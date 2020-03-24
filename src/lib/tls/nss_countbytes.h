@@ -1,4 +1,4 @@
-/* Copyright 2018-2019, The Tor Project, Inc. */
+/* Copyright 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -22,4 +22,4 @@ int tor_get_prfiledesc_byte_counts(struct PRFileDesc *fd,
                                    uint64_t *n_read_out,
                                    uint64_t *n_written_out);
 
-#endif
+#endif /* !defined(TOR_NSS_COUNTBYTES_H) */

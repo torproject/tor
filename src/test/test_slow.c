@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -20,7 +20,9 @@
 
 struct testgroup_t testgroups[] = {
   { "slow/crypto/", slow_crypto_tests },
-  { "slow/util/", slow_util_tests },
+  { "slow/process/", slow_process_tests },
+  { "slow/prob_distr/", slow_stochastic_prob_distr_tests },
+  { "slow/ptr/", slow_ptr_tests },
   END_OF_GROUPS
 };
 

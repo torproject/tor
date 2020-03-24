@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_DIR_H
@@ -30,4 +30,4 @@ MOCK_DECL(int, check_private_dir, (const char *dirname, cpd_check_t check,
 
 MOCK_DECL(struct smartlist_t *, tor_listdir, (const char *dirname));
 
-#endif
+#endif /* !defined(TOR_DIR_H) */

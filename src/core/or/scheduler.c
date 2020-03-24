@@ -1,18 +1,17 @@
-/* Copyright (c) 2013-2019, The Tor Project, Inc. */
+/* Copyright (c) 2013-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "core/or/or.h"
 #include "app/config/config.h"
 
 #include "lib/evloop/compat_libevent.h"
-#define SCHEDULER_PRIVATE_
+#define SCHEDULER_PRIVATE
 #define SCHEDULER_KIST_PRIVATE
 #include "core/or/scheduler.h"
 #include "core/mainloop/mainloop.h"
-#include "lib/container/buffers.h"
-#define TOR_CHANNEL_INTERNAL_
+#include "lib/buf/buffers.h"
+#define CHANNEL_OBJECT_PRIVATE
 #include "core/or/channeltls.h"
-#include "lib/evloop/compat_libevent.h"
 
 #include "core/or/or_connection_st.h"
 
@@ -267,7 +266,7 @@ select_scheduler(void)
           log_notice(LD_SCHED, "Scheduler type KIST has been disabled by "
                                "the consensus or no kernel support.");
         }
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
         log_info(LD_SCHED, "Scheduler type KIST not built in");
 #endif /* defined(HAVE_KIST_SUPPORT) */
         continue;

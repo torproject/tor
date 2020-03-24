@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -64,6 +64,15 @@ int hostname_in_track_host_exits(const or_options_t *options,
 void mark_circuit_unusable_for_new_conns(origin_circuit_t *circ);
 
 int circuit_purpose_is_hidden_service(uint8_t);
+
+/* Series of helper functions for hidden services. */
+bool circuit_purpose_is_hs_client(const uint8_t purpose);
+bool circuit_purpose_is_hs_service(const uint8_t purpose);
+bool circuit_purpose_is_hs_vanguards(const uint8_t purpose);
+
+bool circuit_is_hs_v2(const circuit_t *circ);
+bool circuit_is_hs_v3(const circuit_t *circ);
+
 int circuit_should_use_vanguards(uint8_t);
 void circuit_sent_valid_data(origin_circuit_t *circ, uint16_t relay_body_len);
 void circuit_read_valid_data(origin_circuit_t *circ, uint16_t relay_body_len);

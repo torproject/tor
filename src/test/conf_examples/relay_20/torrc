@@ -1,0 +1,5 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Invalid PublishServerDescriptor
+ORPort 1
+PublishServerDescriptor bad

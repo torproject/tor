@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "lib/crypt_ops/crypto_rand.h"
@@ -448,7 +448,8 @@ static int next_key_idx_2048;
 static crypto_pk_t *
 pk_generate_internal(int bits)
 {
-  tor_assert(bits == 2048 || bits == 1024);
+  tor_assertf(bits == 2048 || bits == 1024,
+             "Wrong key size: %d", bits);
 
 #ifdef USE_PREGENERATED_RSA_KEYS
   int *idxp;
@@ -467,7 +468,7 @@ pk_generate_internal(int bits)
   *idxp += crypto_rand_int_range(1,3);
   *idxp %= n_pregen;
   return crypto_pk_dup_key(pregen_array[*idxp]);
-#else /* !(defined(USE_PREGENERATED_RSA_KEYS)) */
+#else /* !defined(USE_PREGENERATED_RSA_KEYS) */
   crypto_pk_t *result;
   int res;
   result = crypto_pk_new();

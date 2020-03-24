@@ -1,0 +1,4 @@
+# This nickname is too long; we won't accept it.
+# (Unless the relay module is disabled, because Nickname is a
+# relay-only option. We'll ignore all relay-only options in #32395.)
+Nickname TooManyCharactersInThisNickname

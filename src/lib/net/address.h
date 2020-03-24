@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -62,6 +62,7 @@
 typedef uint8_t maskbits_t;
 
 struct in_addr;
+
 /** Holds an IPv4 or IPv6 address.  (Uses less memory than struct
  * sockaddr_storage.) */
 typedef struct tor_addr_t
@@ -133,6 +134,7 @@ tor_addr_to_in6_assert(const tor_addr_t *a)
  * Requires that <b>x</b> is actually an IPv6 address.
  */
 #define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6_assert(x))
+
 /** Given an IPv6 address <b>x</b>, yield it as an array of uint32_t.
  *
  * Requires that <b>x</b> is actually an IPv6 address.
@@ -146,6 +148,7 @@ tor_addr_to_ipv4n(const tor_addr_t *a)
 {
   return a->family == AF_INET ? a->addr.in_addr.s_addr : 0;
 }
+
 /** Return an IPv4 address in host order for <b>a</b>, or 0 if
  * <b>a</b> is not an IPv4 address. */
 static inline uint32_t
@@ -153,10 +156,11 @@ tor_addr_to_ipv4h(const tor_addr_t *a)
 {
   return ntohl(tor_addr_to_ipv4n(a));
 }
+
 /** Given an IPv6 address, return its mapped IPv4 address in host order, or
  * 0 if <b>a</b> is not an IPv6 address.
  *
- * (Does not check whether the address is really a mapped address */
+ * (Does not check whether the address is really a mapped address.) */
 static inline uint32_t
 tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
 {
@@ -165,14 +169,13 @@ tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
     // Work around an incorrect NULL pointer dereference warning in
     // "clang --analyze" due to limited analysis depth
     addr32 = tor_addr_to_in6_addr32(a);
-    // To improve performance, wrap this assertion in:
-    // #if !defined(__clang_analyzer__) || PARANOIA
     tor_assert(addr32);
     return ntohl(addr32[3]);
   } else {
     return 0;
   }
 }
+
 /** Return the address family of <b>a</b>.  Possible values are:
  * AF_INET6, AF_INET, AF_UNSPEC. */
 static inline sa_family_t
@@ -180,6 +183,7 @@ tor_addr_family(const tor_addr_t *a)
 {
   return a->family;
 }
+
 /** Return an in_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
  * an IPv4 address. */
 static inline const struct in_addr *
@@ -187,6 +191,7 @@ tor_addr_to_in(const tor_addr_t *a)
 {
   return a->family == AF_INET ? &a->addr.in_addr : NULL;
 }
+
 /** Return true iff <b>a</b> is an IPv4 address equal to the host-ordered
  * address in <b>u</b>. */
 static inline int
@@ -209,19 +214,23 @@ char *tor_addr_to_str_dup(const tor_addr_t *addr) ATTR_MALLOC;
 /** Wrapper function of fmt_addr_impl(). It does not decorate IPv6
  *  addresses. */
 #define fmt_addr(a) fmt_addr_impl((a), 0)
+
 /** Wrapper function of fmt_addr_impl(). It decorates IPv6
  *  addresses. */
 #define fmt_and_decorate_addr(a) fmt_addr_impl((a), 1)
+
 const char *fmt_addr_impl(const tor_addr_t *addr, int decorate);
 const char *fmt_addrport(const tor_addr_t *addr, uint16_t port);
 const char * fmt_addr32(uint32_t addr);
 
 MOCK_DECL(int,get_interface_address6,(int severity, sa_family_t family,
 tor_addr_t *addr));
+
 struct smartlist_t;
-void interface_address6_list_free_(struct smartlist_t * addrs);// XXXX
+void interface_address6_list_free_(struct smartlist_t * addrs);
 #define interface_address6_list_free(addrs) \
   FREE_AND_NULL(struct smartlist_t, interface_address6_list_free_, (addrs))
+
 MOCK_DECL(struct smartlist_t *,get_interface_address6_list,(int severity,
                                                      sa_family_t family,
                                                      int include_internal));
@@ -246,6 +255,7 @@ int tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
 uint64_t tor_addr_hash(const tor_addr_t *addr);
 struct sipkey;
 uint64_t tor_addr_keyed_hash(const struct sipkey *key, const tor_addr_t *addr);
+
 int tor_addr_is_v4(const tor_addr_t *addr);
 int tor_addr_is_internal_(const tor_addr_t *ip, int for_listening,
                           const char *filename, int lineno);
@@ -276,11 +286,13 @@ int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
 int tor_addr_parse_mask_ports(const char *s, unsigned flags,
                               tor_addr_t *addr_out, maskbits_t *mask_out,
                               uint16_t *port_min_out, uint16_t *port_max_out);
+
 const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len,
                              int decorate);
 int tor_addr_parse(tor_addr_t *addr, const char *src);
 void tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src);
 void tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src);
+
 void tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr);
 /** Set <b>dest</b> to the IPv4 address encoded in <b>v4addr</b> in host
  * order. */
@@ -291,6 +303,7 @@ void tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *bytes);
 #define tor_addr_from_in(dest, in) \
   tor_addr_from_ipv4n((dest), (in)->s_addr);
 void tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6);
+
 int tor_addr_is_null(const tor_addr_t *addr);
 int tor_addr_is_loopback(const tor_addr_t *addr);
 
@@ -299,6 +312,7 @@ int tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening);
 #define tor_addr_is_valid_ipv4h(v4h_addr, for_listening) \
         tor_addr_is_valid_ipv4n(htonl(v4h_addr), (for_listening))
 int tor_port_is_valid(uint16_t port, int for_listening);
+
 /* Are addr and port both valid? */
 #define tor_addr_port_is_valid(addr, port, for_listening) \
         (tor_addr_is_valid((addr), (for_listening)) &&    \
@@ -329,9 +343,11 @@ int parse_port_range(const char *port, uint16_t *port_min_out,
                      uint16_t *port_max_out);
 int addr_mask_get_bits(uint32_t mask);
 char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
+
 MOCK_DECL(int,get_interface_address,(int severity, uint32_t *addr));
 #define interface_address_list_free(lst)\
   interface_address6_list_free(lst)
+
 /** Return a smartlist of the IPv4 addresses of all interfaces on the server.
  * Excludes loopback and multicast addresses. Only includes internal addresses
  * if include_internal is true. (Note that a relay behind NAT may use an

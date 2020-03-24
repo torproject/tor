@@ -1,0 +1,4 @@
+ExtORPort 2.2.2.2:1
+Nickname Unnamed
+ORPort 2
+ServerTransportPlugin bad3 exec /

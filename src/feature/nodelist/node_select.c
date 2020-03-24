@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -19,6 +19,7 @@
 #include "core/or/reasons.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/dirlist.h"
@@ -30,6 +31,7 @@
 #include "feature/nodelist/routerset.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
+#include "lib/container/bitarray.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/math/fp.h"
 
@@ -146,7 +148,7 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
       try_ip_pref = 0;                                                        \
       goto retry_label;                                                       \
     }                                                                         \
-  STMT_END                                                                    \
+  STMT_END
 
 /* Common retry code for router_pick_directory_server_impl and
  * router_pick_trusteddirserver_impl. Retry without excluding nodes, but with
@@ -321,7 +323,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
   const int skip_or_fw = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir_fw = router_skip_dir_reachability(options, try_ip_pref);
-  const int must_have_or = directory_must_use_begindir(options);
+  const int must_have_or = dirclient_must_use_begindir(options);
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
@@ -540,6 +542,51 @@ bridge_get_advertised_bandwidth_bounded(routerinfo_t *router)
   return result;
 }
 
+/**
+ * We have found an instance of bug 32868: log our best guess about where the
+ * routerstatus was found.
+ **/
+static void
+log_buggy_rs_source(const routerstatus_t *rs)
+{
+  static ratelim_t buggy_rs_ratelim = RATELIM_INIT(1200);
+  char *m;
+  if ((m = rate_limit_log(&buggy_rs_ratelim, approx_time()))) {
+    log_warn(LD_BUG,
+             "Found a routerstatus %p with has_guardfraction=%u "
+             " and guardfraction_percentage=%u, but is_possible_guard=%u.%s",
+             rs,
+             rs->has_guardfraction,
+             rs->guardfraction_percentage,
+             rs->is_possible_guard,
+             m);
+    tor_free(m);
+    networkstatus_t *ns;
+    int in_ns_count = 0;
+    if ((ns = networkstatus_get_latest_consensus_by_flavor(FLAV_NS))) {
+      int pos = smartlist_pos(ns->routerstatus_list, rs);
+      if (pos >= 0) {
+        ++in_ns_count;
+        log_warn(LD_BUG, "Found the routerstatus at position %d of the "
+                 "NS consensus.", pos);
+      }
+    }
+    if ((ns = networkstatus_get_latest_consensus_by_flavor(FLAV_MICRODESC))) {
+      int pos = smartlist_pos(ns->routerstatus_list, rs);
+      if (pos >= 0) {
+        ++in_ns_count;
+        log_warn(LD_BUG, "Found the routerstatus at position %d of the "
+                 "MD consensus.", pos);
+      }
+    }
+    if (in_ns_count == 0) {
+      log_warn(LD_BUG, "Could not find the routerstatus in any "
+               "latest consensus.");
+    }
+    tor_assert_nonfatal_unreached();
+  }
+}
+
 /** Given a list of routers and a weighting rule as in
  * smartlist_choose_node_by_bandwidth_weights, compute weighted bandwidth
  * values for each node and store them in a freshly allocated
@@ -585,6 +632,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   }
 
   weight_scale = networkstatus_get_weight_scale_param(NULL);
+  tor_assert(weight_scale >= 1);
 
   if (rule == WEIGHT_FOR_GUARD) {
     Wg = networkstatus_get_bw_weight(NULL, "Wgg", -1);
@@ -715,10 +763,11 @@ compute_weighted_bandwidths(const smartlist_t *sl,
      *    choose N proportionally to F*Wpf*B + (1-F)*Wpn*B.
      */
     if (node->rs && node->rs->has_guardfraction && rule != WEIGHT_FOR_GUARD) {
-      /* XXX The assert should actually check for is_guard. However,
-       * that crashes dirauths because of #13297. This should be
-       * equivalent: */
-      tor_assert(node->rs->is_possible_guard);
+      /* We should only have guardfraction set if the node has the Guard
+         flag. */
+      if (! node->rs->is_possible_guard) {
+        log_buggy_rs_source(node->rs);
+      }
 
       guard_get_guardfraction_bandwidth(&guardfraction_bw,
                                         this_bw,
@@ -825,6 +874,58 @@ routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
   nodelist_add_node_and_family(sl, node);
 }
 
+/**
+ * Remove every node_t that appears in <b>excluded</b> from <b>sl</b>.
+ *
+ * Behaves like smartlist_subtract, but uses nodelist_idx values to deliver
+ * linear performance when smartlist_subtract would be quadratic.
+ **/
+static void
+nodelist_subtract(smartlist_t *sl, const smartlist_t *excluded)
+{
+  const smartlist_t *nodelist = nodelist_get_list();
+  const int nodelist_len = smartlist_len(nodelist);
+  bitarray_t *excluded_idx = bitarray_init_zero(nodelist_len);
+
+  /* We haven't used nodelist_idx in this way previously, so I'm going to be
+   * paranoid in this code, and check that nodelist_idx is correct for every
+   * node before we use it.  If we fail, we fall back to smartlist_subtract().
+   */
+
+  /* Set the excluded_idx bit corresponding to every excluded node...
+   */
+  SMARTLIST_FOREACH_BEGIN(excluded, const node_t *, node) {
+    const int idx = node->nodelist_idx;
+    if (BUG(idx < 0) || BUG(idx >= nodelist_len) ||
+        BUG(node != smartlist_get(nodelist, idx))) {
+      goto internal_error;
+    }
+    bitarray_set(excluded_idx, idx);
+  } SMARTLIST_FOREACH_END(node);
+
+  /* Then remove them from sl.
+   */
+  SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
+    const int idx = node->nodelist_idx;
+    if (BUG(idx < 0) || BUG(idx >= nodelist_len) ||
+        BUG(node != smartlist_get(nodelist, idx))) {
+      goto internal_error;
+    }
+    if (bitarray_is_set(excluded_idx, idx)) {
+      SMARTLIST_DEL_CURRENT(sl, node);
+    }
+  } SMARTLIST_FOREACH_END(node);
+
+  bitarray_free(excluded_idx);
+  return;
+
+ internal_error:
+  log_warn(LD_BUG, "Internal error prevented us from using the fast method "
+           "for subtracting nodelists. Falling back to the quadratic way.");
+  smartlist_subtract(sl, excluded);
+  bitarray_free(excluded_idx);
+}
+
 /** Return a random running node from the nodelist. Never
  * pick a node that is in
  * <b>excludedsmartlist</b>, or which matches <b>excludedset</b>,
@@ -859,6 +960,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
   const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
 
+  const smartlist_t *node_list = nodelist_get_list();
   smartlist_t *sl=smartlist_new(),
     *excludednodes=smartlist_new();
   const node_t *choice = NULL;
@@ -869,17 +971,17 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   rule = weight_for_exit ? WEIGHT_FOR_EXIT :
     (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
-  SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
+  SMARTLIST_FOREACH_BEGIN(node_list, const node_t *, node) {
     if (node_allows_single_hop_exits(node)) {
       /* Exclude relays that allow single hop exit circuits. This is an
        * obsolete option since 0.2.9.2-alpha and done by default in
        * 0.3.1.0-alpha. */
-      smartlist_add(excludednodes, node);
+      smartlist_add(excludednodes, (node_t*)node);
     } else if (rendezvous_v3 &&
                !node_supports_v3_rendezvous_point(node)) {
       /* Exclude relays that do not support to rendezvous for a hidden service
        * version 3. */
-      smartlist_add(excludednodes, node);
+      smartlist_add(excludednodes, (node_t*)node);
     }
   } SMARTLIST_FOREACH_END(node);
 
@@ -896,19 +998,11 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
            "We found %d running nodes.",
             smartlist_len(sl));
 
-  smartlist_subtract(sl,excludednodes);
-  log_debug(LD_CIRC,
-            "We removed %d excludednodes, leaving %d nodes.",
-            smartlist_len(excludednodes),
-            smartlist_len(sl));
-
   if (excludedsmartlist) {
-    smartlist_subtract(sl,excludedsmartlist);
-    log_debug(LD_CIRC,
-              "We removed %d excludedsmartlist, leaving %d nodes.",
-              smartlist_len(excludedsmartlist),
-              smartlist_len(sl));
+    smartlist_add_all(excludednodes, excludedsmartlist);
   }
+  nodelist_subtract(sl, excludednodes);
+
   if (excludedset) {
     routerset_subtract_nodes(sl,excludedset);
     log_debug(LD_CIRC,
@@ -1028,7 +1122,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
 
   const int skip_or_fw = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir_fw = router_skip_dir_reachability(options, try_ip_pref);
-  const int must_have_or = directory_must_use_begindir(options);
+  const int must_have_or = dirclient_must_use_begindir(options);
 
   SMARTLIST_FOREACH_BEGIN(sourcelist, const dir_server_t *, d)
     {

@@ -1,10 +1,10 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
- * \file routerlist.h
+ * \file routerset.h
  * \brief Header file for routerset.c
  **/
 
@@ -43,6 +43,10 @@ int routerset_equal(const routerset_t *old, const routerset_t *new);
 void routerset_free_(routerset_t *routerset);
 #define routerset_free(rs) FREE_AND_NULL(routerset_t, routerset_free_, (rs))
 int routerset_len(const routerset_t *set);
+
+struct var_type_def_t;
+extern const struct var_type_def_t ROUTERSET_type_defn;
+typedef routerset_t *config_decl_ROUTERSET;
 
 #ifdef ROUTERSET_PRIVATE
 #include "lib/container/bitarray.h"

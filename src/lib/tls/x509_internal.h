@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_X509_INTERNAL_H
@@ -50,4 +50,4 @@ int tor_x509_cert_set_cached_der_encoding(tor_x509_cert_t *cert);
 #define tor_x509_cert_set_cached_der_encoding(cert) (0)
 #endif
 
-#endif
+#endif /* !defined(TOR_X509_INTERNAL_H) */

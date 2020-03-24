@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Tor Project, Inc. */
+/* Copyright (c) 2012-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -383,8 +383,10 @@ make_intro_from_plaintext(
 
   /* Output the cell */
   *cell_out = cell;
+  cell = NULL;
 
  done:
+  tor_free(cell);
   return cell_len;
 }
 
@@ -535,4 +537,3 @@ struct testcase_t introduce_tests[] = {
   INTRODUCE_LEGACY(late_parse_v3),
   END_OF_TESTCASES
 };
-

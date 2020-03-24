@@ -1,11 +1,11 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
- * \file or_state_t
+ * \file or_state_st.h
  *
  * \brief The or_state_t structure, which represents Tor's state file.
  */
@@ -15,6 +15,7 @@
 
 #include "lib/cc/torint.h"
 struct smartlist_t;
+struct config_suite_t;
 
 /** Persistent state for an onion router, as saved to disk. */
 struct or_state_t {
@@ -87,6 +88,14 @@ struct or_state_t {
 
   /** When did we last rotate our onion key?  "0" for 'no idea'. */
   time_t LastRotatedOnionKey;
+
+  /**
+   * State objects for individual modules.
+   *
+   * Never access this field or its members directly: instead, use the module
+   * in question to get its relevant state object if you must.
+   */
+  struct config_suite_t *substates_;
 };
 
-#endif
+#endif /* !defined(TOR_OR_STATE_ST_H) */

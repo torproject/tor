@@ -1,3 +1,8 @@
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 q = 2**255 - 19
 
 def expmod(b,e,m):
@@ -25,4 +30,4 @@ def radix255(x):
   return result
 
 I = expmod(2,(q-1)/4,q)
-print radix255(I)
+print(radix255(I))

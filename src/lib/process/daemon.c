@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -165,7 +165,7 @@ finish_daemon(const char *desired_cwd)
 
   return 0;
 }
-#else /* !(!defined(_WIN32)) */
+#else /* defined(_WIN32) */
 /* defined(_WIN32) */
 int
 start_daemon(void)

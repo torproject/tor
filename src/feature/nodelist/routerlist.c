@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -67,12 +67,13 @@
 #include "core/mainloop/mainloop.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/process_descs.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"
+#include "feature/dirclient/dirclient_modes.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/authcert.h"
@@ -160,7 +161,7 @@ static time_t last_descriptor_download_attempted = 0;
  *
  * From time to time, we replace "cached-descriptors" with a new file
  * containing only the live, non-superseded descriptors, and clear
- * cached-routers.new.
+ * cached-descriptors.new.
  *
  * On startup, we read both files.
  */
@@ -1459,12 +1460,13 @@ router_descriptor_is_older_than,(const routerinfo_t *router, int seconds))
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
- * older entries (if any) with the same key.  Note: Callers should not hold
- * their pointers to <b>router</b> if this function fails; <b>router</b>
- * will either be inserted into the routerlist or freed. Similarly, even
- * if this call succeeds, they should not hold their pointers to
- * <b>router</b> after subsequent calls with other routerinfo's -- they
- * might cause the original routerinfo to get freed.
+ * older entries (if any) with the same key.
+ *
+ * Note: Callers should not hold their pointers to <b>router</b> if this
+ * function fails; <b>router</b> will either be inserted into the routerlist or
+ * freed. Similarly, even if this call succeeds, they should not hold their
+ * pointers to <b>router</b> after subsequent calls with other routerinfo's --
+ * they might cause the original routerinfo to get freed.
  *
  * Returns the status for the operation. Might set *<b>msg</b> if it wants
  * the poster of the router to know something.
@@ -1926,6 +1928,8 @@ routerlist_remove_old_routers(void)
 void
 routerlist_descriptors_added(smartlist_t *sl, int from_cache)
 {
+  // XXXX use pubsub mechanism here.
+
   tor_assert(sl);
   control_event_descriptors_changed(sl);
   SMARTLIST_FOREACH_BEGIN(sl, routerinfo_t *, ri) {
@@ -2401,7 +2405,7 @@ max_dl_per_request(const or_options_t *options, int purpose)
   }
   /* If we're going to tunnel our connections, we can ask for a lot more
    * in a request. */
-  if (directory_must_use_begindir(options)) {
+  if (dirclient_must_use_begindir(options)) {
     max = 500;
   }
   return max;
@@ -2444,7 +2448,7 @@ launch_descriptor_downloads(int purpose,
   if (!n_downloadable)
     return;
 
-  if (!directory_fetches_dir_info_early(options)) {
+  if (!dirclient_fetches_dir_info_early(options)) {
     if (n_downloadable >= MAX_DL_TO_DELAY) {
       log_debug(LD_DIR,
                 "There are enough downloadable %ss to launch requests.",
@@ -2535,7 +2539,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0, n_in_oldrouters=0;
 
-  if (directory_too_idle_to_fetch_descriptors(options, now))
+  if (dirclient_too_idle_to_fetch_descriptors(options, now))
     goto done;
   if (!consensus)
     goto done;
@@ -2555,8 +2559,15 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
   map = digestmap_new();
   list_pending_descriptor_downloads(map, 0);
   SMARTLIST_FOREACH_BEGIN(consensus->routerstatus_list, void *, rsp) {
-      routerstatus_t *rs =
-        is_vote ? &(((vote_routerstatus_t *)rsp)->status) : rsp;
+      routerstatus_t *rs;
+      vote_routerstatus_t *vrs;
+      if (is_vote) {
+        rs = &(((vote_routerstatus_t *)rsp)->status);
+        vrs = rsp;
+      } else {
+        rs = rsp;
+        vrs = NULL;
+      }
       signed_descriptor_t *sd;
       if ((sd = router_get_by_descriptor_digest(rs->descriptor_digest))) {
         const routerinfo_t *ri;
@@ -2581,7 +2592,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         ++n_delayed; /* Not ready for retry. */
         continue;
       }
-      if (authdir && dirserv_would_reject_router(rs)) {
+      if (authdir && is_vote && dirserv_would_reject_router(rs, vrs)) {
         ++n_would_reject;
         continue; /* We would throw it out immediately. */
       }
@@ -2971,7 +2982,7 @@ routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
   digest256_matches = tor_memeq(ei->digest256,
                                 sd->extra_info_digest256, DIGEST256_LEN);
   digest256_matches |=
-    tor_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
+    fast_mem_is_zero(sd->extra_info_digest256, DIGEST256_LEN);
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
@@ -3055,7 +3066,7 @@ routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
     return 0;
   }
 
-  if (tor_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
+  if (fast_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
                       CURVE25519_PUBKEY_LEN)) {
     return 0;
   }
@@ -3223,6 +3234,8 @@ refresh_all_country_info(void)
     routerset_refresh_countries(options->EntryNodes);
   if (options->ExitNodes)
     routerset_refresh_countries(options->ExitNodes);
+  if (options->MiddleNodes)
+    routerset_refresh_countries(options->MiddleNodes);
   if (options->ExcludeNodes)
     routerset_refresh_countries(options->ExcludeNodes);
   if (options->ExcludeExitNodes)

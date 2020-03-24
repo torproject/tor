@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file networkstatus_voter_info_st.h
+ * @brief Single consensus voter structure.
+ **/
 
 #ifndef NETWORKSTATUS_VOTER_INFO_ST_H
 #define NETWORKSTATUS_VOTER_INFO_ST_H
@@ -27,4 +32,4 @@ struct networkstatus_voter_info_t {
   smartlist_t *sigs;
 };
 
-#endif
+#endif /* !defined(NETWORKSTATUS_VOTER_INFO_ST_H) */

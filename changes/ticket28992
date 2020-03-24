@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion service v3, client):
+    - Remove a BUG() that is causing a stacktrace for a situation that very
+      rarely happens but still can. Fixes bug 28992; bugfix on 0.3.2.1-alpha.

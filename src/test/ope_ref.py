@@ -1,8 +1,13 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # Copyright 2018-2019, The Tor Project, Inc. See LICENSE for licensing info.
 
 # Reference implementation for our rudimentary OPE code, used to
 # generate test vectors. See crypto_ope.c for more details.
+
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.algorithms import AES

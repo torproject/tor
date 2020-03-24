@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -31,7 +31,7 @@ typedef int socklen_t;
 #define TOR_SOCKET_T_FORMAT "%"PRIuPTR
 #define SOCKET_OK(s) ((SOCKET)(s) != INVALID_SOCKET)
 #define TOR_INVALID_SOCKET INVALID_SOCKET
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
 /** Type used for a network socket. */
 #define tor_socket_t int
 #define TOR_SOCKET_T_FORMAT "%d"
@@ -41,4 +41,4 @@ typedef int socklen_t;
 #define TOR_INVALID_SOCKET (-1)
 #endif /* defined(_WIN32) */
 
-#endif
+#endif /* !defined(TOR_NET_TYPES_H) */

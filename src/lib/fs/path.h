@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -25,6 +25,6 @@ char *expand_filename(const char *filename);
 int path_is_relative(const char *filename);
 void clean_fname_for_stat(char *name);
 int get_parent_directory(char *fname);
-char *make_path_absolute(char *fname);
+char *make_path_absolute(const char *fname);
 
-#endif
+#endif /* !defined(TOR_PATH_H) */

@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -48,7 +48,7 @@ typedef struct tor_mutex_t {
 #else
   /** No-threads only: Dummy variable so that tor_mutex_t takes up space. */
   int _unused;
-#endif /* defined(USE_WIN32_MUTEX) || ... */
+#endif /* defined(USE_WIN32_THREADS) || ... */
 } tor_mutex_t;
 
 tor_mutex_t *tor_mutex_new(void);
@@ -58,6 +58,11 @@ void tor_mutex_init_nonrecursive(tor_mutex_t *m);
 void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free_(tor_mutex_t *m);
+/**
+ * @copydoc tor_mutex_free_
+ *
+ * Additionally, set the pointer <b>m</b> to NULL.
+ **/
 #define tor_mutex_free(m) FREE_AND_NULL(tor_mutex_t, tor_mutex_free_, (m))
 void tor_mutex_uninit(tor_mutex_t *m);
 

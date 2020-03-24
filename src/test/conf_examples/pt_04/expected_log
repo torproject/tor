@@ -1,0 +1,1 @@
+Tor is not configured as a relay but you specified a ServerTransportPlugin line.*The ServerTransportPlugin line will be ignored

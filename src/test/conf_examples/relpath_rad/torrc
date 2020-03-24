@@ -1,0 +1,4 @@
+
+# Relative-path data directories are incompatible with RunAsDaemon
+DataDirectory ./datadir
+RunAsDaemon 1

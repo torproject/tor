@@ -1,5 +1,0 @@
-  o Minor bugfixes (mainloop, periodic events):
-    - Periodic events enabled flag was not unset properly when shutting down tor
-      cleanly. This had the side effect to not re-enable periodic events when
-      tor_api.h is used to relaunch tor after a shutdown. Fixes bug 32058;
-      bugfix on 0.3.3.1-alpha.

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -17,32 +17,7 @@ struct ed25519_keypair_t;
 
 or_connection_t *TO_OR_CONN(connection_t *);
 
-#define OR_CONN_STATE_MIN_ 1
-/** State for a connection to an OR: waiting for connect() to finish. */
-#define OR_CONN_STATE_CONNECTING 1
-/** State for a connection to an OR: waiting for proxy handshake to complete */
-#define OR_CONN_STATE_PROXY_HANDSHAKING 2
-/** State for an OR connection client: SSL is handshaking, not done
- * yet. */
-#define OR_CONN_STATE_TLS_HANDSHAKING 3
-/** State for a connection to an OR: We're doing a second SSL handshake for
- * renegotiation purposes. (V2 handshake only.) */
-#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 4
-/** State for a connection at an OR: We're waiting for the client to
- * renegotiate (to indicate a v2 handshake) or send a versions cell (to
- * indicate a v3 handshake) */
-#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 5
-/** State for an OR connection: We're done with our SSL handshake, we've done
- * renegotiation, but we haven't yet negotiated link protocol versions and
- * sent a netinfo cell. */
-#define OR_CONN_STATE_OR_HANDSHAKING_V2 6
-/** State for an OR connection: We're done with our SSL handshake, but we
- * haven't yet negotiated link protocol versions, done a V3 handshake, and
- * sent a netinfo cell. */
-#define OR_CONN_STATE_OR_HANDSHAKING_V3 7
-/** State for an OR connection: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 8
-#define OR_CONN_STATE_MAX_ 8
+#include "core/or/orconn_event.h"
 
 void connection_or_clear_identity(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
@@ -80,6 +55,9 @@ MOCK_DECL(void,connection_or_close_for_error,
           (or_connection_t *orconn, int flush));
 
 void connection_or_report_broken_states(int severity, int domain);
+
+void connection_or_event_status(or_connection_t *conn,
+                                or_conn_status_event_t tp, int reason);
 
 MOCK_DECL(int,connection_tls_start_handshake,(or_connection_t *conn,
                                               int receiving));
@@ -156,7 +134,14 @@ void connection_or_group_set_badness_(smartlist_t *group, int force);
 #ifdef CONNECTION_OR_PRIVATE
 STATIC int should_connect_to_relay(const or_connection_t *or_conn);
 STATIC void note_or_connect_failed(const or_connection_t *or_conn);
-#endif
+
+/*
+ * Call this when changing connection state, so notifications to the owning
+ * channel can be handled.
+ */
+MOCK_DECL(STATIC void,connection_or_change_state,
+          (or_connection_t *conn, uint8_t state));
+#endif /* defined(CONNECTION_OR_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 extern int certs_cell_ed25519_disabled_for_testing;

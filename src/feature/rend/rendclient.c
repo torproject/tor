@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -17,7 +17,7 @@
 #include "core/or/connection_edge.h"
 #include "core/or/relay.h"
 #include "feature/client/circpathbias.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hs/hs_circuit.h"
@@ -119,7 +119,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   char tmp[RELAY_PAYLOAD_SIZE];
   rend_cache_entry_t *entry = NULL;
   crypt_path_t *cpath;
-  off_t dh_offset;
+  ptrdiff_t dh_offset;
   crypto_pk_t *intro_key = NULL;
   int status = 0;
   const char *onion_address;
@@ -403,14 +403,23 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     } else {
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
+    /* Save the rend data digest to a temporary object so that we don't access
+     * it after we mark the circuit for close. */
+    const uint8_t *rend_digest_tmp = NULL;
+    size_t digest_len;
+    uint8_t *cached_rend_digest = NULL;
+    rend_digest_tmp = rend_data_get_pk_digest(circ->rend_data, &digest_len);
+    cached_rend_digest = tor_malloc_zero(digest_len);
+    memcpy(cached_rend_digest, rend_digest_tmp, digest_len);
+
     /* close the circuit: we won't need it anymore. */
     circuit_change_purpose(TO_CIRCUIT(circ),
                            CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
 
     /* close any other intros launched in parallel */
-    rend_client_close_other_intros(rend_data_get_pk_digest(circ->rend_data,
-                                                           NULL));
+    rend_client_close_other_intros(cached_rend_digest);
+    tor_free(cached_rend_digest); /* free the temporary digest */
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
     circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_C_INTRODUCING);
@@ -469,16 +478,19 @@ directory_get_from_hs_dir(const char *desc_id,
 
   /* Automatically pick an hs dir if none given. */
   if (!rs_hsdir) {
+    bool rate_limited = false;
+
     /* Determine responsible dirs. Even if we can't get all we want, work with
      * the ones we have. If it's empty, we'll notice in hs_pick_hsdir(). */
     smartlist_t *responsible_dirs = smartlist_new();
     hid_serv_get_responsible_directories(responsible_dirs, desc_id);
 
-    hs_dir = hs_pick_hsdir(responsible_dirs, desc_id_base32);
+    hs_dir = hs_pick_hsdir(responsible_dirs, desc_id_base32, &rate_limited);
     if (!hs_dir) {
       /* No suitable hs dir can be found, stop right now. */
-      control_event_hsv2_descriptor_failed(rend_query, NULL,
-                                           "QUERY_NO_HSDIR");
+      const char *query_response = (rate_limited) ? "QUERY_RATE_LIMITED" :
+                                                    "QUERY_NO_HSDIR";
+      control_event_hsv2_descriptor_failed(rend_query, NULL, query_response);
       control_event_hs_descriptor_content(rend_data_get_address(rend_query),
                                           desc_id_base32, NULL, NULL);
       return 0;
@@ -1036,18 +1048,30 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
   const or_options_t *options = get_options();
   smartlist_t *usable_nodes;
   int n_excluded = 0;
+  char service_id[REND_SERVICE_ID_LEN_BASE32 + 1];
 
   /* We'll keep a separate list of the usable nodes.  If this becomes empty,
    * no nodes are usable.  */
   usable_nodes = smartlist_new();
   smartlist_add_all(usable_nodes, entry->parsed->intro_nodes);
 
+  /* Get service ID so we can use it to query the failure cache. If we fail to
+   * parse it, this cache entry is no good. */
+  if (BUG(rend_get_service_id(entry->parsed->pk, service_id) < 0)) {
+    smartlist_free(usable_nodes);
+    return NULL;
+  }
+
   /* Remove the intro points that have timed out during this HS
    * connection attempt from our list of usable nodes. */
-  SMARTLIST_FOREACH(usable_nodes, rend_intro_point_t *, ip,
-                    if (ip->timed_out) {
-                      SMARTLIST_DEL_CURRENT(usable_nodes, ip);
-                    });
+  SMARTLIST_FOREACH_BEGIN(usable_nodes, const rend_intro_point_t *, ip) {
+    bool failed_intro =
+      rend_cache_intro_failure_exists(service_id,
+                       (const uint8_t *) ip->extend_info->identity_digest);
+    if (ip->timed_out || failed_intro) {
+      SMARTLIST_DEL_CURRENT(usable_nodes, ip);
+    };
+  } SMARTLIST_FOREACH_END(ip);
 
  again:
   if (smartlist_len(usable_nodes) == 0) {
@@ -1225,4 +1249,67 @@ rend_parse_service_authorization(const or_options_t *options,
     strmap_free(parsed, rend_service_authorization_free_void);
   }
   return res;
+}
+
+/** The given circuit is being freed. Take appropriate action if it is of
+ * interest to the client subsystem. */
+void
+rend_client_circuit_cleanup_on_free(const circuit_t *circ)
+{
+  int reason, orig_reason;
+  bool has_timed_out, ip_is_redundant;
+  const origin_circuit_t *ocirc = NULL;
+
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  reason = circ->marked_for_close_reason;
+  orig_reason = circ->marked_for_close_orig_reason;
+  ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
+  tor_assert(ocirc->rend_data);
+
+  has_timed_out = (reason == END_CIRC_REASON_TIMEOUT);
+  ip_is_redundant = (orig_reason == END_CIRC_REASON_IP_NOW_REDUNDANT);
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+  {
+    if (ip_is_redundant) {
+      break;
+    }
+    tor_assert(circ->state == CIRCUIT_STATE_OPEN);
+    tor_assert(ocirc->build_state->chosen_exit);
+    /* Treat this like getting a nack from it */
+    log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). %s",
+        safe_str_client(rend_data_get_address(ocirc->rend_data)),
+        safe_str_client(build_state_get_exit_nickname(ocirc->build_state)),
+        has_timed_out ? "Recording timeout." : "Removing from descriptor.");
+    rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                           ocirc->rend_data,
+                                           has_timed_out ?
+                                           INTRO_POINT_FAILURE_TIMEOUT :
+                                           INTRO_POINT_FAILURE_GENERIC);
+    break;
+  }
+  case CIRCUIT_PURPOSE_C_INTRODUCING:
+  {
+    /* Ignore if we were introducing and it timed out, we didn't pick an exit
+     * point yet (IP) or the reason indicate that it was a redundant IP. */
+    if (has_timed_out || !ocirc->build_state->chosen_exit || ip_is_redundant) {
+      break;
+    }
+    log_info(LD_REND, "Failed intro circ %s to %s "
+             "(building circuit to intro point). "
+             "Marking intro point as possibly unreachable.",
+             safe_str_client(rend_data_get_address(ocirc->rend_data)),
+             safe_str_client(build_state_get_exit_nickname(
+                                                  ocirc->build_state)));
+    rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
+                                           ocirc->rend_data,
+                                           INTRO_POINT_FAILURE_UNREACHABLE);
+    break;
+  }
+  default:
+    break;
+  }
 }

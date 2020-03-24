@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -33,7 +33,7 @@
 /** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
  * and <b>generate</b> is true, create a new RSA key and save it in
  * <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
- * errors at level <b>severity</b>. If <b>created_out/b> is non-NULL and a
+ * errors at level <b>severity</b>. If <b>created_out</b> is non-NULL and a
  * new key was created, set *<b>created_out</b> to true.
  */
 crypto_pk_t *

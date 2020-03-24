@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_SMARTLIST_H
@@ -13,6 +13,7 @@
  **/
 
 #include <stdarg.h>
+#include <stddef.h>
 
 #include "lib/smartlist_core/smartlist_core.h"
 #include "lib/smartlist_core/smartlist_foreach.h"
@@ -72,18 +73,18 @@ int smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
 
 void smartlist_pqueue_add(smartlist_t *sl,
                           int (*compare)(const void *a, const void *b),
-                          int idx_field_offset,
+                          ptrdiff_t idx_field_offset,
                           void *item);
 void *smartlist_pqueue_pop(smartlist_t *sl,
                            int (*compare)(const void *a, const void *b),
-                           int idx_field_offset);
+                           ptrdiff_t idx_field_offset);
 void smartlist_pqueue_remove(smartlist_t *sl,
                              int (*compare)(const void *a, const void *b),
-                             int idx_field_offset,
+                             ptrdiff_t idx_field_offset,
                              void *item);
 void smartlist_pqueue_assert_ok(smartlist_t *sl,
                                 int (*compare)(const void *a, const void *b),
-                                int idx_field_offset);
+                                ptrdiff_t idx_field_offset);
 
 char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate,
                              size_t *len_out) ATTR_MALLOC;
@@ -91,6 +92,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
                               size_t join_len, int terminate, size_t *len_out)
   ATTR_MALLOC;
 
+#ifndef COCCI
 /* Helper: Given two lists of items, possibly of different types, such that
  * both lists are sorted on some common field (as determined by a comparison
  * expression <b>cmpexpr</b>), and such that one list (<b>sl1</b>) has no
@@ -164,5 +166,6 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 #define SMARTLIST_FOREACH_JOIN_END(var1, var2)  \
   }                                             \
   STMT_END
+#endif /* !defined(COCCI) */
 
-#endif /* !defined(TOR_CONTAINER_H) */
+#endif /* !defined(TOR_SMARTLIST_H) */

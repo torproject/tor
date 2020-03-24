@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file connection_st.h
+ * @brief Base connection structure.
+ **/
 
 #ifndef CONNECTION_ST_H
 #define CONNECTION_ST_H
@@ -146,4 +151,4 @@ struct connection_t {
  * directory connection. */
 #define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
 
-#endif
+#endif /* !defined(CONNECTION_ST_H) */

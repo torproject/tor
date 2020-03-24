@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -33,18 +33,18 @@ ssize_t crypto_read_tagged_contents_from_file(const char *fname,
 
 int ed25519_public_from_base64(struct ed25519_public_key_t *pkey,
                                const char *input);
-int ed25519_public_to_base64(char *output,
-                             const struct ed25519_public_key_t *pkey);
+void ed25519_public_to_base64(char *output,
+                              const struct ed25519_public_key_t *pkey);
 const char *ed25519_fmt(const struct ed25519_public_key_t *pkey);
 
 int ed25519_signature_from_base64(struct ed25519_signature_t *sig,
                                   const char *input);
-int ed25519_signature_to_base64(char *output,
-                                const struct ed25519_signature_t *sig);
+void ed25519_signature_to_base64(char *output,
+                                 const struct ed25519_signature_t *sig);
 
-int digest_to_base64(char *d64, const char *digest);
+void digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
-int digest256_to_base64(char *d64, const char *digest);
+void digest256_to_base64(char *d64, const char *digest);
 int digest256_from_base64(char *digest, const char *d64);
 
 #endif /* !defined(TOR_CRYPTO_FORMAT_H) */

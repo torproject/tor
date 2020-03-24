@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -17,4 +17,4 @@ struct timeval;
 
 MOCK_DECL(void, tor_gettimeofday, (struct timeval *timeval));
 
-#endif
+#endif /* !defined(TOR_GETTIMEOFDAY_H) */

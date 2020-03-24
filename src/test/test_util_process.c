@@ -1,7 +1,6 @@
-/* Copyright (c) 2010-2019, The Tor Project, Inc. */
+/* Copyright (c) 2010-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#define UTIL_PROCESS_PRIVATE
 #include "orconfig.h"
 #include "core/or/or.h"
 
@@ -12,7 +11,6 @@
 #include "test/log_test_helpers.h"
 
 #ifndef _WIN32
-#define NS_MODULE util_process
 
 static void
 temp_callback(int r, void *s)

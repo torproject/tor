@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -175,7 +175,7 @@ typedef struct {
 } network_liveness_t;
 
 /** Structure for circuit build times history */
-struct circuit_build_times_s {
+struct circuit_build_times_t {
   /** The circular array of recorded build times in milliseconds */
   build_time_t circuit_build_times[CBT_NCIRCUITS_TO_OBSERVE];
   /** Current index in the circuit_build_times circular array */

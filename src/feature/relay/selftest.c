@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -11,8 +11,6 @@
  * Relays need to make sure that their own ports are reasonable, and estimate
  * their own bandwidth, before publishing.
  */
-
-#define SELFTEST_PRIVATE
 
 #include "core/or/or.h"
 
@@ -26,7 +24,7 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "core/or/relay.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/authority_cert_st.h"
@@ -35,6 +33,7 @@
 #include "feature/nodelist/routerlist.h" // but...
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
+#include "feature/relay/relay_periodic.h"
 #include "feature/relay/router.h"
 #include "feature/relay/selftest.h"
 

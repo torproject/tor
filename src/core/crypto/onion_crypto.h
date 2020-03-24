@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -44,4 +44,4 @@ void server_onion_keys_free_(server_onion_keys_t *keys);
 #define server_onion_keys_free(keys) \
   FREE_AND_NULL(server_onion_keys_t, server_onion_keys_free_, (keys))
 
-#endif
+#endif /* !defined(TOR_ONION_CRYPTO_H) */

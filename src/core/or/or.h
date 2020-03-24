@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -24,9 +24,8 @@
 
 #include "lib/arch/bytes.h"
 #include "lib/cc/compat_compiler.h"
-#include "lib/cc/torint.h"
 #include "lib/container/map.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto_cipher.h"
 #include "lib/crypt_ops/crypto_rsa.h"
@@ -97,6 +96,8 @@ struct curve25519_public_key_t;
 #define SIGNEWNYM 129
 #define SIGCLEARDNSCACHE 130
 #define SIGHEARTBEAT 131
+#define SIGACTIVE 132
+#define SIGDORMANT 133
 
 #if (SIZEOF_CELL_T != 0)
 /* On Irix, stdlib.h defines a cell_t type, so we need to make sure
@@ -166,12 +167,13 @@ struct curve25519_public_key_t;
 #define PROXY_CONNECT 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
-/* !!!! If there is ever a PROXY_* type over 3, we must grow the proxy_type
+#define PROXY_HAPROXY 4
+/* !!!! If there is ever a PROXY_* type over 7, we must grow the proxy_type
  * field in or_connection_t */
 
 /* Pluggable transport proxy type. Don't use this in or_connection_t,
  * instead use the actual underlying proxy type (see above).  */
-#define PROXY_PLUGGABLE 4
+#define PROXY_PLUGGABLE 5
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
@@ -204,6 +206,9 @@ struct curve25519_public_key_t;
 #define RELAY_COMMAND_INTRO_ESTABLISHED 38
 #define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 #define RELAY_COMMAND_INTRODUCE_ACK 40
+
+#define RELAY_COMMAND_PADDING_NEGOTIATE 41
+#define RELAY_COMMAND_PADDING_NEGOTIATED 42
 
 /* Reasons why an OR connection is closed. */
 #define END_OR_CONN_REASON_DONE           1
@@ -604,21 +609,21 @@ typedef uint32_t circid_t;
 /** Identifies a stream on a circuit */
 typedef uint16_t streamid_t;
 
-/* channel_t typedef; struct channel_s is in channel.h */
+/* channel_t typedef; struct channel_t is in channel.h */
 
-typedef struct channel_s channel_t;
+typedef struct channel_t channel_t;
 
-/* channel_listener_t typedef; struct channel_listener_s is in channel.h */
+/* channel_listener_t typedef; struct channel_listener_t is in channel.h */
 
-typedef struct channel_listener_s channel_listener_t;
+typedef struct channel_listener_t channel_listener_t;
 
 /* TLS channel stuff */
 
-typedef struct channel_tls_s channel_tls_t;
+typedef struct channel_tls_t channel_tls_t;
 
-/* circuitmux_t typedef; struct circuitmux_s is in circuitmux.h */
+/* circuitmux_t typedef; struct circuitmux_t is in circuitmux.h */
 
-typedef struct circuitmux_s circuitmux_t;
+typedef struct circuitmux_t circuitmux_t;
 
 typedef struct cell_t cell_t;
 typedef struct var_cell_t var_cell_t;
@@ -834,6 +839,14 @@ typedef struct protover_summary_flags_t {
    * service rendezvous point supporting version 3 as seen in proposal 224.
    * This requires HSRend=2. */
   unsigned int supports_v3_rendezvous_point: 1;
+
+  /** True iff this router has a protocol list that allows clients to
+   * negotiate hs circuit setup padding. Requires Padding>=2. */
+  unsigned int supports_hs_setup_padding : 1;
+
+  /** True iff this router has a protocol list that allows it to support the
+   * ESTABLISH_INTRO DoS cell extension. Requires HSIntro>=5. */
+  unsigned int supports_establish_intro_dos_extension : 1;
 } protover_summary_flags_t;
 
 typedef struct routerinfo_t routerinfo_t;
@@ -1000,7 +1013,7 @@ typedef struct or_state_t or_state_t;
 #define BW_MIN_WEIGHT_SCALE 1
 #define BW_MAX_WEIGHT_SCALE INT32_MAX
 
-typedef struct circuit_build_times_s circuit_build_times_t;
+typedef struct circuit_build_times_t circuit_build_times_t;
 
 /********************************* config.c ***************************/
 

@@ -1,5 +1,0 @@
-  o Minor bugfixes (testing):
-    - When testing port rebinding, don't busy-wait for tor to log. Instead,
-      actually sleep for a short time before polling again. Also improve the
-      formatting of control commands and log messages.
-      Fixes bug 31837; bugfix on 0.3.5.1-alpha.

@@ -1,0 +1,7 @@
+# Relay PT tests
+# Options from relay/transport_config.c
+# Empty linelist values are ignored with a warning
+ExtORPort
+ServerTransportPlugin
+ServerTransportListenAddr
+ServerTransportOptions

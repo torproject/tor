@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -11,4 +11,4 @@
 
 void tor_trace_init(void);
 
-#endif // TOR_TRACE_TRACE_H
+#endif /* !defined(TOR_TRACE_TRACE_H) */

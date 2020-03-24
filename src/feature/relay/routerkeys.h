@@ -1,5 +1,10 @@
-/* Copyright (c) 2014-2019, The Tor Project, Inc. */
+/* Copyright (c) 2014-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file routerkeys.h
+ * @brief Header for routerkeys.c
+ **/
 
 #ifndef TOR_ROUTERKEYS_H
 #define TOR_ROUTERKEYS_H
@@ -7,8 +12,8 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 const ed25519_public_key_t *get_master_identity_key(void);
-const ed25519_keypair_t *get_master_signing_keypair(void);
-const struct tor_cert_st *get_master_signing_key_cert(void);
+MOCK_DECL(const ed25519_keypair_t *, get_master_signing_keypair,(void));
+MOCK_DECL(const struct tor_cert_st *, get_master_signing_key_cert,(void));
 
 const ed25519_keypair_t *get_current_auth_keypair(void);
 const struct tor_cert_st *get_current_link_cert_cert(void);

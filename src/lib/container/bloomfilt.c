@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -14,7 +14,7 @@
 #include "lib/container/bloomfilt.h"
 #include "lib/intmath/bits.h"
 #include "lib/log/util_bug.h"
-#include "siphash.h"
+#include "ext/siphash.h"
 
 /** How many bloom-filter bits we set per address. This is twice the
  * BLOOMFILT_N_HASHES value, since we split the siphash output into two 32-bit

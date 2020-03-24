@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -40,8 +40,6 @@ typedef enum {
   /** Connect over a multi-hop anonymizing Tor circuit to our dirport */
   DIRIND_ANON_DIRPORT,
 } dir_indirection_t;
-
-int directory_must_use_begindir(const or_options_t *options);
 
 /**
  * A directory_request_t describes the information about a directory request
@@ -167,6 +165,6 @@ STATIC int handle_response_fetch_consensus(dir_connection_t *conn,
 
 STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,
                                      const char *resource);
-#endif
+#endif /* defined(DIRCLIENT_PRIVATE) */
 
 #endif /* !defined(TOR_DIRCLIENT_H) */

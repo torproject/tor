@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -53,6 +53,6 @@ STATIC void next_random_exponential_delay_range(int *low_bound_out,
 /* no more than triple the previous delay */
 #define DIR_TEST_NET_RANDOM_MULTIPLIER (2)
 
-#endif
+#endif /* defined(DLSTATUS_PRIVATE) */
 
 #endif /* !defined(TOR_DLSTATUS_H) */

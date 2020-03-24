@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -19,4 +19,4 @@ void ns_detached_signatures_free_(ns_detached_signatures_t *s);
 #define ns_detached_signatures_free(s) \
   FREE_AND_NULL(ns_detached_signatures_t, ns_detached_signatures_free_, (s))
 
-#endif
+#endif /* !defined(TOR_DSIGS_PARSE_H) */

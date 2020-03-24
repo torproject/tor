@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -27,4 +27,4 @@
                         "\"" XSTR(subsystem) "\" hit. " \
                         "(line "XSTR(__LINE__) ")")
 
-#endif /* TOR_TRACE_LOG_DEBUG_H */
+#endif /* !defined(TOR_TRACE_LOG_DEBUG_H) */

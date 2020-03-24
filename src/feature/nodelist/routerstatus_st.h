@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file routerstatus_st.h
+ * @brief Routerstatus (consensus entry) structure
+ **/
 
 #ifndef ROUTERSTATUS_ST_H
 #define ROUTERSTATUS_ST_H
@@ -12,6 +17,10 @@
 /** Contents of a single router entry in a network status object.
  */
 struct routerstatus_t {
+ /* This should be kept in sync with the function
+ * routerstatus_has_visibly_changed and the printing function
+ * routerstatus_format_entry in NS_CONTROL_PORT mode.
+ */
   time_t published_on; /**< When was this router published? */
   char nickname[MAX_NICKNAME_LEN+1]; /**< The nickname this router says it
                                       * has. */
@@ -47,6 +56,8 @@ struct routerstatus_t {
   unsigned int is_v2_dir:1; /** True iff this router publishes an open DirPort
                              * or it claims to accept tunnelled dir requests.
                              */
+  unsigned int is_staledesc:1; /** True iff the authorities think this router
+                                * should upload a new descriptor soon. */
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
@@ -76,5 +87,4 @@ struct routerstatus_t {
 
 };
 
-#endif
-
+#endif /* !defined(ROUTERSTATUS_ST_H) */

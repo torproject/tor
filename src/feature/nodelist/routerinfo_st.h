@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file routerinfo_st.h
+ * @brief Router descriptor structure.
+ **/
 
 #ifndef ROUTERINFO_ST_H
 #define ROUTERINFO_ST_H
@@ -112,4 +117,4 @@ struct routerinfo_t {
   uint8_t purpose;
 };
 
-#endif
+#endif /* !defined(ROUTERINFO_ST_H) */

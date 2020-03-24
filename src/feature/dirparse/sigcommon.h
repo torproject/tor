@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -43,6 +43,6 @@ MOCK_DECL(STATIC int, signed_digest_equals,
 MOCK_DECL(STATIC int, router_compute_hash_final,(char *digest,
                            const char *start, size_t len,
                            digest_algorithm_t alg));
-#endif
+#endif /* defined(SIGCOMMON_PRIVATE) */
 
 #endif /* !defined(TOR_SIGCOMMON_H) */

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -29,6 +29,6 @@ void crypto_nss_global_cleanup(void);
 
 void crypto_nss_prefork(void);
 void crypto_nss_postfork(void);
-#endif
+#endif /* defined(ENABLE_NSS) */
 
-#endif /* !defined(TOR_CRYPTO_NSS_H) */
+#endif /* !defined(TOR_CRYPTO_NSS_MGT_H) */

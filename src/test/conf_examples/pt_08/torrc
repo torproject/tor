@@ -1,0 +1,7 @@
+# Relay PT tests
+# Options from relay/transport_config.c
+# Try an invalid config with a unix socket for ExtORPort
+# (Unless the relay module is disabled, because they are relay-only
+# options. We'll ignore all relay-only options in #32395.)
+ExtORPort unix:/
+ServerTransportPlugin bad3 exec /

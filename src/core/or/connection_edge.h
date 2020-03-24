@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -71,6 +71,15 @@ entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
 #define connection_mark_unattached_ap(conn, endreason)                  \
   connection_mark_unattached_ap_((conn), (endreason), __LINE__, SHORT_FILE__)
 
+/** Possible return values for parse_extended_hostname. */
+typedef enum hostname_type_t {
+  BAD_HOSTNAME,
+  EXIT_HOSTNAME,
+  NORMAL_HOSTNAME,
+  ONION_V2_HOSTNAME,
+  ONION_V3_HOSTNAME,
+} hostname_type_t;
+
 MOCK_DECL(void,connection_mark_unattached_ap_,
           (entry_connection_t *conn, int endreason,
            int line, const char *file));
@@ -80,6 +89,7 @@ int connection_edge_process_inbuf(edge_connection_t *conn,
 int connection_edge_destroy(circid_t circ_id, edge_connection_t *conn);
 int connection_edge_end(edge_connection_t *conn, uint8_t reason);
 int connection_edge_end_errno(edge_connection_t *conn);
+void connection_edge_end_close(edge_connection_t *conn, uint8_t reason);
 int connection_edge_flushed_some(edge_connection_t *conn);
 int connection_edge_finished_flushing(edge_connection_t *conn);
 int connection_edge_finished_connecting(edge_connection_t *conn);
@@ -154,13 +164,6 @@ int connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                                                origin_circuit_t *circ,
                                                crypt_path_t *cpath);
 
-/** Possible return values for parse_extended_hostname. */
-typedef enum hostname_type_t {
-  NORMAL_HOSTNAME, ONION_V2_HOSTNAME, ONION_V3_HOSTNAME,
-  EXIT_HOSTNAME, BAD_HOSTNAME
-} hostname_type_t;
-hostname_type_t parse_extended_hostname(char *address);
-
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
 int get_pf_socket(void);
 #endif
@@ -217,6 +220,8 @@ void half_edge_free_(struct half_edge_t *he);
 /**@}*/
 
 #ifdef CONNECTION_EDGE_PRIVATE
+
+STATIC bool parse_extended_hostname(char *address, hostname_type_t *type_out);
 
 /** A parsed BEGIN or BEGIN_DIR cell */
 typedef struct begin_cell_t {

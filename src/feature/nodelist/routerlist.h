@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -37,9 +37,12 @@ typedef enum was_router_added_t {
   ROUTER_WAS_NOT_WANTED = -6,
   /* Router descriptor was rejected because it was older than
    * OLD_ROUTER_DESC_MAX_AGE. */
-  ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'NOT_NEW' */
-  /* DOCDOC */
-  ROUTER_CERTS_EXPIRED = -8
+  ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'ROUTER_IS_ALREADY_KNOWN' */
+  /* Some certs on this router are expired. */
+  ROUTER_CERTS_EXPIRED = -8,
+  /* We couldn't format the annotations for this router. This is a directory
+   * authority bug. */
+  ROUTER_AUTHDIR_BUG_ANNOTATIONS = -10
 } was_router_added_t;
 
 /** How long do we avoid using a directory server after it's given us a 503? */

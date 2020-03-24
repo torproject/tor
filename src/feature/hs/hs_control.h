@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -47,6 +47,10 @@ void hs_control_desc_event_content(const hs_ident_dir_conn_t *ident,
 /* Command "HSPOST [...]" */
 int hs_control_hspost_command(const char *body, const char *onion_address,
                               const smartlist_t *hsdirs_rs);
+
+/* Command "HSFETCH [...]" */
+void hs_control_hsfetch_command(const ed25519_public_key_t *onion_identity_pk,
+                                const smartlist_t *hsdirs);
 
 #endif /* !defined(TOR_HS_CONTROL_H) */
 

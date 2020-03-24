@@ -88,6 +88,9 @@
 ## yourself to make this work.
 #ORPort 443 NoListen
 #ORPort 127.0.0.1:9090 NoAdvertise
+## If you want to listen on IPv6 your numeric address must be explictly
+## between square brackets as follows. You must also listen on IPv4.
+#ORPort [2001:DB8::1]:9050
 
 ## The IP address or full DNS name for incoming connections to your
 ## relay. Leave commented out and Tor will guess.

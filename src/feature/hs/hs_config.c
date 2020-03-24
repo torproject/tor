@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -23,8 +23,6 @@
  * every option that is common to all version (config_generic_service).
  **/
 
-#define HS_CONFIG_PRIVATE
-
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_config.h"
 #include "feature/hs/hs_client.h"
@@ -34,7 +32,7 @@
 #include "lib/encoding/confline.h"
 #include "app/config/or_options_st.h"
 
-/* Using the given list of services, stage them into our global state. Every
+/** Using the given list of services, stage them into our global state. Every
  * service version are handled. This function can remove entries in the given
  * service_list.
  *
@@ -70,7 +68,7 @@ stage_services(smartlist_t *service_list)
   hs_service_stage_services(service_list);
 }
 
-/* Validate the given service against all service in the given list. If the
+/** Validate the given service against all service in the given list. If the
  * service is ephemeral, this function ignores it. Services with the same
  * directory path aren't allowed and will return an error. If a duplicate is
  * found, 1 is returned else 0 if none found. */
@@ -118,7 +116,7 @@ service_is_duplicate_in_list(const smartlist_t *service_list,
   return ret;
 }
 
-/* Helper function: Given an configuration option name, its value, a minimum
+/** Helper function: Given an configuration option name, its value, a minimum
  * min and a maxium max, parse the value as a uint64_t. On success, ok is set
  * to 1 and ret is the parsed value. On error, ok is set to 0 and ret must be
  * ignored. This function logs both on error and success. */
@@ -173,7 +171,7 @@ helper_parse_circuit_id_protocol(const char *key, const char *value, int *ok)
   return ret;
 }
 
-/* Return the service version by trying to learn it from the key on disk if
+/** Return the service version by trying to learn it from the key on disk if
  * any. If nothing is found, the current service configured version is
  * returned. */
 static int
@@ -191,7 +189,7 @@ config_learn_service_version(hs_service_t *service)
   return version;
 }
 
-/* Return true iff the given options starting at line_ for a hidden service
+/** Return true iff the given options starting at line_ for a hidden service
  * contains at least one invalid option. Each hidden service option don't
  * apply to all versions so this function can find out. The line_ MUST start
  * right after the HiddenServiceDir line of this service.
@@ -218,6 +216,9 @@ config_has_invalid_options(const config_line_t *line_,
 
   const char *opts_exclude_v2[] = {
     "HiddenServiceExportCircuitID",
+    "HiddenServiceEnableIntroDoSDefense",
+    "HiddenServiceEnableIntroDoSRatePerSec",
+    "HiddenServiceEnableIntroDoSBurstPerSec",
     NULL /* End marker. */
   };
 
@@ -250,6 +251,16 @@ config_has_invalid_options(const config_line_t *line_,
                             "version %" PRIu32 " of service in %s",
                  opt, service->config.version,
                  service->config.directory_path);
+
+        if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
+          /* Special case this v2 option so that we can offer alternatives.
+           * If more such special cases appear, it would be good to
+           * generalize the exception mechanism here. */
+          log_warn(LD_CONFIG, "For v3 onion service client authorization, "
+                   "please read the 'CLIENT AUTHORIZATION' section in the "
+                   "manual.");
+        }
+
         ret = 1;
         /* Continue the loop so we can find all possible options. */
         continue;
@@ -260,7 +271,7 @@ config_has_invalid_options(const config_line_t *line_,
   return ret;
 }
 
-/* Validate service configuration. This is used when loading the configuration
+/** Validate service configuration. This is used when loading the configuration
  * and once we've setup a service object, it's config object is passed to this
  * function for further validation. This does not validate service key
  * material. Return 0 if valid else -1 if invalid. */
@@ -276,13 +287,22 @@ config_validate_service(const hs_service_config_t *config)
     goto invalid;
   }
 
+  /* DoS validation values. */
+  if (config->has_dos_defense_enabled &&
+      (config->intro_dos_burst_per_sec < config->intro_dos_rate_per_sec)) {
+    log_warn(LD_CONFIG, "Hidden service DoS defenses burst (%" PRIu32 ") can "
+                        "not be smaller than the rate value (%" PRIu32 ").",
+             config->intro_dos_burst_per_sec, config->intro_dos_rate_per_sec);
+    goto invalid;
+  }
+
   /* Valid. */
   return 0;
  invalid:
   return -1;
 }
 
-/* Configuration funcion for a version 3 service. The line_ must be pointing
+/** Configuration funcion for a version 3 service. The line_ must be pointing
  * to the directive directly after a HiddenServiceDir. That way, when hitting
  * the next HiddenServiceDir line or reaching the end of the list of lines, we
  * know that we have to stop looking for more options. The given service
@@ -296,6 +316,8 @@ config_service_v3(const config_line_t *line_,
 {
   int have_num_ip = 0;
   bool export_circuit_id = false; /* just to detect duplicate options */
+  bool dos_enabled = false, dos_rate_per_sec = false;
+  bool dos_burst_per_sec = false;
   const char *dup_opt_seen = NULL;
   const config_line_t *line;
 
@@ -334,6 +356,52 @@ config_service_v3(const config_line_t *line_,
       export_circuit_id = true;
       continue;
     }
+    if (!strcasecmp(line->key, "HiddenServiceEnableIntroDoSDefense")) {
+      config->has_dos_defense_enabled =
+        (unsigned int) helper_parse_uint64(line->key, line->value,
+                                           HS_CONFIG_V3_DOS_DEFENSE_DEFAULT,
+                                           1, &ok);
+      if (!ok || dos_enabled) {
+        if (dos_enabled) {
+          dup_opt_seen = line->key;
+        }
+        goto err;
+      }
+      dos_enabled = true;
+      continue;
+    }
+    if (!strcasecmp(line->key, "HiddenServiceEnableIntroDoSRatePerSec")) {
+      config->intro_dos_rate_per_sec =
+        (unsigned int) helper_parse_uint64(line->key, line->value,
+                              HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MIN,
+                              HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_MAX, &ok);
+      if (!ok || dos_rate_per_sec) {
+        if (dos_rate_per_sec) {
+          dup_opt_seen = line->key;
+        }
+        goto err;
+      }
+      dos_rate_per_sec = true;
+      log_info(LD_REND, "Service INTRO2 DoS defenses rate set to: %" PRIu32,
+               config->intro_dos_rate_per_sec);
+      continue;
+    }
+    if (!strcasecmp(line->key, "HiddenServiceEnableIntroDoSBurstPerSec")) {
+      config->intro_dos_burst_per_sec =
+        (unsigned int) helper_parse_uint64(line->key, line->value,
+                              HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MIN,
+                              HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_MAX, &ok);
+      if (!ok || dos_burst_per_sec) {
+        if (dos_burst_per_sec) {
+          dup_opt_seen = line->key;
+        }
+        goto err;
+      }
+      dos_burst_per_sec = true;
+      log_info(LD_REND, "Service INTRO2 DoS defenses burst set to: %" PRIu32,
+               config->intro_dos_burst_per_sec);
+      continue;
+    }
   }
 
   /* We do not load the key material for the service at this stage. This is
@@ -353,7 +421,7 @@ config_service_v3(const config_line_t *line_,
   return -1;
 }
 
-/* Configure a service using the given options in line_ and options. This is
+/** Configure a service using the given options in line_ and options. This is
  * called for any service regardless of its version which means that all
  * directives in this function are generic to any service version. This
  * function will also check the validity of the service directory path.
@@ -496,15 +564,6 @@ config_generic_service(const config_line_t *line_,
    * becomes a single onion service. */
   if (rend_service_non_anonymous_mode_enabled(options)) {
     config->is_single_onion = 1;
-    /* We will add support for IPv6-only v3 single onion services in a future
-     * Tor version. This won't catch "ReachableAddresses reject *4", but that
-     * option doesn't work anyway. */
-    if (options->ClientUseIPv4 == 0 && config->version == HS_VERSION_THREE) {
-      log_warn(LD_CONFIG, "IPv6-only v3 single onion services are not "
-               "supported. Set HiddenServiceSingleHopMode 0 and "
-               "HiddenServiceNonAnonymousMode 0, or set ClientUseIPv4 1.");
-      goto err;
-    }
   }
 
   /* Success */
@@ -516,7 +575,7 @@ config_generic_service(const config_line_t *line_,
   return -1;
 }
 
-/* Configure a service using the given line and options. This function will
+/** Configure a service using the given line and options. This function will
  * call the corresponding configuration function for a specific service
  * version and validate the service against the other ones. On success, add
  * the service to the given list and return 0. On error, nothing is added to
@@ -602,7 +661,7 @@ config_service(const config_line_t *line, const or_options_t *options,
   return -1;
 }
 
-/* From a set of <b>options</b>, setup every hidden service found. Return 0 on
+/** From a set of <b>options</b>, setup every hidden service found. Return 0 on
  * success or -1 on failure. If <b>validate_only</b> is set, parse, warn and
  * return as normal, but don't actually change the configured services. */
 int
@@ -670,7 +729,7 @@ hs_config_service_all(const or_options_t *options, int validate_only)
   return ret;
 }
 
-/* From a set of <b>options</b>, setup every client authorization found.
+/** From a set of <b>options</b>, setup every client authorization found.
  * Return 0 on success or -1 on failure. If <b>validate_only</b> is set,
  * parse, warn and return as normal, but don't actually change the
  * configured state. */

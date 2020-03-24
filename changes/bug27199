@@ -1,3 +1,0 @@
-  o Minor bugfixes (rust):
-    - Abort on panic in all build profiles, instead of potentially unwinding
-      into C code. Fixes bug 27199; bugfix on 0.3.3.1-alpha.

@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -6,7 +6,7 @@
 #define BUFFERS_PRIVATE
 #include "core/or/or.h"
 
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/err/backtrace.h"
 #include "lib/log/log.h"
 #include "core/proto/proto_socks.h"

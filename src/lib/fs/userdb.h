@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -21,6 +21,6 @@ struct passwd;
 const struct passwd *tor_getpwnam(const char *username);
 const struct passwd *tor_getpwuid(uid_t uid);
 char *get_user_homedir(const char *username);
-#endif
+#endif /* !defined(_WIN32) */
 
-#endif
+#endif /* !defined(TOR_USERDB_H) */

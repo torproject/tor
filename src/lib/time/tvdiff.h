@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -20,4 +20,4 @@ int64_t tv_to_msec(const struct timeval *tv);
 
 time_t time_diff(const time_t from, const time_t to);
 
-#endif
+#endif /* !defined(TOR_TVDIFF_H) */

@@ -1,3 +1,0 @@
-  o Testing (continuous integration):
-    - In Travis, make stem log a controller trace to the console. And tail
-      stem's tor log after failure. Closes ticket 30591.

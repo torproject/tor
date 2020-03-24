@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -14,22 +14,16 @@
 #ifdef HAVE_MODULE_DIRAUTH
 
 int authdir_mode(const or_options_t *options);
+int authdir_mode_v3(const or_options_t *options);
 int authdir_mode_handles_descs(const or_options_t *options, int purpose);
 int authdir_mode_publishes_statuses(const or_options_t *options);
 int authdir_mode_tests_reachability(const or_options_t *options);
 int authdir_mode_bridge(const or_options_t *options);
 
-/* Return true iff we believe ourselves to be a v3 authoritative directory
- * server. */
-static inline int
-authdir_mode_v3(const or_options_t *options)
-{
-  return authdir_mode(options) && options->V3AuthoritativeDir != 0;
-}
-
+/* Is the dirauth module enabled? */
 #define have_module_dirauth() (1)
 
-#else /* HAVE_MODULE_DIRAUTH */
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
 
 #define authdir_mode(options) (((void)(options)),0)
 #define authdir_mode_handles_descs(options,purpose) \
@@ -41,6 +35,6 @@ authdir_mode_v3(const or_options_t *options)
 
 #define have_module_dirauth() (0)
 
-#endif /* HAVE_MODULE_DIRAUTH */
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
-#endif /* TOR_MODE_H */
+#endif /* !defined(TOR_DIRAUTH_MODE_H) */

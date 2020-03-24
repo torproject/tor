@@ -1,3 +1,0 @@
-  o Minor bugfixes (bridges):
-    - Lowercase the value of BridgeDistribution from torrc before adding it to
-      the descriptor. Fixes bug 32753; bugfix on 0.3.2.3-alpha.

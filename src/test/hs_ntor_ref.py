@@ -41,6 +41,11 @@ The whole logic and concept for this test suite was taken from ntor_ref.py.
                 *** DO NOT USE THIS IN PRODUCTION. ***
 """
 
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import struct
 import os, sys
 import binascii

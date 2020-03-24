@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -19,6 +19,27 @@
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
+
+#ifdef TOR_COVERAGE
+/* For coverage builds, we use a slower definition of these macros without
+ * branches, to make coverage consistent. */
+#undef timeradd
+#undef timersub
+#define timeradd(tv1,tv2,tvout) \
+  do {                          \
+    (tvout)->tv_sec = (tv1)->tv_sec + (tv2)->tv_sec;    \
+    (tvout)->tv_usec = (tv1)->tv_usec + (tv2)->tv_usec; \
+    (tvout)->tv_sec += (tvout)->tv_usec / 1000000;      \
+    (tvout)->tv_usec %= 1000000;                        \
+  } while (0)
+#define timersub(tv1,tv2,tvout) \
+  do {                          \
+    (tvout)->tv_sec = (tv1)->tv_sec - (tv2)->tv_sec - 1;            \
+    (tvout)->tv_usec = (tv1)->tv_usec - (tv2)->tv_usec + 1000000;   \
+    (tvout)->tv_sec += (tvout)->tv_usec / 1000000;                  \
+    (tvout)->tv_usec %= 1000000;                                    \
+  } while (0)
+#endif /* defined(TOR_COVERAGE) */
 
 #ifndef timeradd
 /** Replacement for timeradd on platforms that do not have it: sets tvout to
@@ -48,6 +69,7 @@
   } while (0)
 #endif /* !defined(timersub) */
 
+#ifndef COCCI
 #ifndef timercmp
 /** Replacement for timercmp on platforms that do not have it: returns true
  * iff the relational operator "op" makes the expression tv1 op tv2 true.
@@ -61,5 +83,6 @@
    ((tv1)->tv_usec op (tv2)->tv_usec) :         \
    ((tv1)->tv_sec op (tv2)->tv_sec))
 #endif /* !defined(timercmp) */
+#endif /* !defined(COCCI) */
 
-#endif
+#endif /* !defined(TOR_TIMEVAL_H) */

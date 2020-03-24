@@ -1,5 +1,10 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file hs_ntor.h
+ * @brief Header for hs_ntor.c
+ **/
 
 #ifndef TOR_HS_NTOR_H
 #define TOR_HS_NTOR_H
@@ -14,7 +19,7 @@ struct curve25519_keypair_t;
   (DIGEST256_LEN*2 + CIPHER256_KEY_LEN*2)
 
 /* Key material needed to encode/decode INTRODUCE1 cells */
-typedef struct {
+typedef struct hs_ntor_intro_cell_keys_t {
   /* Key used for encryption of encrypted INTRODUCE1 blob */
   uint8_t enc_key[CIPHER256_KEY_LEN];
   /* MAC key used to protect encrypted INTRODUCE1 blob */
@@ -22,7 +27,7 @@ typedef struct {
 } hs_ntor_intro_cell_keys_t;
 
 /* Key material needed to encode/decode RENDEZVOUS1 cells */
-typedef struct {
+typedef struct hs_ntor_rend_cell_keys_t {
   /* This is the MAC of the HANDSHAKE_INFO field */
   uint8_t rend_cell_auth_mac[DIGEST256_LEN];
   /* This is the key seed used to derive further rendezvous crypto keys as

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -19,4 +19,4 @@
 /** Length of our legacy DH keys. */
 #define DH1024_KEY_LEN (1024/8)
 
-#endif
+#endif /* !defined(TOR_DH_SIZES_H) */

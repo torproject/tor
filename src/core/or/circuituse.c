@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -35,13 +35,15 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitstats.h"
 #include "core/or/circuituse.h"
+#include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/policies.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/bridges.h"
 #include "feature/client/circpathbias.h"
 #include "feature/client/entrynodes.h"
-#include "feature/control/control.h"
+#include "feature/client/proxymode.h"
+#include "feature/control/control_events.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_client.h"
@@ -69,7 +71,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 
-static void circuit_expire_old_circuits_clientside(void);
+STATIC void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
 
 /** Check whether the hidden service destination of the stream at
@@ -177,7 +179,6 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
       purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
       purpose == CIRCUIT_PURPOSE_C_HSDIR_GET) {
     tor_addr_t addr;
-    const int family = tor_addr_parse(&addr, conn->socks_request->address);
     if (!exitnode && !build_state->onehop_tunnel) {
       log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
@@ -198,6 +199,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
           return 0; /* this is a circuit to somewhere else */
         if (tor_digest_is_zero(digest)) {
           /* we don't know the digest; have to compare addr:port */
+          const int family = tor_addr_parse(&addr,
+                                            conn->socks_request->address);
           if (family < 0 ||
               !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
               build_state->chosen_exit->port != conn->socks_request->port)
@@ -210,12 +213,14 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
         return 0;
       }
     }
-    if (origin_circ->prepend_policy && family != -1) {
-      int r = compare_tor_addr_to_addr_policy(&addr,
-                                              conn->socks_request->port,
-                                              origin_circ->prepend_policy);
-      if (r == ADDR_POLICY_REJECTED)
-        return 0;
+    if (origin_circ->prepend_policy) {
+      if (tor_addr_parse(&addr, conn->socks_request->address) != -1) {
+        int r = compare_tor_addr_to_addr_policy(&addr,
+                                                conn->socks_request->port,
+                                                origin_circ->prepend_policy);
+        if (r == ADDR_POLICY_REJECTED)
+          return 0;
+      }
     }
     if (exitnode && !connection_ap_can_use_exit(conn, exitnode)) {
       /* can't exit from this router */
@@ -770,16 +775,11 @@ circuit_expire_building(void)
     if (!(TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)) {
       switch (victim->purpose) {
       case CIRCUIT_PURPOSE_C_REND_READY:
-        /* We only want to spare a rend circ if it has been specified in
-         * an INTRODUCE1 cell sent to a hidden service.  A circ's
-         * pending_final_cpath field is non-NULL iff it is a rend circ
-         * and we have tried to send an INTRODUCE1 cell specifying it.
-         * Thus, if the pending_final_cpath field *is* NULL, then we
-         * want to not spare it. */
-        if (TO_ORIGIN_CIRCUIT(victim)->build_state &&
-            TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
-            NULL)
+        /* We only want to spare a rend circ iff it has been specified in an
+         * INTRODUCE1 cell sent to a hidden service. */
+        if (!hs_circ_is_rend_sent_in_intro1(CONST_TO_ORIGIN_CIRCUIT(victim))) {
           break;
+        }
         /* fallthrough! */
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
@@ -1425,6 +1425,11 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
       if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
         hs_dec_rdv_stream_counter(origin_circ);
       }
+
+      /* If there are no more streams on this circ, tell circpad */
+      if (!origin_circ->p_streams)
+        circpad_machine_event_circ_has_no_streams(origin_circ);
+
       return;
     }
   } else {
@@ -1465,7 +1470,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
 /** Find each circuit that has been unused for too long, or dirty
  * for too long and has no streams on it: mark it for close.
  */
-static void
+STATIC void
 circuit_expire_old_circuits_clientside(void)
 {
   struct timeval cutoff, now;
@@ -1505,6 +1510,7 @@ circuit_expire_old_circuits_clientside(void)
                 circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
                 circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
                 circ->purpose == CIRCUIT_PURPOSE_TESTING ||
+                circ->purpose == CIRCUIT_PURPOSE_C_CIRCUIT_PADDING ||
                 (circ->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
                 circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
                 circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
@@ -1674,7 +1680,7 @@ circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 void
 circuit_has_opened(origin_circuit_t *circ)
 {
-  control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
+  circuit_event_status(circ, CIRC_EVENT_BUILT, 0);
 
   /* Remember that this circuit has finished building. Now if we start
    * it building again later (e.g. by extending it), we will know not
@@ -1954,23 +1960,61 @@ have_enough_path_info(int need_exit)
 int
 circuit_purpose_is_hidden_service(uint8_t purpose)
 {
-   if (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS) {
-     return 1;
-   }
+  /* HS Vanguard purpose. */
+  if (circuit_purpose_is_hs_vanguards(purpose)) {
+    return 1;
+  }
 
-   /* Client-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
-       purpose <= CIRCUIT_PURPOSE_C_HS_MAX_) {
-     return 1;
-   }
+  /* Client-side purpose */
+  if (circuit_purpose_is_hs_client(purpose)) {
+    return 1;
+  }
 
-   /* Service-side purpose */
-   if (purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
-       purpose <= CIRCUIT_PURPOSE_S_HS_MAX_) {
-     return 1;
-   }
+  /* Service-side purpose */
+  if (circuit_purpose_is_hs_service(purpose)) {
+    return 1;
+  }
 
-   return 0;
+  return 0;
+}
+
+/** Retrun true iff the given circuit is an HS client circuit. */
+bool
+circuit_purpose_is_hs_client(const uint8_t purpose)
+{
+  return (purpose >= CIRCUIT_PURPOSE_C_HS_MIN_ &&
+          purpose <= CIRCUIT_PURPOSE_C_HS_MAX_);
+}
+
+/** Retrun true iff the given circuit is an HS service circuit. */
+bool
+circuit_purpose_is_hs_service(const uint8_t purpose)
+{
+  return (purpose >= CIRCUIT_PURPOSE_S_HS_MIN_ &&
+          purpose <= CIRCUIT_PURPOSE_S_HS_MAX_);
+}
+
+/** Retrun true iff the given circuit is an HS Vanguards circuit. */
+bool
+circuit_purpose_is_hs_vanguards(const uint8_t purpose)
+{
+  return (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS);
+}
+
+/** Retrun true iff the given circuit is an HS v2 circuit. */
+bool
+circuit_is_hs_v2(const circuit_t *circ)
+{
+  return (CIRCUIT_IS_ORIGIN(circ) &&
+          (CONST_TO_ORIGIN_CIRCUIT(circ)->rend_data != NULL));
+}
+
+/** Retrun true iff the given circuit is an HS v3 circuit. */
+bool
+circuit_is_hs_v3(const circuit_t *circ)
+{
+  return (CIRCUIT_IS_ORIGIN(circ) &&
+          (CONST_TO_ORIGIN_CIRCUIT(circ)->hs_ident != NULL));
 }
 
 /**
@@ -2523,8 +2567,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
           circ->rend_data = rend_data_dup(edge_conn->rend_data);
         } else if (edge_conn->hs_ident) {
           circ->hs_ident =
-            hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk,
-                                 HS_IDENT_CIRCUIT_INTRO);
+            hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk);
         }
         if (circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->base_.state == CIRCUIT_STATE_OPEN)
@@ -2596,6 +2639,12 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %u.",
             (unsigned)circ->base_.n_circ_id);
+
+  /* If this is the first stream on this circuit, tell circpad
+   * that streams are attached */
+  if (!circ->p_streams)
+    circpad_machine_event_circ_has_streams(circ);
+
   /* reset it, so we can measure circ timeouts */
   ENTRY_TO_CONN(apconn)->timestamp_last_read_allowed = time(NULL);
   ENTRY_TO_EDGE_CONN(apconn)->next_stream = circ->p_streams;
@@ -3070,7 +3119,7 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
     /* Take specific actions if we are repurposing a hidden service circuit. */
     if (circuit_purpose_is_hidden_service(circ->purpose) &&
         !circuit_purpose_is_hidden_service(new_purpose)) {
-      hs_circ_cleanup(circ);
+      hs_circ_cleanup_on_repurpose(circ);
     }
   }
 
@@ -3080,6 +3129,8 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_purpose_changed(TO_ORIGIN_CIRCUIT(circ),
                                           old_purpose);
+
+    circpad_machine_event_circ_purpose_changed(TO_ORIGIN_CIRCUIT(circ));
   }
 }
 
@@ -3113,7 +3164,9 @@ circuit_sent_valid_data(origin_circuit_t *circ, uint16_t relay_body_len)
 {
   if (!circ) return;
 
-  tor_assert_nonfatal(relay_body_len <= RELAY_PAYLOAD_SIZE);
+  tor_assertf_nonfatal(relay_body_len <= RELAY_PAYLOAD_SIZE,
+                       "Wrong relay_body_len: %d (should be at most %d)",
+                       relay_body_len, RELAY_PAYLOAD_SIZE);
 
   circ->n_delivered_written_circ_bw =
       tor_add_u32_nowrap(circ->n_delivered_written_circ_bw, relay_body_len);

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -285,7 +285,7 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       if (rv < 0)
         return S2K_FAILED;
       return (int)key_out_len;
-#else
+#else /* !defined(ENABLE_OPENSSL) */
       SECItem passItem = { .type = siBuffer,
                            .data = (unsigned char *) secret,
                            .len = (int)secret_len };
@@ -325,7 +325,7 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       if (alg)
         SECOID_DestroyAlgorithmID(alg, PR_TRUE);
       return rv;
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
     }
 
     case S2K_TYPE_SCRYPT: {
@@ -348,7 +348,7 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       if (rv != 0)
         return S2K_FAILED;
       return (int)key_out_len;
-#else /* !(defined(HAVE_SCRYPT)) */
+#else /* !defined(HAVE_SCRYPT) */
       return S2K_NO_SCRYPT_SUPPORT;
 #endif /* defined(HAVE_SCRYPT) */
     }
@@ -380,7 +380,7 @@ secret_to_key_derivekey(uint8_t *key_out, size_t key_out_len,
 #ifndef HAVE_SCRYPT
   if (type == S2K_TYPE_SCRYPT)
     return S2K_NO_SCRYPT_SUPPORT;
- #endif
+#endif
 
   if (! legacy_format) {
     ++spec;

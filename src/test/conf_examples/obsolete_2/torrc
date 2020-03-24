@@ -1,0 +1,5 @@
+# This option has been obsolete for some time
+# Obsolete options without arguments, or with an empty argument,
+# are silently ignored.
+AllowDotExit
+AllowInvalidNodes ""

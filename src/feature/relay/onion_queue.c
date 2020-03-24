@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -212,10 +212,12 @@ num_ntors_per_tap(void)
 #define MIN_NUM_NTORS_PER_TAP 1
 #define MAX_NUM_NTORS_PER_TAP 100000
 
-  return networkstatus_get_param(NULL, "NumNTorsPerTAP",
-                                 DEFAULT_NUM_NTORS_PER_TAP,
-                                 MIN_NUM_NTORS_PER_TAP,
-                                 MAX_NUM_NTORS_PER_TAP);
+  int result = networkstatus_get_param(NULL, "NumNTorsPerTAP",
+                                       DEFAULT_NUM_NTORS_PER_TAP,
+                                       MIN_NUM_NTORS_PER_TAP,
+                                       MAX_NUM_NTORS_PER_TAP);
+  tor_assert(result > 0);
+  return result;
 }
 
 /** Choose which onion queue we'll pull from next. If one is empty choose

@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -89,7 +89,7 @@ void tor_compress_free_(tor_compress_state_t *state);
 
 size_t tor_compress_state_size(const tor_compress_state_t *state);
 
-void tor_compress_init(void);
+int tor_compress_init(void);
 void tor_compress_log_init_warnings(void);
 
 struct buf_t;

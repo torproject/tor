@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /*
@@ -134,7 +134,7 @@ MOCK_DECL(STATIC unsigned int, get_param_cc_enabled,
 MOCK_DECL(STATIC unsigned int, get_param_conn_enabled,
           (const networkstatus_t *ns));
 
-#endif /* TOR_DOS_PRIVATE */
+#endif /* defined(DOS_PRIVATE) */
 
-#endif /* TOR_DOS_H */
+#endif /* !defined(TOR_DOS_H) */
 

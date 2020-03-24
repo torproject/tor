@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -104,4 +104,4 @@ struct sockaddr_in6 {
 };
 #endif /* !defined(HAVE_STRUCT_SOCKADDR_IN6) */
 
-#endif /* TOR_INADDR_ST_H */
+#endif /* !defined(TOR_INADDR_ST_H) */

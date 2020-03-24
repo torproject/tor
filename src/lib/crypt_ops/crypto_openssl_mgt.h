@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -84,6 +84,6 @@ int crypto_openssl_late_init(int useAccel, const char *accelName,
 void crypto_openssl_thread_cleanup(void);
 void crypto_openssl_global_cleanup(void);
 
-#endif /* ENABLE_OPENSSL */
+#endif /* defined(ENABLE_OPENSSL) */
 
 #endif /* !defined(TOR_CRYPTO_OPENSSL_H) */

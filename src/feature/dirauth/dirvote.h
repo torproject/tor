@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -49,35 +49,17 @@
 #define MIN_VOTE_INTERVAL_TESTING_INITIAL \
                 ((MIN_VOTE_SECONDS_TESTING)+(MIN_DIST_SECONDS_TESTING)+1)
 
-/* A placeholder for routerstatus_format_entry() when the consensus method
- * argument is not applicable. */
-#define ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD 0
-
 /** The lowest consensus method that we currently support. */
-#define MIN_SUPPORTED_CONSENSUS_METHOD 25
+#define MIN_SUPPORTED_CONSENSUS_METHOD 28
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 28
+#define MAX_SUPPORTED_CONSENSUS_METHOD 29
 
-/** Lowest consensus method where authorities vote on required/recommended
- * protocols. */
-#define MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS 25
-
-/** Lowest consensus method where authorities add protocols to routerstatus
- * entries. */
-#define MIN_METHOD_FOR_RS_PROTOCOLS 25
-
-/** Lowest consensus method where authorities initialize bandwidth weights to 1
- * instead of 0. See #14881 */
-#define MIN_METHOD_FOR_INIT_BW_WEIGHTS_ONE 26
-
-/** Lowest consensus method where the microdesc consensus contains relay IPv6
- * addresses. See #23826 and #20916. */
-#define MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS 27
-
-/** Lowest consensus method where microdescriptors do not contain relay IPv6
- * addresses. See #23828 and #20916. */
-#define MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC 28
+/**
+ * Lowest consensus method where microdescriptor lines are put in canonical
+ * form for improved compressibility and ease of storage. See proposal 298.
+ **/
+#define MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS 29
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not
@@ -91,6 +73,9 @@
 
 /** Maximum size of a line in a vote. */
 #define MAX_BW_FILE_HEADERS_LINE_LEN 1024
+
+extern const char DIRVOTE_UNIVERSAL_FLAGS[];
+extern const char DIRVOTE_OPTIONAL_FLAGS[];
 
 /*
  * Public API. Used outside of the dirauth subsystem.
@@ -119,7 +104,7 @@ struct config_line_t;
 char *format_recommended_version_list(const struct config_line_t *line,
                                       int warn);
 
-#else /* HAVE_MODULE_DIRAUTH */
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
 
 static inline time_t
 dirvote_act(const or_options_t *options, time_t now)
@@ -177,14 +162,14 @@ dirvote_add_signatures(const char *detached_signatures_body,
 {
   (void) detached_signatures_body;
   (void) source;
-  (void) msg_out;
+  *msg_out = "No directory authority support";
   /* If the dirauth module is disabled, this should NEVER be called else we
    * failed to safeguard the dirauth module. */
   tor_assert_nonfatal_unreached();
   return 0;
 }
 
-#endif /* HAVE_MODULE_DIRAUTH */
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,

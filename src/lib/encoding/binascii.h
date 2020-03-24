@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -42,6 +42,7 @@ const char *hex_str(const char *from, size_t fromlen);
 
 #define BASE64_ENCODE_MULTILINE 1
 size_t base64_encode_size(size_t srclen, int flags);
+size_t base64_decode_maxsize(size_t srclen);
 int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
                   int flags);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
@@ -57,4 +58,4 @@ size_t base32_encoded_size(size_t srclen);
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
-#endif /* !defined(TOR_UTIL_FORMAT_H) */
+#endif /* !defined(TOR_BINASCII_H) */

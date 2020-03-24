@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -59,8 +59,6 @@
 
 /* Temporarily enable and disable warnings. */
 #ifdef __GNUC__
-#  define PRAGMA_STRINGIFY_(s) #s
-#  define PRAGMA_JOIN_STRINGIFY_(a,b) PRAGMA_STRINGIFY_(a ## b)
 /* Support for macro-generated pragmas (c99) */
 #  define PRAGMA_(x) _Pragma (#x)
 #  ifdef __clang__
@@ -72,17 +70,17 @@
 /* we have push/pop support */
 #    define DISABLE_GCC_WARNING(warningopt) \
           PRAGMA_DIAGNOSTIC_(push) \
-          PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
+          PRAGMA_DIAGNOSTIC_(ignored warningopt)
 #    define ENABLE_GCC_WARNING(warningopt) \
           PRAGMA_DIAGNOSTIC_(pop)
 #else /* !(defined(__clang__) || GCC_VERSION >= 406) */
 /* older version of gcc: no push/pop support. */
 #    define DISABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
+         PRAGMA_DIAGNOSTIC_(ignored warningopt)
 #    define ENABLE_GCC_WARNING(warningopt) \
-         PRAGMA_DIAGNOSTIC_(warning PRAGMA_JOIN_STRINGIFY_(-W,warningopt))
+         PRAGMA_DIAGNOSTIC_(warning warningopt)
 #endif /* defined(__clang__) || GCC_VERSION >= 406 */
-#else /* !(defined(__GNUC__)) */
+#else /* !defined(__GNUC__) */
 /* not gcc at all */
 # define DISABLE_GCC_WARNING(warning)
 # define ENABLE_GCC_WARNING(warning)
@@ -194,8 +192,8 @@
 /** Macro: yield a pointer to the field at position <b>off</b> within the
  * structure <b>st</b>.  Example:
  * <pre>
- *   struct a { int foo; int bar; } x;
- *   off_t bar_offset = offsetof(struct a, bar);
+ *   struct a_t { int foo; int bar; } x;
+ *   ptrdiff_t bar_offset = offsetof(struct a_t, bar);
  *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
  *   *bar_p = 3;
  * </pre>
@@ -205,10 +203,10 @@
 /** Macro: yield a pointer to an enclosing structure given a pointer to
  * a substructure at offset <b>off</b>. Example:
  * <pre>
- *   struct base { ... };
- *   struct subtype { int x; struct base b; } x;
- *   struct base *bp = &x.base;
- *   struct *sp = SUBTYPE_P(bp, struct subtype, b);
+ *   struct base_t { ... };
+ *   struct subtype_t { int x; struct base_t b; } x;
+ *   struct base_t *bp = &x.base;
+ *   struct *sp = SUBTYPE_P(bp, struct subtype_t, b);
  * </pre>
  */
 #define SUBTYPE_P(p, subtype, basemember) \
@@ -217,4 +215,29 @@
 /** Macro: Yields the number of elements in array x. */
 #define ARRAY_LENGTH(x) ((sizeof(x)) / sizeof(x[0]))
 
-#endif /* !defined(TOR_COMPAT_H) */
+/**
+ * "Eat" a semicolon that somebody puts at the end of a top-level macro.
+ *
+ * Frequently, we want to declare a macro that people will use at file scope,
+ * and we want to allow people to put a semicolon after the macro.
+ *
+ * This declaration of a struct can be repeated any number of times, and takes
+ * a trailing semicolon afterwards.
+ **/
+#define EAT_SEMICOLON                                   \
+  struct dummy_semicolon_eater__
+
+/**
+ * Tell our static analysis tool to believe that (clang's scan-build or
+ * coverity scan) that an expression might be true.  We use this to suppress
+ * dead-code warnings.
+ **/
+#if defined(__COVERITY__) || defined(__clang_analyzer__)
+/* By calling getenv, we force the analyzer not to conclude that 'expr' is
+ * false. */
+#define POSSIBLE(expr) ((expr) || getenv("STATIC_ANALYZER_DEADCODE_DUMMY_"))
+#else
+#define POSSIBLE(expr) (expr)
+#endif /* defined(__COVERITY__) || defined(__clang_analyzer__) */
+
+#endif /* !defined(TOR_COMPAT_COMPILER_H) */

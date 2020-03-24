@@ -1,10 +1,18 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_TORTLS_ST_H
 #define TOR_TORTLS_ST_H
+
+/**
+ * @file tortls_st.h
+ * @brief Structure declarations for internal TLS types.
+ *
+ * These should generally be treated as opaque outside of the
+ * lib/tls module.
+ **/
 
 #include "lib/net/socket.h"
 
@@ -64,7 +72,7 @@ struct tor_tls_t {
   void (*negotiated_callback)(tor_tls_t *tls, void *arg);
   /** Argument to pass to negotiated_callback. */
   void *callback_arg;
-#endif
+#endif /* defined(ENABLE_OPENSSL) */
 #ifdef ENABLE_NSS
   /** Last values retried from tor_get_prfiledesc_byte_counts(). */
   uint64_t last_write_count;
@@ -72,4 +80,4 @@ struct tor_tls_t {
 #endif
 };
 
-#endif
+#endif /* !defined(TOR_TORTLS_ST_H) */

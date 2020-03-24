@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -27,4 +27,4 @@ int tor_asprintf(char **strp, const char *fmt, ...)
 int tor_vasprintf(char **strp, const char *fmt, va_list args)
   CHECK_PRINTF(2,0);
 
-#endif /* !defined(TOR_UTIL_STRING_H) */
+#endif /* !defined(TOR_UTIL_PRINTF_H) */

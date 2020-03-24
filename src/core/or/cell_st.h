@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file cell_st.h
+ * @brief Fixed-size cell structure.
+ **/
 
 #ifndef CELL_ST_H
 #define CELL_ST_H
@@ -16,5 +21,4 @@ struct cell_t {
   uint8_t payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 };
 
-#endif
-
+#endif /* !defined(CELL_ST_H) */

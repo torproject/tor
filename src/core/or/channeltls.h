@@ -1,4 +1,4 @@
-/* * Copyright (c) 2012-2019, The Tor Project, Inc. */
+/* * Copyright (c) 2012-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -22,16 +22,16 @@ struct curve25519_public_key_t;
 
 #define TLS_CHAN_MAGIC 0x8a192427U
 
-#ifdef TOR_CHANNEL_INTERNAL_
+#ifdef CHANNEL_OBJECT_PRIVATE
 
-struct channel_tls_s {
+struct channel_tls_t {
   /* Base channel_t struct */
   channel_t base_;
   /* or_connection_t pointer */
   or_connection_t *conn;
 };
 
-#endif /* defined(TOR_CHANNEL_INTERNAL_) */
+#endif /* defined(CHANNEL_OBJECT_PRIVATE) */
 
 channel_t * channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                                 const char *id_digest,
@@ -49,7 +49,6 @@ channel_tls_t * channel_tls_from_base(channel_t *chan);
 void channel_tls_handle_cell(cell_t *cell, or_connection_t *conn);
 void channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
                                                or_connection_t *conn,
-                                               uint8_t old_state,
                                                uint8_t state);
 void channel_tls_handle_var_cell(var_cell_t *var_cell,
                                  or_connection_t *conn);

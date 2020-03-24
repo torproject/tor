@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -14,8 +14,10 @@
 
 #include "feature/hs/hs_service.h"
 
-/* Cleanup function when the circuit is closed or/and freed. */
-void hs_circ_cleanup(circuit_t *circ);
+/* Cleanup function when the circuit is closed or freed. */
+void hs_circ_cleanup_on_close(circuit_t *circ);
+void hs_circ_cleanup_on_free(circuit_t *circ);
+void hs_circ_cleanup_on_repurpose(circuit_t *circ);
 
 /* Circuit API. */
 int hs_circ_service_intro_has_opened(hs_service_t *service,
@@ -34,6 +36,8 @@ int hs_circ_launch_rendezvous_point(const hs_service_t *service,
 void hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ);
 
 origin_circuit_t *hs_circ_service_get_intro_circ(
+                                      const hs_service_intro_point_t *ip);
+origin_circuit_t *hs_circ_service_get_established_intro_circ(
                                       const hs_service_intro_point_t *ip);
 
 /* Cell API. */
@@ -62,15 +66,18 @@ int hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
 int hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
                                           const uint8_t *rend_cell_body);
 
+bool hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ);
+
 #ifdef HS_CIRCUIT_PRIVATE
+
+struct hs_ntor_rend_cell_keys_t;
 
 STATIC hs_ident_circuit_t *
 create_rp_circuit_identifier(const hs_service_t *service,
                              const uint8_t *rendezvous_cookie,
                              const curve25519_public_key_t *server_pk,
-                             const hs_ntor_rend_cell_keys_t *keys);
+                             const struct hs_ntor_rend_cell_keys_t *keys);
 
 #endif /* defined(HS_CIRCUIT_PRIVATE) */
 
 #endif /* !defined(TOR_HS_CIRCUIT_H) */
-

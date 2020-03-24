@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file control_connection_st.h
+ * @brief Controller connection structure.
+ **/
 
 #ifndef CONTROL_CONNECTION_ST_H
 #define CONTROL_CONNECTION_ST_H
@@ -40,7 +45,8 @@ struct control_connection_t {
   /** A control command that we're reading from the inbuf, but which has not
    * yet arrived completely. */
   char *incoming_cmd;
+  /** The control command that we are currently processing. */
+  char *current_cmd;
 };
 
-#endif
-
+#endif /* !defined(CONTROL_CONNECTION_ST_H) */

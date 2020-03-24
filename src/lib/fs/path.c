@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -72,7 +72,7 @@ expand_filename(const char *filename)
    *     Chapter+3.+Input+Validation/3.7+Validating+Filenames+and+Paths/
    */
   return tor_strdup(filename);
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   if (*filename == '~') {
     char *home, *result=NULL;
     const char *rest;
@@ -102,7 +102,7 @@ expand_filename(const char *filename)
       }
       tor_free(username);
       rest = slash ? (slash+1) : "";
-#else /* !(defined(HAVE_PWD_H)) */
+#else /* !defined(HAVE_PWD_H) */
       log_warn(LD_CONFIG, "Couldn't expand homedir on system without pwd.h");
       return tor_strdup(filename);
 #endif /* defined(HAVE_PWD_H) */
@@ -153,7 +153,7 @@ clean_fname_for_stat(char *name)
       return;
     name[len-1]='\0';
   }
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   (void)name;
 #endif /* defined(_WIN32) */
 }
@@ -233,7 +233,7 @@ alloc_getcwd(void)
     raw_free(cwd); // alias for free to avoid tripping check-spaces.
   }
   return result;
-#else /* !(defined(HAVE_GET_CURRENT_DIR_NAME)) */
+#else /* !defined(HAVE_GET_CURRENT_DIR_NAME) */
   size_t size = 1024;
   char *buf = NULL;
   char *ptr = NULL;
@@ -255,9 +255,10 @@ alloc_getcwd(void)
 #endif /* !defined(_WIN32) */
 
 /** Expand possibly relative path <b>fname</b> to an absolute path.
- * Return a newly allocated string, possibly equal to <b>fname</b>. */
+ * Return a newly allocated string, which may be a duplicate of <b>fname</b>.
+ */
 char *
-make_path_absolute(char *fname)
+make_path_absolute(const char *fname)
 {
 #ifdef _WIN32
   char *absfname_malloced = _fullpath(NULL, fname, 1);
@@ -268,7 +269,7 @@ make_path_absolute(char *fname)
   if (absfname_malloced) raw_free(absfname_malloced);
 
   return absfname;
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   char *absfname = NULL, *path = NULL;
 
   tor_assert(fname);

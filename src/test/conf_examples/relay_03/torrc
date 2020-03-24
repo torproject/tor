@@ -1,0 +1,5 @@
+# Relay tests
+# Options from relay/relay_config.c
+# DirPort, but no ORPort
+ORPort 0
+DirPort 1

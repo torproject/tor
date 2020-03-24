@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -28,4 +28,4 @@ void address_set_add_ipv4h(address_set_t *set, uint32_t addr);
 int address_set_probably_contains(const address_set_t *set,
                                   const struct tor_addr_t *addr);
 
-#endif
+#endif /* !defined(TOR_ADDRESS_SET_H) */

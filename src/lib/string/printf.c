@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -117,8 +117,8 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
     *strp = NULL;
     return -1;
   }
-  strp_tmp = tor_malloc(len + 1);
-  r = _vsnprintf(strp_tmp, len+1, fmt, args);
+  strp_tmp = tor_malloc((size_t)len + 1);
+  r = _vsnprintf(strp_tmp, (size_t)len+1, fmt, args);
   if (r != len) {
     tor_free(strp_tmp);
     *strp = NULL;
@@ -153,9 +153,9 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
     *strp = tor_strdup(buf);
     return len;
   }
-  strp_tmp = tor_malloc(len+1);
+  strp_tmp = tor_malloc((size_t)len+1);
   /* use of tor_vsnprintf() will ensure string is null terminated */
-  r = tor_vsnprintf(strp_tmp, len+1, fmt, args);
+  r = tor_vsnprintf(strp_tmp, (size_t)len+1, fmt, args);
   if (r != len) {
     tor_free(strp_tmp);
     *strp = NULL;

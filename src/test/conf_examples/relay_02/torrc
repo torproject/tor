@@ -1,0 +1,7 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Bad options are also ignored
+ORPort illegal_hostname_chars$()^*%(%#%)#(%*
+DirPort illegal_hostname_chars$()^*%(%#%)#(%*
+DirCache bad
+BridgeRelay bad

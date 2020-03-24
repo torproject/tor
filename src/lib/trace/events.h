@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -34,12 +34,12 @@
 #include "lib/trace/debug.h"
 #endif
 
-#else /* TOR_EVENT_TRACING_ENABLED */
+#else /* !defined(TOR_EVENT_TRACING_ENABLED) */
 
 /* Reaching this point, we NOP every event declaration because event tracing
  * is not been enabled at compile time. */
 #define tor_trace(subsystem, name, args...)
 
-#endif /* TOR_EVENT_TRACING_ENABLED */
+#endif /* defined(TOR_EVENT_TRACING_ENABLED) */
 
-#endif /* TOR_TRACE_EVENTS_H */
+#endif /* !defined(TOR_TRACE_EVENTS_H) */

@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -34,7 +34,7 @@
 #include "lib/tls/nss_countbytes.h"
 #include "lib/log/util_bug.h"
 
-DISABLE_GCC_WARNING(strict-prototypes)
+DISABLE_GCC_WARNING("-Wstrict-prototypes")
 #include <prio.h>
 // For access to rar sockets.
 #include <private/pprio.h>
@@ -42,7 +42,7 @@ DISABLE_GCC_WARNING(strict-prototypes)
 #include <sslt.h>
 #include <sslproto.h>
 #include <certt.h>
-ENABLE_GCC_WARNING(strict-prototypes)
+ENABLE_GCC_WARNING("-Wstrict-prototypes")
 
 static SECStatus always_accept_cert_cb(void *, PRFileDesc *, PRBool, PRBool);
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -8,7 +8,6 @@
  *        as part of the dirauth module.
  **/
 
-#define SHARED_RANDOM_CLIENT_PRIVATE
 #include "feature/hs_common/shared_random_client.h"
 
 #include "app/config/config.h"
@@ -18,7 +17,7 @@
 
 #include "feature/nodelist/networkstatus_st.h"
 
-/* Convert a given srv object to a string for the control port. This doesn't
+/** Convert a given srv object to a string for the control port. This doesn't
  * fail and the srv object MUST be valid. */
 static char *
 srv_to_control_string(const sr_srv_t *srv)
@@ -32,7 +31,7 @@ srv_to_control_string(const sr_srv_t *srv)
   return srv_str;
 }
 
-/* Return the voting interval of the tor vote subsystem. */
+/** Return the voting interval of the tor vote subsystem. */
 int
 get_voting_interval(void)
 {
@@ -51,7 +50,7 @@ get_voting_interval(void)
   return interval;
 }
 
-/* Given the current consensus, return the start time of the current round of
+/** Given the current consensus, return the start time of the current round of
  * the SR protocol. For example, if it's 23:47:08, the current round thus
  * started at 23:47:00 for a voting interval of 10 seconds.
  *
@@ -78,7 +77,7 @@ get_start_time_of_current_round(void)
  * Public API
  */
 
-/* Encode the given shared random value and put it in dst. Destination
+/** Encode the given shared random value and put it in dst. Destination
  * buffer must be at least SR_SRV_VALUE_BASE64_LEN plus the NULL byte. */
 void
 sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv)
@@ -99,7 +98,7 @@ sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv)
   strlcpy(dst, buf, dst_len);
 }
 
-/* Return the current SRV string representation for the control port. Return a
+/** Return the current SRV string representation for the control port. Return a
  * newly allocated string on success containing the value else "" if not found
  * or if we don't have a valid consensus yet. */
 char *
@@ -115,7 +114,7 @@ sr_get_current_for_control(void)
   return srv_str;
 }
 
-/* Return the previous SRV string representation for the control port. Return
+/** Return the previous SRV string representation for the control port. Return
  * a newly allocated string on success containing the value else "" if not
  * found or if we don't have a valid consensus yet. */
 char *
@@ -131,7 +130,7 @@ sr_get_previous_for_control(void)
   return srv_str;
 }
 
-/* Return current shared random value from the latest consensus. Caller can
+/** Return current shared random value from the latest consensus. Caller can
  * NOT keep a reference to the returned pointer. Return NULL if none. */
 const sr_srv_t *
 sr_get_current(const networkstatus_t *ns)
@@ -154,7 +153,7 @@ sr_get_current(const networkstatus_t *ns)
   return NULL;
 }
 
-/* Return previous shared random value from the latest consensus. Caller can
+/** Return previous shared random value from the latest consensus. Caller can
  * NOT keep a reference to the returned pointer. Return NULL if none. */
 const sr_srv_t *
 sr_get_previous(const networkstatus_t *ns)
@@ -177,7 +176,7 @@ sr_get_previous(const networkstatus_t *ns)
   return NULL;
 }
 
-/* Parse a list of arguments from a SRV value either from a vote, consensus
+/** Parse a list of arguments from a SRV value either from a vote, consensus
  * or from our disk state and return a newly allocated srv object. NULL is
  * returned on error.
  *
@@ -290,4 +289,3 @@ sr_state_get_protocol_run_duration(void)
   int total_protocol_rounds = SHARED_RANDOM_N_ROUNDS * SHARED_RANDOM_N_PHASES;
   return total_protocol_rounds * get_voting_interval();
 }
-

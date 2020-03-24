@@ -1,11 +1,16 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * @file proto_ext_or.c
+ * @brief Parsing/encoding for the extended OR protocol.
+ **/
+
 #include "core/or/or.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "feature/relay/ext_orport.h"
 #include "core/proto/proto_ext_or.h"
 
@@ -37,4 +42,3 @@ fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out)
   buf_get_bytes(buf, (*out)->body, len);
   return 1;
 }
-

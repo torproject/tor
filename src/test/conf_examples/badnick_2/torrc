@@ -1,0 +1,4 @@
+# this nickname has spaces in it and won't work.
+# (Unless the relay module is disabled, because Nickname is a
+# relay-only option. We'll ignore all relay-only options in #32395.)
+Nickname has a space

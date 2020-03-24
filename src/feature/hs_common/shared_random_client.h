@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -44,5 +44,5 @@ time_t get_start_time_of_current_round(void);
 
 #endif /* TOR_UNIT_TESTS */
 
-#endif /* TOR_SHARED_RANDOM_CLIENT_H */
+#endif /* !defined(TOR_SHARED_RANDOM_CLIENT_H) */
 

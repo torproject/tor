@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -42,14 +42,15 @@
 #include "core/or/entry_connection_st.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/socks_request_st.h"
 
-/* Client-side authorizations for hidden services; map of service identity
+/** Client-side authorizations for hidden services; map of service identity
  * public key to hs_client_service_authorization_t *. */
 static digest256map_t *client_auths = NULL;
 
 #include "trunnel/hs/cell_introduce1.h"
 
-/* Return a human-readable string for the client fetch status code. */
+/** Return a human-readable string for the client fetch status code. */
 static const char *
 fetch_status_to_string(hs_client_fetch_status_t status)
 {
@@ -73,7 +74,7 @@ fetch_status_to_string(hs_client_fetch_status_t status)
   }
 }
 
-/* Return true iff tor should close the SOCKS request(s) for the descriptor
+/** Return true iff tor should close the SOCKS request(s) for the descriptor
  * fetch that ended up with this given status code. */
 static int
 fetch_status_should_close_socks(hs_client_fetch_status_t status)
@@ -100,12 +101,51 @@ fetch_status_should_close_socks(hs_client_fetch_status_t status)
   return 1;
 }
 
+/* Return a newly allocated list of all the entry connections that matches the
+ * given service identity pk. If service_identity_pk is NULL, all entry
+ * connections with an hs_ident are returned.
+ *
+ * Caller must free the returned list but does NOT have ownership of the
+ * object inside thus they have to remain untouched. */
+static smartlist_t *
+find_entry_conns(const ed25519_public_key_t *service_identity_pk)
+{
+  time_t now = time(NULL);
+  smartlist_t *conns = NULL, *entry_conns = NULL;
+
+  entry_conns = smartlist_new();
+
+  conns = connection_list_by_type_state(CONN_TYPE_AP,
+                                        AP_CONN_STATE_RENDDESC_WAIT);
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+    entry_connection_t *entry_conn = TO_ENTRY_CONN(base_conn);
+    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+
+    /* Only consider the entry connections that matches the service for which
+     * we just fetched its descriptor. */
+    if (!edge_conn->hs_ident ||
+        (service_identity_pk &&
+         !ed25519_pubkey_eq(service_identity_pk,
+                            &edge_conn->hs_ident->identity_pk))) {
+      continue;
+    }
+    assert_connection_ok(base_conn, now);
+
+    /* Validated! Add the entry connection to the list. */
+    smartlist_add(entry_conns, entry_conn);
+  } SMARTLIST_FOREACH_END(base_conn);
+
+  /* We don't have ownership of the objects in this list. */
+  smartlist_free(conns);
+  return entry_conns;
+}
+
 /* Cancel all descriptor fetches currently in progress. */
 static void
 cancel_descriptor_fetches(void)
 {
   smartlist_t *conns =
-    connection_list_by_type_state(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
+    connection_list_by_type_purpose(CONN_TYPE_DIR, DIR_PURPOSE_FETCH_HSDESC);
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     const hs_ident_dir_conn_t *ident = TO_DIR_CONN(conn)->hs_ident;
     if (BUG(ident == NULL)) {
@@ -124,7 +164,7 @@ cancel_descriptor_fetches(void)
   log_info(LD_REND, "Hidden service client descriptor fetches cancelled.");
 }
 
-/* Get all connections that are waiting on a circuit and flag them back to
+/** Get all connections that are waiting on a circuit and flag them back to
  * waiting for a hidden service descriptor for the given service key
  * service_identity_pk. */
 static void
@@ -151,7 +191,7 @@ flag_all_conn_wait_desc(const ed25519_public_key_t *service_identity_pk)
   smartlist_free(conns);
 }
 
-/* Remove tracked HSDir requests from our history for this hidden service
+/** Remove tracked HSDir requests from our history for this hidden service
  * identity public key. */
 static void
 purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
@@ -167,14 +207,12 @@ purge_hid_serv_request(const ed25519_public_key_t *identity_pk)
    * some point and we don't care about those anymore. */
   hs_build_blinded_pubkey(identity_pk, NULL, 0,
                           hs_get_time_period_num(0), &blinded_pk);
-  if (BUG(ed25519_public_to_base64(base64_blinded_pk, &blinded_pk) < 0)) {
-    return;
-  }
+  ed25519_public_to_base64(base64_blinded_pk, &blinded_pk);
   /* Purge last hidden service request from cache for this blinded key. */
   hs_purge_hid_serv_from_last_hid_serv_requests(base64_blinded_pk);
 }
 
-/* Return true iff there is at least one pending directory descriptor request
+/** Return true iff there is at least one pending directory descriptor request
  * for the service identity_pk. */
 static int
 directory_request_is_pending(const ed25519_public_key_t *identity_pk)
@@ -202,7 +240,7 @@ directory_request_is_pending(const ed25519_public_key_t *identity_pk)
   return ret;
 }
 
-/* Helper function that changes the state of an entry connection to waiting
+/** Helper function that changes the state of an entry connection to waiting
  * for a circuit. For this to work properly, the connection timestamps are set
  * to now and the connection is then marked as pending for a circuit. */
 static void
@@ -222,7 +260,7 @@ mark_conn_as_waiting_for_circuit(connection_t *conn, time_t now)
   connection_ap_mark_as_pending_circuit(TO_ENTRY_CONN(conn));
 }
 
-/* We failed to fetch a descriptor for the service with <b>identity_pk</b>
+/** We failed to fetch a descriptor for the service with <b>identity_pk</b>
  * because of <b>status</b>. Find all pending SOCKS connections for this
  * service that are waiting on the descriptor and close them with
  * <b>reason</b>. */
@@ -232,26 +270,13 @@ close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
                                        int reason)
 {
   unsigned int count = 0;
-  time_t now = approx_time();
-  smartlist_t *conns =
-    connection_list_by_type_state(CONN_TYPE_AP, AP_CONN_STATE_RENDDESC_WAIT);
+  smartlist_t *entry_conns = find_entry_conns(identity_pk);
 
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
-    entry_connection_t *entry_conn = TO_ENTRY_CONN(base_conn);
-    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
-
-    /* Only consider the entry connections that matches the service for which
-     * we tried to get the descriptor */
-    if (!edge_conn->hs_ident ||
-        !ed25519_pubkey_eq(identity_pk,
-                           &edge_conn->hs_ident->identity_pk)) {
-      continue;
-    }
-    assert_connection_ok(base_conn, now);
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
     /* Unattach the entry connection which will close for the reason. */
     connection_mark_unattached_ap(entry_conn, reason);
     count++;
-  } SMARTLIST_FOREACH_END(base_conn);
+  } SMARTLIST_FOREACH_END(entry_conn);
 
   if (count > 0) {
     char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
@@ -264,26 +289,26 @@ close_all_socks_conns_waiting_for_desc(const ed25519_public_key_t *identity_pk,
   }
 
   /* No ownership of the object(s) in this list. */
-  smartlist_free(conns);
+  smartlist_free(entry_conns);
 }
 
-/* Find all pending SOCKS connection waiting for a descriptor and retry them
+/** Find all pending SOCKS connection waiting for a descriptor and retry them
  * all. This is called when the directory information changed. */
 STATIC void
 retry_all_socks_conn_waiting_for_desc(void)
 {
-  smartlist_t *conns =
-    connection_list_by_type_state(CONN_TYPE_AP, AP_CONN_STATE_RENDDESC_WAIT);
+  smartlist_t *entry_conns = find_entry_conns(NULL);
 
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
     hs_client_fetch_status_t status;
-    const edge_connection_t *edge_conn =
-      ENTRY_TO_EDGE_CONN(TO_ENTRY_CONN(base_conn));
+    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+    connection_t *base_conn = &edge_conn->base_;
 
     /* Ignore non HS or non v3 connection. */
     if (edge_conn->hs_ident == NULL) {
       continue;
     }
+
     /* In this loop, we will possibly try to fetch a descriptor for the
      * pending connections because we just got more directory information.
      * However, the refetch process can cleanup all SOCKS request to the same
@@ -317,13 +342,13 @@ retry_all_socks_conn_waiting_for_desc(void)
      * closed or we are still missing directory information. Leave the
      * connection in renddesc wait state so when we get more info, we'll be
      * able to try it again. */
-  } SMARTLIST_FOREACH_END(base_conn);
+  } SMARTLIST_FOREACH_END(entry_conn);
 
   /* We don't have ownership of those objects. */
-  smartlist_free(conns);
+  smartlist_free(entry_conns);
 }
 
-/* A v3 HS circuit successfully connected to the hidden service. Update the
+/** A v3 HS circuit successfully connected to the hidden service. Update the
  * stream state at <b>hs_conn_ident</b> appropriately. */
 static void
 note_connection_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
@@ -345,7 +370,7 @@ note_connection_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
    * will be reset and thus possible to be retried. */
 }
 
-/* Given the pubkey of a hidden service in <b>onion_identity_pk</b>, fetch its
+/** Given the pubkey of a hidden service in <b>onion_identity_pk</b>, fetch its
  * descriptor by launching a dir connection to <b>hsdir</b>. Return a
  * hs_client_fetch_status_t status code depending on how it went. */
 static hs_client_fetch_status_t
@@ -356,7 +381,6 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   ed25519_public_key_t blinded_pubkey;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   hs_ident_dir_conn_t hs_conn_dir_ident;
-  int retval;
 
   tor_assert(hsdir);
   tor_assert(onion_identity_pk);
@@ -365,10 +389,7 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
   hs_build_blinded_pubkey(onion_identity_pk, NULL, 0,
                           current_time_period, &blinded_pubkey);
   /* ...and base64 it. */
-  retval = ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
-  if (BUG(retval < 0)) {
-    return HS_CLIENT_FETCH_ERROR;
-  }
+  ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
 
   /* Copy onion pk to a dir_ident so that we attach it to the dir conn */
   hs_ident_dir_conn_init(onion_identity_pk, &blinded_pubkey,
@@ -407,7 +428,6 @@ directory_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
 STATIC routerstatus_t *
 pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 {
-  int retval;
   char base64_blinded_pubkey[ED25519_BASE64_LEN + 1];
   uint64_t current_time_period = hs_get_time_period_num(0);
   smartlist_t *responsible_hsdirs = NULL;
@@ -420,10 +440,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
   hs_build_blinded_pubkey(onion_identity_pk, NULL, 0,
                           current_time_period, &blinded_pubkey);
   /* ...and base64 it. */
-  retval = ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
-  if (BUG(retval < 0)) {
-    return NULL;
-  }
+  ed25519_public_to_base64(base64_blinded_pubkey, &blinded_pubkey);
 
   /* Get responsible hsdirs of service for this time period */
   responsible_hsdirs = smartlist_new();
@@ -436,7 +453,7 @@ pick_hsdir_v3(const ed25519_public_key_t *onion_identity_pk)
 
   /* Pick an HSDir from the responsible ones. The ownership of
    * responsible_hsdirs is given to this function so no need to free it. */
-  hsdir_rs = hs_pick_hsdir(responsible_hsdirs, base64_blinded_pubkey);
+  hsdir_rs = hs_pick_hsdir(responsible_hsdirs, base64_blinded_pubkey, NULL);
 
   return hsdir_rs;
 }
@@ -461,7 +478,25 @@ fetch_v3_desc, (const ed25519_public_key_t *onion_identity_pk))
   return directory_launch_v3_desc_fetch(onion_identity_pk, hsdir_rs);
 }
 
-/* Make sure that the given v3 origin circuit circ is a valid correct
+/** With a given <b>onion_identity_pk</b>, fetch its descriptor. If
+ * <b>hsdirs</b> is specified, use the directory servers specified in the list.
+ * Else, use a random server. */
+void
+hs_client_launch_v3_desc_fetch(const ed25519_public_key_t *onion_identity_pk,
+                               const smartlist_t *hsdirs)
+{
+  tor_assert(onion_identity_pk);
+
+  if (hsdirs != NULL) {
+    SMARTLIST_FOREACH_BEGIN(hsdirs, const routerstatus_t *, hsdir) {
+      directory_launch_v3_desc_fetch(onion_identity_pk, hsdir);
+    } SMARTLIST_FOREACH_END(hsdir);
+  } else {
+    fetch_v3_desc(onion_identity_pk);
+  }
+}
+
+/** Make sure that the given v3 origin circuit circ is a valid correct
  * introduction circuit. This will BUG() on any problems and hard assert if
  * the anonymity of the circuit is not ok. Return 0 on success else -1 where
  * the circuit should be mark for closed immediately. */
@@ -490,7 +525,7 @@ intro_circ_is_ok(const origin_circuit_t *circ)
   return ret;
 }
 
-/* Find a descriptor intro point object that matches the given ident in the
+/** Find a descriptor intro point object that matches the given ident in the
  * given descriptor desc. Return NULL if not found. */
 static const hs_desc_intro_point_t *
 find_desc_intro_point_by_ident(const hs_ident_circuit_t *ident,
@@ -513,7 +548,7 @@ find_desc_intro_point_by_ident(const hs_ident_circuit_t *ident,
   return intro_point;
 }
 
-/* Find a descriptor intro point object from the descriptor object desc that
+/** Find a descriptor intro point object from the descriptor object desc that
  * matches the given legacy identity digest in legacy_id. Return NULL if not
  * found. */
 static hs_desc_intro_point_t *
@@ -530,13 +565,15 @@ find_desc_intro_point_by_legacy_id(const char *legacy_id,
   SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                           hs_desc_intro_point_t *, ip) {
     SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
-                            const hs_desc_link_specifier_t *, lspec) {
+                            const link_specifier_t *, lspec) {
       /* Not all tor node have an ed25519 identity key so we still rely on the
        * legacy identity digest. */
-      if (lspec->type != LS_LEGACY_ID) {
+      if (link_specifier_get_ls_type(lspec) != LS_LEGACY_ID) {
         continue;
       }
-      if (fast_memneq(legacy_id, lspec->u.legacy_id, DIGEST_LEN)) {
+      if (fast_memneq(legacy_id,
+                      link_specifier_getconstarray_un_legacy_id(lspec),
+                      DIGEST_LEN)) {
         break;
       }
       /* Found it. */
@@ -549,7 +586,7 @@ find_desc_intro_point_by_legacy_id(const char *legacy_id,
   return ret_ip;
 }
 
-/* Send an INTRODUCE1 cell along the intro circuit and populate the rend
+/** Send an INTRODUCE1 cell along the intro circuit and populate the rend
  * circuit identifier with the needed key material for the e2e encryption.
  * Return 0 on success, -1 if there is a transient error such that an action
  * has been taken to recover and -2 if there is a permanent error indicating
@@ -596,9 +633,14 @@ send_introduce1(origin_circuit_t *intro_circ,
   /* We need to find which intro point in the descriptor we are connected to
    * on intro_circ. */
   ip = find_desc_intro_point_by_ident(intro_circ->hs_ident, desc);
-  if (BUG(ip == NULL)) {
-    /* If we can find a descriptor from this introduction circuit ident, we
-     * must have a valid intro point object. Permanent error. */
+  if (ip == NULL) {
+    /* The following is possible if the descriptor was changed while we had
+     * this introduction circuit open and waiting for the rendezvous circuit to
+     * be ready. Which results in this situation where we can't find the
+     * corresponding intro point within the descriptor of the service. */
+    log_info(LD_REND, "Unable to find introduction point for service %s "
+                      "while trying to send an INTRODUCE1 cell.",
+             safe_str_client(onion_address));
     goto perm_err;
   }
 
@@ -661,7 +703,7 @@ send_introduce1(origin_circuit_t *intro_circ,
   return status;
 }
 
-/* Using the introduction circuit circ, setup the authentication key of the
+/** Using the introduction circuit circ, setup the authentication key of the
  * intro point this circuit has extended to. */
 static void
 setup_intro_circ_auth_key(origin_circuit_t *circ)
@@ -693,14 +735,14 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
   }
 
   /* Reaching this point means we didn't find any intro point for this circuit
-   * which is not suppose to happen. */
+   * which is not supposed to happen. */
   tor_assert_nonfatal_unreached();
 
  end:
   return;
 }
 
-/* Called when an introduction circuit has opened. */
+/** Called when an introduction circuit has opened. */
 static void
 client_intro_circ_has_opened(origin_circuit_t *circ)
 {
@@ -717,7 +759,7 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
   connection_ap_attach_pending(1);
 }
 
-/* Called when a rendezvous circuit has opened. */
+/** Called when a rendezvous circuit has opened. */
 static void
 client_rendezvous_circ_has_opened(origin_circuit_t *circ)
 {
@@ -751,7 +793,7 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
   }
 }
 
-/* This is an helper function that convert a descriptor intro point object ip
+/** This is an helper function that convert a descriptor intro point object ip
  * to a newly allocated extend_info_t object fully initialized. Return NULL if
  * we can't convert it for which chances are that we are missing or malformed
  * link specifiers. */
@@ -759,28 +801,17 @@ STATIC extend_info_t *
 desc_intro_point_to_extend_info(const hs_desc_intro_point_t *ip)
 {
   extend_info_t *ei;
-  smartlist_t *lspecs = smartlist_new();
 
   tor_assert(ip);
 
-  /* We first encode the descriptor link specifiers into the binary
-   * representation which is a trunnel object. */
-  SMARTLIST_FOREACH_BEGIN(ip->link_specifiers,
-                          const hs_desc_link_specifier_t *, desc_lspec) {
-    link_specifier_t *lspec = hs_desc_lspec_to_trunnel(desc_lspec);
-    smartlist_add(lspecs, lspec);
-  } SMARTLIST_FOREACH_END(desc_lspec);
-
   /* Explicitly put the direct connection option to 0 because this is client
    * side and there is no such thing as a non anonymous client. */
-  ei = hs_get_extend_info_from_lspecs(lspecs, &ip->onion_key, 0);
+  ei = hs_get_extend_info_from_lspecs(ip->link_specifiers, &ip->onion_key, 0);
 
-  SMARTLIST_FOREACH(lspecs, link_specifier_t *, ls, link_specifier_free(ls));
-  smartlist_free(lspecs);
   return ei;
 }
 
-/* Return true iff the intro point ip for the service service_pk is usable.
+/** Return true iff the intro point ip for the service service_pk is usable.
  * This function checks if the intro point is in the client intro state cache
  * and checks at the failures. It is considered usable if:
  *   - No error happened (INTRO_POINT_FAILURE_GENERIC)
@@ -825,7 +856,7 @@ intro_point_is_usable(const ed25519_public_key_t *service_pk,
   return 0;
 }
 
-/* Using a descriptor desc, return a newly allocated extend_info_t object of a
+/** Using a descriptor desc, return a newly allocated extend_info_t object of a
  * randomly picked introduction point from its list. Return NULL if none are
  * usable. */
 STATIC extend_info_t *
@@ -930,7 +961,7 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
   return ei;
 }
 
-/* For this introduction circuit, we'll look at if we have any usable
+/** For this introduction circuit, we'll look at if we have any usable
  * introduction point left for this service. If so, we'll use the circuit to
  * re-extend to a new intro point. Else, we'll close the circuit and its
  * corresponding rendezvous circuit. Return 0 if we are re-extending else -1
@@ -987,7 +1018,7 @@ close_or_reextend_intro_circ(origin_circuit_t *intro_circ)
   return ret;
 }
 
-/* Called when we get an INTRODUCE_ACK success status code. Do the appropriate
+/** Called when we get an INTRODUCE_ACK success status code. Do the appropriate
  * actions for the rendezvous point and finally close intro_circ. */
 static void
 handle_introduce_ack_success(origin_circuit_t *intro_circ)
@@ -1033,7 +1064,7 @@ handle_introduce_ack_success(origin_circuit_t *intro_circ)
   return;
 }
 
-/* Called when we get an INTRODUCE_ACK failure status code. Depending on our
+/** Called when we get an INTRODUCE_ACK failure status code. Depending on our
  * failure cache status, either close the circuit or re-extend to a new
  * introduction point. */
 static void
@@ -1055,7 +1086,7 @@ handle_introduce_ack_bad(origin_circuit_t *circ, int status)
                                    INTRO_POINT_FAILURE_GENERIC);
 }
 
-/* Called when we get an INTRODUCE_ACK on the intro circuit circ. The encoded
+/** Called when we get an INTRODUCE_ACK on the intro circuit circ. The encoded
  * cell is in payload of length payload_len. Return 0 on success else a
  * negative value. The circuit is either close or reuse to re-extend to a new
  * introduction point. */
@@ -1094,7 +1125,7 @@ handle_introduce_ack(origin_circuit_t *circ, const uint8_t *payload,
   return ret;
 }
 
-/* Called when we get a RENDEZVOUS2 cell on the rendezvous circuit circ. The
+/** Called when we get a RENDEZVOUS2 cell on the rendezvous circuit circ. The
  * encoded cell is in payload of length payload_len. Return 0 on success or a
  * negative value on error. On error, the circuit is marked for close. */
 STATIC int
@@ -1156,7 +1187,7 @@ handle_rendezvous2(origin_circuit_t *circ, const uint8_t *payload,
   return ret;
 }
 
-/* Return true iff the client can fetch a descriptor for this service public
+/** Return true iff the client can fetch a descriptor for this service public
  * identity key and status_out if not NULL is untouched. If the client can
  * _not_ fetch the descriptor and if status_out is not NULL, it is set with
  * the fetch status code. */
@@ -1223,7 +1254,27 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
   return 0;
 }
 
-/* Return the client auth in the map using the service identity public key.
+/** Purge the client authorization cache of all ephemeral entries that is the
+ * entries that are not flagged with CLIENT_AUTH_FLAG_IS_PERMANENT.
+ *
+ * This is called from the hs_client_purge_state() used by a SIGNEWNYM. */
+STATIC void
+purge_ephemeral_client_auth(void)
+{
+  DIGEST256MAP_FOREACH_MODIFY(client_auths, key,
+                              hs_client_service_authorization_t *, auth) {
+    /* Cleanup every entry that are _NOT_ permanent that is ephemeral. */
+    if (!(auth->flags & CLIENT_AUTH_FLAG_IS_PERMANENT)) {
+      MAP_DEL_CURRENT(key);
+      client_service_authorization_free(auth);
+    }
+  } DIGESTMAP_FOREACH_END;
+
+  log_info(LD_REND, "Client onion service ephemeral authorization "
+                    "cache has been purged.");
+}
+
+/** Return the client auth in the map using the service identity public key.
  * Return NULL if it does not exist in the map. */
 static hs_client_service_authorization_t *
 find_client_auth(const ed25519_public_key_t *service_identity_pk)
@@ -1236,9 +1287,529 @@ find_client_auth(const ed25519_public_key_t *service_identity_pk)
   return digest256map_get(client_auths, service_identity_pk->pubkey);
 }
 
+/** This is called when a descriptor has arrived following a fetch request and
+ * has been stored in the client cache. The given entry connections, matching
+ * the service identity key, will get attached to the service circuit. */
+static void
+client_desc_has_arrived(const smartlist_t *entry_conns)
+{
+  time_t now = time(NULL);
+
+  tor_assert(entry_conns);
+
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    const hs_descriptor_t *desc;
+    edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+    const ed25519_public_key_t *identity_pk =
+      &edge_conn->hs_ident->identity_pk;
+
+    /* We were just called because we stored the descriptor for this service
+     * so not finding a descriptor means we have a bigger problem. */
+    desc = hs_cache_lookup_as_client(identity_pk);
+    if (BUG(desc == NULL)) {
+      goto end;
+    }
+
+    if (!hs_client_any_intro_points_usable(identity_pk, desc)) {
+      log_info(LD_REND, "Hidden service descriptor is unusable. "
+                        "Closing streams.");
+      connection_mark_unattached_ap(entry_conn,
+                                    END_STREAM_REASON_RESOLVEFAILED);
+      /* We are unable to use the descriptor so remove the directory request
+       * from the cache so the next connection can try again. */
+      note_connection_attempt_succeeded(edge_conn->hs_ident);
+      continue;
+    }
+
+    log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
+
+    /* Mark connection as waiting for a circuit since we do have a usable
+     * descriptor now. */
+    mark_conn_as_waiting_for_circuit(&edge_conn->base_, now);
+  } SMARTLIST_FOREACH_END(entry_conn);
+
+ end:
+  return;
+}
+
+/** This is called when a descriptor fetch was successful but the descriptor
+ * couldn't be decrypted due to missing or bad client authorization. */
+static void
+client_desc_missing_bad_client_auth(const smartlist_t *entry_conns,
+                                    hs_desc_decode_status_t status)
+{
+  tor_assert(entry_conns);
+
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    socks5_reply_status_t code;
+    if (status == HS_DESC_DECODE_BAD_CLIENT_AUTH) {
+      code = SOCKS5_HS_BAD_CLIENT_AUTH;
+    } else if (status == HS_DESC_DECODE_NEED_CLIENT_AUTH) {
+      code = SOCKS5_HS_MISSING_CLIENT_AUTH;
+    } else {
+      /* We should not be called with another type of status. Recover by
+       * sending a generic error. */
+      tor_assert_nonfatal_unreached();
+      code = HS_DESC_DECODE_GENERIC_ERROR;
+    }
+    entry_conn->socks_request->socks_extended_error_code = code;
+    connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_MISC);
+  } SMARTLIST_FOREACH_END(entry_conn);
+}
+
+/** Called when we get a 200 directory fetch status code. */
+static void
+client_dir_fetch_200(dir_connection_t *dir_conn,
+                     const smartlist_t *entry_conns, const char *body)
+{
+  hs_desc_decode_status_t decode_status;
+
+  tor_assert(dir_conn);
+  tor_assert(entry_conns);
+  tor_assert(body);
+
+  /* We got something: Try storing it in the cache. */
+  decode_status = hs_cache_store_as_client(body,
+                                           &dir_conn->hs_ident->identity_pk);
+  switch (decode_status) {
+  case HS_DESC_DECODE_OK:
+  case HS_DESC_DECODE_NEED_CLIENT_AUTH:
+  case HS_DESC_DECODE_BAD_CLIENT_AUTH:
+    log_info(LD_REND, "Stored hidden service descriptor successfully.");
+    TO_CONN(dir_conn)->purpose = DIR_PURPOSE_HAS_FETCHED_HSDESC;
+    if (decode_status == HS_DESC_DECODE_OK) {
+      client_desc_has_arrived(entry_conns);
+    } else {
+      /* This handles both client auth decode status. */
+      client_desc_missing_bad_client_auth(entry_conns, decode_status);
+      log_info(LD_REND, "Stored hidden service descriptor requires "
+                         "%s client authorization.",
+               decode_status == HS_DESC_DECODE_NEED_CLIENT_AUTH ? "missing"
+                                                                : "new");
+    }
+    /* Fire control port RECEIVED event. */
+    hs_control_desc_event_received(dir_conn->hs_ident,
+                                   dir_conn->identity_digest);
+    hs_control_desc_event_content(dir_conn->hs_ident,
+                                  dir_conn->identity_digest, body);
+    break;
+  case HS_DESC_DECODE_ENCRYPTED_ERROR:
+  case HS_DESC_DECODE_SUPERENC_ERROR:
+  case HS_DESC_DECODE_PLAINTEXT_ERROR:
+  case HS_DESC_DECODE_GENERIC_ERROR:
+  default:
+    log_info(LD_REND, "Failed to store hidden service descriptor. "
+                      "Descriptor decoding status: %d", decode_status);
+    /* Fire control port FAILED event. */
+    hs_control_desc_event_failed(dir_conn->hs_ident,
+                                 dir_conn->identity_digest, "BAD_DESC");
+    hs_control_desc_event_content(dir_conn->hs_ident,
+                                  dir_conn->identity_digest, NULL);
+    break;
+  }
+}
+
+/** Called when we get a 404 directory fetch status code. */
+static void
+client_dir_fetch_404(dir_connection_t *dir_conn,
+                     const smartlist_t *entry_conns)
+{
+  tor_assert(entry_conns);
+
+  /* Not there. We'll retry when connection_about_to_close_connection() tries
+   * to clean this conn up. */
+  log_info(LD_REND, "Fetching hidden service v3 descriptor not found: "
+                    "Retrying at another directory.");
+  /* Fire control port FAILED event. */
+  hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
+                               "NOT_FOUND");
+  hs_control_desc_event_content(dir_conn->hs_ident, dir_conn->identity_digest,
+                                NULL);
+
+  /* Flag every entry connections that the descriptor was not found. */
+  SMARTLIST_FOREACH_BEGIN(entry_conns, entry_connection_t *, entry_conn) {
+    entry_conn->socks_request->socks_extended_error_code =
+      SOCKS5_HS_NOT_FOUND;
+  } SMARTLIST_FOREACH_END(entry_conn);
+}
+
+/** Called when we get a 400 directory fetch status code. */
+static void
+client_dir_fetch_400(dir_connection_t *dir_conn, const char *reason)
+{
+  tor_assert(dir_conn);
+
+  log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
+                    "http status 400 (%s). Dirserver didn't like our "
+                    "query? Retrying at another directory.",
+           escaped(reason));
+
+  /* Fire control port FAILED event. */
+  hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
+                               "QUERY_REJECTED");
+  hs_control_desc_event_content(dir_conn->hs_ident, dir_conn->identity_digest,
+                                NULL);
+}
+
+/** Called when we get an unexpected directory fetch status code. */
+static void
+client_dir_fetch_unexpected(dir_connection_t *dir_conn, const char *reason,
+                            const int status_code)
+{
+  tor_assert(dir_conn);
+
+  log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
+                    "http status %d (%s) response unexpected from HSDir "
+                    "server '%s:%d'. Retrying at another directory.",
+           status_code, escaped(reason), TO_CONN(dir_conn)->address,
+           TO_CONN(dir_conn)->port);
+  /* Fire control port FAILED event. */
+  hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
+                               "UNEXPECTED");
+  hs_control_desc_event_content(dir_conn->hs_ident, dir_conn->identity_digest,
+                                NULL);
+}
+
+/** Get the full filename for storing the client auth credentials for the
+ *  service in <b>onion_address</b>. The base directory is <b>dir</b>.
+ *  This function never returns NULL. */
+static char *
+get_client_auth_creds_filename(const char *onion_address,
+                               const char *dir)
+{
+  char *full_fname = NULL;
+  char *fname;
+
+  tor_asprintf(&fname, "%s.auth_private", onion_address);
+  full_fname = hs_path_from_filename(dir, fname);
+  tor_free(fname);
+
+  return full_fname;
+}
+
+/** Permanently store the credentials in <b>creds</b> to disk.
+ *
+ *  Return -1 if there was an error while storing the credentials, otherwise
+ *  return 0.
+ */
+static int
+store_permanent_client_auth_credentials(
+                              const hs_client_service_authorization_t *creds)
+{
+  const or_options_t *options = get_options();
+  char *full_fname = NULL;
+  char *file_contents = NULL;
+  char priv_key_b32[BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)+1];
+  int retval = -1;
+
+  tor_assert(creds->flags & CLIENT_AUTH_FLAG_IS_PERMANENT);
+
+  /* We need ClientOnionAuthDir to be set, otherwise we can't proceed */
+  if (!options->ClientOnionAuthDir) {
+    log_warn(LD_GENERAL, "Can't register permanent client auth credentials "
+             "for %s without ClientOnionAuthDir option. Discarding.",
+             creds->onion_address);
+    goto err;
+  }
+
+  /* Make sure the directory exists and is private enough. */
+  if (check_private_dir(options->ClientOnionAuthDir, 0, options->User) < 0) {
+    goto err;
+  }
+
+  /* Get filename that we should store the credentials */
+  full_fname = get_client_auth_creds_filename(creds->onion_address,
+                                              options->ClientOnionAuthDir);
+
+  /* Encode client private key */
+  base32_encode(priv_key_b32, sizeof(priv_key_b32),
+                (char*)creds->enc_seckey.secret_key,
+                sizeof(creds->enc_seckey.secret_key));
+
+  /* Get the full file contents and write it to disk! */
+  tor_asprintf(&file_contents, "%s:descriptor:x25519:%s",
+               creds->onion_address, priv_key_b32);
+  if (write_str_to_file(full_fname, file_contents, 0) < 0) {
+    log_warn(LD_GENERAL, "Failed to write client auth creds file for %s!",
+             creds->onion_address);
+    goto err;
+  }
+
+  retval = 0;
+
+ err:
+  tor_free(file_contents);
+  tor_free(full_fname);
+
+  return retval;
+}
+
+/** Register the credential <b>creds</b> as part of the client auth subsystem.
+ *
+ * Takes ownership of <b>creds</b>.
+ **/
+hs_client_register_auth_status_t
+hs_client_register_auth_credentials(hs_client_service_authorization_t *creds)
+{
+  ed25519_public_key_t service_identity_pk;
+  hs_client_service_authorization_t *old_creds = NULL;
+  hs_client_register_auth_status_t retval = REGISTER_SUCCESS;
+
+  tor_assert(creds);
+
+  if (!client_auths) {
+    client_auths = digest256map_new();
+  }
+
+  if (hs_parse_address(creds->onion_address, &service_identity_pk,
+                       NULL, NULL) < 0) {
+    client_service_authorization_free(creds);
+    return REGISTER_FAIL_BAD_ADDRESS;
+  }
+
+  /* If we reach this point, the credentials will be stored one way or another:
+   * Make them permanent if the user asked us to. */
+  if (creds->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
+    if (store_permanent_client_auth_credentials(creds) < 0) {
+      client_service_authorization_free(creds);
+      return REGISTER_FAIL_PERMANENT_STORAGE;
+    }
+  }
+
+  old_creds = digest256map_get(client_auths, service_identity_pk.pubkey);
+  if (old_creds) {
+    digest256map_remove(client_auths, service_identity_pk.pubkey);
+    client_service_authorization_free(old_creds);
+    retval = REGISTER_SUCCESS_ALREADY_EXISTS;
+  }
+
+  digest256map_set(client_auths, service_identity_pk.pubkey, creds);
+
+  /** Now that we set the new credentials, also try to decrypt any cached
+   *  descriptors. */
+  if (hs_cache_client_new_auth_parse(&service_identity_pk)) {
+    retval = REGISTER_SUCCESS_AND_DECRYPTED;
+  }
+
+  return retval;
+}
+
+/** Load a client authorization file with <b>filename</b> that is stored under
+ *  the global client auth directory, and return a newly-allocated credentials
+ *  object if it parsed well. Otherwise, return NULL.
+ */
+static hs_client_service_authorization_t *
+get_creds_from_client_auth_filename(const char *filename,
+                                    const or_options_t *options)
+{
+  hs_client_service_authorization_t *auth = NULL;
+  char *client_key_file_path = NULL;
+  char *client_key_str = NULL;
+
+  log_info(LD_REND, "Loading a client authorization key file %s...",
+           filename);
+
+  if (!auth_key_filename_is_valid(filename)) {
+    log_notice(LD_REND, "Client authorization unrecognized filename %s. "
+               "File must end in .auth_private. Ignoring.",
+               filename);
+    goto err;
+  }
+
+  /* Create a full path for a file. */
+  client_key_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
+                                               filename);
+
+  client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
+  if (!client_key_str) {
+    log_warn(LD_REND, "The file %s cannot be read.", filename);
+    goto err;
+  }
+
+  auth = parse_auth_file_content(client_key_str);
+  if (!auth) {
+    goto err;
+  }
+
+ err:
+  tor_free(client_key_str);
+  tor_free(client_key_file_path);
+
+  return auth;
+}
+
+/*
+ * Remove the file in <b>filename</b> under the global client auth credential
+ * storage.
+ */
+static void
+remove_client_auth_creds_file(const char *filename)
+{
+  char *creds_file_path = NULL;
+  const or_options_t *options = get_options();
+
+  creds_file_path = hs_path_from_filename(options->ClientOnionAuthDir,
+                                          filename);
+  if (tor_unlink(creds_file_path) != 0) {
+    log_warn(LD_REND, "Failed to remove client auth file (%s).",
+             creds_file_path);
+    goto end;
+  }
+
+  log_warn(LD_REND, "Successfuly removed client auth file (%s).",
+           creds_file_path);
+
+ end:
+  tor_free(creds_file_path);
+}
+
+/**
+ * Find the filesystem file corresponding to the permanent client auth
+ * credentials in <b>cred</b> and remove it.
+ */
+static void
+find_and_remove_client_auth_creds_file(
+                                 const hs_client_service_authorization_t *cred)
+{
+  smartlist_t *file_list = NULL;
+  const or_options_t *options = get_options();
+
+  tor_assert(cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT);
+
+  if (!options->ClientOnionAuthDir) {
+    log_warn(LD_REND, "Found permanent credential but no ClientOnionAuthDir "
+             "configured. There is no file to be removed.");
+    goto end;
+  }
+
+  file_list = tor_listdir(options->ClientOnionAuthDir);
+  if (file_list == NULL) {
+    log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
+             options->ClientOnionAuthDir);
+    goto end;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
+    hs_client_service_authorization_t *tmp_cred = NULL;
+
+    tmp_cred = get_creds_from_client_auth_filename(filename, options);
+    if (!tmp_cred) {
+      continue;
+    }
+
+    /* Find the right file for this credential */
+    if (!strcmp(tmp_cred->onion_address, cred->onion_address)) {
+      /* Found it! Remove the file! */
+      remove_client_auth_creds_file(filename);
+      /* cleanup and get out of here */
+      client_service_authorization_free(tmp_cred);
+      break;
+    }
+
+    client_service_authorization_free(tmp_cred);
+  } SMARTLIST_FOREACH_END(filename);
+
+ end:
+  if (file_list) {
+    SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
+    smartlist_free(file_list);
+  }
+}
+
+/** Remove client auth credentials for the service <b>hs_address</b>. */
+hs_client_removal_auth_status_t
+hs_client_remove_auth_credentials(const char *hsaddress)
+{
+  ed25519_public_key_t service_identity_pk;
+
+  if (!client_auths) {
+    return REMOVAL_SUCCESS_NOT_FOUND;
+  }
+
+  if (hs_parse_address(hsaddress, &service_identity_pk, NULL, NULL) < 0) {
+    return REMOVAL_BAD_ADDRESS;
+  }
+
+  hs_client_service_authorization_t *cred = NULL;
+  cred = digest256map_remove(client_auths, service_identity_pk.pubkey);
+
+  /* digestmap_remove() returns the previously stored data if there were any */
+  if (cred) {
+    if (cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
+      /* These creds are stored on disk: remove the corresponding file. */
+      find_and_remove_client_auth_creds_file(cred);
+    }
+
+    /* Remove associated descriptor if any. */
+    hs_cache_remove_as_client(&service_identity_pk);
+
+    client_service_authorization_free(cred);
+    return REMOVAL_SUCCESS;
+  }
+
+  return REMOVAL_SUCCESS_NOT_FOUND;
+}
+
+/** Get the HS client auth map. */
+digest256map_t *
+get_hs_client_auths_map(void)
+{
+  return client_auths;
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
+
+/** Called when a circuit was just cleaned up. This is done right before the
+ * circuit is freed. */
+void
+hs_client_circuit_cleanup_on_free(const circuit_t *circ)
+{
+  bool has_timed_out;
+  rend_intro_point_failure_t failure = INTRO_POINT_FAILURE_GENERIC;
+  const origin_circuit_t *orig_circ = NULL;
+
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  orig_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
+  tor_assert(orig_circ->hs_ident);
+
+  has_timed_out =
+    (circ->marked_for_close_orig_reason == END_CIRC_REASON_TIMEOUT);
+  if (has_timed_out) {
+    failure = INTRO_POINT_FAILURE_TIMEOUT;
+  }
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+    log_info(LD_REND, "Failed v3 intro circ for service %s to intro point %s "
+                      "(awaiting ACK). Failure code: %d",
+        safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
+        safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)),
+        failure);
+    hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
+                                     &orig_circ->hs_ident->intro_auth_pk,
+                                     failure);
+    break;
+  case CIRCUIT_PURPOSE_C_INTRODUCING:
+    if (has_timed_out || !orig_circ->build_state) {
+      break;
+    }
+    failure = INTRO_POINT_FAILURE_UNREACHABLE;
+    log_info(LD_REND, "Failed v3 intro circ for service %s to intro point %s "
+                      "(while building circuit). Marking as unreachable.",
+       safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
+       safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)));
+    hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
+                                     &orig_circ->hs_ident->intro_auth_pk,
+                                     failure);
+    break;
+  default:
+    break;
+  }
+}
 
 /** A circuit just finished connecting to a hidden service that the stream
  *  <b>conn</b> has been waiting for. Let the HS subsystem know about this. */
@@ -1261,21 +1832,23 @@ hs_client_note_connection_attempt_succeeded(const edge_connection_t *conn)
   }
 }
 
-/* With the given encoded descriptor in desc_str and the service key in
+/** With the given encoded descriptor in desc_str and the service key in
  * service_identity_pk, decode the descriptor and set the desc pointer with a
  * newly allocated descriptor object.
  *
- * Return 0 on success else a negative value and desc is set to NULL. */
-int
+ * On success, HS_DESC_DECODE_OK is returned and desc is set to the decoded
+ * descriptor. On error, desc is set to NULL and a decoding error status is
+ * returned depending on what was the issue. */
+hs_desc_decode_status_t
 hs_client_decode_descriptor(const char *desc_str,
                             const ed25519_public_key_t *service_identity_pk,
                             hs_descriptor_t **desc)
 {
-  int ret;
+  hs_desc_decode_status_t ret;
   uint8_t subcredential[DIGEST256_LEN];
   ed25519_public_key_t blinded_pubkey;
   hs_client_service_authorization_t *client_auth = NULL;
-  curve25519_secret_key_t *client_auht_sk = NULL;
+  curve25519_secret_key_t *client_auth_sk = NULL;
 
   tor_assert(desc_str);
   tor_assert(service_identity_pk);
@@ -1284,7 +1857,7 @@ hs_client_decode_descriptor(const char *desc_str,
   /* Check if we have a client authorization for this service in the map. */
   client_auth = find_client_auth(service_identity_pk);
   if (client_auth) {
-    client_auht_sk = &client_auth->enc_seckey;
+    client_auth_sk = &client_auth->enc_seckey;
   }
 
   /* Create subcredential for this HS so that we can decrypt */
@@ -1297,9 +1870,9 @@ hs_client_decode_descriptor(const char *desc_str,
 
   /* Parse descriptor */
   ret = hs_desc_decode_descriptor(desc_str, subcredential,
-                                  client_auht_sk, desc);
+                                  client_auth_sk, desc);
   memwipe(subcredential, 0, sizeof(subcredential));
-  if (ret < 0) {
+  if (ret != HS_DESC_DECODE_OK) {
     goto err;
   }
 
@@ -1312,15 +1885,16 @@ hs_client_decode_descriptor(const char *desc_str,
     log_warn(LD_GENERAL, "Descriptor signing key certificate signature "
              "doesn't validate with computed blinded key: %s",
              tor_cert_describe_signature_status(cert));
+    ret = HS_DESC_DECODE_GENERIC_ERROR;
     goto err;
   }
 
-  return 0;
+  return HS_DESC_DECODE_OK;
  err:
-  return -1;
+  return ret;
 }
 
-/* Return true iff there are at least one usable intro point in the service
+/** Return true iff there are at least one usable intro point in the service
  * descriptor desc. */
 int
 hs_client_any_intro_points_usable(const ed25519_public_key_t *service_pk,
@@ -1369,7 +1943,7 @@ hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk)
   return status;
 }
 
-/* This is called when we are trying to attach an AP connection to these
+/** This is called when we are trying to attach an AP connection to these
  * hidden service circuits from connection_ap_handshake_attach_circuit().
  * Return 0 on success, -1 for a transient error that is actions were
  * triggered to recover or -2 for a permenent error where both circuits will
@@ -1385,7 +1959,7 @@ hs_client_send_introduce1(origin_circuit_t *intro_circ,
                                                                 rend_circ);
 }
 
-/* Called when the client circuit circ has been established. It can be either
+/** Called when the client circuit circ has been established. It can be either
  * an introduction or rendezvous circuit. This function handles all hidden
  * service versions. */
 void
@@ -1415,7 +1989,7 @@ hs_client_circuit_has_opened(origin_circuit_t *circ)
   }
 }
 
-/* Called when we receive a RENDEZVOUS_ESTABLISHED cell. Change the state of
+/** Called when we receive a RENDEZVOUS_ESTABLISHED cell. Change the state of
  * the circuit to CIRCUIT_PURPOSE_C_REND_READY. Return 0 on success else a
  * negative value and the circuit marked for close. */
 int
@@ -1457,16 +2031,14 @@ hs_client_receive_rendezvous_acked(origin_circuit_t *circ,
   return -1;
 }
 
-#define client_service_authorization_free(auth)                      \
-  FREE_AND_NULL(hs_client_service_authorization_t,                   \
-                client_service_authorization_free_, (auth))
-
-static void
+void
 client_service_authorization_free_(hs_client_service_authorization_t *auth)
 {
-  if (auth) {
-    memwipe(auth, 0, sizeof(*auth));
+  if (!auth) {
+    return;
   }
+
+  memwipe(auth, 0, sizeof(*auth));
   tor_free(auth);
 }
 
@@ -1486,7 +2058,7 @@ client_service_authorization_free_all(void)
   digest256map_free(client_auths, client_service_authorization_free_void);
 }
 
-/* Check if the auth key file name is valid or not. Return 1 if valid,
+/** Check if the auth key file name is valid or not. Return 1 if valid,
  * otherwise return 0. */
 STATIC int
 auth_key_filename_is_valid(const char *filename)
@@ -1508,6 +2080,13 @@ auth_key_filename_is_valid(const char *filename)
   return ret;
 }
 
+/** Parse the client auth credentials off a string in <b>client_key_str</b>
+ *  based on the file format documented in the "Client side configuration"
+ *  section of rend-spec-v3.txt.
+ *
+ *  Return NULL if there was an error, otherwise return a newly allocated
+ *  hs_client_service_authorization_t structure.
+ */
 STATIC hs_client_service_authorization_t *
 parse_auth_file_content(const char *client_key_str)
 {
@@ -1538,7 +2117,7 @@ parse_auth_file_content(const char *client_key_str)
     goto err;
   }
 
-  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+  if (strlen(seckey_b32) != BASE32_NOPAD_LEN(CURVE25519_SECKEY_LEN)) {
     log_warn(LD_REND, "Client authorization encoded base32 private key "
                       "length is invalid: %s", seckey_b32);
     goto err;
@@ -1547,10 +2126,16 @@ parse_auth_file_content(const char *client_key_str)
   auth = tor_malloc_zero(sizeof(hs_client_service_authorization_t));
   if (base32_decode((char *) auth->enc_seckey.secret_key,
                     sizeof(auth->enc_seckey.secret_key),
-                    seckey_b32, strlen(seckey_b32)) < 0) {
+                    seckey_b32, strlen(seckey_b32)) !=
+      sizeof(auth->enc_seckey.secret_key)) {
+    log_warn(LD_REND, "Client authorization encoded base32 private key "
+                      "can't be decoded: %s", seckey_b32);
     goto err;
   }
   strncpy(auth->onion_address, onion_address, HS_SERVICE_ADDR_LEN_BASE32);
+
+  /* We are reading this from the disk, so set the permanent flag anyway. */
+  auth->flags |= CLIENT_AUTH_FLAG_IS_PERMANENT;
 
   /* Success. */
   goto done;
@@ -1568,7 +2153,7 @@ parse_auth_file_content(const char *client_key_str)
   return auth;
 }
 
-/* From a set of <b>options</b>, setup every client authorization detail
+/** From a set of <b>options</b>, setup every client authorization detail
  * found. Return 0 on success or -1 on failure. If <b>validate_only</b>
  * is set, parse, warn and return as normal, but don't actually change
  * the configuration. */
@@ -1578,10 +2163,7 @@ hs_config_client_authorization(const or_options_t *options,
 {
   int ret = -1;
   digest256map_t *auths = digest256map_new();
-  char *key_dir = NULL;
   smartlist_t *file_list = NULL;
-  char *client_key_str = NULL;
-  char *client_key_file_path = NULL;
 
   tor_assert(options);
 
@@ -1592,82 +2174,54 @@ hs_config_client_authorization(const or_options_t *options,
     goto end;
   }
 
-  key_dir = tor_strdup(options->ClientOnionAuthDir);
-
   /* Make sure the directory exists and is private enough. */
-  if (check_private_dir(key_dir, 0, options->User) < 0) {
+  if (check_private_dir(options->ClientOnionAuthDir, 0, options->User) < 0) {
     goto end;
   }
 
-  file_list = tor_listdir(key_dir);
+  file_list = tor_listdir(options->ClientOnionAuthDir);
   if (file_list == NULL) {
     log_warn(LD_REND, "Client authorization key directory %s can't be listed.",
-             key_dir);
+             options->ClientOnionAuthDir);
     goto end;
   }
 
-  SMARTLIST_FOREACH_BEGIN(file_list, char *, filename) {
-
+  SMARTLIST_FOREACH_BEGIN(file_list, const char *, filename) {
     hs_client_service_authorization_t *auth = NULL;
     ed25519_public_key_t identity_pk;
-    log_info(LD_REND, "Loading a client authorization key file %s...",
-             filename);
 
-    if (!auth_key_filename_is_valid(filename)) {
-      log_notice(LD_REND, "Client authorization unrecognized filename %s. "
-                          "File must end in .auth_private. Ignoring.",
-                 filename);
+    auth = get_creds_from_client_auth_filename(filename, options);
+    if (!auth) {
       continue;
     }
 
-    /* Create a full path for a file. */
-    client_key_file_path = hs_path_from_filename(key_dir, filename);
-    client_key_str = read_file_to_str(client_key_file_path, 0, NULL);
-    /* Free the file path immediately after using it. */
-    tor_free(client_key_file_path);
-
-    /* If we cannot read the file, continue with the next file. */
-    if (!client_key_str) {
-      log_warn(LD_REND, "The file %s cannot be read.", filename);
+    /* Parse the onion address to get an identity public key and use it
+     * as a key of global map in the future. */
+    if (hs_parse_address(auth->onion_address, &identity_pk,
+                         NULL, NULL) < 0) {
+      log_warn(LD_REND, "The onion address \"%s\" is invalid in "
+               "file %s", filename, auth->onion_address);
+      client_service_authorization_free(auth);
       continue;
     }
 
-    auth = parse_auth_file_content(client_key_str);
-    /* Free immediately after using it. */
-    tor_free(client_key_str);
-
-    if (auth) {
-      /* Parse the onion address to get an identity public key and use it
-       * as a key of global map in the future. */
-      if (hs_parse_address(auth->onion_address, &identity_pk,
-                           NULL, NULL) < 0) {
-        log_warn(LD_REND, "The onion address \"%s\" is invalid in "
-                          "file %s", filename, auth->onion_address);
-        client_service_authorization_free(auth);
-        continue;
-      }
-
-      if (digest256map_get(auths, identity_pk.pubkey)) {
+    if (digest256map_get(auths, identity_pk.pubkey)) {
         log_warn(LD_REND, "Duplicate authorization for the same hidden "
-                          "service address %s.",
+                 "service address %s.",
                  safe_str_client_opts(options, auth->onion_address));
         client_service_authorization_free(auth);
         goto end;
-      }
-
-      digest256map_set(auths, identity_pk.pubkey, auth);
-      log_info(LD_REND, "Loaded a client authorization key file %s.",
-               filename);
     }
+
+    digest256map_set(auths, identity_pk.pubkey, auth);
+    log_info(LD_REND, "Loaded a client authorization key file %s.",
+             filename);
   } SMARTLIST_FOREACH_END(filename);
 
   /* Success. */
   ret = 0;
 
  end:
-  tor_free(key_dir);
-  tor_free(client_key_str);
-  tor_free(client_key_file_path);
   if (file_list) {
     SMARTLIST_FOREACH(file_list, char *, s, tor_free(s));
     smartlist_free(file_list);
@@ -1683,65 +2237,48 @@ hs_config_client_authorization(const or_options_t *options,
   return ret;
 }
 
-/* This is called when a descriptor has arrived following a fetch request and
- * has been stored in the client cache. Every entry connection that matches
- * the service identity key in the ident will get attached to the hidden
- * service circuit. */
+/** Called when a descriptor directory fetch is done.
+ *
+ * Act accordingly on all entry connections depending on the HTTP status code
+ * we got. In case of an error, the SOCKS error is set (if ExtendedErrors is
+ * set).
+ *
+ * The reason is a human readable string returned by the directory server
+ * which can describe the status of the request. The body is the response
+ * content, on 200 code it is the descriptor itself. Finally, the status_code
+ * is the HTTP code returned by the directory server. */
 void
-hs_client_desc_has_arrived(const hs_ident_dir_conn_t *ident)
+hs_client_dir_fetch_done(dir_connection_t *dir_conn, const char *reason,
+                         const char *body, const int status_code)
 {
-  time_t now = time(NULL);
-  smartlist_t *conns = NULL;
+  smartlist_t *entry_conns;
 
-  tor_assert(ident);
+  tor_assert(dir_conn);
+  tor_assert(body);
 
-  conns = connection_list_by_type_state(CONN_TYPE_AP,
-                                        AP_CONN_STATE_RENDDESC_WAIT);
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
-    const hs_descriptor_t *desc;
-    entry_connection_t *entry_conn = TO_ENTRY_CONN(base_conn);
-    const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
+  /* Get all related entry connections. */
+  entry_conns = find_entry_conns(&dir_conn->hs_ident->identity_pk);
 
-    /* Only consider the entry connections that matches the service for which
-     * we just fetched its descriptor. */
-    if (!edge_conn->hs_ident ||
-        !ed25519_pubkey_eq(&ident->identity_pk,
-                           &edge_conn->hs_ident->identity_pk)) {
-      continue;
-    }
-    assert_connection_ok(base_conn, now);
+  switch (status_code) {
+  case 200:
+    client_dir_fetch_200(dir_conn, entry_conns, body);
+    break;
+  case 404:
+    client_dir_fetch_404(dir_conn, entry_conns);
+    break;
+  case 400:
+    client_dir_fetch_400(dir_conn, reason);
+    break;
+  default:
+    client_dir_fetch_unexpected(dir_conn, reason, status_code);
+    break;
+  }
 
-    /* We were just called because we stored the descriptor for this service
-     * so not finding a descriptor means we have a bigger problem. */
-    desc = hs_cache_lookup_as_client(&ident->identity_pk);
-    if (BUG(desc == NULL)) {
-      goto end;
-    }
-
-    if (!hs_client_any_intro_points_usable(&ident->identity_pk, desc)) {
-      log_info(LD_REND, "Hidden service descriptor is unusable. "
-                        "Closing streams.");
-      connection_mark_unattached_ap(entry_conn,
-                                    END_STREAM_REASON_RESOLVEFAILED);
-      /* We are unable to use the descriptor so remove the directory request
-       * from the cache so the next connection can try again. */
-      note_connection_attempt_succeeded(edge_conn->hs_ident);
-      continue;
-    }
-
-    log_info(LD_REND, "Descriptor has arrived. Launching circuits.");
-
-    /* Mark connection as waiting for a circuit since we do have a usable
-     * descriptor now. */
-    mark_conn_as_waiting_for_circuit(base_conn, now);
-  } SMARTLIST_FOREACH_END(base_conn);
-
- end:
   /* We don't have ownership of the objects in this list. */
-  smartlist_free(conns);
+  smartlist_free(entry_conns);
 }
 
-/* Return a newly allocated extend_info_t for a randomly chosen introduction
+/** Return a newly allocated extend_info_t for a randomly chosen introduction
  * point for the given edge connection identifier ident. Return NULL if we
  * can't pick any usable introduction points. */
 extend_info_t *
@@ -1754,7 +2291,7 @@ hs_client_get_random_intro_from_edge(const edge_connection_t *edge_conn)
     rend_client_get_random_intro(edge_conn->rend_data);
 }
 
-/* Called when get an INTRODUCE_ACK cell on the introduction circuit circ.
+/** Called when get an INTRODUCE_ACK cell on the introduction circuit circ.
  * Return 0 on success else a negative value is returned. The circuit will be
  * closed or reuse to extend again to another intro point. */
 int
@@ -1783,7 +2320,7 @@ hs_client_receive_introduce_ack(origin_circuit_t *circ,
   return ret;
 }
 
-/* Called when get a RENDEZVOUS2 cell on the rendezvous circuit circ.  Return
+/** Called when get a RENDEZVOUS2 cell on the rendezvous circuit circ.  Return
  * 0 on success else a negative value is returned. The circuit will be closed
  * on error. */
 int
@@ -1816,7 +2353,7 @@ hs_client_receive_rendezvous2(origin_circuit_t *circ,
   return ret;
 }
 
-/* Extend the introduction circuit circ to another valid introduction point
+/** Extend the introduction circuit circ to another valid introduction point
  * for the hidden service it is trying to connect to, or mark it and launch a
  * new circuit if we can't extend it.  Return 0 on success or possible
  * success. Return -1 and mark the introduction circuit for close on permanent
@@ -1866,7 +2403,7 @@ hs_client_reextend_intro_circuit(origin_circuit_t *circ)
   return ret;
 }
 
-/* Close all client introduction circuits related to the given descriptor.
+/** Close all client introduction circuits related to the given descriptor.
  * This is called with a descriptor that is about to get replaced in the
  * client cache.
  *
@@ -1898,7 +2435,7 @@ hs_client_close_intro_circuits_from_desc(const hs_descriptor_t *desc)
   }
 }
 
-/* Release all the storage held by the client subsystem. */
+/** Release all the storage held by the client subsystem. */
 void
 hs_client_free_all(void)
 {
@@ -1907,7 +2444,7 @@ hs_client_free_all(void)
   client_service_authorization_free_all();
 }
 
-/* Purge all potentially remotely-detectable state held in the hidden
+/** Purge all potentially remotely-detectable state held in the hidden
  * service client code. Called on SIGNAL NEWNYM. */
 void
 hs_client_purge_state(void)
@@ -1924,11 +2461,13 @@ hs_client_purge_state(void)
   hs_cache_purge_as_client();
   /* Purge the last hidden service request cache. */
   hs_purge_last_hid_serv_requests();
+  /* Purge ephemeral client authorization. */
+  purge_ephemeral_client_auth();
 
   log_info(LD_REND, "Hidden service client state has been purged.");
 }
 
-/* Called when our directory information has changed. */
+/** Called when our directory information has changed. */
 void
 hs_client_dir_info_changed(void)
 {
@@ -1940,10 +2479,11 @@ hs_client_dir_info_changed(void)
 
 #ifdef TOR_UNIT_TESTS
 
-STATIC digest256map_t *
-get_hs_client_auths_map(void)
+STATIC void
+set_hs_client_auths_map(digest256map_t *map)
 {
-  return client_auths;
+  client_auths = map;
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
+

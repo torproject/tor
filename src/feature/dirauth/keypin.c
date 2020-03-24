@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2019, The Tor Project, Inc. */
+/* Copyright (c) 2014-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -15,8 +15,6 @@
 #include "lib/cc/torint.h"
 #include "lib/crypt_ops/crypto_digest.h"
 #include "lib/crypt_ops/crypto_format.h"
-#include "lib/crypt_ops/crypto_format.h"
-#include "lib/ctime/di_ops.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/encoding/binascii.h"
 #include "lib/encoding/time_fmt.h"
@@ -438,7 +436,7 @@ keypin_load_journal_impl(const char *data, size_t size)
   tor_log(severity, LD_DIRSERV,
           "Loaded %d entries from keypin journal. "
           "Found %d corrupt lines (ignored), %d duplicates (harmless), "
-          "and %d conflicts (resolved in favor or more recent entry).",
+          "and %d conflicts (resolved in favor of more recent entry).",
           n_entries, n_corrupt_lines, n_duplicates, n_conflicts);
 
   return 0;

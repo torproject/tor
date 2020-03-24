@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2019, The Tor Project, Inc. */
+/* Copyright (c) 2010-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define COMPAT_LIBEVENT_PRIVATE
@@ -12,8 +12,6 @@
 #include <event2/event.h>
 
 #include "test/log_test_helpers.h"
-
-#define NS_MODULE compat_libevent
 
 static void
 test_compat_libevent_logging_callback(void *ignored)
@@ -151,8 +149,6 @@ test_compat_libevent_postloop_events(void *arg)
   mainloop_event_t *a = NULL, *b = NULL;
   periodic_timer_t *timed = NULL;
 
-  tor_libevent_postfork();
-
   /* If postloop events don't work, then these events will activate one
    * another ad infinitum and, and the periodic event will never occur. */
   b = mainloop_event_postloop_new(activate_event_cb, &a);
@@ -187,4 +183,3 @@ struct testcase_t compat_libevent_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
-

@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -26,15 +26,15 @@ typedef struct {
   /** When do we publish the consensus? */
   time_t interval_starts;
 
-  /* True iff we have generated and distributed our vote. */
+  /** True iff we have generated and distributed our vote. */
   int have_voted;
-  /* True iff we've requested missing votes. */
+  /** True iff we've requested missing votes. */
   int have_fetched_missing_votes;
-  /* True iff we have built a consensus and sent the signatures around. */
+  /** True iff we have built a consensus and sent the signatures around. */
   int have_built_consensus;
-  /* True iff we've fetched missing signatures. */
+  /** True iff we've fetched missing signatures. */
   int have_fetched_missing_signatures;
-  /* True iff we have published our consensus. */
+  /** True iff we have published our consensus. */
   int have_published_consensus;
 
   /* True iff this voting schedule was set on demand meaning not through the
@@ -61,5 +61,4 @@ time_t voting_schedule_get_start_of_next_interval(time_t now,
                                                   int offset);
 time_t voting_schedule_get_next_valid_after_time(void);
 
-#endif /* TOR_VOTING_SCHEDULE_H */
-
+#endif /* !defined(TOR_VOTING_SCHEDULE_H) */

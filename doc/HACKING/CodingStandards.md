@@ -42,6 +42,7 @@ If you have changed build system components:
    - For example, if you have changed Makefiles, autoconf files, or anything
      else that affects the build system.
 
+
 License issues
 ==============
 
@@ -56,7 +57,6 @@ Some compatible licenses include:
   - 3-clause BSD
   - 2-clause BSD
   - CC0 Public Domain Dedication
-
 
 
 How we use Git branches
@@ -99,29 +99,65 @@ When you do a commit that needs a ChangeLog entry, add a new file to
 the `changes` toplevel subdirectory.  It should have the format of a
 one-entry changelog section from the current ChangeLog file, as in
 
-- Major bugfixes:
+  o Major bugfixes (security):
     - Fix a potential buffer overflow. Fixes bug 99999; bugfix on
       0.3.1.4-beta.
+  o Minor features (performance):
+    - Make tor faster. Closes ticket 88888.
 
 To write a changes file, first categorize the change.  Some common categories
-are: Minor bugfixes, Major bugfixes, Minor features, Major features, Code
-simplifications and refactoring.  Then say what the change does.  If
-it's a bugfix, mention what bug it fixes and when the bug was
-introduced.  To find out which Git tag the change was introduced in,
-you can use `git describe --contains <sha1 of commit>`.
+are:
+  o Minor bugfixes (subheading):
+  o Major bugfixes (subheading):
+  o Minor features (subheading):
+  o Major features (subheading):
+  o Code simplifications and refactoring:
+  o Testing:
+  o Documentation:
 
-If at all possible, try to create this file in the same commit where you are
-making the change.  Please give it a distinctive name that no other branch will
-use for the lifetime of your change. To verify the format of the changes file,
-you can use `make check-changes`.  This is run automatically as part of
-`make check` -- if it fails, we must fix it before we release.  These
-checks are implemented in `scripts/maint/lintChanges.py`.
+The subheading is a particular area within Tor.  See the ChangeLog for
+examples.
+
+Then say what the change does.  If it's a bugfix, mention what bug it fixes
+and when the bug was introduced. To find out which Git tag the change was
+introduced in, you can use `git describe --contains <sha1 of commit>`.
+If you don't know the commit, you can search the git diffs (-S) for the first
+instance of the feature (--reverse).
+
+For example, for #30224, we wanted to know when the bridge-distribution-request
+feature was introduced into Tor:
+    $ git log -S bridge-distribution-request --reverse
+    commit ebab521525
+    Author: Roger Dingledine <arma@torproject.org>
+    Date:   Sun Nov 13 02:39:16 2016 -0500
+
+        Add new BridgeDistribution config option
+
+    $ git describe --contains ebab521525
+    tor-0.3.2.3-alpha~15^2~4
+
+If you need to know all the Tor versions that contain a commit, use:
+    $ git tag --contains 9f2efd02a1 | sort -V
+    tor-0.2.5.16
+    tor-0.2.8.17
+    tor-0.2.9.14
+    tor-0.2.9.15
+    ...
+    tor-0.3.0.13
+    tor-0.3.1.9
+    tor-0.3.1.10
+    ...
+
+If at all possible, try to create the changes file in the same commit where
+you are making the change.  Please give it a distinctive name that no other
+branch will use for the lifetime of your change. We usually use "ticketNNNNN"
+or "bugNNNNN", where NNNNN is the ticket number. To verify the format of the
+changes file, you can use `make check-changes`.  This is run automatically as
+part of `make check` -- if it fails, we must fix it as soon as possible, so
+that our CI passes.  These checks are implemented in
+`scripts/maint/lintChanges.py`.
 
 Changes file style guide:
-  * Changes files begin with "  o Header (subheading):".  The header
-    should usually be "Minor/Major bugfixes/features". The subheading is a
-    particular area within Tor.  See the ChangeLog for examples.
-
   * Make everything terse.
 
   * Write from the user's point of view: describe the user-visible changes
@@ -183,6 +219,9 @@ deviations from our C whitespace style.  Generally, we use:
    - No space between a function name and an opening paren. `puts(x)`, not
      `puts (x)`.
    - Function declarations at the start of the line.
+   - Use `void foo(void)` to declare a function with no arguments.  Saying
+     `void foo()` is C++ syntax.
+   - Use `const` for new APIs.
 
 If you use an editor that has plugins for editorconfig.org, the file
 `.editorconfig` will help you to conform this coding style.
@@ -199,20 +238,49 @@ We have some wrapper functions like `tor_malloc`, `tor_free`, `tor_strdup`, and
 `tor_gettimeofday;` use them instead of their generic equivalents.  (They
 always succeed or exit.)
 
+Specifically, Don't use `malloc`, `realloc`, `calloc`, `free`, or
+`strdup`. Use `tor_malloc`, `tor_realloc`, `tor_calloc`, `tor_free`, or
+`tor_strdup`.
+
+Don't use `tor_realloc(x, y\*z)`. Use `tor_reallocarray(x, y, z)` instead.;
+
 You can get a full list of the compatibility functions that Tor provides by
 looking through `src/lib/*/*.h`.  You can see the
 available containers in `src/lib/containers/*.h`.  You should probably
 familiarize yourself with these modules before you write too much code, or
 else you'll wind up reinventing the wheel.
 
-We don't use `strcat` or `strcpy` or `sprintf` of any of those notoriously broken
-old C functions.  Use `strlcat`, `strlcpy`, or `tor_snprintf/tor_asprintf` instead.
+
+We don't use `strcat` or `strcpy` or `sprintf` of any of those notoriously
+broken old C functions.  We also avoid `strncat` and `strncpy`. Use
+`strlcat`, `strlcpy`, or `tor_snprintf/tor_asprintf` instead.
 
 We don't call `memcmp()` directly.  Use `fast_memeq()`, `fast_memneq()`,
-`tor_memeq()`, or `tor_memneq()` for most purposes.
+`tor_memeq()`, or `tor_memneq()` for most purposes.  If you really need a
+tristate return value, use `tor_memcmp()` or `fast_memcmp()`.
 
-Also see a longer list of functions to avoid in:
-https://people.torproject.org/~nickm/tor-auto/internal/this-not-that.html
+Don't call `assert()` directly. For hard asserts, use `tor_assert()`. For
+soft asserts, use `tor_assert_nonfatal()` or `BUG()`. If you need to print
+debug information in assert error message, consider using `tor_assertf()` and
+`tor_assertf_nonfatal()`.  If you are writing code that is too low-level to
+use the logging subsystem, use `raw_assert()`.
+
+Don't use `toupper()` and `tolower()` functions. Use `TOR_TOUPPER` and
+`TOR_TOLOWER` macros instead. Similarly, use `TOR_ISALPHA`, `TOR_ISALNUM` et.
+al. instead of `isalpha()`, `isalnum()`, etc.
+
+When allocating new string to be added to a smartlist, use
+`smartlist_add_asprintf()` to do both at once.
+
+Avoid calling BSD socket functions directly. Use portable wrappers to work
+with sockets and socket addresses. Also, sockets should be of type
+`tor_socket_t`.
+
+Don't use any of these functions: they aren't portable. Use the
+version prefixed with `tor_` instead: strtok_r, memmem, memstr,
+asprintf, localtime_r, gmtime_r, inet_aton, inet_ntop, inet_pton,
+getpass, ntohll, htonll.  (This list is incomplete.)
+
 
 What code can use what other code?
 ----------------------------------
@@ -302,8 +370,16 @@ definitions when necessary.)
 Assignment operators shouldn't nest inside other expressions.  (You can
 ignore this inside macro definitions when necessary.)
 
-Functions not to write
-----------------------
+Binary data and wire formats
+----------------------------
+
+Use pointer to `char` when representing NUL-terminated string. To represent
+arbitrary binary data, use pointer to `uint8_t`. (Many older Tor APIs ignore
+this rule.)
+
+Refrain from attempting to encode integers by casting their pointers to byte
+arrays. Use something like `set_uint32()`/`get_uint32()` instead and don't
+forget about endianness.
 
 Try to never hand-write new code to parse or generate binary
 formats. Instead, use trunnel if at all possible.  See
@@ -313,7 +389,6 @@ formats. Instead, use trunnel if at all possible.  See
 for more information about trunnel.
 
 For information on adding new trunnel code to Tor, see src/trunnel/README
-
 
 Calling and naming conventions
 ------------------------------
@@ -422,6 +497,8 @@ to use it as a function callback), define it with a name like
       abc_free_(obj);
     }
 
+When deallocating, don't say e.g. `if (x) tor_free(x)`. The convention is to
+have deallocators do nothing when NULL pointer is passed.
 
 Doxygen comment conventions
 ---------------------------

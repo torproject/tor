@@ -7,7 +7,7 @@ if [ ! -d "$1" ] ; then
     exit 1
 fi
 
-which=`basename "$1"`
+which=$(basename "$1")
 
 mkdir "$1.out"
 afl-cmin -i "$1" -o "$1.out" -m none "./src/test/fuzz/fuzz-${which}"

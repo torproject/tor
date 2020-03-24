@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -36,7 +36,7 @@ SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 #elif defined(HAVE_READPASSPHRASE_H)
 #include <readpassphrase.h>
 #else
-#include "tor_readpassphrase.h"
+#include "ext/tor_readpassphrase.h"
 #endif /* defined(_WIN32) || ... */
 
 #include <stdlib.h>

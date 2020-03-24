@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ht.h"
+#include "ext/ht.h"
 
 /** Helper: Declare an entry type and a map type to implement a mapping using
  * ht.h.  The map type will be called <b>maptype</b>.  The key part of each

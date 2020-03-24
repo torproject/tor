@@ -1,5 +1,0 @@
-  o Minor bugfixes (FreeBSD, PF-based proxy, IPv6):
-    - When extracting an IPv6 address from a PF-based proxy, verify
-      that we are actually configured to receive an IPv6 address,
-      and log an internal error if not. Fixes part of bug 31687;
-      bugfix on 0.2.3.4-alpha.

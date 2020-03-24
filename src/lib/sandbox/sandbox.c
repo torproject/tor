@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -38,13 +38,12 @@
 #include "lib/err/torerr.h"
 #include "lib/log/log.h"
 #include "lib/cc/torint.h"
-#include "lib/net/resolve.h"
 #include "lib/malloc/malloc.h"
 #include "lib/string/scanf.h"
 
-#include "tor_queue.h"
-#include "ht.h"
-#include "siphash.h"
+#include "ext/tor_queue.h"
+#include "ext/ht.h"
+#include "ext/siphash.h"
 
 #define DEBUGGING_CLOSE
 
@@ -83,7 +82,7 @@
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 #define USE_BACKTRACE
-#define EXPOSE_CLEAN_BACKTRACE
+#define BACKTRACE_PRIVATE
 #include "lib/err/backtrace.h"
 #endif /* defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && ... */
 
@@ -144,6 +143,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(clock_gettime),
     SCMP_SYS(close),
     SCMP_SYS(clone),
+    SCMP_SYS(dup),
     SCMP_SYS(epoll_create),
     SCMP_SYS(epoll_wait),
 #ifdef __NR_epoll_pwait
@@ -295,6 +295,7 @@ sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   unsigned i;
   int rc;
   int param[] = { SIGINT, SIGTERM, SIGPIPE, SIGUSR1, SIGUSR2, SIGHUP, SIGCHLD,
+                  SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS, SIGIO,
 #ifdef SIGXFSZ
       SIGXFSZ
 #endif
@@ -444,7 +445,7 @@ libc_uses_openat_for_everything(void)
     return 1;
   else
     return 0;
-#else /* !(defined(CHECK_LIBC_VERSION)) */
+#else /* !defined(CHECK_LIBC_VERSION) */
   return 0;
 #endif /* defined(CHECK_LIBC_VERSION) */
 }
@@ -795,6 +796,12 @@ sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
       SCMP_CMP(1, SCMP_CMP_EQ, SOL_SOCKET),
       SCMP_CMP(2, SCMP_CMP_EQ, SO_ERROR));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_SOCKET),
+      SCMP_CMP(2, SCMP_CMP_EQ, SO_ACCEPTCONN));
   if (rc)
     return rc;
 
@@ -1517,7 +1524,6 @@ install_syscall_filter(sandbox_cfg_t* cfg)
 
   // marking the sandbox as active
   sandbox_active = 1;
-  tor_make_getaddrinfo_cache_active();
 
  end:
   seccomp_release(ctx);
@@ -1762,11 +1768,6 @@ int
 sandbox_is_active(void)
 {
   return 0;
-}
-
-void
-sandbox_disable_getaddrinfo_cache(void)
-{
 }
 
 #endif /* !defined(USE_LIBSECCOMP) */

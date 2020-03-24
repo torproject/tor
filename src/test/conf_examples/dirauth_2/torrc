@@ -1,0 +1,5 @@
+#
+# This will get accepted if the module is enabled, and ignored if the module
+# is disabled.
+#
+AuthDirMaxServersPerAddr 8

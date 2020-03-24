@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -17,6 +17,6 @@
 #include <tchar.h>
 
 HANDLE load_windows_system_library(const TCHAR *library_name);
-#endif
+#endif /* defined(_WIN32) */
 
-#endif
+#endif /* !defined(TOR_WINLIB_H) */

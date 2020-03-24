@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -97,6 +97,6 @@ STATIC const routerstatus_t *router_pick_directory_server_impl(
                                            int *n_busy_out);
 STATIC int router_is_already_dir_fetching(const tor_addr_port_t *ap,
                                           int serverdesc, int microdesc);
-#endif
+#endif /* defined(NODE_SELECT_PRIVATE) */
 
-#endif
+#endif /* !defined(TOR_NODE_SELECT_H) */

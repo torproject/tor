@@ -1,0 +1,5 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Advertising more than one DirPort
+DirPort 1
+DirPort 2

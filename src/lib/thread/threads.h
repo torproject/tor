@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -63,7 +63,7 @@ int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex,
 void tor_cond_signal_one(tor_cond_t *cond);
 void tor_cond_signal_all(tor_cond_t *cond);
 
-typedef struct tor_threadlocal_s {
+typedef struct tor_threadlocal_t {
 #ifdef _WIN32
   DWORD index;
 #else
@@ -106,8 +106,10 @@ void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
 typedef struct atomic_counter_t {
   atomic_size_t val;
 } atomic_counter_t;
+#ifndef COCCI
 #define ATOMIC_LINKAGE static
-#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
+#endif
+#else /* !defined(HAVE_WORKING_STDATOMIC) */
 typedef struct atomic_counter_t {
   tor_mutex_t mutex;
   size_t val;
@@ -131,7 +133,17 @@ atomic_counter_init(atomic_counter_t *counter)
 {
   atomic_init(&counter->val, 0);
 }
-/** Clean up all resources held by an atomic counter. */
+/** Clean up all resources held by an atomic counter.
+ *
+ * This usage note applies to the compat_threads implementation of
+ * atomic_counter_destroy():
+ * Destroying a locked mutex is undefined behaviour. Global mutexes may be
+ * locked when they are passed to this function, because multiple threads can
+ * still access them. So we can either:
+ *  - destroy on shutdown, and re-initialise when tor re-initialises, or
+ *  - skip destroying and re-initialisation, using a sentinel variable.
+ * See #31735 for details.
+ */
 static inline void
 atomic_counter_destroy(atomic_counter_t *counter)
 {
@@ -162,7 +174,7 @@ atomic_counter_exchange(atomic_counter_t *counter, size_t newval)
   return atomic_exchange(&counter->val, newval);
 }
 
-#else /* !(defined(HAVE_WORKING_STDATOMIC)) */
+#else /* !defined(HAVE_WORKING_STDATOMIC) */
 #endif /* defined(HAVE_WORKING_STDATOMIC) */
 
 #endif /* !defined(TOR_COMPAT_THREADS_H) */

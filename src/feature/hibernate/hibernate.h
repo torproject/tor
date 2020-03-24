@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -32,6 +32,7 @@ int getinfo_helper_accounting(control_connection_t *conn,
                               const char **errmsg);
 uint64_t get_accounting_max_total(void);
 void accounting_free_all(void);
+bool accounting_tor_is_dormant(void);
 
 #ifdef HIBERNATE_PRIVATE
 /** Possible values of hibernate_state */

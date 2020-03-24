@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -77,6 +77,19 @@ config_line_find(const config_line_t *lines,
   const config_line_t *cl;
   for (cl = lines; cl; cl = cl->next) {
     if (!strcmp(cl->key, key))
+      return cl;
+  }
+  return NULL;
+}
+
+/** As config_line_find(), but perform a case-insensitive comparison. */
+const config_line_t *
+config_line_find_case(const config_line_t *lines,
+                      const char *key)
+{
+  const config_line_t *cl;
+  for (cl = lines; cl; cl = cl->next) {
+    if (!strcasecmp(cl->key, key))
       return cl;
   }
   return NULL;
@@ -243,7 +256,7 @@ config_lines_dup_and_filter(const config_line_t *inp,
 /** Return true iff a and b contain identical keys and values in identical
  * order. */
 int
-config_lines_eq(config_line_t *a, config_line_t *b)
+config_lines_eq(const config_line_t *a, const config_line_t *b)
 {
   while (a && b) {
     if (strcasecmp(a->key, b->key) || strcmp(a->value, b->value))

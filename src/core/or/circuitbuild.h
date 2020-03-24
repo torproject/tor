@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -34,9 +34,6 @@ int circuit_timeout_want_to_count_circ(const origin_circuit_t *circ);
 int circuit_send_next_onion_skin(origin_circuit_t *circ);
 void circuit_note_clock_jumped(int64_t seconds_elapsed, bool was_idle);
 int circuit_extend(cell_t *cell, circuit_t *circ);
-int circuit_init_cpath_crypto(crypt_path_t *cpath,
-                              const char *key_data, size_t key_data_len,
-                              int reverse, int is_hs_v3);
 struct created_cell_t;
 int circuit_finish_handshake(origin_circuit_t *circ,
                              const struct created_cell_t *created_cell);
@@ -51,7 +48,6 @@ MOCK_DECL(int, circuit_all_predicted_ports_handled, (time_t now,
 
 int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
-void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_new(const char *nickname,
                                const char *rsa_id_digest,
                                const struct ed25519_public_key_t *ed_id,
@@ -83,19 +79,15 @@ void circuit_upgrade_circuits_from_guard_wait(void);
 #ifdef CIRCUITBUILD_PRIVATE
 STATIC circid_t get_unique_circ_id_by_chan(channel_t *chan);
 STATIC int new_route_len(uint8_t purpose, extend_info_t *exit_ei,
-                         smartlist_t *nodes);
-MOCK_DECL(STATIC int, count_acceptable_nodes, (smartlist_t *nodes));
+                         const smartlist_t *nodes);
+MOCK_DECL(STATIC int, count_acceptable_nodes, (const smartlist_t *nodes,
+                                               int direct));
 
 STATIC int onion_extend_cpath(origin_circuit_t *circ);
 
 STATIC int
 onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
                       int is_hs_v3_rp_circuit);
-
-#if defined(TOR_UNIT_TESTS)
-unsigned int cpath_get_n_hops(crypt_path_t **head_ptr);
-
-#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(CIRCUITBUILD_PRIVATE) */
 

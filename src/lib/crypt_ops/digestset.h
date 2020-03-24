@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -26,4 +26,4 @@ void digestset_add(digestset_t *set, const char *addr);
 int digestset_probably_contains(const digestset_t *set,
                                 const char *addr);
 
-#endif
+#endif /* !defined(TOR_DIGESTSET_H) */

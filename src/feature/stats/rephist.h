@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -103,7 +103,7 @@ typedef struct bw_array_t bw_array_t;
 STATIC uint64_t find_largest_max(bw_array_t *b);
 STATIC void commit_max(bw_array_t *b);
 STATIC void advance_obs(bw_array_t *b);
-#endif
+#endif /* defined(REPHIST_PRIVATE) */
 
 /**
  * Represents the type of a cell for padding accounting

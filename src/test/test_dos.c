@@ -1,8 +1,8 @@
-/* Copyright (c) 2018-2019, The Tor Project, Inc. */
+/* Copyright (c) 2018-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define DOS_PRIVATE
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #define CIRCUITLIST_PRIVATE
 
 #include "core/or/or.h"
@@ -411,7 +411,7 @@ test_dos_bucket_refill(void *arg)
   }
   tt_uint_op(current_circ_count, OP_EQ, 0);
   tt_uint_op(dos_stats->cc_stats.circuit_bucket, OP_EQ, current_circ_count);
-#endif
+#endif /* SIZEOF_TIME_T == 8 */
 
  done:
   tor_free(chan);

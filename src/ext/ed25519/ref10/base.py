@@ -1,3 +1,8 @@
+# Future imports for Python 2.7, mandatory in 3.0
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 b = 256
 q = 2**255 - 19
 l = 2**252 + 27742317777372353535851937790883648493
@@ -51,15 +56,15 @@ def radix255(x):
 
 Bi = B
 for i in range(32):
-  print "{"
+  print("{")
   Bij = Bi
   for j in range(8):
-    print " {"
-    print "  {",radix255(Bij[1]+Bij[0]),"},"
-    print "  {",radix255(Bij[1]-Bij[0]),"},"
-    print "  {",radix255(2*d*Bij[0]*Bij[1]),"},"
+    print(" {")
+    print("  {",radix255(Bij[1]+Bij[0]),"},")
+    print("  {",radix255(Bij[1]-Bij[0]),"},")
+    print("  {",radix255(2*d*Bij[0]*Bij[1]),"},")
     Bij = edwards(Bij,Bi)
-    print " },"
-  print "},"
+    print(" },")
+  print("},")
   for k in range(8):
     Bi = edwards(Bi,Bi)

@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -152,7 +152,7 @@ tor_mlockall(void)
                            "pages: %s", strerror(errno));
     return -1;
   }
-#else /* !(defined(HAVE_UNIX_MLOCKALL)) */
+#else /* !defined(HAVE_UNIX_MLOCKALL) */
   log_warn(LD_GENERAL, "Unable to lock memory pages. mlockall() unsupported?");
   return -1;
 #endif /* defined(HAVE_UNIX_MLOCKALL) */
@@ -214,7 +214,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     return -1;
   }
   limit = MAX_CONNECTIONS;
-#else /* !(!defined(HAVE_GETRLIMIT)) */
+#else /* defined(HAVE_GETRLIMIT) */
   struct rlimit rlim;
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {

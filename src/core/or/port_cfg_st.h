@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file port_cfg_st.h
+ * @brief Listener port configuration structure.
+ **/
 
 #ifndef PORT_CFG_ST_H
 #define PORT_CFG_ST_H
@@ -31,5 +36,4 @@ struct port_cfg_t {
   char unix_addr[FLEXIBLE_ARRAY_MEMBER];
 };
 
-#endif
-
+#endif /* !defined(PORT_CFG_ST_H) */

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2019, The Tor Project, Inc. */
+/* Copyright (c) 2014-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define CIRCUITBUILD_PRIVATE
@@ -10,7 +10,6 @@
 #include "core/or/channeltls.h"
 #include "feature/stats/rephist.h"
 #include "core/or/relay.h"
-#include "feature/stats/rephist.h"
 #include "lib/container/order.h"
 /* For init/free stuff */
 #include "core/or/scheduler.h"
@@ -21,41 +20,9 @@
 /* Test suite stuff */
 #include "test/test.h"
 #include "test/fakechans.h"
-
-static or_circuit_t * new_fake_orcirc(channel_t *nchan, channel_t *pchan);
+#include "test/fakecircs.h"
 
 static void test_relay_append_cell_to_circuit_queue(void *arg);
-
-static or_circuit_t *
-new_fake_orcirc(channel_t *nchan, channel_t *pchan)
-{
-  or_circuit_t *orcirc = NULL;
-  circuit_t *circ = NULL;
-
-  orcirc = tor_malloc_zero(sizeof(*orcirc));
-  circ = &(orcirc->base_);
-  circ->magic = OR_CIRCUIT_MAGIC;
-
-  circuit_set_n_circid_chan(circ, get_unique_circ_id_by_chan(nchan), nchan);
-  cell_queue_init(&(circ->n_chan_cells));
-
-  circ->n_hop = NULL;
-  circ->streams_blocked_on_n_chan = 0;
-  circ->streams_blocked_on_p_chan = 0;
-  circ->n_delete_pending = 0;
-  circ->p_delete_pending = 0;
-  circ->received_destroy = 0;
-  circ->state = CIRCUIT_STATE_OPEN;
-  circ->purpose = CIRCUIT_PURPOSE_OR;
-  circ->package_window = CIRCWINDOW_START_MAX;
-  circ->deliver_window = CIRCWINDOW_START_MAX;
-  circ->n_chan_create_cell = NULL;
-
-  circuit_set_p_circid_chan(orcirc, get_unique_circ_id_by_chan(pchan), pchan);
-  cell_queue_init(&(orcirc->p_chan_cells));
-
-  return orcirc;
-}
 
 static void
 assert_circuit_ok_mock(const circuit_t *c)
@@ -145,7 +112,7 @@ test_relay_close_circuit(void *arg)
     cell_queue_clear(&orcirc->base_.n_chan_cells);
     cell_queue_clear(&orcirc->p_chan_cells);
   }
-  tor_free(orcirc);
+  free_fake_orcirc(orcirc);
   free_fake_channel(nchan);
   free_fake_channel(pchan);
   UNMOCK(assert_circuit_ok);
@@ -218,7 +185,7 @@ test_relay_append_cell_to_circuit_queue(void *arg)
     cell_queue_clear(&orcirc->base_.n_chan_cells);
     cell_queue_clear(&orcirc->p_chan_cells);
   }
-  tor_free(orcirc);
+  free_fake_orcirc(orcirc);
   free_fake_channel(nchan);
   free_fake_channel(pchan);
 

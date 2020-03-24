@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -14,63 +14,18 @@
 #include "core/or/or.h"
 #include "feature/nodelist/fmt_routerstatus.h"
 
-/* #include "lib/container/buffers.h" */
-/* #include "app/config/config.h" */
-/* #include "app/config/confparse.h" */
-/* #include "core/or/channel.h" */
-/* #include "core/or/channeltls.h" */
-/* #include "core/or/command.h" */
-/* #include "core/mainloop/connection.h" */
-/* #include "core/or/connection_or.h" */
-/* #include "feature/dircache/conscache.h" */
-/* #include "feature/dircache/consdiffmgr.h" */
-/* #include "feature/control/control.h" */
-/* #include "feature/dircache/directory.h" */
-/* #include "feature/dircache/dirserv.h" */
-/* #include "feature/hibernate/hibernate.h" */
-/* #include "feature/dirauth/keypin.h" */
-/* #include "core/mainloop/mainloop.h" */
-/* #include "feature/nodelist/microdesc.h" */
-/* #include "feature/nodelist/networkstatus.h" */
-/* #include "feature/nodelist/nodelist.h" */
 #include "core/or/policies.h"
-/* #include "core/or/protover.h" */
-/* #include "feature/stats/rephist.h" */
-/* #include "feature/relay/router.h" */
-/* #include "feature/nodelist/dirlist.h" */
 #include "feature/nodelist/routerlist.h"
-
-/* #include "feature/nodelist/routerparse.h" */
-/* #include "feature/nodelist/routerset.h" */
-/* #include "feature/nodelist/torcert.h" */
-/* #include "feature/dircommon/voting_schedule.h" */
-
 #include "feature/dirauth/dirvote.h"
 
-/* #include "feature/dircache/cached_dir_st.h" */
-/* #include "feature/dircommon/dir_connection_st.h" */
-/* #include "feature/nodelist/extrainfo_st.h" */
-/* #include "feature/nodelist/microdesc_st.h" */
-/* #include "feature/nodelist/node_st.h" */
 #include "feature/nodelist/routerinfo_st.h"
-/* #include "feature/nodelist/routerlist_st.h" */
-/* #include "core/or/tor_version_st.h" */
 #include "feature/nodelist/vote_routerstatus_st.h"
 
-/* #include "lib/compress/compress.h" */
-/* #include "lib/container/order.h" */
 #include "lib/crypt_ops/crypto_format.h"
-/* #include "lib/encoding/confline.h" */
-
-/* #include "lib/encoding/keyval.h" */
 
 /** Helper: write the router-status information in <b>rs</b> into a newly
  * allocated character buffer.  Use the same format as in network-status
  * documents.  If <b>version</b> is non-NULL, add a "v" line for the platform.
- *
- * consensus_method is the current consensus method when format is
- * NS_V3_CONSENSUS or NS_V3_CONSENSUS_MICRODESC. It is ignored for other
- * formats: pass ROUTERSTATUS_FORMAT_NO_CONSENSUS_METHOD.
  *
  * Return 0 on success, -1 on failure.
  *
@@ -88,7 +43,6 @@ char *
 routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                           const char *protocols,
                           routerstatus_format_type_t format,
-                          int consensus_method,
                           const vote_routerstatus_t *vrs)
 {
   char *summary;
@@ -119,12 +73,6 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
 
-  /* V3 microdesc consensuses only have "a" lines in later consensus methods
-   */
-  if (format == NS_V3_CONSENSUS_MICRODESC &&
-      consensus_method < MIN_METHOD_FOR_A_LINES_IN_MICRODESC_CONSENSUS)
-    goto done;
-
   /* Possible "a" line. At most one for now. */
   if (!tor_addr_is_null(&rs->ipv6_addr)) {
     smartlist_add_asprintf(chunks, "a %s\n",
@@ -135,7 +83,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     goto done;
 
   smartlist_add_asprintf(chunks,
-                   "s%s%s%s%s%s%s%s%s%s%s\n",
+                   "s%s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
                    rs->is_authority?" Authority":"",
                    rs->is_bad_exit?" BadExit":"",
@@ -145,6 +93,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                    rs->is_hs_dir?" HSDir":"",
                    rs->is_flagged_running?" Running":"",
                    rs->is_stable?" Stable":"",
+                   rs->is_staledesc?" StaleDesc":"",
                    rs->is_v2_dir?" V2Dir":"",
                    rs->is_valid?" Valid":"");
 
@@ -164,6 +113,8 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     if (format != NS_CONTROL_PORT) {
       /* Blow up more or less nicely if we didn't get anything or not the
        * thing we expected.
+       * This should be kept in sync with the function
+       * routerstatus_has_visibly_changed and the struct routerstatus_t
        */
       if (!desc) {
         char id[HEX_DIGEST_LEN+1];
@@ -232,7 +183,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     }
 
     if (format == NS_V3_VOTE && vrs) {
-      if (tor_mem_is_zero((char*)vrs->ed25519_id, ED25519_PUBKEY_LEN)) {
+      if (fast_mem_is_zero((char*)vrs->ed25519_id, ED25519_PUBKEY_LEN)) {
         smartlist_add_strdup(chunks, "id ed25519 none\n");
       } else {
         char ed_b64[BASE64_DIGEST256_LEN+1];

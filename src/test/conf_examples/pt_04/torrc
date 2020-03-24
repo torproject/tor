@@ -1,0 +1,6 @@
+# Relay PT tests
+# Options from relay/transport_config.c
+# Try a bad cookie auth file
+ExtORPort 1
+ExtORPortCookieAuthFile /
+ServerTransportPlugin bad3 exec /

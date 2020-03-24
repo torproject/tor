@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -11,7 +11,7 @@
 
 #define BUFFERS_PRIVATE
 #include "lib/cc/compat_compiler.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/compress/compress.h"
 #include "lib/log/util_bug.h"
 

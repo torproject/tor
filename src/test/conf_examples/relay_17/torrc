@@ -1,0 +1,6 @@
+# Relay tests
+# Options from relay/relay_config.c
+# Rebind warning
+ORPort 1
+AccountingMax 1
+KeepBindCapabilities 0

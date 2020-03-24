@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file addr_policy_st.h
+ * @brief Address policy structures.
+ **/
 
 #ifndef TOR_ADDR_POLICY_ST_H
 #define TOR_ADDR_POLICY_ST_H
@@ -43,4 +48,4 @@ struct addr_policy_t {
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 };
 
-#endif
+#endif /* !defined(TOR_ADDR_POLICY_ST_H) */

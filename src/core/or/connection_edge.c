@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -62,21 +62,24 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/netstatus.h"
 #include "core/or/channel.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/sendme.h"
 #include "core/proto/proto_http.h"
 #include "core/proto/proto_socks.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/circpathbias.h"
 #include "feature/client/dnsserv.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/directory.h"
 #include "feature/hibernate/hibernate.h"
@@ -97,7 +100,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "lib/crypt_ops/crypto_util.h"
 
 #include "core/or/cell_st.h"
@@ -300,6 +303,11 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       }
       return 0;
     case AP_CONN_STATE_OPEN:
+      if (! conn->base_.linked) {
+        note_user_activity(approx_time());
+      }
+
+      /* falls through. */
     case EXIT_CONN_STATE_OPEN:
       if (connection_edge_package_raw_inbuf(conn, package_partial, NULL) < 0) {
         /* (We already sent an end cell if possible) */
@@ -754,8 +762,13 @@ connection_edge_flushed_some(edge_connection_t *conn)
 {
   switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
+      if (! conn->base_.linked) {
+        note_user_activity(approx_time());
+      }
+
+      /* falls through. */
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       break;
   }
   return 0;
@@ -779,7 +792,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   switch (conn->base_.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      connection_edge_consider_sending_sendme(conn);
+      sendme_connection_edge_consider_sending(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
     case AP_CONN_STATE_NATD_WAIT:
@@ -1211,7 +1224,7 @@ connection_ap_rescan_and_attach_pending(void)
     entry_conn->marked_pending_circ_line = 0;   \
     entry_conn->marked_pending_circ_file = 0;   \
   } while (0)
-#else /* !(defined(DEBUGGING_17659)) */
+#else /* !defined(DEBUGGING_17659) */
 #define UNMARK() do { } while (0)
 #endif /* defined(DEBUGGING_17659) */
 
@@ -1538,6 +1551,102 @@ consider_plaintext_ports(entry_connection_t *conn, uint16_t port)
   }
 
   return 0;
+}
+
+/** Parse the given hostname in address. Returns true if the parsing was
+ * successful and type_out contains the type of the hostname. Else, false is
+ * returned which means it was not recognized and type_out is set to
+ * BAD_HOSTNAME.
+ *
+ * The possible recognized forms are (where true is returned):
+ *
+ *  If address is of the form "y.onion" with a well-formed handle y:
+ *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
+ *     ONION_V3_HOSTNAME depending on the HS version.
+ *
+ *  If address is of the form "x.y.onion" with a well-formed handle x:
+ *     Drop "x.", put a NUL after y, lower-case it, and return
+ *     ONION_V2_HOSTNAME or ONION_V3_HOSTNAME depending on the HS version.
+ *
+ * If address is of the form "y.onion" with a badly-formed handle y:
+ *     Return BAD_HOSTNAME and log a message.
+ *
+ * If address is of the form "y.exit":
+ *     Put a NUL after y and return EXIT_HOSTNAME.
+ *
+ * Otherwise:
+ *     Return NORMAL_HOSTNAME and change nothing.
+ */
+STATIC bool
+parse_extended_hostname(char *address, hostname_type_t *type_out)
+{
+  char *s;
+  char *q;
+  char query[HS_SERVICE_ADDR_LEN_BASE32+1];
+
+  s = strrchr(address,'.');
+  if (!s) {
+    *type_out = NORMAL_HOSTNAME; /* no dot, thus normal */
+    goto success;
+  }
+  if (!strcmp(s+1,"exit")) {
+    *s = 0; /* NUL-terminate it */
+    *type_out = EXIT_HOSTNAME; /* .exit */
+    goto success;
+  }
+  if (strcmp(s+1,"onion")) {
+    *type_out = NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
+    goto success;
+  }
+
+  /* so it is .onion */
+  *s = 0; /* NUL-terminate it */
+  /* locate a 'sub-domain' component, in order to remove it */
+  q = strrchr(address, '.');
+  if (q == address) {
+    *type_out = BAD_HOSTNAME;
+    goto failed; /* reject sub-domain, as DNS does */
+  }
+  q = (NULL == q) ? address : q + 1;
+  if (strlcpy(query, q, HS_SERVICE_ADDR_LEN_BASE32+1) >=
+      HS_SERVICE_ADDR_LEN_BASE32+1) {
+    *type_out = BAD_HOSTNAME;
+    goto failed;
+  }
+  if (q != address) {
+    memmove(address, q, strlen(q) + 1 /* also get \0 */);
+  }
+  /* v2 onion address check. */
+  if (strlen(query) == REND_SERVICE_ID_LEN_BASE32) {
+    *type_out = ONION_V2_HOSTNAME;
+    if (rend_valid_v2_service_id(query)) {
+      goto success;
+    }
+    goto failed;
+  }
+
+  /* v3 onion address check. */
+  if (strlen(query) == HS_SERVICE_ADDR_LEN_BASE32) {
+    *type_out = ONION_V3_HOSTNAME;
+    if (hs_address_is_valid(query)) {
+      goto success;
+    }
+    goto failed;
+  }
+
+  /* Reaching this point, nothing was recognized. */
+  *type_out = BAD_HOSTNAME;
+  goto failed;
+
+ success:
+  return true;
+ failed:
+  /* otherwise, return to previous state and return 0 */
+  *s = '.';
+  log_warn(LD_APP, "Invalid %shostname %s; rejecting",
+      (*type_out == (ONION_V2_HOSTNAME || ONION_V3_HOSTNAME) ? "onion " : ""),
+      safe_str_client(address));
+  return false;
 }
 
 /** How many times do we try connecting with an exit configured via
@@ -2007,16 +2116,15 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   const int automap = rr.automap;
   const addressmap_entry_source_t exit_source = rr.exit_source;
 
-  /* Now, we parse the address to see if it's an .onion or .exit or
-   * other special address.
-   */
-  const hostname_type_t addresstype = parse_extended_hostname(socks->address);
-
   /* Now see whether the hostname is bogus.  This could happen because of an
    * onion hostname whose format we don't recognize. */
-  if (addresstype == BAD_HOSTNAME) {
+  hostname_type_t addresstype;
+  if (!parse_extended_hostname(socks->address, &addresstype)) {
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
+    if (addresstype == ONION_V3_HOSTNAME) {
+      conn->socks_request->socks_extended_error_code = SOCKS5_HS_BAD_ADDRESS;
+    }
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
     return -1;
   }
@@ -2803,6 +2911,31 @@ connection_ap_process_natd(entry_connection_t *conn)
   return connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
 }
 
+static const char HTTP_CONNECT_IS_NOT_AN_HTTP_PROXY_MSG[] =
+  "HTTP/1.0 405 Method Not Allowed\r\n"
+  "Content-Type: text/html; charset=iso-8859-1\r\n\r\n"
+  "<html>\n"
+  "<head>\n"
+  "<title>This is an HTTP CONNECT tunnel, not a full HTTP Proxy</title>\n"
+  "</head>\n"
+  "<body>\n"
+  "<h1>This is an HTTP CONNECT tunnel, not an HTTP proxy.</h1>\n"
+  "<p>\n"
+  "It appears you have configured your web browser to use this Tor port as\n"
+  "an HTTP proxy.\n"
+  "</p><p>\n"
+  "This is not correct: This port is configured as a CONNECT tunnel, not\n"
+  "an HTTP proxy. Please configure your client accordingly.  You can also\n"
+  "use HTTPS; then the client should automatically use HTTP CONNECT."
+  "</p>\n"
+  "<p>\n"
+  "See <a href=\"https://www.torproject.org/documentation.html\">"
+  "https://www.torproject.org/documentation.html</a> for more "
+  "information.\n"
+  "</p>\n"
+  "</body>\n"
+  "</html>\n";
+
 /** Called on an HTTP CONNECT entry connection when some bytes have arrived,
  * but we have not yet received a full HTTP CONNECT request.  Try to parse an
  * HTTP CONNECT request from the connection's inbuf.  On success, set up the
@@ -2843,7 +2976,7 @@ connection_ap_process_http_connect(entry_connection_t *conn)
   tor_assert(command);
   tor_assert(addrport);
   if (strcasecmp(command, "connect")) {
-    errmsg = "HTTP/1.0 405 Method Not Allowed\r\n\r\n";
+    errmsg = HTTP_CONNECT_IS_NOT_AN_HTTP_PROXY_MSG;
     goto err;
   }
 
@@ -3484,10 +3617,16 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
                                     size_t replylen, int endreason)
 {
   char buf[256];
-  socks5_reply_status_t status =
-    stream_end_reason_to_socks5_response(endreason);
+  socks5_reply_status_t status;
 
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
+
+  if (conn->socks_request->socks_use_extended_errors &&
+      conn->socks_request->socks_extended_error_code != 0) {
+    status = conn->socks_request->socks_extended_error_code;
+  } else {
+    status = stream_end_reason_to_socks5_response(endreason);
+  }
 
   if (!SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
     control_event_stream_status(conn, status==SOCKS5_SUCCEEDED ?
@@ -3706,6 +3845,10 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
   /* Link the circuit and the connection crypt path. */
   conn->cpath_layer = origin_circ->cpath->prev;
 
+  /* If this is the first stream on this circuit, tell circpad */
+  if (!origin_circ->p_streams)
+    circpad_machine_event_circ_has_streams(origin_circ);
+
   /* Add it into the linked list of p_streams on this circuit */
   conn->next_stream = origin_circ->p_streams;
   origin_circ->p_streams = conn;
@@ -3796,6 +3939,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   if (! bcell.is_begindir) {
     /* Steal reference */
+    tor_assert(bcell.address);
     address = bcell.address;
     port = bcell.port;
 
@@ -4263,68 +4407,6 @@ connection_ap_can_use_exit(const entry_connection_t *conn,
   return 1;
 }
 
-/** If address is of the form "y.onion" with a well-formed handle y:
- *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
- *     ONION_V3_HOSTNAME depending on the HS version.
- *
- *  If address is of the form "x.y.onion" with a well-formed handle x:
- *     Drop "x.", put a NUL after y, lower-case it, and return
- *     ONION_V2_HOSTNAME or ONION_V3_HOSTNAME depending on the HS version.
- *
- * If address is of the form "y.onion" with a badly-formed handle y:
- *     Return BAD_HOSTNAME and log a message.
- *
- * If address is of the form "y.exit":
- *     Put a NUL after y and return EXIT_HOSTNAME.
- *
- * Otherwise:
- *     Return NORMAL_HOSTNAME and change nothing.
- */
-hostname_type_t
-parse_extended_hostname(char *address)
-{
-    char *s;
-    char *q;
-    char query[HS_SERVICE_ADDR_LEN_BASE32+1];
-
-    s = strrchr(address,'.');
-    if (!s)
-      return NORMAL_HOSTNAME; /* no dot, thus normal */
-    if (!strcmp(s+1,"exit")) {
-      *s = 0; /* NUL-terminate it */
-      return EXIT_HOSTNAME; /* .exit */
-    }
-    if (strcmp(s+1,"onion"))
-      return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
-
-    /* so it is .onion */
-    *s = 0; /* NUL-terminate it */
-    /* locate a 'sub-domain' component, in order to remove it */
-    q = strrchr(address, '.');
-    if (q == address) {
-      goto failed; /* reject sub-domain, as DNS does */
-    }
-    q = (NULL == q) ? address : q + 1;
-    if (strlcpy(query, q, HS_SERVICE_ADDR_LEN_BASE32+1) >=
-        HS_SERVICE_ADDR_LEN_BASE32+1)
-      goto failed;
-    if (q != address) {
-      memmove(address, q, strlen(q) + 1 /* also get \0 */);
-    }
-    if (rend_valid_v2_service_id(query)) {
-      return ONION_V2_HOSTNAME; /* success */
-    }
-    if (hs_address_is_valid(query)) {
-      return ONION_V3_HOSTNAME;
-    }
- failed:
-    /* otherwise, return to previous state and return 0 */
-    *s = '.';
-    log_warn(LD_APP, "Invalid onion hostname %s; rejecting",
-             safe_str_client(address));
-    return BAD_HOSTNAME;
-}
-
 /** Return true iff the (possibly NULL) <b>alen</b>-byte chunk of memory at
  * <b>a</b> is equal to the (possibly NULL) <b>blen</b>-byte chunk of memory
  * at <b>b</b>. */
@@ -4526,6 +4608,25 @@ circuit_clear_isolation(origin_circuit_t *circ)
     tor_free(circ->socks_password);
   }
   circ->socks_username_len = circ->socks_password_len = 0;
+}
+
+/** Send an END and mark for close the given edge connection conn using the
+ * given reason that has to be a stream reason.
+ *
+ * Note: We don't unattached the AP connection (if applicable) because we
+ * don't want to flush the remaining data. This function aims at ending
+ * everything quickly regardless of the connection state.
+ *
+ * This function can't fail and does nothing if conn is NULL. */
+void
+connection_edge_end_close(edge_connection_t *conn, uint8_t reason)
+{
+  if (!conn) {
+    return;
+  }
+
+  connection_edge_end(conn, reason);
+  connection_mark_for_close(TO_CONN(conn));
 }
 
 /** Free all storage held in module-scoped variables for connection_edge.c */

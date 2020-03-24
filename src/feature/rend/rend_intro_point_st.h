@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file rend_intro_point_st.h
+ * @brief v2 hidden service introduction point structure.
+ **/
 
 #ifndef REND_INTRO_POINT_ST_H
 #define REND_INTRO_POINT_ST_H
@@ -73,4 +78,4 @@ struct rend_intro_point_t {
   unsigned int circuit_established:1;
 };
 
-#endif
+#endif /* !defined(REND_INTRO_POINT_ST_H) */

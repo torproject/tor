@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -12,17 +12,21 @@
  * them make those decisions.
  **/
 
+#define PROCESS_DESCS_PRIVATE
+
 #include "core/or/or.h"
 #include "feature/dirauth/process_descs.h"
 
 #include "app/config/config.h"
 #include "core/or/policies.h"
 #include "core/or/versions.h"
+#include "feature/dirauth/dirauth_sys.h"
 #include "feature/dirauth/keypin.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
@@ -32,46 +36,28 @@
 #include "feature/relay/router.h"
 
 #include "core/or/tor_version_st.h"
+#include "feature/dirauth/dirauth_options_st.h"
 #include "feature/nodelist/extrainfo_st.h"
 #include "feature/nodelist/node_st.h"
+#include "feature/nodelist/microdesc_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/nodelist/vote_routerstatus_st.h"
 
 #include "lib/encoding/confline.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 /** How far in the future do we allow a router to get? (seconds) */
 #define ROUTER_ALLOW_SKEW (60*60*12)
 
 static void directory_remove_invalid(void);
-struct authdir_config_t;
 static was_router_added_t dirserv_add_extrainfo(extrainfo_t *ei,
                                                 const char **msg);
 static uint32_t
-dirserv_get_status_impl(const char *fp, const char *nickname,
-                        uint32_t addr, uint16_t or_port,
-                        const char *platform, const char **msg,
-                        int severity);
-
-/*                 1  Historically used to indicate Named */
-#define FP_INVALID 2  /**< Believed invalid. */
-#define FP_REJECT  4  /**< We will not publish this router. */
-/*                 8  Historically used to avoid using this as a dir. */
-#define FP_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
-/*                 32 Historically used to indicade Unnamed */
-
-/** Target of status_by_digest map. */
-typedef uint32_t router_status_t;
-
-static void add_fingerprint_to_dir(const char *fp,
-                                   struct authdir_config_t *list,
-                                   router_status_t add_status);
-
-/** List of nickname-\>identity fingerprint mappings for all the routers
- * that we name.  Used to prevent router impersonation. */
-typedef struct authdir_config_t {
-  strmap_t *fp_by_name; /**< Map from lc nickname to fingerprint. */
-  digestmap_t *status_by_digest; /**< Map from digest to router_status_t. */
-} authdir_config_t;
+dirserv_get_status_impl(const char *id_digest,
+                        const ed25519_public_key_t *ed25519_public_key,
+                        const char *nickname, uint32_t addr, uint16_t or_port,
+                        const char *platform, const char **msg, int severity);
 
 /** Should be static; exposed for testing. */
 static authdir_config_t *fingerprint_list = NULL;
@@ -83,20 +69,39 @@ authdir_config_new(void)
   authdir_config_t *list = tor_malloc_zero(sizeof(authdir_config_t));
   list->fp_by_name = strmap_new();
   list->status_by_digest = digestmap_new();
+  list->status_by_digest256 = digest256map_new();
   return list;
 }
+
+#ifdef TOR_UNIT_TESTS
+
+/** Initialize fingerprint_list to a new authdir_config_t. Used for tests. */
+void
+authdir_init_fingerprint_list(void)
+{
+  fingerprint_list = authdir_config_new();
+}
+
+/* Return the current fingerprint_list. Used for tests. */
+authdir_config_t *
+authdir_return_fingerprint_list(void)
+{
+  return fingerprint_list;
+}
+
+#endif /* defined(TOR_UNIT_TESTS) */
 
 /** Add the fingerprint <b>fp</b> to the smartlist of fingerprint_entry_t's
  * <b>list</b>, or-ing the currently set status flags with
  * <b>add_status</b>.
  */
-/* static */ void
-add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
-                       router_status_t add_status)
+int
+add_rsa_fingerprint_to_dir(const char *fp, authdir_config_t *list,
+                           rtr_flags_t add_status)
 {
   char *fingerprint;
   char d[DIGEST_LEN];
-  router_status_t *status;
+  rtr_flags_t *status;
   tor_assert(fp);
   tor_assert(list);
 
@@ -107,24 +112,52 @@ add_fingerprint_to_dir(const char *fp, authdir_config_t *list,
     log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
              escaped(fp));
     tor_free(fingerprint);
-    return;
+    return -1;
   }
 
   status = digestmap_get(list->status_by_digest, d);
   if (!status) {
-    status = tor_malloc_zero(sizeof(router_status_t));
+    status = tor_malloc_zero(sizeof(rtr_flags_t));
     digestmap_set(list->status_by_digest, d, status);
   }
 
   tor_free(fingerprint);
   *status |= add_status;
-  return;
+  return 0;
+}
+
+/** Add the ed25519 key <b>edkey</b> to the smartlist of fingerprint_entry_t's
+ * <b>list</b>, or-ing the currently set status flags with <b>add_status</b>.
+ * Return -1 if we were unable to decode the key, else return 0.
+ */
+int
+add_ed25519_to_dir(const ed25519_public_key_t *edkey, authdir_config_t *list,
+                   rtr_flags_t add_status)
+{
+  rtr_flags_t *status;
+
+  tor_assert(edkey);
+  tor_assert(list);
+
+  if (ed25519_validate_pubkey(edkey) < 0) {
+    log_warn(LD_DIRSERV, "Invalid ed25519 key \"%s\"", ed25519_fmt(edkey));
+    return -1;
+  }
+
+  status = digest256map_get(list->status_by_digest256, edkey->pubkey);
+  if (!status) {
+    status = tor_malloc_zero(sizeof(rtr_flags_t));
+    digest256map_set(list->status_by_digest256, edkey->pubkey, status);
+  }
+
+  *status |= add_status;
+  return 0;
 }
 
 /** Add the fingerprint for this OR to the global list of recognized
  * identity key fingerprints. */
 int
-dirserv_add_own_fingerprint(crypto_pk_t *pk)
+dirserv_add_own_fingerprint(crypto_pk_t *pk, const ed25519_public_key_t *edkey)
 {
   char fp[FINGERPRINT_LEN+1];
   if (crypto_pk_get_fingerprint(pk, fp, 0)<0) {
@@ -133,7 +166,14 @@ dirserv_add_own_fingerprint(crypto_pk_t *pk)
   }
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
-  add_fingerprint_to_dir(fp, fingerprint_list, 0);
+  if (add_rsa_fingerprint_to_dir(fp, fingerprint_list, 0) < 0) {
+    log_err(LD_BUG, "Error adding RSA fingerprint");
+    return -1;
+  }
+  if (add_ed25519_to_dir(edkey, fingerprint_list, 0) < 0) {
+    log_err(LD_BUG, "Error adding ed25519 key");
+    return -1;
+  }
   return 0;
 }
 
@@ -174,27 +214,46 @@ dirserv_load_fingerprint_file(void)
   fingerprint_list_new = authdir_config_new();
 
   for (list=front; list; list=list->next) {
-    char digest_tmp[DIGEST_LEN];
-    router_status_t add_status = 0;
+    rtr_flags_t add_status = 0;
     nickname = list->key; fingerprint = list->value;
     tor_strstrip(fingerprint, " "); /* remove spaces */
-    if (strlen(fingerprint) != HEX_DIGEST_LEN ||
-        base16_decode(digest_tmp, sizeof(digest_tmp),
-                      fingerprint, HEX_DIGEST_LEN) != sizeof(digest_tmp)) {
-      log_notice(LD_CONFIG,
-                 "Invalid fingerprint (nickname '%s', "
-                 "fingerprint %s). Skipping.",
-                 nickname, fingerprint);
+
+   /* Determine what we should do with the relay with the nickname field. */
+    if (!strcasecmp(nickname, "!reject")) {
+        add_status = RTR_REJECT;
+    } else if (!strcasecmp(nickname, "!badexit")) {
+        add_status = RTR_BADEXIT;
+    } else if (!strcasecmp(nickname, "!invalid")) {
+        add_status = RTR_INVALID;
+    }
+
+    /* Check if fingerprint is RSA or ed25519 by verifying it. */
+    int ed25519_not_ok = -1, rsa_not_ok = -1;
+
+    /* Attempt to add the RSA key. */
+    if (strlen(fingerprint) == HEX_DIGEST_LEN) {
+      rsa_not_ok = add_rsa_fingerprint_to_dir(fingerprint,
+                                              fingerprint_list_new,
+                                              add_status);
+    }
+
+    /* Check ed25519 key. We check the size to prevent buffer overflows.
+     * If valid, attempt to add it, */
+    ed25519_public_key_t ed25519_pubkey_tmp;
+    if (strlen(fingerprint) == BASE64_DIGEST256_LEN) {
+      if (!digest256_from_base64((char *) ed25519_pubkey_tmp.pubkey,
+                                 fingerprint)) {
+        ed25519_not_ok = add_ed25519_to_dir(&ed25519_pubkey_tmp,
+                                            fingerprint_list_new, add_status);
+      }
+    }
+
+    /* If both keys are invalid (or missing), log and skip. */
+    if (ed25519_not_ok && rsa_not_ok) {
+      log_warn(LD_CONFIG, "Invalid fingerprint (nickname '%s', "
+               "fingerprint %s). Skipping.", nickname, fingerprint);
       continue;
     }
-    if (!strcasecmp(nickname, "!reject")) {
-        add_status = FP_REJECT;
-    } else if (!strcasecmp(nickname, "!badexit")) {
-        add_status = FP_BADEXIT;
-    } else if (!strcasecmp(nickname, "!invalid")) {
-        add_status = FP_INVALID;
-    }
-    add_fingerprint_to_dir(fingerprint, fingerprint_list_new, add_status);
   }
 
   config_free_lines(front);
@@ -216,30 +275,42 @@ dirserv_load_fingerprint_file(void)
 
 #define DISABLE_DISABLING_ED25519
 
-/** Check whether <b>router</b> has a nickname/identity key combination that
- * we recognize from the fingerprint list, or an IP we automatically act on
- * according to our configuration.  Return the appropriate router status.
+/** Check whether <b>router</b> has:
+ * - a nickname/identity key combination that we recognize from the fingerprint
+ *   list,
+ * - an IP we automatically act on according to our configuration,
+ * - an appropriate version, and
+ * - matching pinned keys.
  *
- * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
- * *<b>msg</b> to an explanation of why. */
+ * Return the appropriate router status.
+ *
+ * If the status is 'RTR_REJECT' and <b>msg</b> is provided, set
+ * *<b>msg</b> to a string constant explaining why. */
 uint32_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg,
                           int severity)
 {
   char d[DIGEST_LEN];
-  const int key_pinning = get_options()->AuthDirPinKeys;
+  const int key_pinning = dirauth_get_options()->AuthDirPinKeys;
+  uint32_t r;
+  ed25519_public_key_t *signing_key = NULL;
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
     if (msg)
       *msg = "Bug: Error computing fingerprint";
-    return FP_REJECT;
+    return RTR_REJECT;
   }
 
-  /* Check for the more usual versions to reject a router first. */
-  const uint32_t r = dirserv_get_status_impl(d, router->nickname,
-                                             router->addr, router->or_port,
-                                             router->platform, msg, severity);
+  /* First, check for the more common reasons to reject a router. */
+  if (router->cache_info.signing_key_cert) {
+    /* This has an ed25519 identity key. */
+    signing_key = &router->cache_info.signing_key_cert->signing_key;
+  }
+  r = dirserv_get_status_impl(d, signing_key, router->nickname, router->addr,
+                              router->or_port, router->platform, msg,
+                              severity);
+
   if (r)
     return r;
 
@@ -254,7 +325,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
            "key.", router_describe(router));
     if (msg)
       *msg = "Missing ntor curve25519 onion key. Please upgrade!";
-    return FP_REJECT;
+    return RTR_REJECT;
   }
 
   if (router->cache_info.signing_key_cert) {
@@ -270,7 +341,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
         if (msg) {
           *msg = "Ed25519 identity key or RSA identity key has changed.";
         }
-        return FP_REJECT;
+        return RTR_REJECT;
       }
     }
   } else {
@@ -287,7 +358,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
         if (msg) {
           *msg = "Ed25519 identity key has disappeared.";
         }
-        return FP_REJECT;
+        return RTR_REJECT;
       }
 #endif /* defined(DISABLE_DISABLING_ED25519) */
     }
@@ -299,31 +370,74 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
 /** Return true if there is no point in downloading the router described by
  * <b>rs</b> because this directory would reject it. */
 int
-dirserv_would_reject_router(const routerstatus_t *rs)
+dirserv_would_reject_router(const routerstatus_t *rs,
+                            const vote_routerstatus_t *vrs)
 {
   uint32_t res;
+  struct ed25519_public_key_t pk;
+  memcpy(&pk.pubkey, vrs->ed25519_id, ED25519_PUBKEY_LEN);
 
-  res = dirserv_get_status_impl(rs->identity_digest, rs->nickname,
-                                rs->addr, rs->or_port,
-                                NULL, NULL, LOG_DEBUG);
+  res = dirserv_get_status_impl(rs->identity_digest, &pk, rs->nickname,
+                                rs->addr, rs->or_port, NULL, NULL, LOG_DEBUG);
 
-  return (res & FP_REJECT) != 0;
+  return (res & RTR_REJECT) != 0;
+}
+
+/**
+ * Check whether the platform string in <b>platform</b> describes a platform
+ * that, as a directory authority, we want to reject.  If it does, return
+ * true, and set *<b>msg</b> (if present) to a rejection message.  Otherwise
+ * return false.
+ */
+STATIC bool
+dirserv_rejects_tor_version(const char *platform,
+                            const char **msg)
+{
+  if (!platform)
+    return false;
+
+  static const char please_upgrade_string[] =
+    "Tor version is insecure or unsupported. Please upgrade!";
+
+  /* Versions before Tor 0.3.5 are unsupported.
+   *
+   * Also, reject unstable versions of 0.3.5, since (as of this writing)
+   * they are almost none of the network. */
+  if (!tor_version_as_new_as(platform,"0.3.5.7")) {
+    if (msg)
+      *msg = please_upgrade_string;
+    return true;
+  }
+
+  /* Series between Tor 0.3.6 and 0.4.1.4-rc inclusive are unsupported.
+   * Reject them. 0.3.6.0-alpha-dev only existed for a short time, before
+   * it was renamed to 0.4.0.0-alpha-dev. */
+  if (tor_version_as_new_as(platform,"0.3.6.0-alpha-dev") &&
+      !tor_version_as_new_as(platform,"0.4.1.5")) {
+    if (msg) {
+      *msg = please_upgrade_string;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 /** Helper: As dirserv_router_get_status, but takes the router fingerprint
- * (hex, no spaces), nickname, address (used for logging only), IP address, OR
- * port and platform (logging only) as arguments.
+ * (hex, no spaces), ed25519 key, nickname, address (used for logging only),
+ * IP address, OR port and platform (logging only) as arguments.
  *
  * Log messages at 'severity'. (There's not much point in
  * logging that we're rejecting servers we'll not download.)
  */
 static uint32_t
-dirserv_get_status_impl(const char *id_digest, const char *nickname,
-                        uint32_t addr, uint16_t or_port,
+dirserv_get_status_impl(const char *id_digest,
+                        const ed25519_public_key_t *ed25519_public_key,
+                        const char *nickname, uint32_t addr, uint16_t or_port,
                         const char *platform, const char **msg, int severity)
 {
   uint32_t result = 0;
-  router_status_t *status_by_digest;
+  rtr_flags_t *status_by_digest;
 
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
@@ -338,27 +452,13 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
       if (msg) {
         *msg = "Malformed platform string.";
       }
-      return FP_REJECT;
+      return RTR_REJECT;
     }
   }
 
-  /* Versions before Tor 0.2.4.18-rc are too old to support, and are
-   * missing some important security fixes too. Disable them. */
-  if (platform && !tor_version_as_new_as(platform,"0.2.4.18-rc")) {
-    if (msg)
-      *msg = "Tor version is insecure or unsupported. Please upgrade!";
-    return FP_REJECT;
-  }
-
-  /* Tor 0.2.9.x where x<5 suffers from bug #20499, where relays don't
-   * keep their consensus up to date so they make bad guards.
-   * The simple fix is to just drop them from the network. */
-  if (platform &&
-      tor_version_as_new_as(platform,"0.2.9.0-alpha") &&
-      !tor_version_as_new_as(platform,"0.2.9.5-alpha")) {
-    if (msg)
-      *msg = "Tor version contains bug 20499. Please upgrade!";
-    return FP_REJECT;
+  /* Check whether the version is obsolete, broken, insecure, etc... */
+  if (platform && dirserv_rejects_tor_version(platform, msg)) {
+    return RTR_REJECT;
   }
 
   status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
@@ -366,23 +466,30 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
   if (status_by_digest)
     result |= *status_by_digest;
 
-  if (result & FP_REJECT) {
+  if (ed25519_public_key) {
+    status_by_digest = digest256map_get(fingerprint_list->status_by_digest256,
+                                        ed25519_public_key->pubkey);
+    if (status_by_digest)
+      result |= *status_by_digest;
+  }
+
+  if (result & RTR_REJECT) {
     if (msg)
-      *msg = "Fingerprint is marked rejected -- if you think this is a "
-             "mistake please set a valid email address in ContactInfo and "
-             "send an email to bad-relays@lists.torproject.org mentioning "
-             "your fingerprint(s)?";
-    return FP_REJECT;
-  } else if (result & FP_INVALID) {
+      *msg = "Fingerprint and/or ed25519 identity is marked rejected -- if "
+             "you think this is a mistake please set a valid email address "
+             "in ContactInfo and send an email to "
+             "bad-relays@lists.torproject.org mentioning your fingerprint(s)?";
+    return RTR_REJECT;
+  } else if (result & RTR_INVALID) {
     if (msg)
-      *msg = "Fingerprint is marked invalid";
+      *msg = "Fingerprint and/or ed25519 identity is marked invalid";
   }
 
   if (authdir_policy_badexit_address(addr, or_port)) {
     log_fn(severity, LD_DIRSERV,
            "Marking '%s' as bad exit because of address '%s'",
                nickname, fmt_addr32(addr));
-    result |= FP_BADEXIT;
+    result |= RTR_BADEXIT;
   }
 
   if (!authdir_policy_permits_address(addr, or_port)) {
@@ -393,13 +500,13 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
              "mistake please set a valid email address in ContactInfo and "
              "send an email to bad-relays@lists.torproject.org mentioning "
              "your address(es) and fingerprint(s)?";
-    return FP_REJECT;
+    return RTR_REJECT;
   }
   if (!authdir_policy_valid_address(addr, or_port)) {
     log_fn(severity, LD_DIRSERV,
            "Not marking '%s' valid because of address '%s'",
                nickname, fmt_addr32(addr));
-    result |= FP_INVALID;
+    result |= RTR_INVALID;
   }
 
   return result;
@@ -414,6 +521,7 @@ dirserv_free_fingerprint_list(void)
 
   strmap_free(fingerprint_list->fp_by_name, tor_free_);
   digestmap_free(fingerprint_list->status_by_digest, tor_free_);
+  digest256map_free(fingerprint_list->status_by_digest256, tor_free_);
   tor_free(fingerprint_list);
 }
 
@@ -423,27 +531,40 @@ dirserv_free_fingerprint_list(void)
 
 /** Return -1 if <b>ri</b> has a private or otherwise bad address,
  * unless we're configured to not care. Return 0 if all ok. */
-static int
+STATIC int
 dirserv_router_has_valid_address(routerinfo_t *ri)
 {
   tor_addr_t addr;
+
   if (get_options()->DirAllowPrivateAddresses)
     return 0; /* whatever it is, we're fine with it */
-  tor_addr_from_ipv4h(&addr, ri->addr);
 
-  if (tor_addr_is_internal(&addr, 0)) {
+  tor_addr_from_ipv4h(&addr, ri->addr);
+  if (tor_addr_is_null(&addr) || tor_addr_is_internal(&addr, 0)) {
     log_info(LD_DIRSERV,
-             "Router %s published internal IP address. Refusing.",
+             "Router %s published internal IPv4 address. Refusing.",
              router_describe(ri));
     return -1; /* it's a private IP, we should reject it */
   }
+
+  /* We only check internal v6 on non-null addresses because we do not require
+   * IPv6 and null IPv6 is normal. */
+  if (!tor_addr_is_null(&ri->ipv6_addr) &&
+      tor_addr_is_internal(&ri->ipv6_addr, 0)) {
+    log_info(LD_DIRSERV,
+             "Router %s published internal IPv6 address. Refusing.",
+             router_describe(ri));
+    return -1; /* it's a private IP, we should reject it */
+  }
+
   return 0;
 }
 
 /** Check whether we, as a directory server, want to accept <b>ri</b>.  If so,
  * set its is_valid,running fields and return 0.  Otherwise, return -1.
  *
- * If the router is rejected, set *<b>msg</b> to an explanation of why.
+ * If the router is rejected, set *<b>msg</b> to a string constant explining
+ * why.
  *
  * If <b>complain</b> then explain at log-level 'notice' why we refused
  * a descriptor; else explain at log-level 'info'.
@@ -457,7 +578,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   int severity = (complain && ri->contact_info) ? LOG_NOTICE : LOG_INFO;
   uint32_t status = dirserv_router_get_status(ri, msg, severity);
   tor_assert(msg);
-  if (status & FP_REJECT)
+  if (status & RTR_REJECT)
     return -1; /* msg is already set. */
 
   /* Is there too much clock skew? */
@@ -493,7 +614,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
     return -1;
   }
 
-  *valid_out = ! (status & FP_INVALID);
+  *valid_out = ! (status & RTR_INVALID);
 
   return 0;
 }
@@ -505,8 +626,8 @@ void
 dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                  uint32_t authstatus)
 {
-  node->is_valid = (authstatus & FP_INVALID) ? 0 : 1;
-  node->is_bad_exit = (authstatus & FP_BADEXIT) ? 1 : 0;
+  node->is_valid = (authstatus & RTR_INVALID) ? 0 : 1;
+  node->is_bad_exit = (authstatus & RTR_BADEXIT) ? 1 : 0;
 }
 
 /** True iff <b>a</b> is more severe than <b>b</b>. */
@@ -519,7 +640,8 @@ WRA_MORE_SEVERE(was_router_added_t a, was_router_added_t b)
 /** As for dirserv_add_descriptor(), but accepts multiple documents, and
  * returns the most severe error that occurred for any one of them. */
 was_router_added_t
-dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
+dirserv_add_multiple_descriptors(const char *desc, size_t desclen,
+                                 uint8_t purpose,
                                  const char *source,
                                  const char **msg)
 {
@@ -534,7 +656,12 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
 
-  r=ROUTER_ADDED_SUCCESSFULLY; /*Least severe return value. */
+  r=ROUTER_ADDED_SUCCESSFULLY; /* Least severe return value. */
+
+  if (!string_is_utf8_no_bom(desc, desclen)) {
+    *msg = "descriptor(s) or extrainfo(s) not valid UTF-8 or had BOM.";
+    return ROUTER_AUTHDIR_REJECTS;
+  }
 
   format_iso_time(time_buf, now);
   if (tor_snprintf(annotation_buf, sizeof(annotation_buf),
@@ -545,14 +672,12 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
                    !general ? router_purpose_to_string(purpose) : "",
                    !general ? "\n" : "")<0) {
     *msg = "Couldn't format annotations";
-    /* XXX Not cool: we return -1 below, but (was_router_added_t)-1 is
-     * ROUTER_BAD_EI, which isn't what's gone wrong here. :( */
-    return -1;
+    return ROUTER_AUTHDIR_BUG_ANNOTATIONS;
   }
 
   s = desc;
   list = smartlist_new();
-  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0, 0,
+  if (!router_parse_list_from_string(&s, s+desclen, list, SAVED_NOWHERE, 0, 0,
                                      annotation_buf, NULL)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
@@ -568,7 +693,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   smartlist_clear(list);
 
   s = desc;
-  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 1, 0,
+  if (!router_parse_list_from_string(&s, s+desclen, list, SAVED_NOWHERE, 1, 0,
                                      NULL, NULL)) {
     SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
         msg_out = NULL;
@@ -605,7 +730,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
  * That means the caller must not access <b>ri</b> after this function
  * returns, since it might have been freed.
  *
- * Return the status of the operation.
+ * Return the status of the operation, and set *<b>msg</b> to a string
+ * constant describing the status.
  *
  * This function is only called when fresh descriptors are posted, not when
  * we re-load the cache.
@@ -618,7 +744,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   char *desc, *nickname;
   const size_t desclen = ri->cache_info.signed_descriptor_len +
       ri->cache_info.annotations_len;
-  const int key_pinning = get_options()->AuthDirPinKeys;
+  const int key_pinning = dirauth_get_options()->AuthDirPinKeys;
   *msg = NULL;
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
@@ -816,21 +942,21 @@ directory_remove_invalid(void)
       continue;
     r = dirserv_router_get_status(ent, &msg, LOG_INFO);
     description = router_describe(ent);
-    if (r & FP_REJECT) {
+    if (r & RTR_REJECT) {
       log_info(LD_DIRSERV, "Router %s is now rejected: %s",
                description, msg?msg:"");
       routerlist_remove(rl, ent, 0, time(NULL));
       continue;
     }
-    if (bool_neq((r & FP_INVALID), !node->is_valid)) {
+    if (bool_neq((r & RTR_INVALID), !node->is_valid)) {
       log_info(LD_DIRSERV, "Router '%s' is now %svalid.", description,
-               (r&FP_INVALID) ? "in" : "");
-      node->is_valid = (r&FP_INVALID)?0:1;
+               (r&RTR_INVALID) ? "in" : "");
+      node->is_valid = (r&RTR_INVALID)?0:1;
     }
-    if (bool_neq((r & FP_BADEXIT), node->is_bad_exit)) {
+    if (bool_neq((r & RTR_BADEXIT), node->is_bad_exit)) {
       log_info(LD_DIRSERV, "Router '%s' is now a %s exit", description,
-               (r & FP_BADEXIT) ? "bad" : "good");
-      node->is_bad_exit = (r&FP_BADEXIT) ? 1: 0;
+               (r & RTR_BADEXIT) ? "bad" : "good");
+      node->is_bad_exit = (r&RTR_BADEXIT) ? 1: 0;
     }
   } SMARTLIST_FOREACH_END(node);
 

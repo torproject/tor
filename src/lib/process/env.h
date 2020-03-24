@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -38,4 +38,4 @@ void set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
                                            const char *new_var,
                                            void (*free_old)(void*),
                                            int free_p);
-#endif
+#endif /* !defined(TOR_ENV_H) */

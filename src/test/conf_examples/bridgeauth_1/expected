@@ -1,0 +1,7 @@
+Address 198.51.100.123
+AuthoritativeDirectory 1
+BridgeAuthoritativeDir 1
+ContactInfo tor_parse_test@example.com
+DirPort 80
+Nickname Unnamed
+ORPort 443

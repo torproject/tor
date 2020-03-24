@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Tor Project, Inc. */
+/* Copyright (c) 2015-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -49,7 +49,7 @@ const char *s = NULL;
  * us do bad things, such as access freed buffers, without crashing. */
 extern const char *malloc_options;
 const char *malloc_options = "sufjj";
-#endif
+#endif /* defined(OpenBSD) */
 
 static unsigned
 fill_a_buffer_memset(void)

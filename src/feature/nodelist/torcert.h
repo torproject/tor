@@ -1,5 +1,10 @@
-/* Copyright (c) 2014-2019, The Tor Project, Inc. */
+/* Copyright (c) 2014-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file torcert.h
+ * @brief Header for torcert.c
+ **/
 
 #ifndef TORCERT_H_INCLUDED
 #define TORCERT_H_INCLUDED
@@ -71,7 +76,7 @@ int tor_cert_checksig(tor_cert_t *cert,
                       const ed25519_public_key_t *pubkey, time_t now);
 const char *tor_cert_describe_signature_status(const tor_cert_t *cert);
 
-tor_cert_t *tor_cert_dup(const tor_cert_t *cert);
+MOCK_DECL(tor_cert_t *,tor_cert_dup,(const tor_cert_t *cert));
 int tor_cert_eq(const tor_cert_t *cert1, const tor_cert_t *cert2);
 int tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2);
 

@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -17,16 +17,21 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
 
 #include "lib/fdio/fdio.h"
 #include "lib/cc/torint.h"
 #include "lib/err/torerr.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
-/** @{ */
-/** Some old versions of Unix didn't define constants for these values,
+/* Some old versions of Unix didn't define constants for these values,
  * and instead expect you to say 0, 1, or 2. */
+
+/** @cond */
 #ifndef SEEK_SET
 #define SEEK_SET 0
 #endif
@@ -36,7 +41,7 @@
 #ifndef SEEK_END
 #define SEEK_END 2
 #endif
-/** @} */
+/** @endcond */
 
 /** Return the position of <b>fd</b> with respect to the start of the file. */
 off_t

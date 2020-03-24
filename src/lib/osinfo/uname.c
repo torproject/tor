@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -137,7 +137,7 @@ get_uname,(void))
         if (!is_server && !is_client) {
           strlcat(uname_result, " [client or server]", sizeof(uname_result));
         }
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
         /* LCOV_EXCL_START -- can't provoke uname failure */
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
         /* LCOV_EXCL_STOP */

@@ -1,5 +1,10 @@
-/* Copyright (c) 2010-2019, The Tor Project, Inc. */
+/* Copyright (c) 2010-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file status.h
+ * @brief Header for status.c
+ **/
 
 #ifndef TOR_STATUS_H
 #define TOR_STATUS_H
@@ -15,4 +20,3 @@ STATIC char *bytes_to_usage(uint64_t bytes);
 #endif
 
 #endif /* !defined(TOR_STATUS_H) */
-

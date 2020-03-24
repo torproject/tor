@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -114,7 +114,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
-#include "app/config/confparse.h"
+#include "lib/confmgt/confmgt.h"
 #include "app/config/statefile.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
@@ -128,7 +128,7 @@
 #include "feature/client/circpathbias.h"
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
-#include "feature/control/control.h"
+#include "feature/control/control_events.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/microdesc.h"
@@ -1038,7 +1038,7 @@ get_max_sample_size(guard_selection_t *gs,
  * Return a smartlist of the all the guards that are not currently
  * members of the sample (GUARDS - SAMPLED_GUARDS).  The elements of
  * this list are node_t pointers in the non-bridge case, and
- * bridge_info_t pointers in the bridge case.  Set *<b>n_guards_out/b>
+ * bridge_info_t pointers in the bridge case.  Set *<b>n_guards_out</b>
  * to the number of guards that we found in GUARDS, including those
  * that were already sampled.
  */

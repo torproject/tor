@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -15,15 +15,18 @@
 #include "core/or/circuituse.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
+#include "core/or/crypt_path.h"
 #include "feature/client/circpathbias.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_service.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/rend/rendservice.h"
+#include "feature/rend/rendclient.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -39,7 +42,7 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/origin_circuit_st.h"
 
-/* A circuit is about to become an e2e rendezvous circuit. Check
+/** A circuit is about to become an e2e rendezvous circuit. Check
  * <b>circ_purpose</b> and ensure that it's properly set. Return true iff
  * circuit purpose is properly set, otherwise return false. */
 static int
@@ -66,7 +69,7 @@ circuit_purpose_is_correct_for_rend(unsigned int circ_purpose,
   return 1;
 }
 
-/* Create and return a crypt path for the final hop of a v3 prop224 rendezvous
+/** Create and return a crypt path for the final hop of a v3 prop224 rendezvous
  * circuit. Initialize the crypt path crypto using the output material from the
  * ntor key exchange at <b>ntor_key_seed</b>.
  *
@@ -89,7 +92,7 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   cpath = tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
 
-  if (circuit_init_cpath_crypto(cpath, (char*)keys, sizeof(keys),
+  if (cpath_init_circuit_crypto(cpath, (char*)keys, sizeof(keys),
                                 is_service_side, 1) < 0) {
     tor_free(cpath);
     goto err;
@@ -100,7 +103,7 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   return cpath;
 }
 
-/* We are a v2 legacy HS client: Create and return a crypt path for the hidden
+/** We are a v2 legacy HS client: Create and return a crypt path for the hidden
  * service on the other side of the rendezvous circuit <b>circ</b>. Initialize
  * the crypt path crypto using the body of the RENDEZVOUS1 cell at
  * <b>rend_cell_body</b> (which must be at least DH1024_KEY_LEN+DIGEST_LEN
@@ -126,7 +129,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
     goto err;
   }
   /* ... and set up cpath. */
-  if (circuit_init_cpath_crypto(hop,
+  if (cpath_init_circuit_crypto(hop,
                                 keys+DIGEST_LEN, sizeof(keys)-DIGEST_LEN,
                                 0, 0) < 0)
     goto err;
@@ -151,7 +154,7 @@ create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
   return hop;
 }
 
-/* Append the final <b>hop</b> to the cpath of the rend <b>circ</b>, and mark
+/** Append the final <b>hop</b> to the cpath of the rend <b>circ</b>, and mark
  * <b>circ</b> ready for use to transfer HS relay cells. */
 static void
 finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
@@ -177,7 +180,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   circ->hs_circ_has_timed_out = 0;
 
   /* Append the hop to the cpath of this circuit */
-  onion_append_to_cpath(&circ->cpath, hop);
+  cpath_extend_linked_list(&circ->cpath, hop);
 
   /* In legacy code, 'pending_final_cpath' points to the final hop we just
    * appended to the cpath. We set the original pointer to NULL so that we
@@ -192,7 +195,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   }
 }
 
-/* For a given circuit and a service introduction point object, register the
+/** For a given circuit and a service introduction point object, register the
  * intro circuit to the circuitmap. This supports legacy intro point. */
 static void
 register_intro_circ(const hs_service_intro_point_t *ip,
@@ -210,7 +213,7 @@ register_intro_circ(const hs_service_intro_point_t *ip,
   }
 }
 
-/* Return the number of opened introduction circuit for the given circuit that
+/** Return the number of opened introduction circuit for the given circuit that
  * is matching its identity key. */
 static unsigned int
 count_opened_desc_intro_point_circuits(const hs_service_t *service,
@@ -242,7 +245,7 @@ count_opened_desc_intro_point_circuits(const hs_service_t *service,
   return count;
 }
 
-/* From a given service, rendezvous cookie and handshake info, create a
+/** From a given service, rendezvous cookie and handshake info, create a
  * rendezvous point circuit identifier. This can't fail. */
 STATIC hs_ident_circuit_t *
 create_rp_circuit_identifier(const hs_service_t *service,
@@ -258,8 +261,7 @@ create_rp_circuit_identifier(const hs_service_t *service,
   tor_assert(server_pk);
   tor_assert(keys);
 
-  ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                               HS_IDENT_CIRCUIT_RENDEZVOUS);
+  ident = hs_ident_circuit_new(&service->keys.identity_pk);
   /* Copy the RENDEZVOUS_COOKIE which is the unique identifier. */
   memcpy(ident->rendezvous_cookie, rendezvous_cookie,
          sizeof(ident->rendezvous_cookie));
@@ -282,7 +284,7 @@ create_rp_circuit_identifier(const hs_service_t *service,
   return ident;
 }
 
-/* From a given service and service intro point, create an introduction point
+/** From a given service and service intro point, create an introduction point
  * circuit identifier. This can't fail. */
 static hs_ident_circuit_t *
 create_intro_circuit_identifier(const hs_service_t *service,
@@ -293,14 +295,13 @@ create_intro_circuit_identifier(const hs_service_t *service,
   tor_assert(service);
   tor_assert(ip);
 
-  ident = hs_ident_circuit_new(&service->keys.identity_pk,
-                               HS_IDENT_CIRCUIT_INTRO);
+  ident = hs_ident_circuit_new(&service->keys.identity_pk);
   ed25519_pubkey_copy(&ident->intro_auth_pk, &ip->auth_key_kp.pubkey);
 
   return ident;
 }
 
-/* For a given introduction point and an introduction circuit, send the
+/** For a given introduction point and an introduction circuit, send the
  * ESTABLISH_INTRO cell. The service object is used for logging. This can fail
  * and if so, the circuit is closed and the intro point object is flagged
  * that the circuit is not established anymore which is important for the
@@ -318,7 +319,7 @@ send_establish_intro(const hs_service_t *service,
 
   /* Encode establish intro cell. */
   cell_len = hs_cell_build_establish_intro(circ->cpath->prev->rend_circ_nonce,
-                                           ip, payload);
+                                           &service->config, ip, payload);
   if (cell_len < 0) {
     log_warn(LD_REND, "Unable to encode ESTABLISH_INTRO cell for service %s "
                       "on circuit %u. Closing circuit.",
@@ -350,7 +351,7 @@ send_establish_intro(const hs_service_t *service,
   memwipe(payload, 0, sizeof(payload));
 }
 
-/* Return a string constant describing the anonymity of service. */
+/** Return a string constant describing the anonymity of service. */
 static const char *
 get_service_anonymity_string(const hs_service_t *service)
 {
@@ -361,7 +362,7 @@ get_service_anonymity_string(const hs_service_t *service)
   }
 }
 
-/* For a given service, the ntor onion key and a rendezvous cookie, launch a
+/** For a given service, the ntor onion key and a rendezvous cookie, launch a
  * circuit to the rendezvous point specified by the link specifiers. On
  * success, a circuit identifier is attached to the circuit with the needed
  * data. This function will try to open a circuit for a maximum value of
@@ -388,10 +389,7 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
                                         &data->onion_pk,
                                         service->config.is_single_onion);
   if (info == NULL) {
-    /* We are done here, we can't extend to the rendezvous point.
-     * If you're running an IPv6-only v3 single onion service on 0.3.2 or with
-     * 0.3.2 clients, and somehow disable the option check, it will fail here.
-     */
+    /* We are done here, we can't extend to the rendezvous point. */
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Not enough info to open a circuit to a rendezvous point for "
            "%s service %s.",
@@ -473,7 +471,7 @@ launch_rendezvous_point_circuit(const hs_service_t *service,
   extend_info_free(info);
 }
 
-/* Return true iff the given service rendezvous circuit circ is allowed for a
+/** Return true iff the given service rendezvous circuit circ is allowed for a
  * relaunch to the rendezvous point. */
 static int
 can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
@@ -520,7 +518,7 @@ can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
   return 0;
 }
 
-/* Retry the rendezvous point of circ by launching a new circuit to it. */
+/** Retry the rendezvous point of circ by launching a new circuit to it. */
 static void
 retry_service_rendezvous_point(const origin_circuit_t *circ)
 {
@@ -569,82 +567,7 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
   return;
 }
 
-/* Add all possible link specifiers in node to lspecs:
- *  - legacy ID is mandatory thus MUST be present in node;
- *  - include ed25519 link specifier if present in the node, and the node
- *    supports ed25519 link authentication, even if its link versions are not
- *    compatible with us;
- *  - include IPv4 link specifier, if the primary address is not IPv4, log a
- *    BUG() warning, and return an empty smartlist;
- *  - include IPv6 link specifier if present in the node. */
-static void
-get_lspecs_from_node(const node_t *node, smartlist_t *lspecs)
-{
-  link_specifier_t *ls;
-  tor_addr_port_t ap;
-
-  tor_assert(node);
-  tor_assert(lspecs);
-
-  /* Get the relay's IPv4 address. */
-  node_get_prim_orport(node, &ap);
-
-  /* We expect the node's primary address to be a valid IPv4 address.
-   * This conforms to the protocol, which requires either an IPv4 or IPv6
-   * address (or both). */
-  if (BUG(!tor_addr_is_v4(&ap.addr)) ||
-      BUG(!tor_addr_port_is_valid_ap(&ap, 0))) {
-    return;
-  }
-
-  ls = link_specifier_new();
-  link_specifier_set_ls_type(ls, LS_IPV4);
-  link_specifier_set_un_ipv4_addr(ls, tor_addr_to_ipv4h(&ap.addr));
-  link_specifier_set_un_ipv4_port(ls, ap.port);
-  /* Four bytes IPv4 and two bytes port. */
-  link_specifier_set_ls_len(ls, sizeof(ap.addr.addr.in_addr) +
-                            sizeof(ap.port));
-  smartlist_add(lspecs, ls);
-
-  /* Legacy ID is mandatory and will always be present in node. */
-  ls = link_specifier_new();
-  link_specifier_set_ls_type(ls, LS_LEGACY_ID);
-  memcpy(link_specifier_getarray_un_legacy_id(ls), node->identity,
-         link_specifier_getlen_un_legacy_id(ls));
-  link_specifier_set_ls_len(ls, link_specifier_getlen_un_legacy_id(ls));
-  smartlist_add(lspecs, ls);
-
-  /* ed25519 ID is only included if the node has it, and the node declares a
-     protocol version that supports ed25519 link authentication, even if that
-     link version is not compatible with us. (We are sending the ed25519 key
-     to another tor, which may support different link versions.) */
-  if (!ed25519_public_key_is_zero(&node->ed25519_id) &&
-      node_supports_ed25519_link_authentication(node, 0)) {
-    ls = link_specifier_new();
-    link_specifier_set_ls_type(ls, LS_ED25519_ID);
-    memcpy(link_specifier_getarray_un_ed25519_id(ls), &node->ed25519_id,
-           link_specifier_getlen_un_ed25519_id(ls));
-    link_specifier_set_ls_len(ls, link_specifier_getlen_un_ed25519_id(ls));
-    smartlist_add(lspecs, ls);
-  }
-
-  /* Check for IPv6. If so, include it as well. */
-  if (node_has_ipv6_orport(node)) {
-    ls = link_specifier_new();
-    node_get_pref_ipv6_orport(node, &ap);
-    link_specifier_set_ls_type(ls, LS_IPV6);
-    size_t addr_len = link_specifier_getlen_un_ipv6_addr(ls);
-    const uint8_t *in6_addr = tor_addr_to_in6_addr8(&ap.addr);
-    uint8_t *ipv6_array = link_specifier_getarray_un_ipv6_addr(ls);
-    memcpy(ipv6_array, in6_addr, addr_len);
-    link_specifier_set_un_ipv6_port(ls, ap.port);
-    /* Sixteen bytes IPv6 and two bytes port. */
-    link_specifier_set_ls_len(ls, addr_len + sizeof(ap.port));
-    smartlist_add(lspecs, ls);
-  }
-}
-
-/* Using the given descriptor intro point ip, the node of the
+/** Using the given descriptor intro point ip, the node of the
  * rendezvous point rp_node and the service's subcredential, populate the
  * already allocated intro1_data object with the needed key material and link
  * specifiers.
@@ -666,10 +589,9 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
   tor_assert(subcredential);
   tor_assert(intro1_data);
 
-  /* Build the link specifiers from the extend information of the rendezvous
-   * circuit that we've picked previously. */
-  rp_lspecs = smartlist_new();
-  get_lspecs_from_node(rp_node, rp_lspecs);
+  /* Build the link specifiers from the node at the end of the rendezvous
+   * circuit that we opened for this introduction. */
+  rp_lspecs = node_get_link_specifier_smartlist(rp_node, 0);
   if (smartlist_len(rp_lspecs) == 0) {
     /* We can't rendezvous without link specifiers. */
     smartlist_free(rp_lspecs);
@@ -698,11 +620,27 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
   return ret;
 }
 
+/** Helper: cleanup function for client circuit. This is for every HS version.
+ * It is called from hs_circ_cleanup_on_free() entry point. */
+static void
+cleanup_on_free_client_circ(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circuit_is_hs_v2(circ)) {
+    rend_client_circuit_cleanup_on_free(circ);
+  } else if (circuit_is_hs_v3(circ)) {
+    hs_client_circuit_cleanup_on_free(circ);
+  }
+  /* It is possible the circuit has an HS purpose but no identifier (rend_data
+   * or hs_ident). Thus possible that this passess through. */
+}
+
 /* ========== */
 /* Public API */
 /* ========== */
 
-/* Return an introduction point circuit matching the given intro point object.
+/** Return an introduction point circuit matching the given intro point object.
  * NULL is returned is no such circuit can be found. */
 origin_circuit_t *
 hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
@@ -717,7 +655,29 @@ hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
   }
 }
 
-/* Called when we fail building a rendezvous circuit at some point other than
+/** Return an introduction point established circuit matching the given intro
+ * point object. The circuit purpose has to be CIRCUIT_PURPOSE_S_INTRO. NULL
+ * is returned is no such circuit can be found. */
+origin_circuit_t *
+hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
+{
+  origin_circuit_t *circ;
+
+  tor_assert(ip);
+
+  if (ip->base.is_only_legacy) {
+    circ = hs_circuitmap_get_intro_circ_v2_service_side(ip->legacy_key_digest);
+  } else {
+    circ = hs_circuitmap_get_intro_circ_v3_service_side(
+                                        &ip->auth_key_kp.pubkey);
+  }
+
+  /* Only return circuit if it is established. */
+  return (circ && TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ?
+          circ : NULL;
+}
+
+/** Called when we fail building a rendezvous circuit at some point other than
  * the last hop: launches a new circuit to the same rendezvous point. This
  * supports legacy service.
  *
@@ -757,7 +717,7 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
   return;
 }
 
-/* For a given service and a service intro point, launch a circuit to the
+/** For a given service and a service intro point, launch a circuit to the
  * extend info ei. If the service is a single onion, and direct_conn is true,
  * a one-hop circuit will be requested.
  *
@@ -818,7 +778,7 @@ hs_circ_launch_intro_point(hs_service_t *service,
   return ret;
 }
 
-/* Called when a service introduction point circuit is done building. Given
+/** Called when a service introduction point circuit is done building. Given
  * the service and intro point object, this function will send the
  * ESTABLISH_INTRO cell on the circuit. Return 0 on success. Return 1 if the
  * circuit has been repurposed to General because we already have too many
@@ -887,7 +847,7 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
   return ret;
 }
 
-/* Called when a service rendezvous point circuit is done building. Given the
+/** Called when a service rendezvous point circuit is done building. Given the
  * service and the circuit, this function will send a RENDEZVOUS1 cell on the
  * circuit using the information in the circuit identifier. If the cell can't
  * be sent, the circuit is closed. */
@@ -953,7 +913,7 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
   memwipe(payload, 0, sizeof(payload));
 }
 
-/* Circ has been expecting an INTRO_ESTABLISHED cell that just arrived. Handle
+/** Circ has been expecting an INTRO_ESTABLISHED cell that just arrived. Handle
  * the INTRO_ESTABLISHED cell payload of length payload_len arriving on the
  * given introduction circuit circ. The service is only used for logging
  * purposes. Return 0 on success else a negative value. */
@@ -998,7 +958,7 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   return ret;
 }
 
-/* We just received an INTRODUCE2 cell on the established introduction circuit
+/** We just received an INTRODUCE2 cell on the established introduction circuit
  * circ.  Handle the INTRODUCE2 payload of size payload_len for the given
  * circuit and service. This cell is associated with the intro point object ip
  * and the subcredential. Return 0 on success else a negative value. */
@@ -1060,14 +1020,12 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   ret = 0;
 
  done:
-  SMARTLIST_FOREACH(data.link_specifiers, link_specifier_t *, lspec,
-                    link_specifier_free(lspec));
-  smartlist_free(data.link_specifiers);
+  link_specifier_smartlist_free(data.link_specifiers);
   memwipe(&data, 0, sizeof(data));
   return ret;
 }
 
-/* Circuit <b>circ</b> just finished the rend ntor key exchange. Use the key
+/** Circuit <b>circ</b> just finished the rend ntor key exchange. Use the key
  * exchange output material at <b>ntor_key_seed</b> and setup <b>circ</b> to
  * serve as a rendezvous end-to-end circuit between the client and the
  * service. If <b>is_service_side</b> is set, then we are the hidden service
@@ -1097,7 +1055,7 @@ hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
   return 0;
 }
 
-/* We are a v2 legacy HS client and we just received a RENDEZVOUS1 cell
+/** We are a v2 legacy HS client and we just received a RENDEZVOUS1 cell
  * <b>rend_cell_body</b> on <b>circ</b>. Finish up the DH key exchange and then
  * extend the crypt path of <b>circ</b> so that the hidden service is on the
  * other side. */
@@ -1122,7 +1080,7 @@ hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
   return 0;
 }
 
-/* Given the introduction circuit intro_circ, the rendezvous circuit
+/** Given the introduction circuit intro_circ, the rendezvous circuit
  * rend_circ, a descriptor intro point object ip and the service's
  * subcredential, send an INTRODUCE1 cell on intro_circ.
  *
@@ -1207,7 +1165,7 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   return ret;
 }
 
-/* Send an ESTABLISH_RENDEZVOUS cell along the rendezvous circuit circ. On
+/** Send an ESTABLISH_RENDEZVOUS cell along the rendezvous circuit circ. On
  * success, 0 is returned else -1 and the circuit is marked for close. */
 int
 hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
@@ -1258,30 +1216,132 @@ hs_circ_send_establish_rendezvous(origin_circuit_t *circ)
   return -1;
 }
 
-/* We are about to close or free this <b>circ</b>. Clean it up from any
- * related HS data structures. This function can be called multiple times
- * safely for the same circuit. */
+/** Circuit cleanup strategy:
+ *
+ *  What follows is a series of functions that notifies the HS subsystem of 3
+ *  different circuit cleanup phase: close, free and repurpose.
+ *
+ *  Tor can call any of those in any orders so they have to be safe between
+ *  each other. In other words, the free should never depend on close to be
+ *  called before.
+ *
+ *  The "on_close()" is called from circuit_mark_for_close() which is
+ *  considered the tor fast path and thus as little work as possible should
+ *  done in that function. Currently, we only remove the circuit from the HS
+ *  circuit map and move on.
+ *
+ *  The "on_free()" is called from circuit circuit_free_() and it is very
+ *  important that at the end of the function, no state or objects related to
+ *  this circuit remains alive.
+ *
+ *  The "on_repurpose()" is called from circuit_change_purpose() for which we
+ *  simply remove it from the HS circuit map. We do not have other cleanup
+ *  requirements after that.
+ *
+ *  NOTE: The onion service code, specifically the service code, cleans up
+ *  lingering objects or state if any of its circuit disappear which is why
+ *  our cleanup strategy doesn't involve any service specific actions. As long
+ *  as the circuit is removed from the HS circuit map, it won't be used.
+ */
+
+/** We are about to close this <b>circ</b>. Clean it up from any related HS
+ * data structures. This function can be called multiple times safely for the
+ * same circuit. */
 void
-hs_circ_cleanup(circuit_t *circ)
+hs_circ_cleanup_on_close(circuit_t *circ)
 {
   tor_assert(circ);
 
-  /* If it's a service-side intro circ, notify the HS subsystem for the intro
-   * point circuit closing so it can be dealt with cleanly. */
-  if (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-      circ->purpose == CIRCUIT_PURPOSE_S_INTRO) {
-    hs_service_intro_circ_has_closed(TO_ORIGIN_CIRCUIT(circ));
-  }
+  /* On close, we simply remove it from the circuit map. It can not be used
+   * anymore. We keep this code path fast and lean. */
 
-  /* Clear HS circuitmap token for this circ (if any). Very important to be
-   * done after the HS subsystem has been notified of the close else the
-   * circuit will not be found.
-   *
-   * We do this at the close if possible because from that point on, the
-   * circuit is good as dead. We can't rely on removing it in the circuit
-   * free() function because we open a race window between the close and free
-   * where we can't register a new circuit for the same intro point. */
   if (circ->hs_token) {
     hs_circuitmap_remove_circuit(circ);
   }
+}
+
+/** We are about to free this <b>circ</b>. Clean it up from any related HS
+ * data structures. This function can be called multiple times safely for the
+ * same circuit. */
+void
+hs_circ_cleanup_on_free(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* NOTE: Bulk of the work of cleaning up a circuit is done here. */
+
+  if (circuit_purpose_is_hs_client(circ->purpose)) {
+    cleanup_on_free_client_circ(circ);
+  }
+
+  /* We have no assurance that the given HS circuit has been closed before and
+   * thus removed from the HS map. This actually happens in unit tests. */
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
+}
+
+/** We are about to repurpose this <b>circ</b>. Clean it up from any related
+ * HS data structures. This function can be called multiple times safely for
+ * the same circuit. */
+void
+hs_circ_cleanup_on_repurpose(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  /* On repurpose, we simply remove it from the circuit map but we do not do
+   * the on_free actions since we don't treat a repurpose as something we need
+   * to report in the client cache failure. */
+
+  if (circ->hs_token) {
+    hs_circuitmap_remove_circuit(circ);
+  }
+}
+
+/** Return true iff the given established client rendezvous circuit was sent
+ * into the INTRODUCE1 cell. This is called so we can take a decision on
+ * expiring or not the circuit.
+ *
+ * The caller MUST make sure the circuit is an established client rendezvous
+ * circuit (purpose: CIRCUIT_PURPOSE_C_REND_READY).
+ *
+ * This function supports all onion service versions. */
+bool
+hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  /* This can only be called for a rendezvous circuit that is an established
+   * confirmed rendezsvous circuit but without an introduction ACK. */
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_REND_READY);
+
+  /* The v2 and v3 circuit are handled differently:
+   *
+   * v2: A circ's pending_final_cpath field is non-NULL iff it is a rend circ
+   * and we have tried to send an INTRODUCE1 cell specifying it. Thus, if the
+   * pending_final_cpath field *is* NULL, then we want to not spare it.
+   *
+   * v3: When the INTRODUCE1 cell is sent, the introduction encryption public
+   * key is copied in the rendezvous circuit hs identifier. If it is a valid
+   * key, we know that this circuit is waiting the ACK on the introduction
+   * circuit. We want to _not_ spare the circuit if the key was never set. */
+
+  if (circ->rend_data) {
+    /* v2. */
+    if (circ->build_state && circ->build_state->pending_final_cpath != NULL) {
+      return true;
+    }
+  } else if (circ->hs_ident) {
+    /* v3. */
+    if (curve25519_public_key_is_ok(&circ->hs_ident->intro_enc_pk)) {
+      return true;
+    }
+  } else {
+    /* A circuit with an HS purpose without an hs_ident or rend_data in theory
+     * can not happen. In case, scream loudly and return false to the caller
+     * that the rendezvous was not sent in the INTRO1 cell. */
+    tor_assert_nonfatal_unreached();
+  }
+
+  /* The rendezvous has not been specified in the INTRODUCE1 cell. */
+  return false;
 }

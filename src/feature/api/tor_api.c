@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -40,10 +40,10 @@
 #define raw_socketpair tor_ersatz_socketpair
 #define raw_closesocket closesocket
 #define snprintf _snprintf
-#else
+#else /* !defined(_WIN32) */
 #define raw_socketpair socketpair
 #define raw_closesocket close
-#endif
+#endif /* defined(_WIN32) */
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>

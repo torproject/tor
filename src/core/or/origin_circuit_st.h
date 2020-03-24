@@ -1,8 +1,13 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file origin_circuit_st.h
+ * @brief Origin circuit structure.
+ **/
 
 #ifndef ORIGIN_CIRCUIT_ST_H
 #define ORIGIN_CIRCUIT_ST_H
@@ -161,6 +166,10 @@ struct origin_circuit_t {
    * connections to this circuit. */
   unsigned int unusable_for_new_conns : 1;
 
+  /* If this flag is set (due to padding negotiation failure), we should
+   * not try to negotiate further circuit padding. */
+  unsigned padding_negotiation_failed : 1;
+
   /**
    * Tristate variable to guard against pathbias miscounting
    * due to circuit purpose transitions changing the decision
@@ -291,4 +300,4 @@ struct origin_circuit_t {
 
 };
 
-#endif
+#endif /* !defined(ORIGIN_CIRCUIT_ST_H) */

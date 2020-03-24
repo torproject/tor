@@ -1,17 +1,22 @@
-/* Copyright (c) 2017-2019, The Tor Project, Inc. */
+/* Copyright (c) 2017-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
+
+/**
+ * @file scheduler_kist.c
+ * @brief Implements the KIST cell scheduler.
+ **/
 
 #define SCHEDULER_KIST_PRIVATE
 
 #include "core/or/or.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/nodelist/networkstatus.h"
-#define TOR_CHANNEL_INTERNAL_
+#define CHANNEL_OBJECT_PRIVATE
 #include "core/or/channel.h"
 #include "core/or/channeltls.h"
-#define SCHEDULER_PRIVATE_
+#define SCHEDULER_PRIVATE
 #include "core/or/scheduler.h"
 #include "lib/math/fp.h"
 
@@ -46,13 +51,13 @@ socket_table_ent_eq(const socket_table_ent_t *a, const socket_table_ent_t *b)
   return a->chan == b->chan;
 }
 
-typedef HT_HEAD(socket_table_s, socket_table_ent_s) socket_table_t;
+typedef HT_HEAD(socket_table_s, socket_table_ent_t) socket_table_t;
 
 static socket_table_t socket_table = HT_INITIALIZER();
 
-HT_PROTOTYPE(socket_table_s, socket_table_ent_s, node, socket_table_ent_hash,
+HT_PROTOTYPE(socket_table_s, socket_table_ent_t, node, socket_table_ent_hash,
              socket_table_ent_eq)
-HT_GENERATE2(socket_table_s, socket_table_ent_s, node, socket_table_ent_hash,
+HT_GENERATE2(socket_table_s, socket_table_ent_t, node, socket_table_ent_hash,
              socket_table_ent_eq, 0.6, tor_reallocarray, tor_free_)
 
 /* outbuf_table hash table stuff. The outbuf_table keeps track of which
@@ -60,8 +65,8 @@ HT_GENERATE2(socket_table_s, socket_table_ent_s, node, socket_table_ent_hash,
  * a write from outbuf to kernel periodically during a run and at the end of a
  * run. */
 
-typedef struct outbuf_table_ent_s {
-  HT_ENTRY(outbuf_table_ent_s) node;
+typedef struct outbuf_table_ent_t {
+  HT_ENTRY(outbuf_table_ent_t) node;
   channel_t *chan;
 } outbuf_table_ent_t;
 
@@ -77,9 +82,9 @@ outbuf_table_ent_eq(const outbuf_table_ent_t *a, const outbuf_table_ent_t *b)
   return a->chan->global_identifier == b->chan->global_identifier;
 }
 
-HT_PROTOTYPE(outbuf_table_s, outbuf_table_ent_s, node, outbuf_table_ent_hash,
+HT_PROTOTYPE(outbuf_table_s, outbuf_table_ent_t, node, outbuf_table_ent_hash,
              outbuf_table_ent_eq)
-HT_GENERATE2(outbuf_table_s, outbuf_table_ent_s, node, outbuf_table_ent_hash,
+HT_GENERATE2(outbuf_table_s, outbuf_table_ent_t, node, outbuf_table_ent_hash,
              outbuf_table_ent_eq, 0.6, tor_reallocarray, tor_free_)
 
 /*****************************************************************************
@@ -104,7 +109,7 @@ static unsigned int kist_lite_mode = 0;
  * changed and it doesn't recognized the values passed to the syscalls needed
  * by KIST. In that case, fallback to the naive approach. */
 static unsigned int kist_no_kernel_support = 0;
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
 static unsigned int kist_lite_mode = 1;
 #endif /* defined(HAVE_KIST_SUPPORT) */
 
@@ -298,7 +303,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   }
   return;
 
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
   goto fallback;
 #endif /* defined(HAVE_KIST_SUPPORT) */
 
@@ -724,7 +729,7 @@ kist_scheduler_run(void)
     SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
       scheduler_set_channel_state(readd_chan, SCHED_CHAN_PENDING);
       if (!smartlist_contains(cp, readd_chan)) {
-        if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+        if (!SCHED_BUG(readd_chan->sched_heap_idx != -1, readd_chan)) {
           /* XXXX Note that the check above is in theory redundant with
            * the smartlist_contains check.  But let's make sure we're
            * not messing anything up, and leave them both for now. */
@@ -833,7 +838,7 @@ scheduler_can_use_kist(void)
   return run_interval > 0;
 }
 
-#else /* !(defined(HAVE_KIST_SUPPORT)) */
+#else /* !defined(HAVE_KIST_SUPPORT) */
 
 int
 scheduler_can_use_kist(void)

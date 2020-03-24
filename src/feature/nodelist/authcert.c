@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -380,7 +380,8 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
   int added_trusted_cert = 0;
 
   for (s = contents; *s; s = eos) {
-    authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
+    authority_cert_t *cert = authority_cert_parse_from_string(s, strlen(s),
+                                                              &eos);
     cert_list_t *cl;
     if (!cert) {
       failure_code = -1;

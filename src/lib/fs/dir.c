@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -262,7 +262,7 @@ check_private_dir,(const char *dirname, cpd_check_t check,
     }
   }
   close(fd);
-#else /* !(!defined(_WIN32)) */
+#else /* defined(_WIN32) */
   /* Win32 case: we can't open() a directory. */
   (void)effective_user;
 
@@ -347,7 +347,7 @@ tor_listdir, (const char *dirname))
   }
   FindClose(handle);
   tor_free(pattern);
-#else /* !(defined(_WIN32)) */
+#else /* !defined(_WIN32) */
   const char *prot_dname = sandbox_intern_string(dirname);
   DIR *d;
   struct dirent *de;

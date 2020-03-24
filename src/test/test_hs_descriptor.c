@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Tor Project, Inc. */
+/* Copyright (c) 2016-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -21,21 +21,15 @@
 #include "test/hs_test_helpers.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
+#include "test/rng_test_helpers.h"
 
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
-DISABLE_GCC_WARNING(overlength-strings)
+DISABLE_GCC_WARNING("-Woverlength-strings")
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
 #include "test_hs_descriptor.inc"
-ENABLE_GCC_WARNING(overlength-strings)
-
-/* Mock function to fill all bytes with 1 */
-static void
-mock_crypto_strongest_rand(uint8_t *out, size_t out_len)
-{
-  memset(out, 1, out_len);
-}
+ENABLE_GCC_WARNING("-Woverlength-strings")
 
 /* Test certificate encoding put in a descriptor. */
 static void
@@ -132,7 +126,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -149,7 +143,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -166,7 +160,7 @@ test_descriptor_padding(void *arg)
     tt_assert(padded_plaintext);
     tor_free(plaintext);
     /* Make sure our padding has been zeroed. */
-    tt_int_op(tor_mem_is_zero((char *) padded_plaintext + plaintext_len,
+    tt_int_op(fast_mem_is_zero((char *) padded_plaintext + plaintext_len,
                               padded_len - plaintext_len), OP_EQ, 1);
     tor_free(padded_plaintext);
     /* Never never have a padded length smaller than the plaintext. */
@@ -176,115 +170,6 @@ test_descriptor_padding(void *arg)
 
  done:
   return;
-}
-
-static void
-test_link_specifier(void *arg)
-{
-  ssize_t ret;
-  hs_desc_link_specifier_t spec;
-  smartlist_t *link_specifiers = smartlist_new();
-  char buf[256];
-  char *b64 = NULL;
-  link_specifier_t *ls = NULL;
-
-  (void) arg;
-
-  /* Always this port. */
-  spec.u.ap.port = 42;
-  smartlist_add(link_specifiers, &spec);
-
-  /* Test IPv4 for starter. */
-  {
-    uint32_t ipv4;
-
-    spec.type = LS_IPV4;
-    ret = tor_addr_parse(&spec.u.ap.addr, "1.2.3.4");
-    tt_int_op(ret, OP_EQ, AF_INET);
-    b64 = encode_link_specifiers(link_specifiers);
-    tt_assert(b64);
-
-    /* Decode it and validate the format. */
-    ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, OP_GT, 0);
-    /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), OP_EQ, 1);
-    ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    tt_int_op(ret, OP_EQ, 8);
-    /* Should be 2 bytes for port and 4 bytes for IPv4. */
-    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, 6);
-    ipv4 = link_specifier_get_un_ipv4_addr(ls);
-    tt_int_op(tor_addr_to_ipv4h(&spec.u.ap.addr), OP_EQ, ipv4);
-    tt_int_op(link_specifier_get_un_ipv4_port(ls), OP_EQ, spec.u.ap.port);
-
-    link_specifier_free(ls);
-    ls = NULL;
-    tor_free(b64);
-  }
-
-  /* Test IPv6. */
-  {
-    uint8_t ipv6[16];
-
-    spec.type = LS_IPV6;
-    ret = tor_addr_parse(&spec.u.ap.addr, "[1:2:3:4::]");
-    tt_int_op(ret, OP_EQ, AF_INET6);
-    b64 = encode_link_specifiers(link_specifiers);
-    tt_assert(b64);
-
-    /* Decode it and validate the format. */
-    ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, OP_GT, 0);
-    /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), OP_EQ, 1);
-    ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    tt_int_op(ret, OP_EQ, 20);
-    /* Should be 2 bytes for port and 16 bytes for IPv6. */
-    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, 18);
-    for (unsigned int i = 0; i < sizeof(ipv6); i++) {
-      ipv6[i] = link_specifier_get_un_ipv6_addr(ls, i);
-    }
-    tt_mem_op(tor_addr_to_in6_addr8(&spec.u.ap.addr), OP_EQ, ipv6,
-              sizeof(ipv6));
-    tt_int_op(link_specifier_get_un_ipv6_port(ls), OP_EQ, spec.u.ap.port);
-
-    link_specifier_free(ls);
-    ls = NULL;
-    tor_free(b64);
-  }
-
-  /* Test legacy. */
-  {
-    uint8_t *id;
-
-    spec.type = LS_LEGACY_ID;
-    memset(spec.u.legacy_id, 'Y', sizeof(spec.u.legacy_id));
-    b64 = encode_link_specifiers(link_specifiers);
-    tt_assert(b64);
-
-    /* Decode it and validate the format. */
-    ret = base64_decode(buf, sizeof(buf), b64, strlen(b64));
-    tt_int_op(ret, OP_GT, 0);
-    /* First byte is the number of link specifier. */
-    tt_int_op(get_uint8(buf), OP_EQ, 1);
-    ret = link_specifier_parse(&ls, (uint8_t *) buf + 1, ret - 1);
-    /* 20 bytes digest + 1 byte type + 1 byte len. */
-    tt_int_op(ret, OP_EQ, 22);
-    tt_int_op(link_specifier_getlen_un_legacy_id(ls), OP_EQ, DIGEST_LEN);
-    /* Digest length is 20 bytes. */
-    tt_int_op(link_specifier_get_ls_len(ls), OP_EQ, DIGEST_LEN);
-    id = link_specifier_getarray_un_legacy_id(ls);
-    tt_mem_op(spec.u.legacy_id, OP_EQ, id, DIGEST_LEN);
-
-    link_specifier_free(ls);
-    ls = NULL;
-    tor_free(b64);
-  }
-
- done:
-  link_specifier_free(ls);
-  tor_free(b64);
-  smartlist_free(link_specifiers);
 }
 
 static void
@@ -350,14 +235,14 @@ test_decode_descriptor(void *arg)
   /* Give some bad stuff to the decoding function. */
   ret = hs_desc_decode_descriptor("hladfjlkjadf", subcredential,
                                   NULL, &decoded);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
 
   ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
-  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
   tt_assert(encoded);
 
   ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
-  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
   tt_assert(decoded);
 
   hs_helper_desc_equal(desc, decoded);
@@ -378,7 +263,7 @@ test_decode_descriptor(void *arg)
     tt_assert(encoded);
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential, NULL, &decoded);
-    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(decoded);
   }
 
@@ -432,21 +317,21 @@ test_decode_descriptor(void *arg)
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     NULL, &decoded);
-    tt_int_op(ret, OP_LT, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have an invalid client secret key, the decoding must fail. */
     hs_descriptor_free(decoded);
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     &invalid_client_kp.seckey, &decoded);
-    tt_int_op(ret, OP_LT, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_BAD_CLIENT_AUTH);
     tt_assert(!decoded);
 
     /* If we have the client secret key, the decoding must succeed and the
      * decoded descriptor must be correct. */
     ret = hs_desc_decode_descriptor(encoded, subcredential,
                                     &client_kp.seckey, &decoded);
-    tt_int_op(ret, OP_EQ, 0);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
     tt_assert(decoded);
 
     hs_helper_desc_equal(desc, decoded);
@@ -682,7 +567,7 @@ test_decode_bad_signature(void *arg)
 
   setup_full_capture_of_logs(LOG_WARN);
   ret = hs_desc_decode_plaintext(HS_DESC_BAD_SIG, &desc_plaintext);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   expect_log_msg_containing("Malformed signature line. Rejecting.");
   teardown_capture_of_logs();
 
@@ -722,14 +607,14 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, bad_value, "180", "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Missing fields. */
   {
     const char *plaintext = "hs-descriptor 3\n";
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Max length. */
@@ -742,7 +627,7 @@ test_decode_plaintext(void *arg)
     plaintext[big - 1] = '\0';
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Bad lifetime value. */
@@ -751,7 +636,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", bad_value, "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Huge lifetime value. */
@@ -760,7 +645,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", "7181615", "42", "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Invalid encrypted section. */
@@ -769,7 +654,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", "180", "42", bad_value);
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
   /* Invalid revision counter. */
@@ -778,7 +663,7 @@ test_decode_plaintext(void *arg)
     tor_asprintf(&plaintext, template, "3", "180", bad_value, "MESSAGE");
     ret = hs_desc_decode_plaintext(plaintext, &desc_plaintext);
     tor_free(plaintext);
-    tt_int_op(ret, OP_EQ, -1);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_PLAINTEXT_ERROR);
   }
 
  done:
@@ -848,8 +733,7 @@ test_desc_signature(void *arg)
   ret = ed25519_sign_prefixed(&sig, (const uint8_t *) data, strlen(data),
                               "Tor onion service descriptor sig v3", &kp);
   tt_int_op(ret, OP_EQ, 0);
-  ret = ed25519_signature_to_base64(sig_b64, &sig);
-  tt_int_op(ret, OP_EQ, 0);
+  ed25519_signature_to_base64(sig_b64, &sig);
   /* Build the descriptor that should be valid. */
   tor_asprintf(&desc, "%ssignature %s\n", data, sig_b64);
   ret = desc_sig_is_valid(sig_b64, &kp.pubkey, desc, strlen(desc));
@@ -909,7 +793,7 @@ test_build_authorized_client(void *arg)
                 client_pubkey_b16,
                 strlen(client_pubkey_b16));
 
-  MOCK(crypto_strongest_rand_, mock_crypto_strongest_rand);
+  testing_enable_prefilled_rng("\x01", 1);
 
   hs_desc_build_authorized_client(subcredential,
                                   &client_auth_pk, &auth_ephemeral_sk,
@@ -925,14 +809,12 @@ test_build_authorized_client(void *arg)
  done:
   tor_free(desc_client);
   tor_free(mem_op_hex_tmp);
-  UNMOCK(crypto_strongest_rand_);
+  testing_disable_prefilled_rng();
 }
 
 struct testcase_t hs_descriptor[] = {
   /* Encoding tests. */
   { "cert_encoding", test_cert_encoding, TT_FORK,
-    NULL, NULL },
-  { "link_specifier", test_link_specifier, TT_FORK,
     NULL, NULL },
   { "encode_descriptor", test_encode_descriptor, TT_FORK,
     NULL, NULL },

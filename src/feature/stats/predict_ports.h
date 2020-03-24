@@ -1,11 +1,11 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
- * \file predict_portst.h
+ * \file predict_ports.h
  * \brief Header file for predict_ports.c.
  **/
 
@@ -27,4 +27,4 @@ int rep_hist_circbuilding_dormant(time_t now);
 int predicted_ports_prediction_time_remaining(time_t now);
 void predicted_ports_free_all(void);
 
-#endif
+#endif /* !defined(TOR_PREDICT_PORTS_H) */

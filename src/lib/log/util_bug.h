@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -80,10 +80,10 @@
     tor__assert_tmp_value__;                    \
   } )
 #define ASSERT_PREDICT_LIKELY_(e) ASSERT_PREDICT_UNLIKELY_(e)
-#else
+#else /* !(defined(TOR_UNIT_TESTS) && defined(__GNUC__)) */
 #define ASSERT_PREDICT_UNLIKELY_(e) PREDICT_UNLIKELY(e)
 #define ASSERT_PREDICT_LIKELY_(e) PREDICT_LIKELY(e)
-#endif
+#endif /* defined(TOR_UNIT_TESTS) && defined(__GNUC__) */
 
 /* Sometimes we don't want to use assertions during branch coverage tests; it
  * leads to tons of unreached branches which in reality are only assertions we
@@ -92,21 +92,28 @@
 #define tor_assert(a) STMT_BEGIN                                        \
   (void)(a);                                                            \
   STMT_END
-#else
+#define tor_assertf(a, fmt, ...) STMT_BEGIN                             \
+  (void)(a);                                                            \
+  (void)(fmt);                                                          \
+  STMT_END
+#else /* !(defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_T...)) */
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
-#define tor_assert(expr) STMT_BEGIN                                     \
+#define tor_assert(expr) tor_assertf(expr, NULL)
+
+#define tor_assertf(expr, fmt, ...) STMT_BEGIN                          \
   if (ASSERT_PREDICT_LIKELY_(expr)) {                                   \
   } else {                                                              \
-    tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr);     \
-    tor_abort_();                                                       \
+    tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr,      \
+                          fmt, ##__VA_ARGS__);                          \
+    tor_abort_();                                                        \
   } STMT_END
 #endif /* defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS) */
 
 #define tor_assert_unreached()                                  \
   STMT_BEGIN {                                                  \
     tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__,     \
-                          "line should be unreached");          \
+                          "line should be unreached", NULL);    \
     tor_abort_();                                               \
   } STMT_END
 
@@ -124,7 +131,9 @@
 #undef BUG
 // Coverity defines this in global headers; let's override it.  This is a
 // magic coverity-only preprocessor thing.
+#ifndef COCCI
 #nodef BUG(x) (x)
+#endif
 #endif /* defined(__COVERITY__) */
 
 #if defined(__COVERITY__) || defined(__clang_analyzer__)
@@ -136,34 +145,47 @@
 #ifdef ALL_BUGS_ARE_FATAL
 #define tor_assert_nonfatal_unreached() tor_assert(0)
 #define tor_assert_nonfatal(cond) tor_assert((cond))
+#define tor_assertf_nonfatal(cond, fmt, ...)    \
+  tor_assertf(cond, fmt, ##__VA_ARGS__)
 #define tor_assert_nonfatal_unreached_once() tor_assert(0)
 #define tor_assert_nonfatal_once(cond) tor_assert((cond))
 #define BUG(cond)                                                       \
   (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
-   (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")"), \
+   (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",NULL), \
     tor_abort_(), 1)                                                    \
    : 0)
 #elif defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS)
 #define tor_assert_nonfatal_unreached() STMT_NIL
 #define tor_assert_nonfatal(cond) ((void)(cond))
+#define tor_assertf_nonfatal(cond, fmt, ...) STMT_BEGIN                 \
+  (void)cond;                                                           \
+  (void)fmt;                                                            \
+  STMT_END
 #define tor_assert_nonfatal_unreached_once() STMT_NIL
 #define tor_assert_nonfatal_once(cond) ((void)(cond))
 #define BUG(cond) (ASSERT_PREDICT_UNLIKELY_(cond) ? 1 : 0)
 #else /* Normal case, !ALL_BUGS_ARE_FATAL, !DISABLE_ASSERTS_IN_UNIT_TESTS */
 #define tor_assert_nonfatal_unreached() STMT_BEGIN                      \
-  tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, NULL, 0);         \
+  tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, NULL, 0, NULL);   \
   STMT_END
 #define tor_assert_nonfatal(cond) STMT_BEGIN                            \
   if (ASSERT_PREDICT_LIKELY_(cond)) {                                   \
   } else {                                                              \
-    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 0);      \
+    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 0, NULL);\
+  }                                                                     \
+  STMT_END
+#define tor_assertf_nonfatal(cond, fmt, ...) STMT_BEGIN                 \
+  if (ASSERT_PREDICT_UNLIKELY_(cond)) {                                 \
+  } else {                                                              \
+    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 0,        \
+                      fmt, ##__VA_ARGS__);                               \
   }                                                                     \
   STMT_END
 #define tor_assert_nonfatal_unreached_once() STMT_BEGIN                 \
   static int warning_logged__ = 0;                                      \
   if (!warning_logged__) {                                              \
     warning_logged__ = 1;                                               \
-    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, NULL, 1);       \
+    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, NULL, 1, NULL); \
   }                                                                     \
   STMT_END
 #define tor_assert_nonfatal_once(cond) STMT_BEGIN                       \
@@ -171,15 +193,16 @@
   if (ASSERT_PREDICT_LIKELY_(cond)) {                                   \
   } else if (!warning_logged__) {                                       \
     warning_logged__ = 1;                                               \
-    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1);      \
+    tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1, NULL);\
   }                                                                     \
   STMT_END
 #define BUG(cond)                                                       \
   (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
-   (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",0), 1) \
+  (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",0,NULL),1) \
    : 0)
 #endif /* defined(ALL_BUGS_ARE_FATAL) || ... */
 
+#ifndef COCCI
 #ifdef __GNUC__
 #define IF_BUG_ONCE__(cond,var)                                         \
   if (( {                                                               \
@@ -188,20 +211,22 @@
       if (bool_result && !var) {                                        \
         var = 1;                                                        \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__,             \
-                          "!("#cond")", 1);                             \
+                          ("!("#cond")"), 1, NULL);                     \
       }                                                                 \
       bool_result; } ))
-#else /* !(defined(__GNUC__)) */
+#else /* !defined(__GNUC__) */
 #define IF_BUG_ONCE__(cond,var)                                         \
   static int var = 0;                                                   \
   if ((cond) ?                                                          \
       (var ? 1 :                                                        \
        (var=1,                                                          \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__,             \
-                           "!("#cond")", 1),                            \
+                          ("!("#cond")"), 1, NULL),                     \
         1))                                                             \
       : 0)
 #endif /* defined(__GNUC__) */
+#endif /* !defined(COCCI) */
+
 #define IF_BUG_ONCE_VARNAME_(a)               \
   warning_logged_on_ ## a ## __
 #define IF_BUG_ONCE_VARNAME__(a)              \
@@ -221,10 +246,13 @@
 #define tor_fragile_assert() tor_assert_nonfatal_unreached_once()
 
 void tor_assertion_failed_(const char *fname, unsigned int line,
-                           const char *func, const char *expr);
+                           const char *func, const char *expr,
+                           const char *fmt, ...)
+    CHECK_PRINTF(5,6);
 void tor_bug_occurred_(const char *fname, unsigned int line,
                        const char *func, const char *expr,
-                       int once);
+                       int once, const char *fmt, ...)
+  CHECK_PRINTF(6,7);
 
 void tor_abort_(void) ATTR_NORETURN;
 

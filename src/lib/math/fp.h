@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -19,5 +19,6 @@ double tor_mathlog(double d) ATTR_CONST;
 long tor_lround(double d) ATTR_CONST;
 int64_t tor_llround(double d) ATTR_CONST;
 int64_t clamp_double_to_int64(double number);
+int tor_isinf(double x);
 
-#endif
+#endif /* !defined(TOR_FP_H) */

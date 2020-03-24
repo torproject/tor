@@ -31,7 +31,7 @@
 
 #include <inttypes.h>   /* PRIu64 PRIx64 PRIX64 uint64_t */
 
-#include "tor_queue.h"  /* TAILQ(3) */
+#include "ext/tor_queue.h"  /* TAILQ(3) */
 
 
 /*
@@ -89,10 +89,10 @@ typedef uint64_t timeout_t;
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef TIMEOUT_CB_OVERRIDE
-struct timeout_cb {
+struct timeout_cb_t {
 	void (*fn)(void);
 	void *arg;
-}; /* struct timeout_cb */
+}; /* struct timeout_cb_t */
 #endif
 
 /*
@@ -125,7 +125,7 @@ struct timeout {
 	/* entry member for struct timeout_list lists */
 
 #ifndef TIMEOUT_DISABLE_CALLBACKS
-	struct timeout_cb callback;
+	struct timeout_cb_t callback;
 	/* optional callback information */
 #endif
 
@@ -147,7 +147,7 @@ TIMEOUT_PUBLIC struct timeout *timeout_init(struct timeout *, int);
 #ifndef TIMEOUT_DISABLE_RELATIVE_ACCESS
 TIMEOUT_PUBLIC bool timeout_pending(struct timeout *);
 /* true if on timing wheel, false otherwise */
- 
+
 TIMEOUT_PUBLIC bool timeout_expired(struct timeout *);
 /* true if on expired queue, false otherwise */
 

@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging, protocol violations):
-    - Do not log a nonfatal assertion failure when receiving a VERSIONS
-      cell on a connection using the obsolete v1 link protocol. Log a
-      protocol_warn instead. Fixes bug 31107; bugfix on 0.2.4.4-alpha.

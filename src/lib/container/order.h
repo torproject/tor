@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2019, The Tor Project, Inc. */
+ * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_ORDER_H
@@ -57,4 +57,4 @@ third_quartile_uint32(uint32_t *array, int n_elements)
   return find_nth_uint32(array, n_elements, (n_elements*3)/4);
 }
 
-#endif /* !defined(TOR_CONTAINER_H) */
+#endif /* !defined(TOR_ORDER_H) */

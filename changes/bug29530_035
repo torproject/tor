@@ -1,5 +1,0 @@
-  o Minor bugfixes (testing):
-    - Downgrade some LOG_ERR messages in the address/* tests to warnings.
-      The LOG_ERR messages were occurring when we had no configured network.
-      We were failing the unit tests, because we backported 28668 to 0.3.5.8,
-      but did not backport 29530. Fixes bug 29530; bugfix on 0.3.5.8.
