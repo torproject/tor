@@ -61,6 +61,9 @@ install:
      # unprefixed packages are from MSYS2, which is like Cygwin. Avoid them.
      #
      # Use pacman --debug to show package downloads and install locations
+     #
+     # All installed library dlls must be copied to the test and app
+     # directories, before running tor's tests. (See below.)
      #>
     Execute-Command "C:\msys64\usr\bin\pacman" -Sy --verbose --needed --noconfirm ${env:mingw_prefix}-libevent ${env:mingw_prefix}-openssl ${env:mingw_prefix}-pkg-config ${env:mingw_prefix}-xz ${env:mingw_prefix}-zstd ;
 
@@ -95,8 +98,17 @@ test_script:
             $buildpath = @("C:\msys64\${env:compiler_path}\bin") + $oldpath
             $env:Path = $buildpath -join ';'
             Set-Location "${env:build}"
-            Copy-Item "C:/msys64/${env:compiler_path}/bin/libssp-0.dll" -Destination "${env:build}/src/test"
-            Copy-Item "C:/msys64/${env:compiler_path}/bin/zlib1.dll" -Destination "${env:build}/src/test"
+            <# Some compiler dlls must be copied to the test and app
+             # directories, before running tor's tests.
+             #>
+            Copy-Item "C:/msys64/${env:compiler_path}/bin/libssp-0.dll","C:/msys64/${env:compiler_path}/bin/zlib1.dll" -Destination "${env:build}/src/test"
+            Copy-Item "C:/msys64/${env:compiler_path}/bin/libssp-0.dll","C:/msys64/${env:compiler_path}/bin/zlib1.dll" -Destination "${env:build}/src/app"
+            <# All installed library dlls must be copied to the test and app
+             # directories, before running tor's tests.
+             # (See install command above.)
+             #>
+            Copy-Item "C:/${env:compiler_path}/bin/libcrypto*.dll","C:/${env:compiler_path}/bin/libssl*.dll","C:/${env:compiler_path}/bin/liblzma*.dll","C:/${env:compiler_path}/bin/libevent*.dll","C:/${env:compiler_path}/bin/libzstd*.dll" -Destination "${env:build}/src/test"
+            Copy-Item "C:/${env:compiler_path}/bin/libcrypto*.dll","C:/${env:compiler_path}/bin/libssl*.dll","C:/${env:compiler_path}/bin/liblzma*.dll","C:/${env:compiler_path}/bin/libevent*.dll","C:/${env:compiler_path}/bin/libzstd*.dll" -Destination "${env:build}/src/app"
             Execute-Bash "VERBOSE=1 TOR_SKIP_TESTCASES=crypto/openssl_version make -k -j2 check"
     }
 

@@ -1,0 +1,6 @@
+  o Testing:
+    - In our Appveyor Windows CI, copy required DLLs to test and app, before
+      running tor's tests. This ensures that tor.exe and test*.exe use the
+      correct version of each DLL. This fix is not required, but we hope it
+      will avoid DLL search issues in future.
+      Fixes bug 33673; bugfix on 0.3.4.2-alpha.
