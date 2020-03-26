@@ -45,20 +45,3 @@ The other files in this `HACKING` directory may also be useful as you
 get started working with Tor.
 
 Happy hacking!
-
-## TODO
------------------------
-
-XXXXX also describe
-
-doc/HACKING/WritingTests.md
-
-torguts.git
-
-torspec.git
-
-The design paper
-
-freehaven.net/anonbib
-
-XXXX describe these and add links.
