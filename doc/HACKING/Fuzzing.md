@@ -11,7 +11,6 @@ To run the fuzzing test cases in a deterministic fashion, use:
 This won't actually fuzz Tor!  It will just run all the fuzz binaries
 on our existing set of testcases for the fuzzer.
 
-
 ## Different kinds of fuzzing
 
 Right now we support three different kinds of fuzzer.
@@ -50,7 +49,6 @@ harness should rejecting invalid inputs without crashing or behaving badly.
 But the fuzzing harness should crash if tor fails an assertion, triggers a
 bug, or accesses memory it shouldn't. This helps fuzzing frameworks detect
 "interesting" cases.
-
 
 ## Guided Fuzzing with AFL
 

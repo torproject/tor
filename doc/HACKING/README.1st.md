@@ -1,5 +1,6 @@
-In this directory
------------------
+# README.1st
+
+## In this directory
 
 This directory has helpful information about what you need to know to
 hack on Tor!
@@ -21,8 +22,7 @@ with Tor.
 If it's your job to put out Tor releases, see `ReleasingTor.md` so
 that you don't miss any steps!
 
-Additional Information
------------------------
+## Additional Information
 
 For full information on how Tor is supposed to work, look at the files in
 [Tor specification](https://gitweb.torproject.org/torspec.git/tree).
@@ -34,8 +34,7 @@ For the latest version of the code, get a copy of git, and
 
     git clone https://git.torproject.org/git/tor
 
-Stay in touch
------------------------
+## Stay in touch
 
 We talk about Tor on the `tor-talk` mailing list.  Design proposals and
 discussion belong on the `tor-dev` mailing list.  We hang around on
@@ -47,7 +46,7 @@ get started working with Tor.
 
 Happy hacking!
 
-TODO
+## TODO
 -----------------------
 
 XXXXX also describe

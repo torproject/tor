@@ -1,5 +1,4 @@
-Getting started in Tor development
-==================================
+# Getting started in Tor development
 
 Congratulations!  You've found this file, and you're reading it!  This
 means that you might be interested in getting started in developing Tor.
@@ -14,8 +13,7 @@ dump of important information, you might like reading the
 You probably should skim some of the topic headings there before you write
 your first patch.
 
-Required background
--------------------
+## Required background
 
 First, I'm going to assume that you can build Tor from source, and that
 you know enough of the C language to read and write it.  (See the README
@@ -30,8 +28,7 @@ Most Tor developers develop using some Unix-based system, such as GNU/Linux,
 BSD, or macOS.  It's okay to develop on Windows if you want, but you're
 going to have a more difficult time.
 
-Getting your first patch into Tor
----------------------------------
+## Getting your first patch into Tor
 
 Once you've reached this point, here's what you need to know.
 

@@ -1,11 +1,9 @@
-Rust Coding Standards
-=======================
+# Rust Coding Standards
 
 You MUST follow the standards laid out in `doc/HACKING/CodingStandards.md`,
 where applicable.
 
-Module/Crate Declarations
----------------------------
+## Module/Crate Declarations
 
 Each Tor C module which is being rewritten MUST be in its own crate.
 See the structure of `src/rust` for examples.
@@ -53,8 +51,7 @@ If you have any external modules as dependencies (e.g. `extern crate
 libc;`), you MUST declare them in your crate's `lib.rs` and NOT in any
 other module.
 
-Dependencies and versions
----------------------------
+## Dependencies and versions
 
 In general, we use modules from only the Rust standard library
 whenever possible. We will review including external crates on a
@@ -80,8 +77,7 @@ Currently, Tor requires that you use the latest stable Rust version. At
 some point in the future, we will freeze on a given stable Rust version,
 to ensure backward compatibility with stable distributions that ship it.
 
-Updating/Adding Dependencies
-------------------------------
+## Updating/Adding Dependencies
 
 To add/remove/update dependencies, first add your dependencies,
 exactly specifying their versions, into the appropriate *crate-level*
@@ -100,8 +96,7 @@ Next, run `/scripts/maint/updateRustDependencies.sh`.  Then, go into
 `src/ext/rust` and commit the changes to the `tor-rust-dependencies`
 repo.
 
-Documentation
----------------
+## Documentation
 
 You MUST include `#![deny(missing_docs)]` in your crate.
 
@@ -117,14 +112,12 @@ types/constants/objects/functions/methods, you SHOULD also include an
 You MUST document your module with _module docstring_ comments,
 i.e. `//!` at the beginning of each line.
 
-Style
--------
+## Style
 
 You SHOULD consider breaking up large literal numbers with `_` when it makes it
 more human readable to do so, e.g. `let x: u64 = 100_000_000_000`.
 
-Testing
----------
+## Testing
 
 All code MUST be unittested and integration tested.
 
@@ -147,8 +140,7 @@ should put:
         }
     }
 
-Benchmarking
---------------
+## Benchmarking
 
 The external `test` crate can be used for most benchmarking.  However, using
 this crate requires nightly Rust.  Since we may want to switch to a more
@@ -185,23 +177,20 @@ Finally, to write your benchmark code, in
         }
     }
 
-Fuzzing
----------
+## Fuzzing
 
 If you wish to fuzz parts of your code, please see the
 [cargo fuzz](https://github.com/rust-fuzz/cargo-fuzz) crate, which uses
 [libfuzzer-sys](https://github.com/rust-fuzz/libfuzzer-sys).
 
-Whitespace & Formatting
--------------------------
+## Whitespace & Formatting
 
 You MUST run `rustfmt` (https://github.com/rust-lang-nursery/rustfmt)
 on your code before your code will be merged.  You can install rustfmt
 by doing `cargo install rustfmt-nightly` and then run it with `cargo
 fmt`.
 
-Safety
---------
+## Safety
 
 You SHOULD read [the nomicon](https://doc.rust-lang.org/nomicon/) before writing
 Rust FFI code.  It is *highly advised* that you read and write normal Rust code

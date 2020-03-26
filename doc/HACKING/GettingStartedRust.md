@@ -1,8 +1,6 @@
-Hacking on Rust in Tor
-========================
+# Hacking on Rust in Tor
 
-Getting Started
------------------
+## Getting Started
 
 Please read or review our documentation on Rust coding standards
 (`doc/HACKING/CodingStandardsRust.md`) before doing anything.
@@ -22,8 +20,7 @@ Please be patient with the other people who are working on getting more
 Rust code into Tor, because they are graciously donating their free time
 to contribute to this effort.
 
-Resources for learning Rust
------------------------------
+## Resources for learning Rust
 
 **Beginning resources**
 
@@ -48,8 +45,7 @@ is
 For learning more about FFI and Rust, see Jake Goulding's
 [Rust FFI Omnibus](http://jakegoulding.com/rust-ffi-omnibus/).
 
-Compiling Tor with Rust enabled
----------------------------------
+## Compiling Tor with Rust enabled
 
 You will need to run the `configure` script with the `--enable-rust`
 flag to explicitly build with Rust. Additionally, you will need to
@@ -86,8 +82,7 @@ topmost directory of the repository, this would be:
 
     TOR_RUST_DEPENDENCIES=`pwd`/src/ext/rust/crates ./configure --enable-rust
 
-Identifying which modules to rewrite
-======================================
+## Identifying which modules to rewrite
 
 The places in the Tor codebase that are good candidates for porting to
 Rust are:
@@ -115,8 +110,7 @@ interconnected your target module is.
 The output will tell you each module name, along with a set of every module that
 the module calls.  Modules which call fewer other modules are better targets.
 
-Writing your Rust module
-==========================
+## Writing your Rust module
 
 Strive to change the C API as little as possible.
 
@@ -138,8 +132,7 @@ Where `<name_of_c_object>` can be an enum, struct, constant, etc.  Then,
 do the same in the C code, to note that rust will need to be changed
 when the C does.
 
-Adding your Rust module to Tor's build system
------------------------------------------------
+## Adding your Rust module to Tor's build system
 
 0. Your translation of the C module should live in its own crate(s)
    in the `src/rust/` directory.
@@ -153,8 +146,7 @@ dependency of other Rust modules):
    `src/rust/tor_util/Cargo.toml` and include it in
    `src/rust/tor_rust/lib.rs`
 
-How to test your Rust code
-----------------------------
+## How to test your Rust code
 
 Everything should be tested full stop.  Even non-public functionality.
 
@@ -174,7 +166,6 @@ Tor's integration tests should also pass:
 
     make test-stem
 
-Submitting a patch
-=====================
+## Submitting a patch
 
 Please follow the instructions in `doc/HACKING/GettingStarted.md`.

@@ -47,6 +47,7 @@ If you want to install on your localsystem, run `make install`. For our case we
 just want the tor binary at `src/app/tor`.
 
 ## Use tor in TB and at a relay
+
 Download and install a fresh Tor Browser (TB) from torproject.org. Make sure it
 works. From the command line, relative to the folder created when you extracted
 TB, run `./Browser/start-tor-browser --verbose` to get some basic log output.
@@ -75,6 +76,7 @@ relay. Start TB, visit a website, and manually confirm that the middle is used
 by looking at the circuit display. 
 
 ## Add a bare-bones APE padding machine
+
 Now the fun part. We have several resources at our disposal (mind that links
 might be broken in the future, just search for the headings):
 - The official [Circuit Padding Developer
@@ -192,6 +194,7 @@ register our machines:
 We run `make` to get a new `tor` binary and copy it to our local TB. 
 
 ## Run the machine
+
 To be able
 to view circuit info events in the console as we launch TB, we add `Log
 [circ]info notice stdout` to `torrc` of TB. 
