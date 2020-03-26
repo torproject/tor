@@ -9,7 +9,7 @@
  * @brief "Client"-related key management operations.
  *
  * These functions are used by clients and relay code paths alike, in spite of
- * residing in feature/relay.  They should be refatored, moved, made
+ * residing in feature/relay.  They should be refactored, moved, made
  * relay-only, or removed entirely, but for now, they are residing here
  * pending analysis.
  **/
