@@ -1,38 +1,38 @@
 Rust Coding Standards
 =======================
 
-You MUST follow the standards laid out in `.../doc/HACKING/CodingStandards.md`,
+You MUST follow the standards laid out in `doc/HACKING/CodingStandards.md`,
 where applicable.
 
 Module/Crate Declarations
 ---------------------------
 
 Each Tor C module which is being rewritten MUST be in its own crate.
-See the structure of `.../src/rust` for examples.
+See the structure of `src/rust` for examples.
 
 In your crate, you MUST use `lib.rs` ONLY for pulling in external
 crates (e.g. `extern crate libc;`) and exporting public objects from
 other Rust modules (e.g. `pub use mymodule::foo;`).  For example, if
-you create a crate in `.../src/rust/yourcrate`, your Rust code should
-live in `.../src/rust/yourcrate/yourcode.rs` and the public interface
-to it should be exported in `.../src/rust/yourcrate/lib.rs`.
+you create a crate in `src/rust/yourcrate`, your Rust code should
+live in `src/rust/yourcrate/yourcode.rs` and the public interface
+to it should be exported in `src/rust/yourcrate/lib.rs`.
 
 If your code is to be called from Tor C code, you MUST define a safe
 `ffi.rs`.  See the "Safety" section further down for more details.
 
 For example, in a hypothetical `tor_addition` Rust module:
 
-In `.../src/rust/tor_addition/addition.rs`:
+In `src/rust/tor_addition/addition.rs`:
 
     pub fn get_sum(a: i32, b: i32) -> i32 {
         a + b
     }
 
-In `.../src/rust/tor_addition/lib.rs`:
+In `src/rust/tor_addition/lib.rs`:
 
     pub use addition::*;
 
-In `.../src/rust/tor_addition/ffi.rs`:
+In `src/rust/tor_addition/ffi.rs`:
 
     #[no_mangle]
     pub extern "C" fn tor_get_sum(a: c_int, b: c_int) -> c_int {
@@ -41,7 +41,7 @@ In `.../src/rust/tor_addition/ffi.rs`:
 
 If your Rust code must call out to parts of Tor's C code, you must
 declare the functions you are calling in the `external` crate, located
-at `.../src/rust/external`.
+at `src/rust/external`.
 
 <!-- XXX get better examples of how to declare these externs, when/how they -->
 <!-- XXX are unsafe, what they are expected to do —isis                     -->
@@ -107,7 +107,7 @@ You MUST include `#![deny(missing_docs)]` in your crate.
 
 For function/method comments, you SHOULD include a one-sentence, "first person"
 description of function behaviour (see requirements for documentation as
-described in `.../src/HACKING/CodingStandards.md`), then an `# Inputs` section
+described in `src/HACKING/CodingStandards.md`), then an `# Inputs` section
 for inputs or initialisation values, a `# Returns` section for return
 values/types, a `# Warning` section containing warnings for unsafe behaviours or
 panics that could happen.  For publicly accessible
@@ -133,7 +133,7 @@ describing how the function/object is expected to be used.
 
 Integration tests SHOULD go into a `tests/` directory inside your
 crate.  Unittests SHOULD go into their own module inside the module
-they are testing, e.g. in `.../src/rust/tor_addition/addition.rs` you
+they are testing, e.g. in `src/rust/tor_addition/addition.rs` you
 should put:
 
     #[cfg(test)]
@@ -172,7 +172,7 @@ for basic benchmarks, is only used when running benchmarks via `cargo
 bench --features bench`.
 
 Finally, to write your benchmark code, in
-`.../src/rust/tor_addition/addition.rs` you SHOULD put:
+`src/rust/tor_addition/addition.rs` you SHOULD put:
 
     #[cfg(all(test, features = "bench"))]
     mod bench {

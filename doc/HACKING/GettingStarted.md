@@ -57,7 +57,7 @@ Once you've reached this point, here's what you need to know.
      looking around it to see how it fits together!
 
      We do some unusual things in our codebase.  Our testing-related
-     practices and kludges are explained in `.../doc/HACKING/WritingTests.md`.
+     practices and kludges are explained in `doc/HACKING/WritingTests.md`.
 
      If you see something that doesn't make sense, we love to get
      questions!
@@ -120,7 +120,7 @@ Once you've reached this point, here's what you need to know.
      As you write your code, you'll probably want it to fit in with the
      standards of the rest of the Tor codebase so it will be easy for us
      to review and merge.  You can learn our coding standards in
-     `.../doc/HACKING` directory.
+     `doc/HACKING` directory.
 
      If your patch is large and/or is divided into multiple logical
      components, remember to divide it into a series of Git commits.  A
@@ -132,7 +132,7 @@ Once you've reached this point, here's what you need to know.
      ensure that it runs correctly.  Also, all code should actually be
      _run_ by somebody, to make sure it works.
 
-     See `.../doc/HACKING/WritingTests.md` for more information on how we test things
+     See `doc/HACKING/WritingTests.md` for more information on how we test things
      in Tor.  If you'd like any help writing tests, just ask!  We're
      glad to help out.
 

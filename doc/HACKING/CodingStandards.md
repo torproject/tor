@@ -34,7 +34,7 @@ Did you remember...
 
 If you are submitting a major patch or new feature, or want to in the future...
 
-   - Set up Chutney and Stem, see `.../doc/HACKING/WritingTests.md`
+   - Set up Chutney and Stem, see `doc/HACKING/WritingTests.md`
    - Run `make test-full` to test against all unit and integration tests.
 
 If you have changed build system components:

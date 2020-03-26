@@ -5,7 +5,7 @@ Getting Started
 -----------------
 
 Please read or review our documentation on Rust coding standards
-(`.../doc/HACKING/CodingStandardsRust.md`) before doing anything.
+(`doc/HACKING/CodingStandardsRust.md`) before doing anything.
 
 Please also read
 [the Rust Code of Conduct](https://www.rust-lang.org/en-US/conduct.html). We
@@ -142,8 +142,8 @@ Adding your Rust module to Tor's build system
 -----------------------------------------------
 
 0. Your translation of the C module should live in its own crate(s)
-   in the `.../tor/src/rust/` directory.
-1. Add your crate to `.../tor/src/rust/Cargo.toml`, in the
+   in the `src/rust/` directory.
+1. Add your crate to `src/rust/Cargo.toml`, in the
    `[workspace.members]` section.
 2. Add your crate's files to src/rust/include.am
 
@@ -158,7 +158,7 @@ How to test your Rust code
 
 Everything should be tested full stop.  Even non-public functionality.
 
-Be sure to edit `.../tor/src/test/test_rust.sh` to add the name of your
+Be sure to edit `src/test/test_rust.sh` to add the name of your
 crate to the `crates` variable! This will ensure that `cargo test` is
 run on your crate.
 
@@ -177,4 +177,4 @@ Tor's integration tests should also pass:
 Submitting a patch
 =====================
 
-Please follow the instructions in `.../doc/HACKING/GettingStarted.md`.
+Please follow the instructions in `doc/HACKING/GettingStarted.md`.
