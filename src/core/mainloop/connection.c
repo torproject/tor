@@ -1514,10 +1514,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
   }
 
+  /* Force IPv4 and IPv6 traffic on for non-SOCKSPorts.
+   * Forcing options on isn't a good idea, see #32994 and #33607. */
   if (type != CONN_TYPE_AP_LISTENER) {
     lis_conn->entry_cfg.ipv4_traffic = 1;
     lis_conn->entry_cfg.ipv6_traffic = 1;
-    lis_conn->entry_cfg.prefer_ipv6 = 1;
   }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
