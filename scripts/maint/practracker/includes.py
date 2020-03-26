@@ -254,11 +254,18 @@ def walk_c_files(topdir="src"):
                     for err in consider_include_rules(fullpath, f):
                         yield err
 
+def open_or_stdin(fname):
+    if fname == '-':
+        return sys.stdin
+    else:
+        return open(fname)
+
 def check_subsys_file(fname, uses_dirs):
     uses_closure = closure(uses_dirs)
     ok = True
     previous_subsystems = []
-    with open(fname) as f:
+
+    with open_or_stdin(fname) as f:
         for line in f:
             _, name, fname = line.split()
             fname = re.sub(r'^.*/src/', "", fname)
