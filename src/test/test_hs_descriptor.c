@@ -45,8 +45,8 @@ test_cert_encoding(void *arg)
 
   (void) arg;
 
-  /* Change time to 2290-02-01 20:08 UTC */
-  update_approx_time(10101010101);
+  /* Change time to 03-01-2002 23:36 UTC */
+  update_approx_time(1010101010);
   time_t now = approx_time();
 
   ret = ed25519_keypair_generate(&kp, 0);
@@ -108,12 +108,12 @@ test_cert_encoding(void *arg)
     setup_full_capture_of_logs(LOG_PROTOCOL_WARN);
     ret = cert_is_valid(parsed_cert, CERT_TYPE_SIGNING_AUTH, msg);
     tt_int_op(ret, OP_EQ, 0);
-    /* Since the current time at the creation of the cert was "2290-02-01
-     * 20:08", and the expiration date of the cert was two hours, the Tor code
-     * will ceiling that and make it 23:00. Make sure that the right log
+    /* Since the current time at the creation of the cert was "03-01-2002
+     * 23:36", and the expiration date of the cert was two hours, the Tor code
+     * will ceiling that and make it 02:00. Make sure that the right log
      * message is emitted */
     expect_log_msg_containing("Invalid signature for fire: expired"
-                              " (2290-02-01 23:00:00)");
+                              " (2002-01-04 02:00:00)");
     teardown_capture_of_logs();
 
     tor_cert_free(parsed_cert);
