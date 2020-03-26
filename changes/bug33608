@@ -1,0 +1,5 @@
+  o Minor bugfixes (client IPv6):
+    - Stop forcing all non-SOCKSPorts to prefer IPv6 exit connections. Instead,
+      prefer IPv6 connections by default, but allow users to change their
+      configs using the "NoPreferIPv6" port flag.
+      Fixes bug 33608; bugfix on 0.4.3.1-alpha.
