@@ -37,7 +37,8 @@ TESTSCRIPTS += \
 	src/test/test_ntor.sh \
 	src/test/test_hs_ntor.sh \
 	src/test/test_bt.sh \
-	scripts/maint/practracker/test_practracker.sh
+	scripts/maint/practracker/test_practracker.sh \
+	scripts/maint/run_check_subsystem_order.sh
 
 if COVERAGE_ENABLED
 # ...
