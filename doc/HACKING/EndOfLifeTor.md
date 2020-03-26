@@ -1,4 +1,3 @@
-
 End of Life on an old release series
 ------------------------------------
 

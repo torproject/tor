@@ -1,4 +1,3 @@
-
 Writing tests for Tor: an incomplete guide
 ==========================================
 
