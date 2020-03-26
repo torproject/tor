@@ -2922,7 +2922,7 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
       (r1->bandwidthburst != r2->bandwidthburst))
     return 0;
 
-  /* Did more than 12 hours pass? */
+  /* Has enough time passed between the publication times? */
   if (r1->cache_info.published_on + ROUTER_MAX_COSMETIC_TIME_DIFFERENCE
       < r2->cache_info.published_on)
     return 0;
