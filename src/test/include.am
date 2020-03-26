@@ -431,6 +431,7 @@ EXTRA_DIST += \
 	src/test/test_rebind.sh \
 	src/test/test_rebind.py \
 	src/test/zero_length_keys.sh \
+	scripts/maint/run_check_subsystem_order.sh \
 	src/test/rust_supp.txt \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \
