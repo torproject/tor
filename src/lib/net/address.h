@@ -177,7 +177,7 @@ tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
 }
 
 /** Return the address family of <b>a</b>.  Possible values are:
- * AF_INET6, AF_INET, AF_UNSPEC. */
+ * AF_INET6, AF_INET, AF_UNSPEC, AF_UNIX. */
 static inline sa_family_t
 tor_addr_family(const tor_addr_t *a)
 {
