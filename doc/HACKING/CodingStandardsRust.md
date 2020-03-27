@@ -1,39 +1,36 @@
+# Rust Coding Standards
 
- Rust Coding Standards
-=======================
-
-You MUST follow the standards laid out in `.../doc/HACKING/CodingStandards.md`,
+You MUST follow the standards laid out in `doc/HACKING/CodingStandards.md`,
 where applicable.
 
- Module/Crate Declarations
----------------------------
+## Module/Crate Declarations
 
 Each Tor C module which is being rewritten MUST be in its own crate.
-See the structure of `.../src/rust` for examples.
+See the structure of `src/rust` for examples.
 
 In your crate, you MUST use `lib.rs` ONLY for pulling in external
 crates (e.g. `extern crate libc;`) and exporting public objects from
 other Rust modules (e.g. `pub use mymodule::foo;`).  For example, if
-you create a crate in `.../src/rust/yourcrate`, your Rust code should
-live in `.../src/rust/yourcrate/yourcode.rs` and the public interface
-to it should be exported in `.../src/rust/yourcrate/lib.rs`.
+you create a crate in `src/rust/yourcrate`, your Rust code should
+live in `src/rust/yourcrate/yourcode.rs` and the public interface
+to it should be exported in `src/rust/yourcrate/lib.rs`.
 
 If your code is to be called from Tor C code, you MUST define a safe
 `ffi.rs`.  See the "Safety" section further down for more details.
 
 For example, in a hypothetical `tor_addition` Rust module:
 
-In `.../src/rust/tor_addition/addition.rs`:
+In `src/rust/tor_addition/addition.rs`:
 
     pub fn get_sum(a: i32, b: i32) -> i32 {
         a + b
     }
 
-In `.../src/rust/tor_addition/lib.rs`:
+In `src/rust/tor_addition/lib.rs`:
 
     pub use addition::*;
 
-In `.../src/rust/tor_addition/ffi.rs`:
+In `src/rust/tor_addition/ffi.rs`:
 
     #[no_mangle]
     pub extern "C" fn tor_get_sum(a: c_int, b: c_int) -> c_int {
@@ -42,7 +39,7 @@ In `.../src/rust/tor_addition/ffi.rs`:
 
 If your Rust code must call out to parts of Tor's C code, you must
 declare the functions you are calling in the `external` crate, located
-at `.../src/rust/external`.
+at `src/rust/external`.
 
 <!-- XXX get better examples of how to declare these externs, when/how they -->
 <!-- XXX are unsafe, what they are expected to do —isis                     -->
@@ -54,8 +51,7 @@ If you have any external modules as dependencies (e.g. `extern crate
 libc;`), you MUST declare them in your crate's `lib.rs` and NOT in any
 other module.
 
- Dependencies and versions
----------------------------
+## Dependencies and versions
 
 In general, we use modules from only the Rust standard library
 whenever possible. We will review including external crates on a
@@ -81,8 +77,7 @@ Currently, Tor requires that you use the latest stable Rust version. At
 some point in the future, we will freeze on a given stable Rust version,
 to ensure backward compatibility with stable distributions that ship it.
 
- Updating/Adding Dependencies
-------------------------------
+## Updating/Adding Dependencies
 
 To add/remove/update dependencies, first add your dependencies,
 exactly specifying their versions, into the appropriate *crate-level*
@@ -101,14 +96,13 @@ Next, run `/scripts/maint/updateRustDependencies.sh`.  Then, go into
 `src/ext/rust` and commit the changes to the `tor-rust-dependencies`
 repo.
 
- Documentation
----------------
+## Documentation
 
 You MUST include `#![deny(missing_docs)]` in your crate.
 
 For function/method comments, you SHOULD include a one-sentence, "first person"
 description of function behaviour (see requirements for documentation as
-described in `.../src/HACKING/CodingStandards.md`), then an `# Inputs` section
+described in `src/HACKING/CodingStandards.md`), then an `# Inputs` section
 for inputs or initialisation values, a `# Returns` section for return
 values/types, a `# Warning` section containing warnings for unsafe behaviours or
 panics that could happen.  For publicly accessible
@@ -118,14 +112,12 @@ types/constants/objects/functions/methods, you SHOULD also include an
 You MUST document your module with _module docstring_ comments,
 i.e. `//!` at the beginning of each line.
 
- Style
--------
+## Style
 
 You SHOULD consider breaking up large literal numbers with `_` when it makes it
 more human readable to do so, e.g. `let x: u64 = 100_000_000_000`.
 
- Testing
----------
+## Testing
 
 All code MUST be unittested and integration tested.
 
@@ -134,7 +126,7 @@ describing how the function/object is expected to be used.
 
 Integration tests SHOULD go into a `tests/` directory inside your
 crate.  Unittests SHOULD go into their own module inside the module
-they are testing, e.g. in `.../src/rust/tor_addition/addition.rs` you
+they are testing, e.g. in `src/rust/tor_addition/addition.rs` you
 should put:
 
     #[cfg(test)]
@@ -148,8 +140,7 @@ should put:
         }
     }
 
- Benchmarking
---------------
+## Benchmarking
 
 The external `test` crate can be used for most benchmarking.  However, using
 this crate requires nightly Rust.  Since we may want to switch to a more
@@ -173,7 +164,7 @@ for basic benchmarks, is only used when running benchmarks via `cargo
 bench --features bench`.
 
 Finally, to write your benchmark code, in
-`.../src/rust/tor_addition/addition.rs` you SHOULD put:
+`src/rust/tor_addition/addition.rs` you SHOULD put:
 
     #[cfg(all(test, features = "bench"))]
     mod bench {
@@ -186,23 +177,20 @@ Finally, to write your benchmark code, in
         }
     }
 
- Fuzzing
----------
+## Fuzzing
 
 If you wish to fuzz parts of your code, please see the
-[`cargo fuzz`](https://github.com/rust-fuzz/cargo-fuzz) crate, which uses
+[cargo fuzz](https://github.com/rust-fuzz/cargo-fuzz) crate, which uses
 [libfuzzer-sys](https://github.com/rust-fuzz/libfuzzer-sys).
 
- Whitespace & Formatting
--------------------------
+## Whitespace & Formatting
 
 You MUST run `rustfmt` (https://github.com/rust-lang-nursery/rustfmt)
 on your code before your code will be merged.  You can install rustfmt
 by doing `cargo install rustfmt-nightly` and then run it with `cargo
 fmt`.
 
- Safety
---------
+## Safety
 
 You SHOULD read [the nomicon](https://doc.rust-lang.org/nomicon/) before writing
 Rust FFI code.  It is *highly advised* that you read and write normal Rust code

@@ -1,5 +1,4 @@
-Coding conventions for Tor
-==========================
+# Coding conventions for Tor
 
 tl;dr:
 
@@ -10,8 +9,7 @@ tl;dr:
    - Run `make distcheck` if you have made changes to build system components
    - Add a file in `changes` for your branch.
 
-Patch checklist
----------------
+## Patch checklist
 
 If possible, send your patch as one of these (in descending order of
 preference)
@@ -34,7 +32,7 @@ Did you remember...
 
 If you are submitting a major patch or new feature, or want to in the future...
 
-   - Set up Chutney and Stem, see HACKING/WritingTests.md
+   - Set up Chutney and Stem, see `doc/HACKING/WritingTests.md`
    - Run `make test-full` to test against all unit and integration tests.
 
 If you have changed build system components:
@@ -42,9 +40,7 @@ If you have changed build system components:
    - For example, if you have changed Makefiles, autoconf files, or anything
      else that affects the build system.
 
-
-License issues
-==============
+## License issues
 
 Tor is distributed under the license terms in the LICENSE -- in
 brief, the "3-clause BSD license".  If you send us code to
@@ -58,9 +54,7 @@ Some compatible licenses include:
   - 2-clause BSD
   - CC0 Public Domain Dedication
 
-
-How we use Git branches
-=======================
+## How we use Git branches
 
 Each main development series (like 0.2.1, 0.2.2, etc) has its main work
 applied to a single branch.  At most one series can be the development series
@@ -91,9 +85,7 @@ conflicts in the ChangeLog when it comes time to merge your branch into Tor.
 Best advice: don't try to keep an independent branch forked for more than 6
 months and expect it to merge cleanly. Try to merge pieces early and often.
 
-
-How we log changes
-==================
+## How we log changes
 
 When you do a commit that needs a ChangeLog entry, add a new file to
 the `changes` toplevel subdirectory.  It should have the format of a
@@ -199,8 +191,7 @@ Why use changes files instead of entries in the ChangeLog?
    * Having every single commit touch the ChangeLog file tended to create
    zillions of merge conflicts.
 
-Whitespace and C conformance
-----------------------------
+## Whitespace and C conformance
 
 Invoke `make check-spaces` from time to time, so it can tell you about
 deviations from our C whitespace style.  Generally, we use:
@@ -231,8 +222,7 @@ you're using gcc, you should invoke the configure script with the
 option `--enable-fatal-warnings`.  This will tell the compiler
 to make all warnings into errors.
 
-Functions to use; functions not to use
---------------------------------------
+## Functions to use; functions not to use
 
 We have some wrapper functions like `tor_malloc`, `tor_free`, `tor_strdup`, and
 `tor_gettimeofday;` use them instead of their generic equivalents.  (They
@@ -249,7 +239,6 @@ looking through `src/lib/*/*.h`.  You can see the
 available containers in `src/lib/containers/*.h`.  You should probably
 familiarize yourself with these modules before you write too much code, or
 else you'll wind up reinventing the wheel.
-
 
 We don't use `strcat` or `strcpy` or `sprintf` of any of those notoriously
 broken old C functions.  We also avoid `strncat` and `strncpy`. Use
@@ -281,9 +270,7 @@ version prefixed with `tor_` instead: strtok_r, memmem, memstr,
 asprintf, localtime_r, gmtime_r, inet_aton, inet_ntop, inet_pton,
 getpass, ntohll, htonll.  (This list is incomplete.)
 
-
-What code can use what other code?
-----------------------------------
+## What code can use what other code?
 
 We're trying to simplify Tor's structure over time.  In the long run, we want
 Tor to be structured as a set of modules with *no circular dependencies*.
@@ -300,8 +287,7 @@ included except those specifically permitted by the `.may_include` file.
 When editing one of these files, please make sure that you are not
 introducing any cycles into Tor's dependency graph.
 
-Floating point math is hard
----------------------------
+## Floating point math is hard
 
 Floating point arithmetic as typically implemented by computers is
 very counterintuitive.  Failure to adequately analyze floating point
@@ -360,8 +346,7 @@ For more detailed (and math-intensive) background, see [What Every
 Computer Scientist Should Know About Floating-Point
 Arithmetic](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html).
 
-Other C conventions
--------------------
+## Other C conventions
 
 The `a ? b : c` trinary operator only goes inside other expressions;
 don't use it as a replacement for if. (You can ignore this inside macro
@@ -370,8 +355,7 @@ definitions when necessary.)
 Assignment operators shouldn't nest inside other expressions.  (You can
 ignore this inside macro definitions when necessary.)
 
-Binary data and wire formats
-----------------------------
+## Binary data and wire formats
 
 Use pointer to `char` when representing NUL-terminated string. To represent
 arbitrary binary data, use pointer to `uint8_t`. (Many older Tor APIs ignore
@@ -390,8 +374,7 @@ for more information about trunnel.
 
 For information on adding new trunnel code to Tor, see src/trunnel/README
 
-Calling and naming conventions
-------------------------------
+## Calling and naming conventions
 
 Whenever possible, functions should return -1 on error and 0 on success.
 
@@ -414,17 +397,15 @@ probably time to create an enum.  If you find that you are passing three or
 more flags to a function, it's probably time to create a flags argument that
 takes a bitfield.
 
-What To Optimize
-----------------
+## What To Optimize
 
 Don't optimize anything if it's not in the critical path.  Right now, the
 critical path seems to be AES, logging, and the network itself.  Feel free to
 do your own profiling to determine otherwise.
 
-Log conventions
----------------
+## Log conventions
 
-`https://www.torproject.org/docs/faq#LogLevel`
+[FAQ - Log Levels](https://www.torproject.org/docs/faq#LogLevel)
 
 No error or warning messages should be expected during normal OR or OP
 operation.
@@ -438,8 +419,7 @@ end-users that they aren't expected to understand the message (perhaps
 with a string like "internal error"). Option (A) is to be preferred to
 option (B).
 
-Assertions In Tor
------------------
+## Assertions In Tor
 
 Assertions should be used for bug-detection only.  Don't use assertions to
 detect bad user inputs, network errors, resource exhaustion, or similar
@@ -458,8 +438,7 @@ macro, as in:
 	if (BUG(ptr == NULL))
 		return -1;
 
-Allocator conventions
----------------------
+## Allocator conventions
 
 By convention, any tor type with a name like `abc_t` should be allocated
 by a function named `abc_new()`.  This function should never return
@@ -500,8 +479,7 @@ to use it as a function callback), define it with a name like
 When deallocating, don't say e.g. `if (x) tor_free(x)`. The convention is to
 have deallocators do nothing when NULL pointer is passed.
 
-Doxygen comment conventions
----------------------------
+## Doxygen comment conventions
 
 Say what functions do as a series of one or more imperative sentences, as
 though you were telling somebody how to be the function.  In other words, DO
