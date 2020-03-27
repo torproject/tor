@@ -2167,7 +2167,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
   warn_early_consensus(c, flavor, now);
 
-  /* We got a new consesus. Reset our md fetch fail cache */
+  /* We got a new consensus. Reset our md fetch fail cache */
   microdesc_reset_outdated_dirservers_list();
 
   router_dir_info_changed();

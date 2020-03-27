@@ -188,7 +188,7 @@ guardfraction_file_parse_inputs_line(const char *inputs_line,
  *
  *      guardfraction-file-version 1
  *      written-at <date and time>
- *      n-inputs <number of consesuses parsed> <number of days considered>
+ *      n-inputs <number of consensuses parsed> <number of days considered>
  *
  *      guard-seen <fpr 1> <guardfraction percentage> <consensus appearances>
  *      guard-seen <fpr 2> <guardfraction percentage> <consensus appearances>

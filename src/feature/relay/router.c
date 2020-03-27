@@ -748,8 +748,8 @@ v3_authority_check_key_expiry(void)
 }
 
 /** Get the lifetime of an onion key in days. This value is defined by the
- * network consesus parameter "onion-key-rotation-days". Always returns a value
- * between <b>MIN_ONION_KEY_LIFETIME_DAYS</b> and
+ * network consensus parameter "onion-key-rotation-days". Always returns a
+ * value between <b>MIN_ONION_KEY_LIFETIME_DAYS</b> and
  * <b>MAX_ONION_KEY_LIFETIME_DAYS</b>.
  */
 static int
@@ -763,7 +763,7 @@ get_onion_key_rotation_days_(void)
 }
 
 /** Get the current lifetime of an onion key in seconds. This value is defined
- * by the network consesus parameter "onion-key-rotation-days", but the value
+ * by the network consensus parameter "onion-key-rotation-days", but the value
  * is converted to seconds.
  */
 int
@@ -773,7 +773,7 @@ get_onion_key_lifetime(void)
 }
 
 /** Get the grace period of an onion key in seconds. This value is defined by
- * the network consesus parameter "onion-key-grace-period-days", but the value
+ * the network consensus parameter "onion-key-grace-period-days", but the value
  * is converted to seconds.
  */
 int
