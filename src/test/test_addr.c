@@ -1690,7 +1690,7 @@ test_addr_octal(void *arg)
 
 #define Get_AF_UNSPEC(test_addr) STMT_BEGIN                     \
     test_addr = tor_malloc(sizeof(tor_addr_t));                 \
-    tor_addr_make_unspec(sizeof(tor_addr_t));                   \
+    tor_addr_make_unspec(test_addr);                            \
   STMT_END;
 
 #define TEST_ADDR_VALIDITY(a, lis, rv) STMT_BEGIN               \
