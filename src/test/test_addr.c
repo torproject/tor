@@ -1684,13 +1684,13 @@ test_addr_octal(void *arg)
   STMT_END;
 
 #define Get_AF_UNIX(test_addr) STMT_BEGIN                       \
-    test_addr = tor_malloc(sizeof(tor_addr_t));                 \
-    tor_addr_make_af_unix(test_addr);                           \
+    test_addr = tor_malloc_zero(sizeof(tor_addr_t));            \
+    test_addr->family = AF_UNIX;                                \
   STMT_END;
 
 #define Get_AF_UNSPEC(test_addr) STMT_BEGIN                     \
-    test_addr = tor_malloc(sizeof(tor_addr_t));                 \
-    tor_addr_make_unspec(test_addr);                            \
+    test_addr = tor_malloc_zero(sizeof(tor_addr_t));            \
+    test_addr->family = AF_UNSPEC;                              \
   STMT_END;
 
 #define TEST_ADDR_VALIDITY(a, lis, rv) STMT_BEGIN               \
