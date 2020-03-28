@@ -40,7 +40,7 @@ mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type)
 // Use of global variable is justified by its use in nodelist.c
 // and is necessary to avoid memory leaks when mocking the
 // function node_get_by_id
-node_t  *first_node;
+node_t *first_node;
 node_t *second_node;
 
 const node_t *mock_node_get_by_id(const char *identity_digest);
@@ -124,8 +124,10 @@ test_dirvote_compare_routerinfo_by_ip_and_bw_(void *arg)
   }
   first->ipv6_addr = first_ipv6;
   signed_descriptor_t first_cache_info, second_cache_info;
-  strlcpy(first_cache_info.identity_digest, "first", 6);
-  strlcpy(second_cache_info.identity_digest, "second", 7);
+  strlcpy(first_cache_info.identity_digest, "first",
+          sizeof(first_cache_info.identity_digest));
+  strlcpy(second_cache_info.identity_digest, "second",
+          sizeof(second_cache_info.identity_digest));
   first->cache_info = first_cache_info;
   second->cache_info = second_cache_info;
   first_status.is_auth = 1;
