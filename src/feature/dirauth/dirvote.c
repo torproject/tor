@@ -4234,13 +4234,26 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
     }
   } else {
     // both are ipv4, return -1 if first has smaller address than second
-      if (first->addr < second->addr)
-        return -1;
-      else if (first->addr > second->addr)
-        return 1;
+    if (first->addr < second->addr)
+      return -1;
+    else if (first->addr > second->addr)
+      return 1;
   }
   // If addresses are equal, use other comparison criterions
-
+}
+/**
+* Compare routerinfos by descending order of "usefulness" :
+* An authority is more useful than a non-authority; a running router is
+* more useful than a non-running router; and a router with more bandwidth
+* is more useful than one with less.
+**/
+int
+compare_routerinfo_usefulness(const void **a, const void **b)
+  routerinfo_t *first = *(routerinfo_t **) a, *second = *(routerinfo_t **) b;
+  int first_is_auth, second_is_auth;
+  const node_t *node_first, *node_second;
+  int first_is_running, second_is_running;
+  uint32_t bw_kb_first, bw_kb_second;
   /* Potentially, this next bit could cause k n lg n memeq calls.  But in
    * reality, we will almost never get here, since addresses will usually be
    * different. */
