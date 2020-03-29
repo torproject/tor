@@ -3020,8 +3020,8 @@ const tor_addr_t *addr_ipv6)
   /* Check whether ip is on the same /24 as we are. */
   if (EnforceDistinctSubnets == 0)
     return 0;
-  if (tor_addr_family(addr) == AF_INET) {
-    uint32_t ip = tor_addr_to_ipv4h(addr);
+  if (tor_addr_family(other_addr) == AF_INET) {
+    uint32_t ip = tor_addr_to_ipv4h(other_addr);
 
     /* It's possible that this next check will hit before the first time
      * resolve_my_address actually succeeds.  (For clients, it is likely that
