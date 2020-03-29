@@ -3001,15 +3001,13 @@ is_local_addr, (const tor_addr_t *addr))
 {
   int EnforceDistinctSubnets = get_options()->EnforceDistinctSubnets;
 
-  if (tor_addr_family(addr) == AF_INET6) {
-    if (router_get_my_routerinfo() &&
-        tor_addr_is_valid(&(router_get_my_routerinfo()->ipv6_addr), 0))
-      return is_local_addr_impl(EnforceDistinctSubnets,
-          addr, tor_addr_to_ipv4h(addr),
-          &(router_get_my_routerinfo()->ipv6_addr));
-  }
+  if (router_get_my_routerinfo() &&
+      tor_addr_is_valid(&(router_get_my_routerinfo()->ipv6_addr), 0))
+    return is_local_addr_impl(EnforceDistinctSubnets,
+        addr, tor_addr_to_ipv4h(addr),
+        &(router_get_my_routerinfo()->ipv6_addr));
   return is_local_addr_impl(EnforceDistinctSubnets,
-      addr, tor_addr_to_ipv4h(addr), 0);
+      addr, tor_addr_to_ipv4h(addr), NULL);
 }
 
 int
