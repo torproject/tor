@@ -3032,7 +3032,7 @@ const tor_addr_t *addr_ipv6)
      * the same /24 as last_resolved_addr will be the same as checking whether
      * it was on net 0, which is already done by tor_addr_is_internal.
      */
-    if ((last_resolved_addr & (uint32_t)0xffffff00ul)
+    if ((addr_ipv4 & (uint32_t)0xffffff00ul)
         == (ip & (uint32_t)0xffffff00ul))
       return 1;
   }
