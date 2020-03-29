@@ -3039,7 +3039,7 @@ const tor_addr_t *addr_ipv6)
 
   /* Check for the same IPv6 /48 as the directory server */
   if (tor_addr_family(other_addr) == AF_INET6) {
-    if (router_get_my_routerinfo() && tor_addr_is_valid(addr_ipv6, 0))
+    if (tor_addr_is_valid(addr_ipv6, 0))
       return tor_addr_compare_masked(other_addr,
           addr_ipv6, 48, CMP_EXACT);
   }
