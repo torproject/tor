@@ -253,6 +253,35 @@ config_lines_dup_and_filter(const config_line_t *inp,
   return result;
 }
 
+/**
+ * Given a linelist <b>inp</b> beginning with the key <b>header</b>, find the
+ * next line with that key, and remove that instance and all following lines
+ * from the list.  Return the lines that were removed.  Operate
+ * case-insensitively.
+ *
+ * For example, if the header is "H", and <b>inp</b> contains "H, A, B, H, C,
+ * H, D", this function will alter <b>inp</b> to contain only "H, A, B", and
+ * return the elements "H, C, H, D" as a separate list.
+ **/
+config_line_t *
+config_lines_partition(config_line_t *inp, const char *header)
+{
+  if (BUG(inp == NULL))
+    return NULL;
+  if (BUG(strcasecmp(inp->key, header)))
+    return NULL;
+
+  /* Advance ptr until it points to the link to the next segment of this
+     list. */
+  config_line_t **ptr = &inp->next;
+  while (*ptr && strcasecmp((*ptr)->key, header)) {
+    ptr = &(*ptr)->next;
+  }
+  config_line_t *remainder = *ptr;
+  *ptr = NULL;
+  return remainder;
+}
+
 /** Return true iff a and b contain identical keys and values in identical
  * order. */
 int

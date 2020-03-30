@@ -139,7 +139,8 @@ STATIC void rend_service_prune_list_impl_(void);
 #endif /* defined(RENDSERVICE_PRIVATE) */
 
 int rend_num_services(void);
-int rend_config_service(const struct config_line_t *line_,
+struct hs_opts_t;
+int rend_config_service(const struct hs_opts_t *hs_opts,
                         const or_options_t *options,
                         hs_service_config_t *config);
 void rend_service_prune_list(void);
