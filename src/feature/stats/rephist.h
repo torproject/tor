@@ -12,6 +12,9 @@
 #ifndef TOR_REPHIST_H
 #define TOR_REPHIST_H
 
+/* Bandwidth Statistics Reporting enabled by default. */
+#define BANDWIDTHSTATS_ENABLED_DEFAULT 1
+
 void rep_hist_init(void);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(uint64_t num_bytes, time_t when);

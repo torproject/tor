@@ -634,10 +634,10 @@ struct or_options_t {
   /** If true, include statistics file contents in extra-info documents. */
   int ExtraInfoStatistics;
 
-  /** If true, activate reporting of all bandwidth statistics.
-   *  Defaults to auto which let's the consensus decide the reporting part.
-   *  If it is true and the consenus decides otherwise than the statistics
-   *  are written to disks but are not reported. */
+  /** If true, write the badnwidth stats to disk and publish the stats
+   *  in extrainfo document. If set to auto, write the bandwidth stats
+   *  to disk and check the consesus parameter, BandwidthStatistics,
+   *  before publishing the stats in extrainfo document. */
   int BandwidthStatistics;
 
   /** If true, do not believe anybody who tells us that a domain resolves

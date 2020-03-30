@@ -1533,19 +1533,19 @@ rep_hist_load_state(or_state_t *state, char **err)
   return 0;
 }
 
-/** Checks the consensus parameter if BandwidthStatistics is auto,
- *  and returns 1 if the parameter returned is 1 or not known.
- *  If BandwidthStatistics is set to true (obviously in torrc) then return 1.
- *  Otherwise, returns 0. */
+/** If BandwidthStatistics is auto, checks the consensus parameter,
+ *  and returns its value. If the parameter is not known, a default value is
+ *  returned. If BandwidthStatistics is set to 1, return 1 else, return 0. */
 bool
 get_bandwidth_stats_param(void)
 {
   int bandwidth_stats = get_options()->BandwidthStatistics;
   /* If bandwidth_stats is auto check the consensus parameter. */
   if (bandwidth_stats == -1)
-    bandwidth_stats = networkstatus_get_param(NULL,
-                      "BandwidthStatistics", -1, 0, 1);
-  /* If bandwidth_stats is still auto, it defaults to true. */
+    bandwidth_stats = networkstatus_get_param(NULL, "BandwidthStatistics",
+                              BANDWIDTHSTATS_ENABLED_DEFAULT, 0, 1);
+  /** If BANDWIDTHSTATS_ENABLED_DEFAULT is set to -1 in future,
+   *  this should return true. */
   return !!bandwidth_stats;
 }
 
