@@ -1694,6 +1694,7 @@ test_addr_octal(void *arg)
   STMT_END;
 
 #define TEST_ADDR_VALIDITY(a, lis, rv) STMT_BEGIN               \
+    tor_assert(a);                                              \
     tt_int_op(tor_addr_is_valid(a, lis), OP_EQ, rv);            \
   STMT_END;
 
