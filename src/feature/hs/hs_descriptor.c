@@ -1419,10 +1419,14 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   tor_assert(!fast_mem_is_zero(
         (char *) &desc->superencrypted_data.auth_ephemeral_pubkey,
         sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
-  tor_assert(!fast_mem_is_zero((char *) client_auth_sk,
-                              sizeof(*client_auth_sk)));
   tor_assert(!fast_mem_is_zero((char *) desc->subcredential.subcred,
                                DIGEST256_LEN));
+
+  /* Catch potential code-flow cases of an unitialized private key sneaking
+   * into this function. */
+  if (BUG(fast_mem_is_zero((char *)client_auth_sk, sizeof(*client_auth_sk)))) {
+    goto done;
+  }
 
   /* Get the KEYS component to derive the CLIENT-ID and COOKIE-KEY. */
   keystream_length =
