@@ -1537,12 +1537,12 @@ rep_hist_load_state(or_state_t *state, char **err)
  *  and returns its value. If the parameter is not known, a default value is
  *  returned. If BandwidthStatistics is set to 1, return 1 else, return 0. */
 bool
-get_bandwidth_stats_param(void)
+get_bandwidth_stats_param(const networkstatus_t *ns)
 {
   int bandwidth_stats = get_options()->BandwidthStatistics;
   /* If bandwidth_stats is auto check the consensus parameter. */
   if (bandwidth_stats == -1)
-    bandwidth_stats = networkstatus_get_param(NULL, "BandwidthStatistics",
+    bandwidth_stats = networkstatus_get_param(ns, "BandwidthStatistics",
                               BANDWIDTHSTATS_ENABLED_DEFAULT, 0, 1);
   /** If BANDWIDTHSTATS_ENABLED_DEFAULT is set to -1 in future,
    *  this should return true. */
