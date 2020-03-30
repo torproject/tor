@@ -1750,6 +1750,49 @@ test_addr_is_valid(void *arg)
   ;
 }
 
+#define TEST_ADDR_IS_NULL(a, rv) STMT_BEGIN               \
+  tor_assert(a);                                          \
+  tt_int_op(tor_addr_is_null(a), OP_EQ, rv);              \
+  STMT_END;
+
+static void
+test_addr_is_null(void *arg)
+{
+  (void)arg;
+  tor_addr_t *test_addr;
+  /* Test for null IPv4. */
+  Get_IPv4(test_addr, "0.0.0.0");
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+
+  /* Test for non-null IPv4. */
+  Get_IPv4(test_addr, "123.98.45.1");
+  TEST_ADDR_IS_NULL(test_addr, 0);
+  tor_free(test_addr);
+
+  /* Test for null IPv6. */
+  Get_IPv6(test_addr, "::");
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+
+  /* Test for non-null IPv6. */
+  Get_IPv6(test_addr, "2000::1a00::1000:fc098");
+  TEST_ADDR_IS_NULL(test_addr, 0);
+  tor_free(test_addr);
+
+  /* Test for address family AF_UNIX. */
+  Get_AF_UNIX(test_addr);
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+
+  /* Test for address family AF_UNSPEC. */
+  Get_AF_UNSPEC(test_addr);
+  TEST_ADDR_IS_NULL(test_addr, 1);
+  tor_free(test_addr);
+ done:
+  ;
+}
+
 #ifndef COCCI
 #define ADDR_LEGACY(name)                                               \
   { #name, test_addr_ ## name , 0, NULL, NULL }
@@ -1770,5 +1813,6 @@ struct testcase_t addr_tests[] = {
   { "rfc6598", test_addr_rfc6598, 0, NULL, NULL },
   { "octal", test_addr_octal, 0, NULL, NULL },
   { "address_validity", test_addr_is_valid, 0, NULL, NULL },
+  { "address_is_null", test_addr_is_null, 0, NULL, NULL },
   END_OF_TESTCASES
 };
