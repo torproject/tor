@@ -14,6 +14,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "trunnel/ed25519_cert.h"
 #include "core/or/or.h"
+#include "app/config/config.h"
 #include "feature/hs/hs_descriptor.h"
 #include "test/test.h"
 #include "feature/nodelist/torcert.h"
@@ -37,13 +38,16 @@ test_cert_encoding(void *arg)
 {
   int ret;
   char *encoded = NULL;
-  time_t now = time(NULL);
   ed25519_keypair_t kp;
   ed25519_public_key_t signed_key;
   ed25519_secret_key_t secret_key;
   tor_cert_t *cert = NULL;
 
   (void) arg;
+
+  /* Change time to 03-01-2002 23:36 UTC */
+  update_approx_time(1010101010);
+  time_t now = approx_time();
 
   ret = ed25519_keypair_generate(&kp, 0);
   tt_int_op(ret, == , 0);
@@ -88,13 +92,31 @@ test_cert_encoding(void *arg)
     /* The cert did have the signing key? */
     ret= ed25519_pubkey_eq(&parsed_cert->signing_key, &kp.pubkey);
     tt_int_op(ret, OP_EQ, 1);
-    tor_cert_free(parsed_cert);
 
     /* Get to the end part of the certificate. */
     pos += b64_cert_len;
     tt_int_op(strcmpstart(pos, "-----END ED25519 CERT-----"), OP_EQ, 0);
     pos += strlen("-----END ED25519 CERT-----");
     tt_str_op(pos, OP_EQ, "");
+
+    /* Check that certificate expiry works properly and emits the right log
+       message */
+    const char *msg = "fire";
+    /* Move us forward 4 hours so that the the certificate is definitely
+       expired */
+    update_approx_time(approx_time() + 3600*4);
+    setup_full_capture_of_logs(LOG_PROTOCOL_WARN);
+    ret = cert_is_valid(parsed_cert, CERT_TYPE_SIGNING_AUTH, msg);
+    tt_int_op(ret, OP_EQ, 0);
+    /* Since the current time at the creation of the cert was "03-01-2002
+     * 23:36", and the expiration date of the cert was two hours, the Tor code
+     * will ceiling that and make it 02:00. Make sure that the right log
+     * message is emitted */
+    expect_log_msg_containing("Invalid signature for fire: expired"
+                              " (2002-01-04 02:00:00)");
+    teardown_capture_of_logs();
+
+    tor_cert_free(parsed_cert);
   }
 
  done:
