@@ -890,10 +890,18 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
   if (dst->replay_cache_rend_cookie != NULL) {
     replaycache_free(dst->replay_cache_rend_cookie);
   }
+
   dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
+  src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
+
   dst->next_rotation_time = src->next_rotation_time;
 
-  src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
+  if (src_service->ob_subcreds) {
+    dst_service->ob_subcreds = src_service->ob_subcreds;
+    dst_service->n_ob_subcreds =  src_service->n_ob_subcreds;
+
+    src_service->ob_subcreds = NULL; /* steal pointer reference */
+  }
 }
 
 /** Register services that are in the staging list. Once this function returns,
