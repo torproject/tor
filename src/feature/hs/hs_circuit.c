@@ -984,13 +984,13 @@ get_subcredential_for_handling_intro2_cell(const hs_service_t *service,
 
   /* This should not happen since we should have made onionbalance
    * subcredentials when we created our descriptors. */
-  if (BUG(!service->ob_subcreds)) {
+  if (BUG(!service->state.ob_subcreds)) {
     return -1;
   }
 
   /* We are an onionbalance instance: */
-  data->n_subcredentials = service->n_ob_subcreds;
-  data->subcredentials = service->ob_subcreds;
+  data->n_subcredentials = service->state.n_ob_subcreds;
+  data->subcredentials = service->state.ob_subcreds;
 
   return 0;
 }

@@ -896,11 +896,11 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
 
   dst->next_rotation_time = src->next_rotation_time;
 
-  if (src_service->ob_subcreds) {
-    dst_service->ob_subcreds = src_service->ob_subcreds;
-    dst_service->n_ob_subcreds =  src_service->n_ob_subcreds;
+  if (src->ob_subcreds) {
+    dst->ob_subcreds = src->ob_subcreds;
+    dst->n_ob_subcreds =  src->n_ob_subcreds;
 
-    src_service->ob_subcreds = NULL; /* steal pointer reference */
+    src->ob_subcreds = NULL; /* steal pointer reference */
   }
 }
 
@@ -4162,8 +4162,8 @@ hs_service_free_(hs_service_t *service)
   }
 
   /* Free onionbalance subcredentials (if any) */
-  if (service->ob_subcreds) {
-    tor_free(service->ob_subcreds);
+  if (service->state.ob_subcreds) {
+    tor_free(service->state.ob_subcreds);
   }
 
   /* Wipe service keys. */
