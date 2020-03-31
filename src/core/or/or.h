@@ -995,8 +995,6 @@ typedef struct routerset_t routerset_t;
 
 typedef struct or_options_t or_options_t;
 
-#define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())
-
 typedef struct or_state_t or_state_t;
 
 #define MAX_SOCKS_ADDR_LEN 256
