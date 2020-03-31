@@ -713,23 +713,49 @@ MOCK_IMPL(int,
 tor_tls_cert_matches_key,(const tor_tls_t *tls,
                           const struct tor_x509_cert_t *cert))
 {
-  tor_assert(tls);
   tor_assert(cert);
+  tor_assert(cert->cert);
+
   int rv = 0;
 
-  CERTCertificate *peercert = SSL_PeerCertificate(tls->ssl);
-  if (!peercert)
+  tor_x509_cert_t *peercert = tor_tls_get_peer_cert((tor_tls_t *)tls);
+
+  if (!peercert || !peercert->cert)
     goto done;
-  CERTSubjectPublicKeyInfo *peer_info = &peercert->subjectPublicKeyInfo;
+
+  CERTSubjectPublicKeyInfo *peer_info = &peercert->cert->subjectPublicKeyInfo;
   CERTSubjectPublicKeyInfo *cert_info = &cert->cert->subjectPublicKeyInfo;
+
+  /* NSS stores the `len` field in bits, instead of bytes, for the
+   * `subjectPublicKey` field in CERTSubjectPublicKeyInfo, but
+   * `SECITEM_ItemsAreEqual()` compares the two bitstrings using a length field
+   * defined in bytes.
+   *
+   * We convert the `len` field from bits to bytes, do our comparison with
+   * `SECITEM_ItemsAreEqual()`, and reset the length field from bytes to bits
+   * again.
+   *
+   * See also NSS's own implementation of `SECKEY_CopySubjectPublicKeyInfo()`
+   * in seckey.c in the NSS source tree. This function also does the conversion
+   * between bits and bytes.
+   */
+  unsigned int peer_info_orig_len = peer_info->subjectPublicKey.len;
+  unsigned int cert_info_orig_len = cert_info->subjectPublicKey.len;
+
+  peer_info->subjectPublicKey.len = (peer_info_orig_len >> 3);
+  cert_info->subjectPublicKey.len = (cert_info_orig_len >> 3);
+
   rv = SECOID_CompareAlgorithmID(&peer_info->algorithm,
                                  &cert_info->algorithm) == 0 &&
        SECITEM_ItemsAreEqual(&peer_info->subjectPublicKey,
                              &cert_info->subjectPublicKey);
 
+  peer_info->subjectPublicKey.len = peer_info_orig_len;
+  cert_info->subjectPublicKey.len = cert_info_orig_len;
+
  done:
-  if (peercert)
-    CERT_DestroyCertificate(peercert);
+  tor_x509_cert_free(peercert);
+
   return rv;
 }
 
