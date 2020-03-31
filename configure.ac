@@ -2665,7 +2665,7 @@ PPRINT_SUBTITLE([Modules])
 
 m4_foreach_w([mname], MODULES,
   [
-    test "xenable_module_mname" != "xno" && value=1 || value=0
+    AM_COND_IF(m4_join([], [BUILD_MODULE_], m4_toupper([]mname[])), value=1, value=0)
     PPRINT_PROP_BOOL([mname (--disable-module-mname)], $value)
   ]
 )

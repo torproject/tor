@@ -1,0 +1,4 @@
+  o Minor bugfixes (build system):
+    - Correctly output the enabled module in the configure summary. Before that,
+      the list shown was just plain wrong. Fixes bug 33646; bugfix on
+      0.4.3.2-alpha.
