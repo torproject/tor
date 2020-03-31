@@ -773,12 +773,8 @@ tor_addr_is_null(const tor_addr_t *addr)
 
   switch (tor_addr_family(addr)) {
     case AF_INET6: {
-      const char *ipv6 = (const char *)tor_addr_to_in6_addr8(addr);
-      int result = 1, i;
-      for (i = 0; i < 16; ++i) {
-        result &= ipv6[i] == 0;
-      }
-      return result;
+      uint32_t *a32 = tor_addr_to_in6_addr32(addr);
+      return (a32[0] == 0) && (a32[1] == 0) && (a32[2] == 0) && (a32[3] == 0);
     }
     case AF_INET:
       return (tor_addr_to_ipv4n(addr) == 0);
