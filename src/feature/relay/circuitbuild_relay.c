@@ -42,17 +42,12 @@
 /* Before replying to an extend cell, check the state of the circuit
  * <b>circ</b>, and the configured tor mode.
  *
- * Return -1 if we want to warn and tear down the circuit, else return 0.
+ * If the state and mode are valid, return 0.
+ * Otherwise, if they are invalid, log a protocol warning, and return -1.
  */
-int
-circuit_extend(struct cell_t *cell, struct circuit_t *circ)
+static int
+circuit_extend_state_valid_helper(const struct circuit_t *circ)
 {
-  channel_t *n_chan;
-  relay_header_t rh;
-  extend_cell_t ec;
-  const char *msg = NULL;
-  int should_launch = 0;
-
   if (!server_mode(get_options())) {
     circuitbuild_warn_client_extend();
     return -1;
@@ -68,6 +63,29 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
            "conn to next hop already launched. Bug/attack. Closing.");
     return -1;
   }
+
+  return 0;
+}
+
+/** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
+ * skin and identity digest for the next hop. If we're already connected,
+ * pass the onion skin to the next hop using a create cell; otherwise
+ * launch a new OR connection, and <b>circ</b> will notice when the
+ * connection succeeds or fails.
+ *
+ * Return -1 if we want to warn and tear down the circuit, else return 0.
+ */
+int
+circuit_extend(struct cell_t *cell, struct circuit_t *circ)
+{
+  channel_t *n_chan;
+  relay_header_t rh;
+  extend_cell_t ec;
+  const char *msg = NULL;
+  int should_launch = 0;
+
+  if (circuit_extend_state_valid_helper(circ) < 0)
+    return -1;
 
   relay_header_unpack(&rh, cell->payload);
 
