@@ -3000,15 +3000,15 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 MOCK_IMPL(int,
 is_local_addr, (const tor_addr_t *other_addr))
 {
-  int EnforceDistinctSubnets = get_options()->EnforceDistinctSubnets;
+  const routerinfo_t *my_routerinfo = router_get_my_routerinfo();
+  const tor_addr_t *my_ipv6_addr = NULL;
 
-  if (router_get_my_routerinfo() &&
-      tor_addr_is_valid(&(router_get_my_routerinfo()->ipv6_addr), 0))
-    return is_local_addr_impl(EnforceDistinctSubnets,
-                              other_addr, tor_addr_to_ipv4h(other_addr),
-        &(router_get_my_routerinfo()->ipv6_addr));
-  return is_local_addr_impl(EnforceDistinctSubnets,
-                            other_addr, tor_addr_to_ipv4h(other_addr), NULL);
+  if (my_routerinfo) {
+    my_ipv6_addr = &my_routerinfo->ipv6_addr;
+  }
+
+  return is_local_addr_impl(get_options()->EnforceDistinctSubnets,
+                            other_addr, last_resolved_addr, my_ipv6_addr);
 }
 
 /** Returns true if <b>other_addr</b> is a local address, based on:
