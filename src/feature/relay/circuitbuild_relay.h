@@ -22,6 +22,7 @@ struct created_cell_t;
 
 struct circuit_t;
 struct or_circuit_t;
+struct extend_cell_t;
 
 /* Log a protocol warning about getting an extend cell on a client. */
 static inline void
@@ -65,6 +66,18 @@ onionskin_answer(struct or_circuit_t *circ,
   tor_assert_nonfatal_unreached();
   return -1;
 }
+
+#endif
+
+#ifdef TOR_UNIT_TESTS
+
+STATIC int circuit_extend_state_valid_helper(const struct circuit_t *circ);
+STATIC int circuit_extend_add_ed25519_helper(struct extend_cell_t *ec);
+STATIC int circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
+                                             const struct circuit_t *circ);
+STATIC void circuit_open_connection_for_extend(const struct extend_cell_t *ec,
+                                               struct circuit_t *circ,
+                                               int should_launch);
 
 #endif
 

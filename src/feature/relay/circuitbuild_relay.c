@@ -45,7 +45,7 @@
  * If the state and mode are valid, return 0.
  * Otherwise, if they are invalid, log a protocol warning, and return -1.
  */
-static int
+STATIC int
 circuit_extend_state_valid_helper(const struct circuit_t *circ)
 {
   if (!server_mode(get_options())) {
@@ -78,8 +78,8 @@ circuit_extend_state_valid_helper(const struct circuit_t *circ)
  *
  * Must be called before circuit_extend_lspec_valid_helper().
  */
-static int
-circuit_extend_add_ed25519_helper(extend_cell_t *ec)
+STATIC int
+circuit_extend_add_ed25519_helper(struct extend_cell_t *ec)
 {
   /* Check if they asked us for 0000..0000. We support using
    * an empty fingerprint for the first hop (e.g. for a bridge relay),
@@ -116,8 +116,8 @@ circuit_extend_add_ed25519_helper(extend_cell_t *ec)
  *
  * Must be called after circuit_extend_add_ed25519_helper().
  */
-static int
-circuit_extend_lspec_valid_helper(const extend_cell_t *ec,
+STATIC int
+circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
                                   const struct circuit_t *circ)
 {
   if (!ec->orport_ipv4.port || tor_addr_is_null(&ec->orport_ipv4.addr)) {
@@ -161,8 +161,8 @@ circuit_extend_lspec_valid_helper(const extend_cell_t *ec,
  * is true, open a new connection. (Otherwise, we are already waiting for a
  * new connection to the same relay.)
  */
-static void
-circuit_open_connection_for_extend(const extend_cell_t *ec,
+STATIC void
+circuit_open_connection_for_extend(const struct extend_cell_t *ec,
                                    struct circuit_t *circ,
                                    int should_launch)
 {
