@@ -42,6 +42,8 @@
 /* Before replying to an extend cell, check the state of the circuit
  * <b>circ</b>, and the configured tor mode.
  *
+ * <b>circ</b> must not be NULL.
+ *
  * If the state and mode are valid, return 0.
  * Otherwise, if they are invalid, log a protocol warning, and return -1.
  */
@@ -53,11 +55,16 @@ circuit_extend_state_valid_helper(const struct circuit_t *circ)
     return -1;
   }
 
+  IF_BUG_ONCE(!circ) {
+    return -1;
+  }
+
   if (circ->n_chan) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "n_chan already set. Bug/attack. Closing.");
     return -1;
   }
+
   if (circ->n_hop) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "conn to next hop already launched. Bug/attack. Closing.");
@@ -81,6 +88,10 @@ circuit_extend_state_valid_helper(const struct circuit_t *circ)
 STATIC int
 circuit_extend_add_ed25519_helper(struct extend_cell_t *ec)
 {
+  IF_BUG_ONCE(!ec) {
+    return -1;
+  }
+
   /* Check if they asked us for 0000..0000. We support using
    * an empty fingerprint for the first hop (e.g. for a bridge relay),
    * but we don't want to let clients send us extend cells for empty
@@ -120,6 +131,14 @@ STATIC int
 circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
                                   const struct circuit_t *circ)
 {
+  IF_BUG_ONCE(!ec) {
+    return -1;
+  }
+
+  IF_BUG_ONCE(!circ) {
+    return -1;
+  }
+
   if (!ec->orport_ipv4.port || tor_addr_is_null(&ec->orport_ipv4.addr)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend to zero destination port or addr.");
@@ -133,7 +152,15 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
     return -1;
   }
 
+  IF_BUG_ONCE(circ->magic != OR_CIRCUIT_MAGIC) {
+    return -1;
+  }
+
   const channel_t *p_chan = CONST_TO_OR_CIRCUIT(circ)->p_chan;
+
+  IF_BUG_ONCE(!p_chan) {
+    return -1;
+  }
 
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
@@ -166,6 +193,18 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
                                    struct circuit_t *circ,
                                    int should_launch)
 {
+  /* We have to check circ first, so we can close it on all other failures */
+  IF_BUG_ONCE(!circ) {
+    /* We can't mark a NULL circuit for close. */
+    return;
+  }
+
+  /* Now we know that circ is not NULL */
+  IF_BUG_ONCE(!ec) {
+    circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
+    return;
+  }
+
   circ->n_hop = extend_info_new(NULL /*nickname*/,
                                 (const char*)ec->node_id,
                                 &ec->ed_pubkey,
@@ -210,6 +249,14 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
   extend_cell_t ec;
   const char *msg = NULL;
   int should_launch = 0;
+
+  IF_BUG_ONCE(!cell) {
+    return -1;
+  }
+
+  IF_BUG_ONCE(!circ) {
+    return -1;
+  }
 
   if (circuit_extend_state_valid_helper(circ) < 0)
     return -1;
@@ -288,6 +335,22 @@ onionskin_answer(struct or_circuit_t *circ,
                  const uint8_t *rend_circ_nonce)
 {
   cell_t cell;
+
+  IF_BUG_ONCE(!circ) {
+    return -1;
+  }
+
+  IF_BUG_ONCE(!created_cell) {
+    return -1;
+  }
+
+  IF_BUG_ONCE(!keys) {
+    return -1;
+  }
+
+  IF_BUG_ONCE(!rend_circ_nonce) {
+    return -1;
+  }
 
   tor_assert(keys_len == CPATH_KEY_MATERIAL_LEN);
 
