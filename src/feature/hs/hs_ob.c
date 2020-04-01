@@ -159,8 +159,8 @@ ob_option_parse(hs_service_config_t *config, const ob_options_t *opts)
       goto end;
     }
     smartlist_add(config->ob_master_pubkeys, pubkey);
-    log_info(LD_REND, "OnionBalance: MasterOnionAddress %s registered",
-             line->value);
+    log_notice(LD_REND, "OnionBalance: MasterOnionAddress %s registered",
+               line->value);
   }
   /* Success. */
   ret = 1;
