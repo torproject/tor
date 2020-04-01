@@ -439,6 +439,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
     UNMOCK(connection_write_to_buf_impl_);
     UNMOCK(router_get_my_routerinfo);
 
+    tor_free(mock_routerinfo);
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
     tor_free(body);
@@ -819,6 +820,8 @@ test_dir_handle_get_server_descriptors_all(void* data)
     tor_free(body);
 
     routerlist_free_all();
+    /* Freed by routerlist_free_all() */
+    mock_routerinfo = NULL;
     nodelist_free_all();
     entry_guards_free_all();
 }
