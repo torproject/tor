@@ -59,9 +59,7 @@ int resolve_my_address(int warn_severity, const or_options_t *options,
                        uint32_t *addr_out,
                        const char **method_out, char **hostname_out);
 MOCK_DECL(int, is_local_addr, (const tor_addr_t *addr));
-int is_local_addr_impl(int EnforceDistinctSubnets,
-const tor_addr_t *other_addr, uint32_t addr_ipv4,
-const tor_addr_t *addr_ipv6);
+
 void options_init(or_options_t *options);
 
 #define OPTIONS_DUMP_MINIMAL 1
@@ -325,6 +323,11 @@ int options_validate(const or_options_t *old_options,
 STATIC int parse_ports(or_options_t *options, int validate_only,
                        char **msg, int *n_ports_out,
                        int *world_writable_control_socket);
+
+STATIC int is_local_addr_impl(int EnforceDistinctSubnets,
+                              const tor_addr_t *other_addr,
+                              uint32_t addr_ipv4,
+                              const tor_addr_t *addr_ipv6);
 
 #endif /* defined(CONFIG_PRIVATE) */
 

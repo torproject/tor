@@ -3008,10 +3008,11 @@ is_local_addr, (const tor_addr_t *addr))
       addr, tor_addr_to_ipv4h(addr), NULL);
 }
 
-int
+STATIC int
 is_local_addr_impl(int EnforceDistinctSubnets,
-const tor_addr_t *other_addr, uint32_t addr_ipv4,
-const tor_addr_t *addr_ipv6)
+                   const tor_addr_t *other_addr,
+                   uint32_t addr_ipv4,
+                   const tor_addr_t *addr_ipv6)
 {
   /* Check for an internal IPv4 or IPv6 address */
   if (tor_addr_is_internal(other_addr, 0))
