@@ -2991,8 +2991,11 @@ resolve_my_address(int warn_severity, const or_options_t *options,
   return 0;
 }
 
-/** Return true iff <b>addr</b> is judged to be on the same network as us, or
- * on a private network.
+/** Returns true if <b>other_addr</b> is a local address.
+ *
+ * Returns true if <b>other_addr</b> is on a private network.
+ * If get_options()->EnforceDistinctSubnets is true, also returns true if
+ * <b>other_addr</b> is on the same network as us.
  */
 MOCK_IMPL(int,
 is_local_addr, (const tor_addr_t *other_addr))
@@ -3008,6 +3011,16 @@ is_local_addr, (const tor_addr_t *other_addr))
                             other_addr, tor_addr_to_ipv4h(other_addr), NULL);
 }
 
+/** Returns true if <b>other_addr</b> is a local address, based on:
+ * - our host-order IPv4 address <b>my_addr_ipv4h</b>,
+ * - our IPv6 address <b>my_addr_ipv6</b>, and
+ * - the <b>EnforceDistinctSubnets</b> option value.
+ *
+ * Returns true if <b>other_addr</b> is on a private network.
+ * If <b>EnforceDistinctSubnets</b> is true, also returns true if
+ * <b>other_addr</b> is on the same network as <b>my_addr_ipv4h</b> or
+ * <b>my_addr_ipv6</b>.
+ */
 STATIC int
 is_local_addr_impl(int EnforceDistinctSubnets,
                    const tor_addr_t *other_addr,
