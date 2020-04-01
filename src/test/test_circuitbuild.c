@@ -14,12 +14,16 @@
 #include "app/config/config.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
+#include "core/or/channel.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/or_circuit_st.h"
 
 #include "feature/client/entrynodes.h"
+#include "feature/relay/circuitbuild_relay.h"
+#include "feature/relay/routermode.h"
 
 /* Dummy nodes smartlist for testing */
 static smartlist_t dummy_nodes;
@@ -180,17 +184,98 @@ test_upgrade_from_guard_wait(void *arg)
   entry_guard_free_(guard);
 }
 
+static int server = 0;
+static int
+mock_server_mode(const or_options_t *options)
+{
+  (void)options;
+  return server;
+}
+
+/* Test the different cases in circuit_extend_state_valid_helper(). */
+static void
+test_circuit_extend_state_valid(void *arg)
+{
+  (void)arg;
+  circuit_t *circ = tor_malloc_zero(sizeof(circuit_t));
+
+  server = 0;
+  MOCK(server_mode, mock_server_mode);
+
+  setup_full_capture_of_logs(LOG_INFO);
+
+  /* Clients can't extend */
+  server = 0;
+  tt_int_op(circuit_extend_state_valid_helper(NULL), OP_EQ, -1);
+  expect_log_msg("Got an extend cell, but running as a client. Closing.\n");
+  mock_clean_saved_logs();
+
+  /* Circuit must be non-NULL */
+  tor_capture_bugs_(1);
+  server = 1;
+  tt_int_op(circuit_extend_state_valid_helper(NULL), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!circ))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* n_chan and n_hop are NULL, this should succeed */
+  server = 1;
+  tt_int_op(circuit_extend_state_valid_helper(circ), OP_EQ, 0);
+  mock_clean_saved_logs();
+
+  /* But clients still can't extend */
+  server = 0;
+  tt_int_op(circuit_extend_state_valid_helper(circ), OP_EQ, -1);
+  expect_log_msg("Got an extend cell, but running as a client. Closing.\n");
+  mock_clean_saved_logs();
+
+  /* n_chan must be NULL */
+  circ->n_chan = tor_malloc_zero(sizeof(channel_t));
+  server = 1;
+  tt_int_op(circuit_extend_state_valid_helper(circ), OP_EQ, -1);
+  expect_log_msg("n_chan already set. Bug/attack. Closing.\n");
+  mock_clean_saved_logs();
+  tor_free(circ->n_chan);
+
+  /* n_hop must be NULL */
+  circ->n_hop = tor_malloc_zero(sizeof(extend_info_t));
+  server = 1;
+  tt_int_op(circuit_extend_state_valid_helper(circ), OP_EQ, -1);
+  expect_log_msg("conn to next hop already launched. Bug/attack. Closing.\n");
+  mock_clean_saved_logs();
+  tor_free(circ->n_hop);
+
+ done:
+  tor_end_capture_bugs_();
+  teardown_capture_of_logs();
+
+  UNMOCK(server_mode);
+  server = 0;
+
+  tor_free(circ->n_chan);
+  tor_free(circ->n_hop);
+  tor_free(circ);
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
 #define TEST_NEW_ROUTE_LEN(name, flags) \
   { #name, test_new_route_len_ ## name, flags, NULL, NULL }
 
+#define TEST_CIRCUIT(name, flags) \
+  { #name, test_circuit_ ## name, flags, NULL, NULL }
+
 struct testcase_t circuitbuild_tests[] = {
   TEST_NEW_ROUTE_LEN(noexit, 0),
   TEST_NEW_ROUTE_LEN(safe_exit, 0),
   TEST_NEW_ROUTE_LEN(unsafe_exit, 0),
   TEST_NEW_ROUTE_LEN(unhandled_exit, 0),
+
   TEST(upgrade_from_guard_wait, TT_FORK, &helper_pubsub_setup, NULL),
+
+  TEST_CIRCUIT(extend_state_valid, 0),
   END_OF_TESTCASES
 };
