@@ -180,12 +180,17 @@ test_upgrade_from_guard_wait(void *arg)
   entry_guard_free_(guard);
 }
 
+#define TEST(name, flags, setup, cleanup) \
+  { #name, test_ ## name, flags, setup, cleanup }
+
+#define TEST_NEW_ROUTE_LEN(name, flags) \
+  { #name, test_new_route_len_ ## name, flags, NULL, NULL }
+
 struct testcase_t circuitbuild_tests[] = {
-  { "noexit", test_new_route_len_noexit, 0, NULL, NULL },
-  { "safe_exit", test_new_route_len_safe_exit, 0, NULL, NULL },
-  { "unsafe_exit", test_new_route_len_unsafe_exit, 0, NULL, NULL },
-  { "unhandled_exit", test_new_route_len_unhandled_exit, 0, NULL, NULL },
-  { "upgrade_from_guard_wait", test_upgrade_from_guard_wait, TT_FORK,
-    &helper_pubsub_setup, NULL },
+  TEST_NEW_ROUTE_LEN(noexit, 0),
+  TEST_NEW_ROUTE_LEN(safe_exit, 0),
+  TEST_NEW_ROUTE_LEN(unsafe_exit, 0),
+  TEST_NEW_ROUTE_LEN(unhandled_exit, 0),
+  TEST(upgrade_from_guard_wait, TT_FORK, &helper_pubsub_setup, NULL),
   END_OF_TESTCASES
 };
