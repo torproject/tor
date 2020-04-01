@@ -133,10 +133,10 @@ test_new_route_len_unhandled_exit(void *arg)
             "!(exit_ei && !known_purpose)");
   expect_single_log_msg_containing("Unhandled purpose");
   expect_single_log_msg_containing("with a chosen exit; assuming routelen");
-  teardown_capture_of_logs();
-  tor_end_capture_bugs_();
 
  done:
+  teardown_capture_of_logs();
+  tor_end_capture_bugs_();
   UNMOCK(count_acceptable_nodes);
 }
 
