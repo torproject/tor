@@ -3018,9 +3018,11 @@ is_local_addr_impl(int EnforceDistinctSubnets,
   if (tor_addr_is_internal(other_addr, 0))
     return 1;
 
-  /* Check whether ip is on the same /24 as we are. */
+  /* If we are not enforcing distinct subnets, skip the subnet checks. */
   if (EnforceDistinctSubnets == 0)
     return 0;
+
+  /* Check whether other_addr is on the same IPv4 /24 as we are. */
   if (tor_addr_family(other_addr) == AF_INET) {
     uint32_t other_addr_ipv4h = tor_addr_to_ipv4h(other_addr);
 
@@ -3036,7 +3038,7 @@ is_local_addr_impl(int EnforceDistinctSubnets,
       return 1;
   }
 
-  /* Check for the same IPv6 /48 as the directory server */
+  /* Check whether other_addr is on the same IPv6 /48 as we are. */
   if (tor_addr_family(other_addr) == AF_INET6) {
     if (tor_addr_is_valid(my_addr_ipv6, 0))
       return tor_addr_compare_masked(other_addr,
