@@ -33,8 +33,8 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 9001
-problem include-count /src/app/config/config.c 80
+problem file-size /src/app/config/config.c 7600
+problem include-count /src/app/config/config.c 83
 problem function-size /src/app/config/config.c:options_act() 381
 problem function-size /src/app/config/config.c:resolve_my_address() 191
 problem function-size /src/app/config/config.c:options_validate_cb() 794
