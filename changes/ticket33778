@@ -1,0 +1,3 @@
+  o Documentation (manpage):
+    - Updated the options set by TestingTorNetwork in the man page.
+      Closes ticket 33778.
