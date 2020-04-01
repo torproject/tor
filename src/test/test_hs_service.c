@@ -2520,7 +2520,7 @@ test_intro2_handling(void *arg)
   /* Start cleaning up X */
   replaycache_free(x_service.state.replay_cache_rend_cookie);
   smartlist_free(x_service.config.ob_master_pubkeys);
-  tor_free(x_service.ob_subcreds);
+  tor_free(x_service.state.ob_subcreds);
   service_descriptor_free(x_service.desc_current);
   service_descriptor_free(x_service.desc_next);
   service_intro_point_free(x_ip);

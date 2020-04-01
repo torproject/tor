@@ -392,12 +392,12 @@ hs_ob_refresh_keys(hs_service_t *service)
   }
 
   /* Delete old subcredentials if any */
-  if (service->ob_subcreds) {
-    tor_free(service->ob_subcreds);
+  if (service->state.ob_subcreds) {
+    tor_free(service->state.ob_subcreds);
   }
 
-  service->ob_subcreds = ob_subcreds;
-  service->n_ob_subcreds = num_subcreds;
+  service->state.ob_subcreds = ob_subcreds;
+  service->state.n_ob_subcreds = num_subcreds;
 }
 
 /** Free any memory allocated by the onionblance subsystem. */
