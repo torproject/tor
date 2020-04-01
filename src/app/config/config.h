@@ -58,7 +58,7 @@ void reset_last_resolved_addr(void);
 int resolve_my_address(int warn_severity, const or_options_t *options,
                        uint32_t *addr_out,
                        const char **method_out, char **hostname_out);
-MOCK_DECL(int, is_local_addr, (const tor_addr_t *addr));
+MOCK_DECL(int, is_local_addr, (const tor_addr_t *other_addr));
 
 void options_init(or_options_t *options);
 
@@ -326,8 +326,8 @@ STATIC int parse_ports(or_options_t *options, int validate_only,
 
 STATIC int is_local_addr_impl(int EnforceDistinctSubnets,
                               const tor_addr_t *other_addr,
-                              uint32_t addr_ipv4,
-                              const tor_addr_t *addr_ipv6);
+                              uint32_t my_addr_ipv4,
+                              const tor_addr_t *my_addr_ipv6);
 
 #endif /* defined(CONFIG_PRIVATE) */
 

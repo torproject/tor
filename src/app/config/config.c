@@ -2995,24 +2995,24 @@ resolve_my_address(int warn_severity, const or_options_t *options,
  * on a private network.
  */
 MOCK_IMPL(int,
-is_local_addr, (const tor_addr_t *addr))
+is_local_addr, (const tor_addr_t *other_addr))
 {
   int EnforceDistinctSubnets = get_options()->EnforceDistinctSubnets;
 
   if (router_get_my_routerinfo() &&
       tor_addr_is_valid(&(router_get_my_routerinfo()->ipv6_addr), 0))
     return is_local_addr_impl(EnforceDistinctSubnets,
-        addr, tor_addr_to_ipv4h(addr),
+                              other_addr, tor_addr_to_ipv4h(other_addr),
         &(router_get_my_routerinfo()->ipv6_addr));
   return is_local_addr_impl(EnforceDistinctSubnets,
-      addr, tor_addr_to_ipv4h(addr), NULL);
+                            other_addr, tor_addr_to_ipv4h(other_addr), NULL);
 }
 
 STATIC int
 is_local_addr_impl(int EnforceDistinctSubnets,
                    const tor_addr_t *other_addr,
-                   uint32_t addr_ipv4,
-                   const tor_addr_t *addr_ipv6)
+                   uint32_t my_addr_ipv4h,
+                   const tor_addr_t *my_addr_ipv6)
 {
   /* Check for an internal IPv4 or IPv6 address */
   if (tor_addr_is_internal(other_addr, 0))
@@ -3022,7 +3022,7 @@ is_local_addr_impl(int EnforceDistinctSubnets,
   if (EnforceDistinctSubnets == 0)
     return 0;
   if (tor_addr_family(other_addr) == AF_INET) {
-    uint32_t ip = tor_addr_to_ipv4h(other_addr);
+    uint32_t other_addr_ipv4h = tor_addr_to_ipv4h(other_addr);
 
     /* It's possible that this next check will hit before the first time
      * resolve_my_address actually succeeds.  (For clients, it is likely that
@@ -3031,16 +3031,16 @@ is_local_addr_impl(int EnforceDistinctSubnets,
      * the same /24 as last_resolved_addr will be the same as checking whether
      * it was on net 0, which is already done by tor_addr_is_internal.
      */
-    if ((addr_ipv4 & (uint32_t)0xffffff00ul)
-        == (ip & (uint32_t)0xffffff00ul))
+    if ((my_addr_ipv4h & (uint32_t)0xffffff00ul)
+        == (other_addr_ipv4h & (uint32_t)0xffffff00ul))
       return 1;
   }
 
   /* Check for the same IPv6 /48 as the directory server */
   if (tor_addr_family(other_addr) == AF_INET6) {
-    if (tor_addr_is_valid(addr_ipv6, 0))
+    if (tor_addr_is_valid(my_addr_ipv6, 0))
       return tor_addr_compare_masked(other_addr,
-          addr_ipv6, 48, CMP_EXACT);
+                                     my_addr_ipv6, 48, CMP_EXACT);
   }
   return 0;
 }
