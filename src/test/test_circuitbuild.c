@@ -8,13 +8,17 @@
 #define ENTRYNODES_PRIVATE
 
 #include "core/or/or.h"
+
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
+
 #include "app/config/config.h"
+
+#include "core/or/channel.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
-#include "core/or/channel.h"
+#include "core/or/onion.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/extend_info_st.h"
@@ -22,8 +26,11 @@
 #include "core/or/or_circuit_st.h"
 
 #include "feature/client/entrynodes.h"
+#include "feature/nodelist/nodelist.h"
 #include "feature/relay/circuitbuild_relay.h"
 #include "feature/relay/routermode.h"
+
+#include "feature/nodelist/node_st.h"
 
 /* Dummy nodes smartlist for testing */
 static smartlist_t dummy_nodes;
@@ -259,6 +266,202 @@ test_circuit_extend_state_valid(void *arg)
   tor_free(circ);
 }
 
+static node_t *mocked_node = NULL;
+static const node_t *
+mock_node_get_by_id(const char *identity_digest)
+{
+  (void)identity_digest;
+  return mocked_node;
+}
+
+static int mocked_supports_ed25519_link_authentication = 0;
+static int
+mock_node_supports_ed25519_link_authentication(const node_t *node,
+                                                int compatible_with_us)
+{
+  (void)node;
+  (void)compatible_with_us;
+  return mocked_supports_ed25519_link_authentication;
+}
+
+static ed25519_public_key_t * mocked_ed25519_id = NULL;
+static const ed25519_public_key_t *
+mock_node_get_ed25519_id(const node_t *node)
+{
+  (void)node;
+  return mocked_ed25519_id;
+}
+
+/* Test the different cases in circuit_extend_add_ed25519_helper(). */
+static void
+test_circuit_extend_add_ed25519(void *arg)
+{
+  (void)arg;
+  extend_cell_t *ec = tor_malloc_zero(sizeof(extend_cell_t));
+  extend_cell_t *old_ec = tor_malloc_zero(sizeof(extend_cell_t));
+  extend_cell_t *zero_ec = tor_malloc_zero(sizeof(extend_cell_t));
+
+  node_t *fake_node = tor_malloc_zero(sizeof(node_t));
+  ed25519_public_key_t *fake_ed25519_id = NULL;
+  fake_ed25519_id = tor_malloc_zero(sizeof(ed25519_public_key_t));
+
+  MOCK(node_get_by_id, mock_node_get_by_id);
+  MOCK(node_supports_ed25519_link_authentication,
+       mock_node_supports_ed25519_link_authentication);
+  MOCK(node_get_ed25519_id, mock_node_get_ed25519_id);
+
+  setup_full_capture_of_logs(LOG_INFO);
+
+  /* The extend cell must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_add_ed25519_helper(NULL), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!ec))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* The node id must be non-zero */
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  tt_int_op(circuit_extend_add_ed25519_helper(ec), OP_EQ, -1);
+  expect_log_msg(
+    "Client asked me to extend without specifying an id_digest.\n");
+  /* And nothing should have changed */
+  tt_mem_op(ec, OP_EQ, old_ec, sizeof(extend_cell_t));
+  mock_clean_saved_logs();
+
+  /* Fill in fake node_id, and try again */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  tt_int_op(circuit_extend_add_ed25519_helper(ec), OP_EQ, 0);
+  /* There's no node with that id, so the ed pubkey should still be zeroed */
+  tt_mem_op(&ec->ed_pubkey, OP_EQ, &zero_ec->ed_pubkey, sizeof(ec->ed_pubkey));
+  /* In fact, nothing should have changed */
+  tt_mem_op(ec, OP_EQ, old_ec, sizeof(extend_cell_t));
+  mock_clean_saved_logs();
+
+  /* Provide 2 out of 3 of node, supports link auth, and ed_id.
+   * The ed_id should remain zeroed. */
+
+  /* Provide node and supports link auth */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  /* Set up the fake variables */
+  mocked_node = fake_node;
+  mocked_supports_ed25519_link_authentication = 1;
+  /* Do the test */
+  tt_int_op(circuit_extend_add_ed25519_helper(ec), OP_EQ, 0);
+  /* The ed pubkey should still be zeroed */
+  tt_mem_op(&ec->ed_pubkey, OP_EQ, &zero_ec->ed_pubkey, sizeof(ec->ed_pubkey));
+  /* In fact, nothing should have changed */
+  tt_mem_op(ec, OP_EQ, old_ec, sizeof(extend_cell_t));
+  /* Cleanup */
+  mock_clean_saved_logs();
+  mocked_node = NULL;
+  mocked_supports_ed25519_link_authentication = 0;
+  mocked_ed25519_id = NULL;
+  memset(fake_ed25519_id, 0x00, sizeof(ed25519_public_key_t));
+
+  /* Provide supports link auth and ed id */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  /* Set up the fake variables */
+  mocked_supports_ed25519_link_authentication = 1;
+  memset(fake_ed25519_id, 0xEE, sizeof(ed25519_public_key_t));
+  mocked_ed25519_id = fake_ed25519_id;
+  /* Do the test */
+  tt_int_op(circuit_extend_add_ed25519_helper(ec), OP_EQ, 0);
+  /* The ed pubkey should still be zeroed */
+  tt_mem_op(&ec->ed_pubkey, OP_EQ, &zero_ec->ed_pubkey, sizeof(ec->ed_pubkey));
+  /* In fact, nothing should have changed */
+  tt_mem_op(ec, OP_EQ, old_ec, sizeof(extend_cell_t));
+  /* Cleanup */
+  mock_clean_saved_logs();
+  mocked_node = NULL;
+  mocked_supports_ed25519_link_authentication = 0;
+  mocked_ed25519_id = NULL;
+  memset(fake_ed25519_id, 0x00, sizeof(ed25519_public_key_t));
+
+  /* Provide node and ed id */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  /* Set up the fake variables */
+  mocked_node = fake_node;
+  memset(fake_ed25519_id, 0xEE, sizeof(ed25519_public_key_t));
+  mocked_ed25519_id = fake_ed25519_id;
+  /* Do the test */
+  tt_int_op(circuit_extend_add_ed25519_helper(ec), OP_EQ, 0);
+  /* The ed pubkey should still be zeroed */
+  tt_mem_op(&ec->ed_pubkey, OP_EQ, &zero_ec->ed_pubkey, sizeof(ec->ed_pubkey));
+  /* In fact, nothing should have changed */
+  tt_mem_op(ec, OP_EQ, old_ec, sizeof(extend_cell_t));
+  /* Cleanup */
+  mock_clean_saved_logs();
+  mocked_node = NULL;
+  mocked_supports_ed25519_link_authentication = 0;
+  mocked_ed25519_id = NULL;
+  memset(fake_ed25519_id, 0x00, sizeof(ed25519_public_key_t));
+
+  /* Now do the real lookup */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  /* Set up the fake variables */
+  mocked_node = fake_node;
+  mocked_supports_ed25519_link_authentication = 1;
+  memset(fake_ed25519_id, 0xEE, sizeof(ed25519_public_key_t));
+  mocked_ed25519_id = fake_ed25519_id;
+  /* Do the test */
+  tt_int_op(circuit_extend_add_ed25519_helper(ec), OP_EQ, 0);
+  /* The ed pubkey should match */
+  tt_mem_op(&ec->ed_pubkey, OP_EQ, fake_ed25519_id, sizeof(ec->ed_pubkey));
+  /* Nothing else should have changed */
+  memcpy(&ec->ed_pubkey, &old_ec->ed_pubkey, sizeof(ec->ed_pubkey));
+  tt_mem_op(ec, OP_EQ, old_ec, sizeof(extend_cell_t));
+  /* Cleanup */
+  mock_clean_saved_logs();
+  mocked_node = NULL;
+  mocked_supports_ed25519_link_authentication = 0;
+  mocked_ed25519_id = NULL;
+  memset(fake_ed25519_id, 0x00, sizeof(ed25519_public_key_t));
+
+  /* Now do the real lookup, but with a zeroed ed id */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  /* Set up the fake variables */
+  mocked_node = fake_node;
+  mocked_supports_ed25519_link_authentication = 1;
+  memset(fake_ed25519_id, 0x00, sizeof(ed25519_public_key_t));
+  mocked_ed25519_id = fake_ed25519_id;
+  /* Do the test */
+  tt_int_op(circuit_extend_add_ed25519_helper(ec), OP_EQ, 0);
+  /* The ed pubkey should match */
+  tt_mem_op(&ec->ed_pubkey, OP_EQ, fake_ed25519_id, sizeof(ec->ed_pubkey));
+  /* Nothing else should have changed */
+  memcpy(&ec->ed_pubkey, &old_ec->ed_pubkey, sizeof(ec->ed_pubkey));
+  tt_mem_op(ec, OP_EQ, old_ec, sizeof(extend_cell_t));
+  /* Cleanup */
+  mock_clean_saved_logs();
+  mocked_node = NULL;
+  mocked_supports_ed25519_link_authentication = 0;
+  mocked_ed25519_id = NULL;
+  memset(fake_ed25519_id, 0x00, sizeof(ed25519_public_key_t));
+
+ done:
+  UNMOCK(node_get_by_id);
+  UNMOCK(node_supports_ed25519_link_authentication);
+  UNMOCK(node_get_ed25519_id);
+
+  tor_end_capture_bugs_();
+  teardown_capture_of_logs();
+
+  tor_free(ec);
+  tor_free(old_ec);
+  tor_free(zero_ec);
+
+  tor_free(fake_ed25519_id);
+  tor_free(fake_node);
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -277,5 +480,6 @@ struct testcase_t circuitbuild_tests[] = {
   TEST(upgrade_from_guard_wait, TT_FORK, &helper_pubsub_setup, NULL),
 
   TEST_CIRCUIT(extend_state_valid, 0),
+  TEST_CIRCUIT(extend_add_ed25519, 0),
   END_OF_TESTCASES
 };
