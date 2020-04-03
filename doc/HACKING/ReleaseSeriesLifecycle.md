@@ -1,9 +1,14 @@
-## End of Life on an old release series
+# Release Series Lifecycle
+
+
+## End Of Life On An Old Release Series
 
 Here are the steps that the maintainer should take when an old Tor release
-series reaches End of Life.  Note that they are _only_ for an entire series
-that has reached its planned EOL: they do not apply to security-related
-deprecations of individual versions.
+series reaches End of Life.
+
+Note that they are _only_ for an entire series that has reached its planned
+EOL: they do not apply to security-related deprecations of individual
+patch versions.
 
 
 ### 1. Preliminaries
@@ -17,7 +22,7 @@ deprecations of individual versions.
    packagers.
 
 
-### 2. On the day
+### 2. On The Day
 
 1. Open tickets to remove the release from:
    - the jenkins builds
@@ -72,8 +77,13 @@ deprecations of individual versions.
 12. Finally, make sure this document is up to date with our latest
    process.
 
+## Starting A New Release Series
 
-### 3. Starting a new release series.
+Here are the steps that the maintainer should take to start new maint and
+release branches for a stable release.
+
+Note that they are _only_ for an entire series, when it first becomes stable:
+they do not apply to security-related patch release versions.
 
 (Ideally, do this immediately after a release.)
 
