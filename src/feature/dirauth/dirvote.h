@@ -233,7 +233,14 @@ int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           int severity,
                                           const char **msg_out);
 STATIC
-int compare_routerinfo_by_ip_and_bw_(const void **a, const void **b);
+int compare_routerinfo_by_ipv4(const void **a, const void **b);
+
+STATIC
+int compare_routerinfo_by_ipv6(const void **a, const void **b);
+
+STATIC
+int compare_routerinfo_usefulness(const void **a, const void **b);
+
 STATIC
 char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,

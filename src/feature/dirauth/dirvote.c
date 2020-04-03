@@ -4200,55 +4200,47 @@ MOCK_IMPL(uint32_t,dirserv_get_bandwidth_for_router_kb,
   return bw_kb;
 }
 
-/** Helper for sorting: compares two routerinfos first by address, and then by
- * descending order of "usefulness".  (An authority is more useful than a
- * non-authority; a running router is more useful than a non-running router;
- * and a router with more bandwidth is more useful than one with less.)
+/** Helper for sorting: compares two ipv4 routerinfos first by ipv4 address,
+ * and then by descending order of "usefulness"
+ * (see compare_routerinfo_usefulness)
  **/
-int
-compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
-{
+static int
+compare_routerinfo_by_ipv4(const void **a, const void **b){
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
-  int first_is_auth, second_is_auth;
-  uint32_t bw_kb_first, bw_kb_second;
-  const node_t *node_first, *node_second;
-  int first_is_running, second_is_running;
+  // Don't use tor_addr_compare because it requires a tor_addr_t struct
+  // If addresses are equal, use other comparison criterions
+  if (first->addr == second->addr) {
+    return compare_routerinfo_usefulness(a,b);
+  } else {
+    // Otherwise, compare the addresses
+    if (first->addr < second->addr) return -1;
+    else return 1;
+  }
+}
+
+/** Helper for sorting: compares two ipv6 routerinfos first by ipv6 address,
+ * and then by descending order of "usefulness"
+ * (see compare_routerinfo_usefulness)
+ **/
+static int
+compare_routerinfo_by_ipv6(const void **a, const void **b){
+  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   tor_addr_t *first_ipv6 = &(first->ipv6_addr);
   tor_addr_t *second_ipv6 = &(second->ipv6_addr);
-  sa_family_t first_family, second_family;
-  first_family = tor_addr_family(first_ipv6);
-  second_family = tor_addr_family(second_ipv6);
-  /* the ipv6 router should appear before the ipv4 router
-   * because it is considered a better router */
-  if (first_family != second_family)
-    return first_family == AF_INET6 ? -1 : 1;
-  if (first_family == AF_INET6) {
-    // both are ipv6, return -1 if first has smaller address than second
-    const uint8_t *first_address = tor_addr_to_in6_addr8(first_ipv6);
-    const uint8_t *second_address = tor_addr_to_in6_addr8(second_ipv6);
-    for (int i = 0; i < 16; i++) {
-      if (first_address[i] < second_address[i])
-        return -1;
-      if (first_address[i] > second_address[i])
-        return 1;
-    }
-  } else {
-    // both are ipv4, return -1 if first has smaller address than second
-    if (first->addr < second->addr)
-      return -1;
-    else if (first->addr > second->addr)
-      return 1;
-  }
+  int comparison = tor_addr_compare(first_ipv6, second_ipv6, CMP_EXACT);
   // If addresses are equal, use other comparison criterions
+  if (comparison == 0) return compare_routerinfo_usefulness(a, b);
+  else return comparison;
 }
+
 /**
 * Compare routerinfos by descending order of "usefulness" :
 * An authority is more useful than a non-authority; a running router is
 * more useful than a non-running router; and a router with more bandwidth
 * is more useful than one with less.
 **/
-int
-compare_routerinfo_usefulness(const void **a, const void **b)
+static int
+compare_routerinfo_usefulness(const void **a, const void **b){
   routerinfo_t *first = *(routerinfo_t **) a, *second = *(routerinfo_t **) b;
   int first_is_auth, second_is_auth;
   const node_t *node_first, *node_second;
