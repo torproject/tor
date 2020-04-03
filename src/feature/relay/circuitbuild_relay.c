@@ -148,7 +148,7 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
   if (tor_addr_is_internal(&ec->orport_ipv4.addr, 0) &&
       !get_options()->ExtendAllowPrivateAddresses) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to a private address");
+           "Client asked me to extend to a private address.");
     return -1;
   }
 
@@ -284,7 +284,7 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
                                   &should_launch);
 
   if (!n_chan) {
-    log_debug(LD_CIRC|LD_OR,"Next router (%s): %s",
+    log_debug(LD_CIRC|LD_OR,"Next router (%s): %s.",
               fmt_addrport(&ec.orport_ipv4.addr,ec.orport_ipv4.port),
               msg?msg:"????");
 
@@ -300,7 +300,7 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
   tor_assert(!circ->n_hop); /* Connection is already established. */
   circ->n_chan = n_chan;
   log_debug(LD_CIRC,
-            "n_chan is %s",
+            "n_chan is %s.",
             channel_get_canonical_remote_descr(n_chan));
 
   if (circuit_deliver_create_cell(circ, &ec.create_cell, 1) < 0)
@@ -355,7 +355,7 @@ onionskin_answer(struct or_circuit_t *circ,
   tor_assert(keys_len == CPATH_KEY_MATERIAL_LEN);
 
   if (created_cell_format(&cell, created_cell) < 0) {
-    log_warn(LD_BUG,"couldn't format created cell (type=%d, len=%d)",
+    log_warn(LD_BUG,"couldn't format created cell (type=%d, len=%d).",
              (int)created_cell->cell_type, (int)created_cell->handshake_len);
     return -1;
   }
@@ -367,7 +367,7 @@ onionskin_answer(struct or_circuit_t *circ,
             (unsigned int)get_uint32(keys),
             (unsigned int)get_uint32(keys+20));
   if (relay_crypto_init(&circ->crypto, keys, keys_len, 0, 0)<0) {
-    log_warn(LD_BUG,"Circuit initialization failed");
+    log_warn(LD_BUG,"Circuit initialization failed.");
     return -1;
   }
 
