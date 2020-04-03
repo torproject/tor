@@ -13,6 +13,7 @@
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
 
+#define CONFIG_PRIVATE
 #include "app/config/config.h"
 
 #include "core/or/channel.h"
@@ -462,6 +463,228 @@ test_circuit_extend_add_ed25519(void *arg)
   tor_free(fake_node);
 }
 
+static or_options_t *mocked_options = NULL;
+static const or_options_t *
+mock_get_options(void)
+{
+  return mocked_options;
+}
+
+#define PUBLIC_IPV4   "1.2.3.4"
+#define INTERNAL_IPV4 "0.0.0.1"
+
+#define VALID_PORT    0x1234
+
+/* Test the different cases in circuit_extend_lspec_valid_helper(). */
+static void
+test_circuit_extend_lspec_valid(void *arg)
+{
+  (void)arg;
+  extend_cell_t *ec = tor_malloc_zero(sizeof(extend_cell_t));
+  channel_t *p_chan = tor_malloc_zero(sizeof(channel_t));
+  or_circuit_t *or_circ = tor_malloc_zero(sizeof(or_circuit_t));
+  circuit_t *circ = TO_CIRCUIT(or_circ);
+
+  or_options_t *fake_options = options_new();
+  MOCK(get_options, mock_get_options);
+  mocked_options = fake_options;
+
+  setup_full_capture_of_logs(LOG_INFO);
+
+  /* Extend cell must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(NULL, circ), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!ec))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Circuit must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, NULL), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!circ))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Extend cell and circuit must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(NULL, NULL), OP_EQ, -1);
+  /* Since we're using IF_BUG_ONCE(), we might not log any bugs */
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_GE, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* IPv4 addr or port are 0, these should fail */
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to "
+                 "zero destination port or addr.\n");
+  mock_clean_saved_logs();
+
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to "
+                 "zero destination port or addr.\n");
+  mock_clean_saved_logs();
+  tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
+
+  ec->orport_ipv4.port = VALID_PORT;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to "
+                 "zero destination port or addr.\n");
+  mock_clean_saved_logs();
+  ec->orport_ipv4.port = 0;
+
+  /* IPv4 addr is internal, and port is valid.
+   * Result depends on ExtendAllowPrivateAddresses. */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to a private address.\n");
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  /* If we pass the private address check, but don't have the right
+   * OR circuit magic number, we trigger another bug */
+  fake_options->ExtendAllowPrivateAddresses = 1;
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(circ->magic != 0x98ABC04Fu))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  /* Now set the right magic */
+  or_circ->base_.magic = OR_CIRCUIT_MAGIC;
+
+  /* If we pass the OR circuit magic check, but don't have p_chan,
+   * we trigger another bug */
+  fake_options->ExtendAllowPrivateAddresses = 1;
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!p_chan))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  /* We can also pass the OR circuit magic check with a public address */
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  /* Since we're using IF_BUG_ONCE(), expect 0-1 bug logs */
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_GE, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 1);
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
+  ec->orport_ipv4.port = 0x0000;
+
+  /* Now let's fake a p_chan and the addresses */
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  or_circ->p_chan = p_chan;
+
+  /* This is a trivial failure: node_id and p_chan->identity_digest are both
+   * zeroed */
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend back to the previous hop.\n");
+  mock_clean_saved_logs();
+
+  /* Let's check with non-zero identities as well */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memset(p_chan->identity_digest, 0xAA, sizeof(p_chan->identity_digest));
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend back to the previous hop.\n");
+  mock_clean_saved_logs();
+
+  memset(ec->node_id, 0, sizeof(ec->node_id));
+  memset(p_chan->identity_digest, 0, sizeof(p_chan->identity_digest));
+
+  /* Let's pass the node_id test */
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memset(p_chan->identity_digest, 0xBB, sizeof(p_chan->identity_digest));
+
+  /* ed_pubkey is zero, and that's allowed, so we should succeed */
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  mock_clean_saved_logs();
+
+  /* Fail on matching non-zero identities */
+  memset(&ec->ed_pubkey, 0xEE, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0xEE, sizeof(p_chan->ed25519_identity));
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend back to the previous hop "
+                 "(by Ed25519 ID).\n");
+  mock_clean_saved_logs();
+
+  memset(&ec->ed_pubkey, 0, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0, sizeof(p_chan->ed25519_identity));
+
+  /* Succeed on different, non-zero identities */
+  memset(&ec->ed_pubkey, 0xDD, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0xEE, sizeof(p_chan->ed25519_identity));
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  mock_clean_saved_logs();
+
+  memset(&ec->ed_pubkey, 0, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0, sizeof(p_chan->ed25519_identity));
+
+  /* Succeed if the client knows the identity, but we don't */
+  memset(&ec->ed_pubkey, 0xDD, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0x00, sizeof(p_chan->ed25519_identity));
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  mock_clean_saved_logs();
+
+  memset(&ec->ed_pubkey, 0, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0, sizeof(p_chan->ed25519_identity));
+
+  /* Succeed if we know the identity, but the client doesn't */
+  memset(&ec->ed_pubkey, 0x00, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0xEE, sizeof(p_chan->ed25519_identity));
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  mock_clean_saved_logs();
+
+  memset(&ec->ed_pubkey, 0, sizeof(ec->ed_pubkey));
+  memset(&p_chan->ed25519_identity, 0, sizeof(p_chan->ed25519_identity));
+
+  /* Cleanup the node ids */
+  memset(ec->node_id, 0, sizeof(ec->node_id));
+  memset(p_chan->identity_digest, 0, sizeof(p_chan->identity_digest));
+
+  /* Cleanup the p_chan and the addresses */
+  tor_addr_make_null(&ec->orport_ipv4.addr, AF_UNSPEC);
+  ec->orport_ipv4.port = 0;
+  or_circ->p_chan = NULL;
+
+ done:
+  tor_end_capture_bugs_();
+  teardown_capture_of_logs();
+
+  UNMOCK(get_options);
+  or_options_free(fake_options);
+  mocked_options = NULL;
+
+  tor_free(ec);
+  tor_free(or_circ);
+  tor_free(p_chan);
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -481,5 +704,6 @@ struct testcase_t circuitbuild_tests[] = {
 
   TEST_CIRCUIT(extend_state_valid, TT_FORK),
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
+  TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
   END_OF_TESTCASES
 };
