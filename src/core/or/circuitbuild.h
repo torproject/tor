@@ -73,13 +73,13 @@ void circuit_upgrade_circuits_from_guard_wait(void);
 
 struct ed25519_public_key_t;
 
-channel_t *
-channel_connect_for_circuit(const tor_addr_t *addr,
-                            uint16_t port,
-                            const char *id_digest,
-                            const struct ed25519_public_key_t *ed_id);
-struct create_cell_t;
+MOCK_DECL(channel_t *,
+channel_connect_for_circuit,(const tor_addr_t *addr,
+                             uint16_t port,
+                             const char *id_digest,
+                             const struct ed25519_public_key_t *ed_id));
 
+struct create_cell_t;
 int
 circuit_deliver_create_cell(circuit_t *circ,
                             const struct create_cell_t *create_cell,

@@ -95,10 +95,10 @@ static const node_t *choose_good_middle_server(uint8_t purpose,
  * and then calls command_setup_channel() to give it the right
  * callbacks.
  */
-channel_t *
-channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
-                            const char *id_digest,
-                            const struct ed25519_public_key_t *ed_id)
+MOCK_IMPL(channel_t *,
+channel_connect_for_circuit,(const tor_addr_t *addr, uint16_t port,
+                             const char *id_digest,
+                             const struct ed25519_public_key_t *ed_id))
 {
   channel_t *chan;
 
