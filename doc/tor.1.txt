@@ -3696,14 +3696,15 @@ __DataDirectory__/**`hashed-fingerprint`**::
     identity key. (That is, the hash of the hash of the identity key.)
 
 __DataDirectory__/**`approved-routers`**::
-    Only used by authoritative directory servers. This file lists the status
-    and a fingerprint/pubkey. Each line lists a status and a fingerprint
-    separated by whitespace. See your **fingerprint** file in the
-    __DataDirectory__ for an example fingerprint line. If the status is
-    **!reject** then descriptors from the given identity (fingerprint/pubkey)
-    are rejected by this server. If it is **!invalid** then descriptors are
-    accepted but marked in the directory as not valid, that is, not
-    recommended.
+    Only used by authoritative directory servers. Each line lists a status and
+    an identity, separated by whitespace. Identities can be hex-encoded RSA
+    fingerprints, or base-64 encoded ed25519 public keys. See the
+    **fingerprint** file in a tor relay's __DataDirectory__ for an example
+    fingerprint line. If the status is **!reject**, then descriptors from the
+    given identity are rejected by this server. If it is **!invalid** then
+    descriptors are accepted, but marked in the directory as not valid, that
+    is, not recommended. In either case, the corresponding relays are not
+    included in the consensus.
 
 __DataDirectory__/**`v3-status-votes`**::
     Only for v3 authoritative directory servers. This file contains status
