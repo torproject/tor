@@ -10,7 +10,7 @@
 #define TEST_CONN_ADDRESS_2     "127.0.0.2"
 #define TEST_CONN_PORT          (12345)
 #define TEST_CONN_ADDRESS_PORT  "127.0.0.1:12345"
-#define TEST_CONN_FD_INIT 50
+#define TEST_CONN_FD_INIT       0x10000
 
 void test_conn_lookup_addr_helper(const char *address,
                                   int family, tor_addr_t *addr);
