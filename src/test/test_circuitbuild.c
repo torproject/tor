@@ -685,6 +685,162 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_free(p_chan);
 }
 
+static int mock_circuit_close_calls = 0;
+static void
+mock_circuit_mark_for_close_(circuit_t *circ, int reason,
+                             int line, const char *cfile)
+{
+  (void)circ;
+  (void)reason;
+  (void)line;
+  (void)cfile;
+  mock_circuit_close_calls++;
+}
+
+static int mock_channel_connect_calls = 0;
+static channel_t *mock_channel_connect_nchan = NULL;
+static channel_t *
+mock_channel_connect_for_circuit(const tor_addr_t *addr,
+                                 uint16_t port,
+                                 const char *id_digest,
+                                 const struct ed25519_public_key_t *ed_id)
+{
+  (void)addr;
+  (void)port;
+  (void)id_digest;
+  (void)ed_id;
+  mock_channel_connect_calls++;
+  return mock_channel_connect_nchan;
+}
+
+/* Test the different cases in circuit_open_connection_for_extend(). */
+static void
+test_circuit_open_connection_for_extend(void *arg)
+{
+  (void)arg;
+  extend_cell_t *ec = tor_malloc_zero(sizeof(extend_cell_t));
+  circuit_t *circ = tor_malloc_zero(sizeof(circuit_t));
+  channel_t *fake_n_chan = tor_malloc_zero(sizeof(channel_t));
+
+  MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close_);
+  mock_circuit_close_calls = 0;
+  MOCK(channel_connect_for_circuit, mock_channel_connect_for_circuit);
+  mock_channel_connect_calls = 0;
+  mock_channel_connect_nchan = NULL;
+
+  setup_full_capture_of_logs(LOG_INFO);
+
+  /* Circuit must be non-NULL */
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  tor_capture_bugs_(1);
+  circuit_open_connection_for_extend(ec, NULL, 0);
+  /* We can't close a NULL circuit */
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 0);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!circ))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Extend cell must be non-NULL */
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  tor_capture_bugs_(1);
+  circuit_open_connection_for_extend(NULL, circ, 0);
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 1);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!ec))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Extend cell and circuit must be non-NULL */
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  tor_capture_bugs_(1);
+  circuit_open_connection_for_extend(NULL, NULL, 0);
+  /* We can't close a NULL circuit */
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 0);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 0);
+  /* Since we're using IF_BUG_ONCE(), we might not log any bugs */
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_GE, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Succeed, but don't try to open a connection */
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  circuit_open_connection_for_extend(ec, circ, 0);
+  /* If we haven't closed the circuit, that's success */
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 0);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 0);
+  /* Check state */
+  tt_ptr_op(circ->n_hop, OP_NE, NULL);
+  tt_ptr_op(circ->n_chan_create_cell, OP_NE, NULL);
+  tt_int_op(circ->state, OP_EQ, CIRCUIT_STATE_CHAN_WAIT);
+  /* Cleanup */
+  mock_clean_saved_logs();
+  tor_free(circ->n_hop);
+  tor_free(circ->n_chan_create_cell);
+  circ->state = 0;
+
+  /* Try to open a connection, but fail with a NULL n_chan */
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  circuit_open_connection_for_extend(ec, circ, 1);
+  /* Try to connect, but fail, and close the circuit */
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 1);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 1);
+  expect_log_msg("Launching n_chan failed. Closing circuit.\n");
+  /* Check state */
+  tt_ptr_op(circ->n_hop, OP_NE, NULL);
+  tt_ptr_op(circ->n_chan_create_cell, OP_NE, NULL);
+  tt_int_op(circ->state, OP_EQ, CIRCUIT_STATE_CHAN_WAIT);
+  /* Cleanup */
+  mock_clean_saved_logs();
+  tor_free(circ->n_hop);
+  tor_free(circ->n_chan_create_cell);
+  circ->state = 0;
+
+  /* Try to open a connection, and succeed, because n_chan is not NULL */
+  mock_channel_connect_nchan = fake_n_chan;
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  circuit_open_connection_for_extend(ec, circ, 1);
+  /* Try to connect, and succeed, leaving the circuit open */
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 0);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 1);
+  /* Check state */
+  tt_ptr_op(circ->n_hop, OP_NE, NULL);
+  tt_ptr_op(circ->n_chan_create_cell, OP_NE, NULL);
+  tt_int_op(circ->state, OP_EQ, CIRCUIT_STATE_CHAN_WAIT);
+  /* Cleanup */
+  mock_clean_saved_logs();
+  tor_free(circ->n_hop);
+  tor_free(circ->n_chan_create_cell);
+  circ->state = 0;
+  mock_channel_connect_nchan = NULL;
+
+ done:
+  tor_end_capture_bugs_();
+  teardown_capture_of_logs();
+
+  UNMOCK(circuit_mark_for_close_);
+  mock_circuit_close_calls = 0;
+  UNMOCK(channel_connect_for_circuit);
+  mock_channel_connect_calls = 0;
+
+  tor_free(ec);
+  tor_free(circ->n_hop);
+  tor_free(circ->n_chan_create_cell);
+  tor_free(circ);
+  tor_free(fake_n_chan);
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -705,5 +861,6 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_state_valid, TT_FORK),
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
+  TEST_CIRCUIT(open_connection_for_extend, TT_FORK),
   END_OF_TESTCASES
 };
