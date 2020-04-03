@@ -102,9 +102,12 @@ they do not apply to security-related patch release versions.
 4. Open tickets for connecting the new branches to various other
    places.  See section 2 above for a list of affected locations.
 
-5. Remove "check-best-practices" from the check-local Makefile
-   target in maint-x.y.z branch only. Merge to release-0.x.y.z but do
-   not forward-port to master.
+5. Stop running practracker on maintainence and release branches:
+   * Remove "check-best-practices" from the check-local Makefile
+     target in the maint-x.y.z branch only.
+   * Delete the file scripts/maint/practracker/.enable_practracker_in_hooks
+     in the maint-x.y.z branch only.
+   * Merge to release-x.y.z, but do not forward-port to master.
 
 6. Finally, make sure this document is up to date with our latest
    process.
