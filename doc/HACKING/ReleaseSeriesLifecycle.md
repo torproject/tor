@@ -1,12 +1,10 @@
-
-
-End of Life on an old release series
-------------------------------------
+## End of Life on an old release series
 
 Here are the steps that the maintainer should take when an old Tor release
 series reaches End of Life.  Note that they are _only_ for an entire series
 that has reached its planned EOL: they do not apply to security-related
 deprecations of individual versions.
+
 
 ### 1. Preliminaries
 
@@ -17,6 +15,7 @@ deprecations of individual versions.
 2. A month before End of Life:
    Send the announcement to tor-announce, tor-talk, tor-relays, and the
    packagers.
+
 
 ### 2. On the day
 
