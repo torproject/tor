@@ -479,7 +479,7 @@ struct testcase_t circuitbuild_tests[] = {
 
   TEST(upgrade_from_guard_wait, TT_FORK, &helper_pubsub_setup, NULL),
 
-  TEST_CIRCUIT(extend_state_valid, 0),
-  TEST_CIRCUIT(extend_add_ed25519, 0),
+  TEST_CIRCUIT(extend_state_valid, TT_FORK),
+  TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   END_OF_TESTCASES
 };
