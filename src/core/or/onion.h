@@ -56,8 +56,8 @@ typedef struct extend_cell_t {
   /** Ed25519 public identity key. Zero if not set. */
   struct ed25519_public_key_t ed_pubkey;
   /** The "create cell" embedded in this extend cell. Note that unlike the
-   * create cells we generate ourself, this once can have a handshake type we
-   * don't recognize. */
+   * create cells we generate ourselves, this create cell can have a handshake
+   * type we don't recognize. */
   create_cell_t create_cell;
 } extend_cell_t;
 
