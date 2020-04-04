@@ -270,6 +270,11 @@ def open_or_stdin(fname):
         return open(fname)
 
 def check_subsys_file(fname, uses_dirs):
+    if not uses_dirs:
+        # We're doing a distcheck build, or for some other reason there are
+        # no .may_include files.
+        return False
+
     uses_dirs = { normalize_srcdir(k) : { normalize_srcdir(d) for d in v }
                   for (k,v) in uses_dirs.items() }
     uses_closure = closure(uses_dirs)
