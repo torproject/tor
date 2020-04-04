@@ -136,6 +136,15 @@ class Rules(object):
 
         return allowed
 
+def normalize_srcdir(fname):
+    """given the name of a source directory or file, return its name
+        relative to `src`.
+    """
+    fname = re.sub(r'^.*/src/', "", fname)
+    fname = re.sub(r'^src/', "", fname)
+    fname = re.sub(r'/[^/]*\.[ch]', "", fname)
+    return fname
+
 include_rules_cache = {}
 
 def load_include_rules(fname):
@@ -261,6 +270,8 @@ def open_or_stdin(fname):
         return open(fname)
 
 def check_subsys_file(fname, uses_dirs):
+    uses_dirs = { normalize_srcdir(k) : { normalize_srcdir(d) for d in v }
+                  for (k,v) in uses_dirs.items() }
     uses_closure = closure(uses_dirs)
     ok = True
     previous_subsystems = []
