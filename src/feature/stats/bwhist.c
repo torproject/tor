@@ -74,7 +74,7 @@ advance_obs(bw_array_t *b)
 
 /** Add <b>n</b> bytes to the number of bytes in <b>b</b> for second
  * <b>when</b>. */
-static inline void
+STATIC void
 add_obs(bw_array_t *b, time_t when, uint64_t n)
 {
   if (when < b->cur_obs_time)
@@ -95,7 +95,7 @@ add_obs(bw_array_t *b, time_t when, uint64_t n)
 }
 
 /** Allocate, initialize, and return a new bw_array. */
-static bw_array_t *
+STATIC bw_array_t *
 bw_array_new(void)
 {
   bw_array_t *b;
@@ -107,11 +107,8 @@ bw_array_new(void)
   return b;
 }
 
-#define bw_array_free(val) \
-  FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
-
 /** Free storage held by bandwidth array <b>b</b>. */
-static void
+STATIC void
 bw_array_free_(bw_array_t *b)
 {
   if (!b) {
@@ -250,7 +247,7 @@ bwhist_bandwidth_assess,(void))
  *
  * It returns the number of bytes written.
  */
-static size_t
+STATIC size_t
 bwhist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
 {
   char *cp = buf;

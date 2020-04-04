@@ -31,6 +31,7 @@
 #define MAINLOOP_PRIVATE
 #define STATEFILE_PRIVATE
 #define CONFIG_PRIVATE
+#define BWHIST_PRIVATE
 
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
@@ -43,6 +44,8 @@
 #include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
 #include "app/config/statefile.h"
+#include "feature/stats/bwhist.h"
+#include "feature/stats/bw_array_st.h"
 
 /** Run unit tests for some stats code. */
 static void
@@ -382,7 +385,7 @@ mock_get_options(void)
 
 #define test_fill_bw(b, buf, rv, str, checkrv) STMT_BEGIN \
     buf = tor_malloc_zero(MAX_HIST_VALUE_LEN); \
-    rv = rep_hist_fill_bandwidth_history(buf, MAX_HIST_VALUE_LEN, b); \
+    rv = bwhist_fill_bandwidth_history(buf, MAX_HIST_VALUE_LEN, b); \
     tt_str_op(buf, OP_EQ, str); \
     tt_int_op(rv, OP_EQ, checkrv); \
     tor_free(buf); \
@@ -399,7 +402,7 @@ test_fill_bandwidth_history(void *arg)
   /* Day 1. */
   set_test_case(b, 0, 0, 0, 0, 0, 0, 0);
   buf = tor_malloc_zero(MAX_HIST_VALUE_LEN);
-  rv = rep_hist_fill_bandwidth_history(buf, MAX_HIST_VALUE_LEN, b);
+  rv = bwhist_fill_bandwidth_history(buf, MAX_HIST_VALUE_LEN, b);
   tt_int_op(rv, OP_EQ, 0);
   tor_free(buf);
   /* Day 2. */
@@ -434,14 +437,14 @@ test_fill_bandwidth_history(void *arg)
 }
 
 #define set_test_bw_lines(r, w, dr, dw, when) STMT_BEGIN \
-    rep_hist_note_bytes_read(r, when); \
-    rep_hist_note_bytes_written(w, when); \
-    rep_hist_note_dir_bytes_read(dr, when); \
-    rep_hist_note_dir_bytes_written(dw, when); \
+    bwhist_note_bytes_read(r, when, false); \
+    bwhist_note_bytes_written(w, when, false); \
+    bwhist_note_dir_bytes_read(dr, when); \
+    bwhist_note_dir_bytes_written(dw, when); \
   STMT_END;
 
 #define test_get_bw_lines(str, checkstr) STMT_BEGIN \
-    str = rep_hist_get_bandwidth_lines(); \
+    str = bwhist_get_bandwidth_lines(); \
     tt_str_op(str, OP_EQ, checkstr); \
     tor_free(str); \
   STMT_END;
@@ -455,7 +458,7 @@ test_get_bandwidth_lines(void *arg)
   int len = (67+MAX_HIST_VALUE_LEN)*4;
   checkstr = tor_malloc_zero(len);
   time_t now = time(NULL);
-  bw_arrays_init();
+  bwhist_init();
 
   /* Day 1. */
   now += 86400;
@@ -486,7 +489,7 @@ test_get_bandwidth_lines(void *arg)
   test_get_bw_lines(str, checkstr);
  done:
   tor_free(checkstr);
-  bw_arrays_free_all();
+  bwhist_free_all();
 }
 
 #define ENT(name)                                                       \
