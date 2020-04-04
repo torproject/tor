@@ -31,6 +31,13 @@ typedef struct bw_array_t bw_array_t;
 STATIC uint64_t find_largest_max(bw_array_t *b);
 STATIC void commit_max(bw_array_t *b);
 STATIC void advance_obs(bw_array_t *b);
+STATIC bw_array_t *bw_array_new(void);
+STATIC void add_obs(bw_array_t *b, time_t when, uint64_t n);
+#define bw_array_free(val) \
+  FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
+STATIC void bw_array_free_(bw_array_t *b);
+STATIC size_t bwhist_fill_bandwidth_history(char *buf, size_t len,
+                                            const bw_array_t *b);
 #endif /* defined(REPHIST_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
