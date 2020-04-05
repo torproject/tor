@@ -527,7 +527,7 @@ forward slash (/) in the configuration file and on the command line.
     If this option is set to 1, we always try to include a relay's Ed25519 ID
     when telling the preceding relay in a circuit to extend to it.
     If this option is set to 0, we never include Ed25519 IDs when extending
-    circuits.  If the option is set to "default", we obey a
+    circuits.  If the option is set to "auto", we obey a
     parameter in the consensus document. (Default: auto)
 
 [[ExtORPort]] **ExtORPort** ['address'**:**]{empty}__port__|**auto**::
