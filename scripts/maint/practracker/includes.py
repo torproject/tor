@@ -59,6 +59,8 @@ ALLOWED_PATTERNS = [
     re.compile(r'^micro-revision.i$'),
 ]
 
+TOPDIR = "src"
+
 def pattern_is_normal(s):
     for p in ALLOWED_PATTERNS:
         if p.match(s):
@@ -136,14 +138,28 @@ class Rules(object):
 
         return allowed
 
+
 def normalize_srcdir(fname):
     """given the name of a source directory or file, return its name
-        relative to `src`.
+        relative to `src` in a unix-like format.
     """
-    fname = re.sub(r'^.*/src/', "", fname)
-    fname = re.sub(r'^src/', "", fname)
-    fname = re.sub(r'/[^/]*\.[ch]', "", fname)
-    return fname
+    orig = fname
+    dirname, dirfile = os.path.split(fname)
+    if re.match(r'.*\.[ch]$', dirfile):
+        fname = dirname
+
+    # Now we have a directory.
+    dirname, result = os.path.split(fname)
+    for _ in range(100):
+        # prevent excess looping in case I missed a tricky case
+        dirname, dirpart = os.path.split(dirname)
+        if dirpart == 'src' or dirname == "":
+            #print(orig,"=>",result)
+            return result
+        result = "{}/{}".format(dirpart,result)
+
+    print("No progress!")
+    assert False
 
 include_rules_cache = {}
 
@@ -273,6 +289,7 @@ def check_subsys_file(fname, uses_dirs):
     if not uses_dirs:
         # We're doing a distcheck build, or for some other reason there are
         # no .may_include files.
+        print("SKIPPING")
         return False
 
     uses_dirs = { normalize_srcdir(k) : { normalize_srcdir(d) for d in v }
@@ -284,9 +301,7 @@ def check_subsys_file(fname, uses_dirs):
     with open_or_stdin(fname) as f:
         for line in f:
             _, name, fname = line.split()
-            fname = re.sub(r'^.*/src/', "", fname)
-            fname = re.sub(r'^src/', "", fname)
-            fname = re.sub(r'/[^/]*\.c', "", fname)
+            fname = normalize_srcdir(fname)
             for prev in previous_subsystems:
                 if fname in uses_closure[prev]:
                     print("INVERSION: {} uses {}".format(prev,fname))
@@ -354,6 +369,8 @@ def main(argv):
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
 
+    global TOPDIR
+    TOPDIR = args.topdir
     run_check_includes(topdir=args.topdir,
                        log_sorted_levels=args.toposort,
                        list_unused=args.list_unused,
