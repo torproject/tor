@@ -1,4 +1,3 @@
-
 /* * Copyright (c) 2012-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
