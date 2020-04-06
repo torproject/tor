@@ -2360,12 +2360,15 @@ channel_is_better(channel_t *a, channel_t *b)
 /**
  * Get a channel to extend a circuit.
  *
- * Pick a suitable channel to extend a circuit to given the desired digest
- * the address we believe is correct for that digest; this tries to see
- * if we already have one for the requested endpoint, but if there is no good
- * channel, set *msg_out to a message describing the channel's state
- * and our next action, and set *launch_out to a boolean indicated whether
- * the caller should try to launch a new channel with channel_connect().
+ * Given the desired relay identity, pick a suitable channel to extend a
+ * circuit to the target address requsted by the client. Search for an
+ * existing channel for the requested endpoint. Make sure the channel is
+ * usable for new circuits, and matches the target address.
+ *
+ * Try to return the best channel. But if there is no good channel, set
+ * *msg_out to a message describing the channel's state and our next action,
+ * and set *launch_out to a boolean indicated whether the caller should try to
+ * launch a new channel with channel_connect().
  */
 channel_t *
 channel_get_for_extend(const char *rsa_id_digest,
@@ -2383,9 +2386,7 @@ channel_get_for_extend(const char *rsa_id_digest,
 
   chan = channel_find_by_remote_identity(rsa_id_digest, ed_id);
 
-  /* Walk the list, unrefing the old one and refing the new at each
-   * iteration.
-   */
+  /* Walk the list of channels */
   for (; chan; chan = channel_next_with_rsa_identity(chan)) {
     tor_assert(tor_memeq(chan->identity_digest,
                          rsa_id_digest, DIGEST_LEN));
