@@ -2334,7 +2334,7 @@ channel_is_better(channel_t *a, channel_t *b)
   if (!a->is_canonical_to_peer && b->is_canonical_to_peer) return 0;
 
   /*
-   * Okay, if we're here they tied on canonicity, the prefer the older
+   * Okay, if we're here they tied on canonicity. Prefer the older
    * connection, so that the adversary can't create a new connection
    * and try to switch us over to it (which will leak information
    * about long-lived circuits). Additionally, switching connections
