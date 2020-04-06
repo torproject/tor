@@ -295,18 +295,20 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
      * OR_CONN_STATE_OPEN.
      */
     return 0;
+  } else {
+    /* Connection is already established.
+     * So we need to extend the circuit to the next hop. */
+    tor_assert(!circ->n_hop);
+    circ->n_chan = n_chan;
+    log_debug(LD_CIRC,
+              "n_chan is %s.",
+              channel_get_canonical_remote_descr(n_chan));
+
+    if (circuit_deliver_create_cell(circ, &ec.create_cell, 1) < 0)
+      return -1;
+
+    return 0;
   }
-
-  tor_assert(!circ->n_hop); /* Connection is already established. */
-  circ->n_chan = n_chan;
-  log_debug(LD_CIRC,
-            "n_chan is %s.",
-            channel_get_canonical_remote_descr(n_chan));
-
-  if (circuit_deliver_create_cell(circ, &ec.create_cell, 1) < 0)
-    return -1;
-
-  return 0;
 }
 
 /** On a relay, accept a create cell, initialise a circuit, and send a
