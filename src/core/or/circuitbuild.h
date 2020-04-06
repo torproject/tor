@@ -80,10 +80,10 @@ channel_connect_for_circuit,(const tor_addr_t *addr,
                              const struct ed25519_public_key_t *ed_id));
 
 struct create_cell_t;
-int
-circuit_deliver_create_cell(circuit_t *circ,
-                            const struct create_cell_t *create_cell,
-                            int relayed);
+MOCK_DECL(int,
+circuit_deliver_create_cell,(circuit_t *circ,
+                             const struct create_cell_t *create_cell,
+                             int relayed));
 
 #ifdef CIRCUITBUILD_PRIVATE
 STATIC circid_t get_unique_circ_id_by_chan(channel_t *chan);

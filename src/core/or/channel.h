@@ -658,11 +658,12 @@ channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
                             const char *rsa_id_digest,
                             const struct ed25519_public_key_t *ed_id);
 
-channel_t * channel_get_for_extend(const char *rsa_id_digest,
+MOCK_DECL(channel_t *, channel_get_for_extend,(
+                                   const char *rsa_id_digest,
                                    const struct ed25519_public_key_t *ed_id,
                                    const tor_addr_t *target_addr,
                                    const char **msg_out,
-                                   int *launch_out);
+                                   int *launch_out));
 
 /* Ask which of two channels is better for circuit-extension purposes */
 int channel_is_better(channel_t *a, channel_t *b);
@@ -723,7 +724,7 @@ const char * channel_get_actual_remote_descr(channel_t *chan);
 const char * channel_get_actual_remote_address(channel_t *chan);
 MOCK_DECL(int, channel_get_addr_if_possible, (channel_t *chan,
                                               tor_addr_t *addr_out));
-const char * channel_get_canonical_remote_descr(channel_t *chan);
+MOCK_DECL(const char *, channel_get_canonical_remote_descr,(channel_t *chan));
 int channel_has_queued_writes(channel_t *chan);
 int channel_is_bad_for_new_circs(channel_t *chan);
 void channel_mark_bad_for_new_circs(channel_t *chan);

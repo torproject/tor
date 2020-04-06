@@ -698,10 +698,10 @@ circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits)
  * gave us via an EXTEND cell, so we shouldn't worry if we don't understand
  * it. Return -1 if we failed to find a suitable circid, else return 0.
  */
-int
-circuit_deliver_create_cell(circuit_t *circ,
-                            const struct create_cell_t *create_cell,
-                            int relayed)
+MOCK_IMPL(int,
+circuit_deliver_create_cell,(circuit_t *circ,
+                             const struct create_cell_t *create_cell,
+                             int relayed))
 {
   cell_t cell;
   circid_t id;

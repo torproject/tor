@@ -2370,12 +2370,12 @@ channel_is_better(channel_t *a, channel_t *b)
  * and set *launch_out to a boolean indicated whether the caller should try to
  * launch a new channel with channel_connect().
  */
-channel_t *
-channel_get_for_extend(const char *rsa_id_digest,
-                       const ed25519_public_key_t *ed_id,
-                       const tor_addr_t *target_addr,
-                       const char **msg_out,
-                       int *launch_out)
+MOCK_IMPL(channel_t *,
+channel_get_for_extend,(const char *rsa_id_digest,
+                        const ed25519_public_key_t *ed_id,
+                        const tor_addr_t *target_addr,
+                        const char **msg_out,
+                        int *launch_out))
 {
   channel_t *chan, *best = NULL;
   int n_inprogress_goodaddr = 0, n_old = 0;
@@ -2821,8 +2821,8 @@ channel_get_actual_remote_address(channel_t *chan)
  * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
  * may invalidate the return value from this function.
  */
-const char *
-channel_get_canonical_remote_descr(channel_t *chan)
+MOCK_IMPL(const char *,
+channel_get_canonical_remote_descr,(channel_t *chan))
 {
   tor_assert(chan);
   tor_assert(chan->get_remote_descr);
