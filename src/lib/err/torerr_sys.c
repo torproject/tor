@@ -34,6 +34,7 @@ subsys_torerr_shutdown(void)
 
 const subsys_fns_t sys_torerr = {
   .name = "err",
+  SUBSYS_DECLARE_LOCATION(),
   /* Low-level error handling is a diagnostic feature, we want it to init
    * right after windows process security, and shutdown last.
    * (Security never shuts down.) */
