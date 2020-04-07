@@ -1154,6 +1154,83 @@ test_circuit_extend(void *arg)
   tor_free(fake_n_chan);
 }
 
+/* Test the different cases in onionskin_answer(). */
+static void
+test_onionskin_answer(void *arg)
+{
+  (void)arg;
+  created_cell_t *created_cell = tor_malloc_zero(sizeof(created_cell_t));
+  or_circuit_t *or_circ = tor_malloc_zero(sizeof(or_circuit_t));
+  char keys[CPATH_KEY_MATERIAL_LEN] = {0};
+  uint8_t rend_circ_nonce[DIGEST_LEN] = {0};
+
+  setup_full_capture_of_logs(LOG_INFO);
+
+  /* Circuit must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(onionskin_answer(NULL, created_cell,
+                             keys, CPATH_KEY_MATERIAL_LEN,
+                             rend_circ_nonce), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!circ))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Created cell must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(onionskin_answer(or_circ, NULL,
+                             keys, CPATH_KEY_MATERIAL_LEN,
+                             rend_circ_nonce), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!created_cell))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Keys must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(onionskin_answer(or_circ, created_cell,
+                             NULL, CPATH_KEY_MATERIAL_LEN,
+                             rend_circ_nonce), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!keys))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* The rend circuit nonce must be non-NULL */
+  tor_capture_bugs_(1);
+  tt_int_op(onionskin_answer(or_circ, created_cell,
+                             keys, CPATH_KEY_MATERIAL_LEN,
+                             NULL), OP_EQ, -1);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(!rend_circ_nonce))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+
+  /* Also, the keys length must be CPATH_KEY_MATERIAL_LEN, but we can't catch
+   * asserts in unit tests. */
+
+  /* Fail when formatting the created cell */
+  tt_int_op(onionskin_answer(or_circ, created_cell,
+                             keys, CPATH_KEY_MATERIAL_LEN,
+                             rend_circ_nonce), OP_EQ, -1);
+  expect_log_msg("couldn't format created cell (type=0, len=0).\n");
+  mock_clean_saved_logs();
+
+  /* TODO: test the rest of onionskin_answer(), see #33860 */
+  /* TODO: mock created_cell_format for the next test  */
+
+ done:
+  tor_end_capture_bugs_();
+  teardown_capture_of_logs();
+
+  tor_free(created_cell);
+  tor_free(or_circ);
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -1176,5 +1253,8 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
   TEST_CIRCUIT(open_connection_for_extend, TT_FORK),
   TEST_CIRCUIT(extend, TT_FORK),
+
+  TEST(onionskin_answer, TT_FORK, NULL, NULL),
+
   END_OF_TESTCASES
 };
