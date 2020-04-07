@@ -1492,10 +1492,9 @@ The following options are useful only for clients (that is, if
         requests on this connection. This option is only relevant when SOCKS5
         is in use, because SOCKS4 can't handle IPv6.  (Allowing IPv6 is the
         default.)
-    **NoPreferIPv6**;;
+    **PreferIPv6**;;
         Tells exits that, if a host has both an IPv4 and an IPv6 address,
-        we would prefer to connect to it via IPv4. (IPv6 is the default in
-        recent versions of Tor.)
+        we would prefer to connect to it via IPv6. (IPv4 is the default.)
     **NoDNSRequest**;;
         Do not ask exits to resolve DNS addresses in SOCKS5 requests. Tor will
         connect to IPv4 addresses, IPv6 addresses (if IPv6Traffic is set) and
@@ -1537,7 +1536,7 @@ The following options are useful only for clients (that is, if
         When serving a hostname lookup request on this port that
         should get automapped (according to AutomapHostsOnResolve),
         if we could return either an IPv4 or an IPv6 answer, prefer
-        an IPv4 answer. (Tor prefers IPv6 by default.)
+        an IPv4 answer. (Tor prefers IPv4 by default.)
     **PreferSOCKSNoAuth**;;
         Ordinarily, when an application offers both "username/password
         authentication" and "no authentication" to Tor via SOCKS5, Tor
