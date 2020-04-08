@@ -1,0 +1,2 @@
+  o Minor cleanup (autoconf):
+    - Remove autoconf checks for unused funcs and headers.
