@@ -322,43 +322,47 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       tor_free(digest_algo_b64_digest_bw_file);
     }
 
-    smartlist_add_asprintf(chunks,
-                 "network-status-version 3\n"
-                 "vote-status %s\n"
-                 "consensus-methods %s\n"
-                 "published %s\n"
-                 "valid-after %s\n"
-                 "fresh-until %s\n"
-                 "valid-until %s\n"
-                 "voting-delay %d %d\n"
-                 "%s%s" /* versions */
-                 "%s" /* protocols */
-                 "known-flags %s\n"
-                 "flag-thresholds %s\n"
-                 "params %s\n"
-                 "%s" /* bandwidth file headers */
-                 "%s" /* bandwidth file digest */
-                 "dir-source %s %s %s %s %d %d\n"
-                 "contact %s\n"
-                 "%s" /* shared randomness information */
-                 ,
-                 v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
-                 methods,
-                 published, va, fu, vu,
-                 v3_ns->vote_seconds, v3_ns->dist_seconds,
-                 client_versions_line,
-                 server_versions_line,
-                 protocols_lines,
-                 flags,
-                 flag_thresholds,
-                 params,
-                 bw_headers_line ? bw_headers_line : "",
-                 bw_file_digest ? bw_file_digest: "",
-                 voter->nickname, fingerprint, voter->address,
-                 fmt_addr32(addr), voter->dir_port, voter->or_port,
-                 voter->contact,
-                 shared_random_vote_str ?
-                           shared_random_vote_str : "");
+    const char *ip_str = fmt_addr32(addr);
+
+    if (ip_str[0]) {
+      smartlist_add_asprintf(chunks,
+                   "network-status-version 3\n"
+                   "vote-status %s\n"
+                   "consensus-methods %s\n"
+                   "published %s\n"
+                   "valid-after %s\n"
+                   "fresh-until %s\n"
+                   "valid-until %s\n"
+                   "voting-delay %d %d\n"
+                   "%s%s" /* versions */
+                   "%s" /* protocols */
+                   "known-flags %s\n"
+                   "flag-thresholds %s\n"
+                   "params %s\n"
+                   "%s" /* bandwidth file headers */
+                   "%s" /* bandwidth file digest */
+                   "dir-source %s %s %s %s %d %d\n"
+                   "contact %s\n"
+                   "%s" /* shared randomness information */
+                   ,
+                   v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
+                   methods,
+                   published, va, fu, vu,
+                   v3_ns->vote_seconds, v3_ns->dist_seconds,
+                   client_versions_line,
+                   server_versions_line,
+                   protocols_lines,
+                   flags,
+                   flag_thresholds,
+                   params,
+                   bw_headers_line ? bw_headers_line : "",
+                   bw_file_digest ? bw_file_digest: "",
+                   voter->nickname, fingerprint, voter->address,
+                   ip_str, voter->dir_port, voter->or_port,
+                   voter->contact,
+                   shared_random_vote_str ?
+                             shared_random_vote_str : "");
+    }
 
     tor_free(params);
     tor_free(flags);
