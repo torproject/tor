@@ -3095,7 +3095,8 @@ on the public Tor network.
     requests that is requests not ending with ".z" and lacking
     "Accept-Encoding". (Default: 1)
 
-== HIDDEN SERVICE OPTIONS
+HIDDEN SERVICE OPTIONS
+----------------------
 
 The following options are used to configure a hidden service. Some options
 apply per service and some apply for the whole tor instance.
