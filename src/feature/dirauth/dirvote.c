@@ -4204,8 +4204,8 @@ MOCK_IMPL(uint32_t,dirserv_get_bandwidth_for_router_kb,
  * and then by descending order of "usefulness"
  * (see compare_routerinfo_usefulness)
  **/
-static int
-compare_routerinfo_by_ipv4(const void **a, const void **b){
+STATIC
+int compare_routerinfo_by_ipv4(const void **a, const void **b){
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   // Don't use tor_addr_compare because it requires a tor_addr_t struct
   // If addresses are equal, use other comparison criterions
@@ -4222,8 +4222,8 @@ compare_routerinfo_by_ipv4(const void **a, const void **b){
  * and then by descending order of "usefulness"
  * (see compare_routerinfo_usefulness)
  **/
-static int
-compare_routerinfo_by_ipv6(const void **a, const void **b){
+STATIC
+int compare_routerinfo_by_ipv6(const void **a, const void **b){
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   tor_addr_t *first_ipv6 = &(first->ipv6_addr);
   tor_addr_t *second_ipv6 = &(second->ipv6_addr);
@@ -4239,8 +4239,8 @@ compare_routerinfo_by_ipv6(const void **a, const void **b){
 * more useful than a non-running router; and a router with more bandwidth
 * is more useful than one with less.
 **/
-static int
-compare_routerinfo_usefulness(const void **a, const void **b){
+STATIC
+int compare_routerinfo_usefulness(const void **a, const void **b){
   routerinfo_t *first = *(routerinfo_t **) a, *second = *(routerinfo_t **) b;
   int first_is_auth, second_is_auth;
   const node_t *node_first, *node_second;
