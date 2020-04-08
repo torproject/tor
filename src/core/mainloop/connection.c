@@ -3218,6 +3218,12 @@ connection_dir_is_global_write_low(const connection_t *conn, size_t attempt,
 
   /* Special case for authorities (directory only). */
   if (authdir_mode_v3(get_options())) {
+    /* If this requests is uncompressed and we are configured to reject those,
+     * indicate that have reached the limit thus deny answering. */
+    if (c_method == NO_METHOD &&
+        get_options()->AuthDirRejectUncompressedRequests) {
+      return true;
+    }
     if (c_method != NO_METHOD) {
       /* Always answer compressed request. */
       return false;

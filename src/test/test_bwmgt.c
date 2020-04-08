@@ -336,6 +336,8 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
   mock_options.AuthoritativeDir = 1;
   mock_options.V3AuthoritativeDir = 1;
   mock_options.UseDefaultFallbackDirs = 0;
+  mock_options.AuthDirRejectUncompressedRequests = 0;
+  mock_options.AuthDirRejectRequestsUnderLoad = 0;
 
   /* This will set our global bucket to 1 byte and thus we will hit the
    * banwdith limit in our test. */
@@ -400,6 +402,11 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
   /* Compress method should always let us through. */
   ret = connection_dir_is_global_write_low(conn, INT_MAX, ZLIB_METHOD);
   tt_int_op(ret, OP_EQ, 0);
+
+  /* Lets configure ourselves to reject uncompressed requests. */
+  mock_options.AuthDirRejectUncompressedRequests = 1;
+  ret = connection_dir_is_global_write_low(conn, INT_MAX, NO_METHOD);
+  tt_int_op(ret, OP_EQ, 1);
 
   /* Finally, just make sure it still denies an IP if we are _not_ a v3
    * directory authority. */

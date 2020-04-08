@@ -12,6 +12,8 @@
 #ifndef TOR_CONNECTION_H
 #define TOR_CONNECTION_H
 
+#include "lib/compress/compress.h"
+
 listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
 struct buf_t;
