@@ -992,7 +992,7 @@ intro_points_all_timed_out(const ed25519_public_key_t *service_pk)
   return ret;
 }
 
-/** Called when a rendezvous circuit has timed out. Every streams attached to
+/** Called when a rendezvous circuit has timed out. Every stream attached to
  * the circuit will get set with the SOCKS5_HS_REND_FAILED (0xF3) extended
  * error code so if the connection to the rendezvous point ends up not
  * working, this code could be sent back as a reason. */
@@ -1001,7 +1001,7 @@ socks_report_rend_circuit_timed_out(const origin_circuit_t *rend_circ)
 {
   tor_assert(rend_circ);
 
-  /* For each entry connections attached to this rendezvous circuit, report
+  /* For each entry connection attached to this rendezvous circuit, report
    * the error. */
   for (edge_connection_t *edge = rend_circ->p_streams; edge;
        edge = edge->next_stream) {
@@ -1858,10 +1858,10 @@ hs_client_circuit_cleanup_on_close(const circuit_t *circ)
   case CIRCUIT_PURPOSE_C_REND_READY:
   case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
   case CIRCUIT_PURPOSE_C_REND_JOINED:
-    /* Report extended SOCKS error code when a rendezvous circuit timeouts.
+    /* Report extended SOCKS error code when a rendezvous circuit times out.
      * This MUST be done on_close() because it is possible the entry
      * connection would get closed before the circuit is freed and thus
-     * failing to report the error code. */
+     * would fail to report the error code. */
     if (has_timed_out) {
       socks_report_rend_circuit_timed_out(CONST_TO_ORIGIN_CIRCUIT(circ));
     }

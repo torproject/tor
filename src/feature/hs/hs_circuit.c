@@ -632,7 +632,7 @@ cleanup_on_close_client_circ(circuit_t *circ)
     hs_client_circuit_cleanup_on_close(circ);
   }
   /* It is possible the circuit has an HS purpose but no identifier (rend_data
-   * or hs_ident). Thus possible that this passess through. */
+   * or hs_ident). Thus possible that this passes through. */
 }
 
 /** Helper: cleanup function for client circuit. This is for every HS version.
@@ -648,7 +648,7 @@ cleanup_on_free_client_circ(circuit_t *circ)
     hs_client_circuit_cleanup_on_free(circ);
   }
   /* It is possible the circuit has an HS purpose but no identifier (rend_data
-   * or hs_ident). Thus possible that this passess through. */
+   * or hs_ident). Thus possible that this passes through. */
 }
 
 /* ========== */

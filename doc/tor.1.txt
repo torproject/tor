@@ -1592,7 +1592,7 @@ The following options are useful only for clients (that is, if
 
           X'F7' Onion Service Introduction Timed Out
 
-            Similar to X'F2' code but in this case, all introduction attemps
+            Similar to X'F2' code but in this case, all introduction attempts
             have failed due to a time out. (v3 only)
 
 // Anchor only for formatting, not visible in the man page.
