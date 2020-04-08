@@ -110,7 +110,7 @@ test_addr_basic(void *arg)
     tt_int_op(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), OP_EQ, 1); \
     t1.family = AF_INET6;                                      \
     if (tor_addr_is_internal(&t1, for_listening))              \
-      TT_DIE(("%s was not internal", a));                      \
+      TT_DIE(("%s was internal", a));                      \
   STMT_END
 
 #ifndef COCCI
