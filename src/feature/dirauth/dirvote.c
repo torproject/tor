@@ -4204,8 +4204,9 @@ MOCK_IMPL(uint32_t,dirserv_get_bandwidth_for_router_kb,
  * and then by descending order of "usefulness"
  * (see compare_routerinfo_usefulness)
  **/
-STATIC
-int compare_routerinfo_by_ipv4(const void **a, const void **b){
+STATIC int
+compare_routerinfo_by_ipv4(const void **a, const void **b)
+{
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   // Don't use tor_addr_compare because it requires a tor_addr_t struct
   // If addresses are equal, use other comparison criterions
@@ -4222,8 +4223,9 @@ int compare_routerinfo_by_ipv4(const void **a, const void **b){
  * and then by descending order of "usefulness"
  * (see compare_routerinfo_usefulness)
  **/
-STATIC
-int compare_routerinfo_by_ipv6(const void **a, const void **b){
+STATIC int
+compare_routerinfo_by_ipv6(const void **a, const void **b)
+{
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   tor_addr_t *first_ipv6 = &(first->ipv6_addr);
   tor_addr_t *second_ipv6 = &(second->ipv6_addr);
@@ -4239,8 +4241,9 @@ int compare_routerinfo_by_ipv6(const void **a, const void **b){
 * more useful than a non-running router; and a router with more bandwidth
 * is more useful than one with less.
 **/
-STATIC
-int compare_routerinfo_usefulness(const void **a, const void **b){
+STATIC int
+compare_routerinfo_usefulness(const void **a, const void **b)
+{
   routerinfo_t *first = *(routerinfo_t **) a, *second = *(routerinfo_t **) b;
   int first_is_auth, second_is_auth;
   const node_t *node_first, *node_second;
@@ -4287,34 +4290,49 @@ int compare_routerinfo_usefulness(const void **a, const void **b){
  * whose keys are the identity digests of those routers that we're going to
  * exclude for Sybil-like appearance. */
 static digestmap_t *
-get_possible_sybil_list(const smartlist_t *routers)
+get_possible_sybil_list(const smartlist_t *routers, sa_family_t family)
 {
   const dirauth_options_t *options = dirauth_get_options();
   digestmap_t *omit_as_sybil;
   smartlist_t *routers_by_ip = smartlist_new();
-  uint32_t last_addr;
-  int addr_count;
+  int addr_count = 0;
+  uint32_t last_ipv4_addr = 0;
+  tor_addr_t * last_ipv6_addr = tor_malloc(sizeof(tor_addr_t));
+//  tor_addr_t * current_ipv6_addr;
+  int ipv6_comparison = 0;
   /* Allow at most this number of Tor servers on a single IP address, ... */
   int max_with_same_addr = options->AuthDirMaxServersPerAddr;
   if (max_with_same_addr <= 0)
     max_with_same_addr = INT_MAX;
 
   smartlist_add_all(routers_by_ip, routers);
-  smartlist_sort(routers_by_ip, compare_routerinfo_by_ip_and_bw_);
+  if (family == AF_INET6)
+    smartlist_sort(routers_by_ip, compare_routerinfo_by_ipv6);
+  else
+    smartlist_sort(routers_by_ip, compare_routerinfo_by_ipv4);
   omit_as_sybil = digestmap_new();
 
-  last_addr = 0;
-  addr_count = 0;
   SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
-    if (last_addr != ri->addr) {
-      last_addr = ri->addr;
-      addr_count = 1;
-    } else if (++addr_count > max_with_same_addr) {
-      digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+    if (family == AF_INET6) {
+      ipv6_comparison = tor_addr_compare(last_ipv6_addr, &(ri->ipv6_addr),
+              CMP_EXACT);
+      if (ipv6_comparison != 0) {
+        memcpy(last_ipv6_addr, &(ri->ipv6_addr), sizeof(*last_ipv6_addr));
+        addr_count = 1;
+      } else if (++addr_count > max_with_same_addr) {
+        digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+      }
+    } else {
+      if (last_ipv4_addr != ri->addr) {
+        last_ipv4_addr = ri->addr;
+        addr_count = 1;
+      } else if (++addr_count > max_with_same_addr) {
+        digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+      }
     }
   } SMARTLIST_FOREACH_END(ri);
-
   smartlist_free(routers_by_ip);
+  tor_free(last_ipv6_addr);
   return omit_as_sybil;
 }
 
