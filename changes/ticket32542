@@ -1,0 +1,3 @@
+  o Minor feature (onion service client, SOCKS5):
+    - Add 3 new SocksPort ExtendedErrors (F2, F3, F7) that reports back new type
+      of onion service connection failures. Closes ticket 32542.
