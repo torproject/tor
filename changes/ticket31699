@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (autoconf):
+    - Remove autoconf checks for unused funcs and headers. Closes ticket
+      31699; Patch by @bduszel
