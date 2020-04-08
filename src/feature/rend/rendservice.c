@@ -3723,7 +3723,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                safe_str_client(desc_id_base32),
                seconds_valid,
                hs_dir->nickname,
-               hs_dir_ip,
+               hs_dir_ip ? hs_dir_ip : "<unknown>",
                hs_dir->or_port);
       control_event_hs_descriptor_upload(service_id,
                                          hs_dir->identity_digest,

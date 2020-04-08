@@ -368,6 +368,11 @@ trusted_dir_server_new(const char *nickname, const char *address,
   }
   tor_addr_from_ipv4h(&addr, a);
 
+  if (!hostname) {
+    log_warn(LD_CONFIG, "Unable to find hostname for address %s", address);
+    return NULL;
+  }
+
   result = dir_server_new(1, nickname, &addr, hostname,
                           dir_port, or_port,
                           ipv6_addrport,

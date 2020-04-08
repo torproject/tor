@@ -779,6 +779,9 @@ inform_testing_reachability(void)
   if (!me)
     return 0;
   address = tor_dup_ip(me->addr);
+  if (!address)
+    return 0;
+
   control_event_server_status(LOG_NOTICE,
                               "CHECKING_REACHABILITY ORADDRESS=%s:%d",
                               address, me->or_port);

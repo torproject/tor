@@ -233,9 +233,10 @@ router_orport_found_reachable(void)
     if (options->TestingTorNetwork == 1) {
       reschedule_descriptor_update_check();
     }
-    control_event_server_status(LOG_NOTICE,
-                                "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
-                                address, me->or_port);
+    if (address)
+      control_event_server_status(LOG_NOTICE,
+                                  "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
+                                  address, me->or_port);
     tor_free(address);
   }
 }
@@ -262,9 +263,10 @@ router_dirport_found_reachable(void)
         reschedule_descriptor_update_check();
       }
     }
-    control_event_server_status(LOG_NOTICE,
-                                "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
-                                address, me->dir_port);
+    if (address)
+      control_event_server_status(LOG_NOTICE,
+                                  "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
+                                  address, me->dir_port);
     tor_free(address);
   }
 }

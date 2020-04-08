@@ -207,7 +207,7 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
                "its ORPort is reachable. Relays do not publish descriptors "
                "until their ORPort and DirPort are reachable. Please check "
                "your firewalls, ports, address, /etc/hosts file, etc.",
-               address, me->or_port);
+               address ? address : "<unknown>", me->or_port);
       control_event_server_status(LOG_WARN,
                                   "REACHABILITY_FAILED ORADDRESS=%s:%d",
                                   address, me->or_port);
@@ -224,7 +224,8 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
                address, me->dir_port);
       control_event_server_status(LOG_WARN,
                                   "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                  address, me->dir_port);
+                                  address ? address : "<unknown>",
+                                  me->dir_port);
       tor_free(address);
     }
   }

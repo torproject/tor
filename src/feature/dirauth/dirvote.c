@@ -4497,6 +4497,11 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     hostname = tor_dup_ip(addr);
   }
 
+  if (!hostname) {
+    log_err(LD_BUG, "No hostname found!");
+    return NULL;
+  }
+
   if (d_options->VersioningAuthoritativeDirectory) {
     client_versions =
       format_recommended_version_list(d_options->RecommendedClientVersions, 0);
