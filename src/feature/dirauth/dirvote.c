@@ -371,6 +371,9 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     tor_free(bw_headers_line);
     tor_free(bw_file_digest);
 
+    if (ip_str[0] == '\0')
+      goto err;
+
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
       base16_encode(fpbuf, sizeof(fpbuf), voter->legacy_id_digest, DIGEST_LEN);
