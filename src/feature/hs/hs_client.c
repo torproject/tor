@@ -970,6 +970,12 @@ intro_points_all_timed_out(const ed25519_public_key_t *service_pk)
   tor_assert(service_pk);
 
   const hs_descriptor_t *desc = hs_cache_lookup_as_client(service_pk);
+  if (BUG(!desc)) {
+    /* We can't introduce without a descriptor so ending up here means somehow
+     * between the introduction failure and this, the cache entry was removed
+     * which shouldn't be possible in theory. */
+    goto end;
+  }
 
   SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                           const hs_desc_intro_point_t *, ip) {
@@ -997,7 +1003,7 @@ intro_points_all_timed_out(const ed25519_public_key_t *service_pk)
  * error code so if the connection to the rendezvous point ends up not
  * working, this code could be sent back as a reason. */
 static void
-socks_report_rend_circuit_timed_out(const origin_circuit_t *rend_circ)
+socks_mark_rend_circuit_timed_out(const origin_circuit_t *rend_circ)
 {
   tor_assert(rend_circ);
 
@@ -1021,7 +1027,7 @@ socks_report_rend_circuit_timed_out(const origin_circuit_t *rend_circ)
  * SOCKS5_HS_INTRO_TIMEDOUT (0xF7) if all intros have timed out. The caller
  * has to make sure to close the entry connections. */
 static void
-socks_report_introduction_failed(entry_connection_t *conn,
+socks_mark_introduction_failed(entry_connection_t *conn,
                                  const ed25519_public_key_t *identity_pk)
 {
   socks5_reply_status_t code = SOCKS5_HS_INTRO_FAILED;
@@ -1390,7 +1396,7 @@ client_desc_has_arrived(const smartlist_t *entry_conns)
                         "Closing streams.");
       /* Report the extended socks error code that we were unable to introduce
        * to the service. */
-      socks_report_introduction_failed(entry_conn, identity_pk);
+      socks_mark_introduction_failed(entry_conn, identity_pk);
 
       connection_mark_unattached_ap(entry_conn,
                                     END_STREAM_REASON_RESOLVEFAILED);
@@ -1863,7 +1869,7 @@ hs_client_circuit_cleanup_on_close(const circuit_t *circ)
      * connection would get closed before the circuit is freed and thus
      * failing to report the error code. */
     if (has_timed_out) {
-      socks_report_rend_circuit_timed_out(CONST_TO_ORIGIN_CIRCUIT(circ));
+      socks_mark_rend_circuit_timed_out(CONST_TO_ORIGIN_CIRCUIT(circ));
     }
     break;
   default:
