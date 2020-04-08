@@ -2846,7 +2846,7 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
   /* Let's avoid doing that if tor is configured to not publish. */
   if (!get_options()->PublishHidServDescriptors) {
     log_info(LD_REND, "Service %s not publishing descriptor. "
-                      "PublishHidServDescriptors is set to 1.",
+                      "PublishHidServDescriptors is set to 0.",
              safe_str_client(service->onion_address));
     goto end;
   }
