@@ -649,6 +649,7 @@ AC_CHECK_FUNCS(
 	explicit_bzero \
 	timingsafe_memcmp \
 	flock \
+	fsync \
 	ftime \
 	get_current_dir_name \
 	getaddrinfo \
