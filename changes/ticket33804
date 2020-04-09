@@ -1,0 +1,7 @@
+  o Minor bugfixes (client, SocksPort, IPv6):
+    - Revert PreferIPv6 set by default on the SocksPort because it brokes the
+      torsocks use case. Tor doesn't have a way for an application to request
+      the hostname to be resolved for a specific IP version but torsocks
+      requires that. Up until now, IPv4 was used by default so it is expecting
+      that, and can't handle a possible IPv6 being returned. Fixes bug 33804;
+      bugfix on 0.4.3.1-alpha.
