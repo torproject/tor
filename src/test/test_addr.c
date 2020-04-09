@@ -1751,10 +1751,9 @@ test_addr_is_valid(void *arg)
   get_af_unspec(test_addr);
   TEST_ADDR_VALIDITY(test_addr, 0, 0);
   TEST_ADDR_VALIDITY(test_addr, 1, 0);
-  tor_free(test_addr);
 
  done:
-  ;
+  tor_free(test_addr);
 }
 
 #define TEST_ADDR_IS_NULL(a, rv) STMT_BEGIN                 \
@@ -1797,10 +1796,9 @@ test_addr_is_null(void *arg)
   /* Test for address family AF_UNSPEC. */
   get_af_unspec(test_addr);
   TEST_ADDR_IS_NULL(test_addr, 1);
-  tor_free(test_addr);
 
  done:
-  ;
+  tor_free(test_addr);
 }
 
 #ifndef COCCI
