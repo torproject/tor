@@ -1871,7 +1871,7 @@ channel_do_open_actions(channel_t *chan)
         tor_free(transport_name);
         /* Notify the DoS subsystem of a new client. */
         if (tlschan && tlschan->conn) {
-          dos_new_client_conn(tlschan->conn);
+          dos_new_client_conn(tlschan->conn, transport_name);
         }
       }
       /* Otherwise the underlying transport can't tell us this, so skip it */
