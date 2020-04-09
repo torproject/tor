@@ -4,16 +4,16 @@ Changes in version 0.4.3.4-rc - 2020-04-1?
   defenses on bridges using pluggable transports.
 
   o Major bugfixes (DoS defenses, bridges, pluggable transport):
-    - DoS subsystem was not given the transport name of the client
-      connection when tor is a bridge and thus failing to find the GeoIP
-      cache entry for that client address. This resulted in failing to
-      apply DoS defenses on bridges with a pluggable transport. Fixes
-      bug 33491; bugfix on 0.3.3.2-alpha.
+    - Fix a bug that was preventing DoS defenses from running on bridges
+      with a pluggable transport. Previously, the DoS subsystem was not
+      given the transport name of the client connection, thus failed to
+      find the GeoIP cache entry for that client address. Fixes bug
+      33491; bugfix on 0.3.3.2-alpha.
 
   o Minor feature (sendme, flow control):
     - Default to sending SENDME version 1 cells. (Clients are already
       sending these, because of a consensus parameter telling them to do
-      so: this change only effects what clients would do if the
+      so: this change only affects what clients would do if the
       consensus didn't contain a recommendation.) Closes ticket 33623.
 
   o Minor features (testing):
@@ -24,7 +24,7 @@ Changes in version 0.4.3.4-rc - 2020-04-1?
       libraries. Part of ticket 33643.
 
   o Minor bugfixes (--disable-module-relay):
-    - Fix an assertion failure when Tor is build without the relay
+    - Fix an assertion failure when Tor is built without the relay
       module, and then invoked with the "User" option. Fixes bug 33668;
       bugfix on 0.4.3.1-alpha.
 
@@ -43,12 +43,12 @@ Changes in version 0.4.3.4-rc - 2020-04-1?
       Instead, prefer IPv6 connections by default, but allow users to
       change their configs using the "NoPreferIPv6" port flag. Fixes bug
       33608; bugfix on 0.4.3.1-alpha.
-    - Revert PreferIPv6 set by default on the SocksPort because it
-      brokes the torsocks use case. Tor doesn't have a way for an
-      application to request the hostname to be resolved for a specific
-      IP version but torsocks requires that. Up until now, IPv4 was used
-      by default so it is expecting that, and can't handle a possible
-      IPv6 being returned. Fixes bug 33804; bugfix on 0.4.3.1-alpha.
+    - Revert PreferIPv6 set by default on the SocksPort because it broke
+      the torsocks use case. Tor doesn't have a way for an application
+      to request the hostname to be resolved for a specific IP version,
+      but torsocks requires that. Up until now, IPv4 was used by default
+      so torsocks is expecting that, and can't handle a possible IPv6
+      being returned. Fixes bug 33804; bugfix on 0.4.3.1-alpha.
 
   o Minor bugfixes (key portability):
     - When reading PEM-encoded key data, tolerate CRLF line-endings even
@@ -84,9 +84,9 @@ Changes in version 0.4.3.4-rc - 2020-04-1?
       Putta Khunchalee.
 
   o Testing (CI):
-    - In our Appveyor Windows CI, copy required DLLs to test and app,
-      before running tor's tests. This ensures that tor.exe and
-      test*.exe use the correct version of each DLL. This fix is not
+    - In our Appveyor Windows CI, copy required DLLs to test and app
+      directories, before running tor's tests. This ensures that tor.exe
+      and test*.exe use the correct version of each DLL. This fix is not
       required, but we hope it will avoid DLL search issues in future.
       Fixes bug 33673; bugfix on 0.3.4.2-alpha.
     - On Appveyor, skip the crypto/openssl_version test, which is
