@@ -79,7 +79,7 @@ test_dos_conn_creation(void *arg)
   { /* Register many conns from this client but not enough to get it blocked */
     unsigned int i;
     for (i = 0; i < max_concurrent_conns; i++) {
-      dos_new_client_conn(&or_conn);
+      dos_new_client_conn(&or_conn, NULL);
     }
   }
 
@@ -88,7 +88,7 @@ test_dos_conn_creation(void *arg)
             dos_conn_addr_get_defense_type(addr));
 
   /* Register another conn and check that new conns are not allowed anymore */
-  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn, NULL);
   tt_int_op(DOS_CONN_DEFENSE_CLOSE, OP_EQ,
             dos_conn_addr_get_defense_type(addr));
 
@@ -98,7 +98,7 @@ test_dos_conn_creation(void *arg)
             dos_conn_addr_get_defense_type(addr));
 
   /* Register another conn and see that defense measures get reactivated */
-  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn, NULL);
   tt_int_op(DOS_CONN_DEFENSE_CLOSE, OP_EQ,
             dos_conn_addr_get_defense_type(addr));
 
@@ -153,7 +153,7 @@ test_dos_circuit_creation(void *arg)
    * circuit counting subsystem */
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, addr, NULL, now);
   for (i = 0; i < min_conc_conns_for_cc ; i++) {
-    dos_new_client_conn(&or_conn);
+    dos_new_client_conn(&or_conn, NULL);
   }
 
   /* Register new circuits for this client and conn, but not enough to get
@@ -217,7 +217,7 @@ test_dos_bucket_refill(void *arg)
 
   /* Register this client */
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, addr, NULL, now);
-  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn, NULL);
 
   /* Fetch this client from the geoip cache and get its DoS structs */
   clientmap_entry_t *entry = geoip_lookup_client(addr, NULL,
@@ -460,11 +460,11 @@ test_known_relay(void *arg)
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &or_conn.real_addr, NULL, 0);
   /* Suppose we have 5 connections in rapid succession, the counter should
    * always be 0 because we should ignore this. */
-  dos_new_client_conn(&or_conn);
-  dos_new_client_conn(&or_conn);
-  dos_new_client_conn(&or_conn);
-  dos_new_client_conn(&or_conn);
-  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn, NULL);
+  dos_new_client_conn(&or_conn, NULL);
+  dos_new_client_conn(&or_conn, NULL);
+  dos_new_client_conn(&or_conn, NULL);
+  dos_new_client_conn(&or_conn, NULL);
   entry = geoip_lookup_client(&or_conn.real_addr, NULL, GEOIP_CLIENT_CONNECT);
   tt_assert(entry);
   /* We should have a count of 0. */
@@ -474,8 +474,8 @@ test_known_relay(void *arg)
    * connection and see if we do get it. */
   tor_addr_parse(&or_conn.real_addr, "42.42.42.43");
   geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &or_conn.real_addr, NULL, 0);
-  dos_new_client_conn(&or_conn);
-  dos_new_client_conn(&or_conn);
+  dos_new_client_conn(&or_conn, NULL);
+  dos_new_client_conn(&or_conn, NULL);
   entry = geoip_lookup_client(&or_conn.real_addr, NULL, GEOIP_CLIENT_CONNECT);
   tt_assert(entry);
   /* We should have a count of 2. */

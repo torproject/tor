@@ -671,7 +671,7 @@ dos_log_heartbeat(void)
 /* Called when a new client connection has been established on the given
  * address. */
 void
-dos_new_client_conn(or_connection_t *or_conn)
+dos_new_client_conn(or_connection_t *or_conn, const char *transport_name)
 {
   clientmap_entry_t *entry;
 
@@ -692,7 +692,7 @@ dos_new_client_conn(or_connection_t *or_conn)
   }
 
   /* We are only interested in client connection from the geoip cache. */
-  entry = geoip_lookup_client(&or_conn->real_addr, NULL,
+  entry = geoip_lookup_client(&or_conn->real_addr, transport_name,
                               GEOIP_CLIENT_CONNECT);
   if (BUG(entry == NULL)) {
     /* Should never happen because we note down the address in the geoip
