@@ -55,7 +55,7 @@ parse_private_key_from_control_port(const char *client_privkey_str,
     goto err;
   }
 
-  if (fast_mem_is_zero((const char*)&privkey->secret_key,
+  if (fast_mem_is_zero((const char*)privkey->secret_key,
                        sizeof(privkey->secret_key))) {
     control_printf_endreply(conn, 553,
                             "Invalid private key \"%s\"", key_blob);
