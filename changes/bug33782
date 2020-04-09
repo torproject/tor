@@ -1,7 +1,0 @@
-  o Testing:
-    - Avoid conflicts between the fake sockets in tor's unit tests, and real
-      file descriptors. Resolves issues running unit tests with GitHub Actions,
-      where the process that embeds or launches the tests has already opened a
-      large number of file descriptors.
-      Fixes bug 33782; bugfix on 0.2.8.1-alpha.
-      Found and fixed by Putta Khunchalee.
