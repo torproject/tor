@@ -74,8 +74,10 @@ void create_cell_init(create_cell_t *cell_out, uint8_t cell_type,
                       const uint8_t *onionskin);
 int create_cell_parse(create_cell_t *cell_out, const cell_t *cell_in);
 int created_cell_parse(created_cell_t *cell_out, const cell_t *cell_in);
-int extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
-                      const uint8_t *payload_in, size_t payload_len);
+MOCK_DECL(int,extend_cell_parse,(extend_cell_t *cell_out,
+                                 const uint8_t command,
+                                 const uint8_t *payload_in,
+                                 size_t payload_len));
 int extended_cell_parse(extended_cell_t *cell_out, const uint8_t command,
                         const uint8_t *payload_in, size_t payload_len);
 

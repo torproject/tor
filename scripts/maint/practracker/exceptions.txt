@@ -83,9 +83,9 @@ problem dependency-violation /src/core/mainloop/netstatus.c 4
 problem dependency-violation /src/core/mainloop/periodic.c 2
 problem dependency-violation /src/core/or/address_set.c 1
 problem dependency-violation /src/core/or/cell_queue_st.h 1
-problem file-size /src/core/or/channel.c 3464
+problem file-size /src/core/or/channel.c 3500
 problem dependency-violation /src/core/or/channel.c 9
-problem file-size /src/core/or/channel.h 775
+problem file-size /src/core/or/channel.h 800
 problem dependency-violation /src/core/or/channel.h 1
 problem dependency-violation /src/core/or/channelpadding.c 6
 problem function-size /src/core/or/channeltls.c:channel_tls_handle_var_cell() 160
@@ -94,9 +94,8 @@ problem function-size /src/core/or/channeltls.c:channel_tls_process_netinfo_cell
 problem function-size /src/core/or/channeltls.c:channel_tls_process_certs_cell() 246
 problem function-size /src/core/or/channeltls.c:channel_tls_process_authenticate_cell() 202
 problem dependency-violation /src/core/or/channeltls.c 11
-problem include-count /src/core/or/circuitbuild.c 54
+problem include-count /src/core/or/circuitbuild.c 53
 problem function-size /src/core/or/circuitbuild.c:get_unique_circ_id_by_chan() 128
-problem function-size /src/core/or/circuitbuild.c:circuit_extend() 147
 problem function-size /src/core/or/circuitbuild.c:choose_good_exit_server_general() 206
 problem dependency-violation /src/core/or/circuitbuild.c 25
 problem include-count /src/core/or/circuitlist.c 55
@@ -129,7 +128,7 @@ problem function-size /src/core/or/circuituse.c:connection_ap_handshake_attach_c
 problem dependency-violation /src/core/or/circuituse.c 24
 problem function-size /src/core/or/command.c:command_process_create_cell() 156
 problem function-size /src/core/or/command.c:command_process_relay_cell() 132
-problem dependency-violation /src/core/or/command.c 8
+problem dependency-violation /src/core/or/command.c 9
 problem file-size /src/core/or/connection_edge.c 4655
 problem include-count /src/core/or/connection_edge.c 65
 problem function-size /src/core/or/connection_edge.c:connection_ap_expire_beginning() 117
@@ -147,7 +146,7 @@ problem function-size /src/core/or/connection_or.c:connection_or_client_learned_
 problem dependency-violation /src/core/or/connection_or.c 21
 problem dependency-violation /src/core/or/dos.c 6
 problem dependency-violation /src/core/or/onion.c 2
-problem file-size /src/core/or/or.h 1107
+problem file-size /src/core/or/or.h 1105
 problem include-count /src/core/or/or.h 48
 problem dependency-violation /src/core/or/or.h 1
 problem dependency-violation /src/core/or/or_periodic.c 1
@@ -156,7 +155,7 @@ problem function-size /src/core/or/policies.c:policy_summarize() 107
 problem dependency-violation /src/core/or/policies.c 14
 problem function-size /src/core/or/protover.c:protover_all_supported() 117
 problem dependency-violation /src/core/or/reasons.c 2
-problem file-size /src/core/or/relay.c 3264
+problem file-size /src/core/or/relay.c 3300
 problem function-size /src/core/or/relay.c:circuit_receive_relay_cell() 127
 problem function-size /src/core/or/relay.c:relay_send_command_from_edge_() 109
 problem function-size /src/core/or/relay.c:connection_ap_process_end_not_open() 192
@@ -164,7 +163,7 @@ problem function-size /src/core/or/relay.c:connection_edge_process_relay_cell_no
 problem function-size /src/core/or/relay.c:handle_relay_cell_command() 369
 problem function-size /src/core/or/relay.c:connection_edge_package_raw_inbuf() 128
 problem function-size /src/core/or/relay.c:circuit_resume_edge_reading_helper() 146
-problem dependency-violation /src/core/or/relay.c 16
+problem dependency-violation /src/core/or/relay.c 17
 problem dependency-violation /src/core/or/scheduler.c 1
 problem function-size /src/core/or/scheduler_kist.c:kist_scheduler_run() 171
 problem dependency-violation /src/core/or/scheduler_kist.c 2

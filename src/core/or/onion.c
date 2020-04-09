@@ -374,9 +374,11 @@ extend_cell_from_extend2_cell_body(extend_cell_t *cell_out,
 /** Parse an EXTEND or EXTEND2 cell (according to <b>command</b>) from the
  * <b>payload_length</b> bytes of <b>payload</b> into <b>cell_out</b>. Return
  * 0 on success, -1 on failure. */
-int
-extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
-                  const uint8_t *payload, size_t payload_length)
+MOCK_IMPL(int,
+extend_cell_parse,(extend_cell_t *cell_out,
+                   const uint8_t command,
+                   const uint8_t *payload,
+                   size_t payload_length))
 {
 
   tor_assert(cell_out);
