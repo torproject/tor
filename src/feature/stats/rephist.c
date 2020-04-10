@@ -74,7 +74,6 @@
  * (The "rephist" name originally stood for "reputation and history". )
  **/
 
-#define REPHIST_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "app/config/statefile.h"
@@ -86,6 +85,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
+#include "feature/stats/bw_array.h"
 #include "lib/container/order.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/math/laplace.h"
@@ -97,8 +97,6 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-
-static void bw_arrays_init(void);
 
 /** Total number of bytes currently allocated in fields used by rephist.c. */
 uint64_t rephist_total_alloc=0;
@@ -973,47 +971,45 @@ rep_hist_load_mtbf_data(time_t now)
   return r;
 }
 
-/** For how many seconds do we keep track of individual per-second bandwidth
- * totals? */
-#define NUM_SECS_ROLLING_MEASURE 10
-/** How large are the intervals for which we track and report bandwidth use? */
-#define NUM_SECS_BW_SUM_INTERVAL (24*60*60)
-/** How far in the past do we remember and publish bandwidth use? */
-#define NUM_SECS_BW_SUM_IS_VALID (5*24*60*60)
-/** How many bandwidth usage intervals do we remember? (derived) */
-#define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
+/** Recent history of bandwidth observations for read operations. */
+static bw_array_t *read_array = NULL;
+/** Recent history of bandwidth observations for write operations. */
+STATIC bw_array_t *write_array = NULL;
+/** Recent history of bandwidth observations for read operations for the
+    directory protocol. */
+static bw_array_t *dir_read_array = NULL;
+/** Recent history of bandwidth observations for write operations for the
+    directory protocol. */
+static bw_array_t *dir_write_array = NULL;
 
-/** Structure to track bandwidth use, and remember the maxima for a given
- * time period.
- */
-struct bw_array_t {
-  /** Observation array: Total number of bytes transferred in each of the last
-   * NUM_SECS_ROLLING_MEASURE seconds. This is used as a circular array. */
-  uint64_t obs[NUM_SECS_ROLLING_MEASURE];
-  int cur_obs_idx; /**< Current position in obs. */
-  time_t cur_obs_time; /**< Time represented in obs[cur_obs_idx] */
-  uint64_t total_obs; /**< Total for all members of obs except
-                       * obs[cur_obs_idx] */
-  uint64_t max_total; /**< Largest value that total_obs has taken on in the
-                       * current period. */
-  uint64_t total_in_period; /**< Total bytes transferred in the current
-                             * period. */
+/** Allocate, initialize, and return a new bw_array. */
+STATIC bw_array_t *
+bw_array_new(void)
+{
+  bw_array_t *b;
+  time_t start;
+  b = tor_malloc_zero(sizeof(bw_array_t));
+  rephist_total_alloc += sizeof(bw_array_t);
+  start = time(NULL);
+  b->cur_obs_time = start;
+  b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
+  return b;
+}
 
-  /** When does the next period begin? */
-  time_t next_period;
-  /** Where in 'maxima' should the maximum bandwidth usage for the current
-   * period be stored? */
-  int next_max_idx;
-  /** How many values in maxima/totals have been set ever? */
-  int num_maxes_set;
-  /** Circular array of the maximum
-   * bandwidth-per-NUM_SECS_ROLLING_MEASURE usage for the last
-   * NUM_TOTALS periods */
-  uint64_t maxima[NUM_TOTALS];
-  /** Circular array of the total bandwidth usage for the last NUM_TOTALS
-   * periods */
-  uint64_t totals[NUM_TOTALS];
-};
+#define bw_array_free(val) \
+  FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
+
+/** Free storage held by bandwidth array <b>b</b>. */
+STATIC void
+bw_array_free_(bw_array_t *b)
+{
+  if (!b) {
+    return;
+  }
+
+  rephist_total_alloc -= sizeof(bw_array_t);
+  tor_free(b);
+}
 
 /** Shift the current period of b forward by one. */
 STATIC void
@@ -1060,71 +1056,9 @@ advance_obs(bw_array_t *b)
     commit_max(b);
 }
 
-/** Add <b>n</b> bytes to the number of bytes in <b>b</b> for second
- * <b>when</b>. */
-static inline void
-add_obs(bw_array_t *b, time_t when, uint64_t n)
-{
-  if (when < b->cur_obs_time)
-    return; /* Don't record data in the past. */
-
-  /* If we're currently adding observations for an earlier second than
-   * 'when', advance b->cur_obs_time and b->cur_obs_idx by an
-   * appropriate number of seconds, and do all the other housekeeping. */
-  while (when > b->cur_obs_time) {
-    /* Doing this one second at a time is potentially inefficient, if we start
-       with a state file that is very old.  Fortunately, it doesn't seem to
-       show up in profiles, so we can just ignore it for now. */
-    advance_obs(b);
-  }
-
-  b->obs[b->cur_obs_idx] += n;
-  b->total_in_period += n;
-}
-
-/** Allocate, initialize, and return a new bw_array. */
-static bw_array_t *
-bw_array_new(void)
-{
-  bw_array_t *b;
-  time_t start;
-  b = tor_malloc_zero(sizeof(bw_array_t));
-  rephist_total_alloc += sizeof(bw_array_t);
-  start = time(NULL);
-  b->cur_obs_time = start;
-  b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
-  return b;
-}
-
-#define bw_array_free(val) \
-  FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
-
-/** Free storage held by bandwidth array <b>b</b>. */
-static void
-bw_array_free_(bw_array_t *b)
-{
-  if (!b) {
-    return;
-  }
-
-  rephist_total_alloc -= sizeof(bw_array_t);
-  tor_free(b);
-}
-
-/** Recent history of bandwidth observations for read operations. */
-static bw_array_t *read_array = NULL;
-/** Recent history of bandwidth observations for write operations. */
-STATIC bw_array_t *write_array = NULL;
-/** Recent history of bandwidth observations for read operations for the
-    directory protocol. */
-static bw_array_t *dir_read_array = NULL;
-/** Recent history of bandwidth observations for write operations for the
-    directory protocol. */
-static bw_array_t *dir_write_array = NULL;
-
 /** Set up [dir_]read_array and [dir_]write_array, freeing them if they
  * already exist. */
-static void
+STATIC void
 bw_arrays_init(void)
 {
   bw_array_free(read_array);
@@ -1136,6 +1070,32 @@ bw_arrays_init(void)
   write_array = bw_array_new();
   dir_read_array = bw_array_new();
   dir_write_array = bw_array_new();
+}
+
+STATIC void
+bw_arrays_free_all(void)
+{
+  bw_array_free(read_array);
+  bw_array_free(write_array);
+  bw_array_free(dir_read_array);
+  bw_array_free(dir_write_array);
+}
+
+/** Helper: Return the largest value in b->maxima.  (This is equal to the
+ * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
+ * NUM_SECS_BW_SUM_IS_VALID seconds.)
+ */
+STATIC uint64_t
+find_largest_max(bw_array_t *b)
+{
+  int i;
+  uint64_t max;
+  max=0;
+  for (i=0; i<NUM_TOTALS; ++i) {
+    if (b->maxima[i]>max)
+      max = b->maxima[i];
+  }
+  return max;
 }
 
 /** Remember that we read <b>num_bytes</b> bytes in second <b>when</b>.
@@ -1187,23 +1147,6 @@ rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when)
   add_obs(dir_read_array, when, num_bytes);
 }
 
-/** Helper: Return the largest value in b->maxima.  (This is equal to the
- * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
- * NUM_SECS_BW_SUM_IS_VALID seconds.)
- */
-STATIC uint64_t
-find_largest_max(bw_array_t *b)
-{
-  int i;
-  uint64_t max;
-  max=0;
-  for (i=0; i<NUM_TOTALS; ++i) {
-    if (b->maxima[i]>max)
-      max = b->maxima[i];
-  }
-  return max;
-}
-
 /** Find the largest sums in the past NUM_SECS_BW_SUM_IS_VALID (roughly)
  * seconds. Find one sum for reading and one for writing. They don't have
  * to be at the same time.
@@ -1228,7 +1171,7 @@ rep_hist_bandwidth_assess,(void))
  *
  * It returns the number of bytes written.
  */
-static size_t
+STATIC size_t
 rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
 {
   char *cp = buf;
@@ -2901,16 +2844,10 @@ rep_hist_free_all(void)
   hs_stats_free(hs_stats);
   digestmap_free(history_map, free_or_history);
 
-  bw_array_free(read_array);
+  bw_arrays_free_all();
   read_array = NULL;
-
-  bw_array_free(write_array);
   write_array = NULL;
-
-  bw_array_free(dir_read_array);
   dir_read_array = NULL;
-
-  bw_array_free(dir_write_array);
   dir_write_array = NULL;
 
   tor_free(exit_bytes_read);

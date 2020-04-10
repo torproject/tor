@@ -40,6 +40,7 @@
 #include "core/mainloop/mainloop.h"
 #include "lib/memarea/memarea.h"
 #include "feature/stats/rephist.h"
+#include "feature/stats/bw_array.h"
 #include "app/config/statefile.h"
 
 /** Run unit tests for some stats code. */

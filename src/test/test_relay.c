@@ -3,12 +3,12 @@
 
 #define CIRCUITBUILD_PRIVATE
 #define RELAY_PRIVATE
-#define REPHIST_PRIVATE
 #include "core/or/or.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/channeltls.h"
 #include "feature/stats/rephist.h"
+#include "feature/stats/bw_array.h"
 #include "core/or/relay.h"
 #include "lib/container/order.h"
 /* For init/free stuff */

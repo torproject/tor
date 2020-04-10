@@ -4,7 +4,6 @@
 #define STATUS_PRIVATE
 #define HIBERNATE_PRIVATE
 #define LOG_PRIVATE
-#define REPHIST_PRIVATE
 
 #include "orconfig.h"
 
@@ -19,6 +18,7 @@
 #include "app/config/config.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/stats/rephist.h"
+#include "feature/stats/bw_array_st.h"
 #include "core/or/relay.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"

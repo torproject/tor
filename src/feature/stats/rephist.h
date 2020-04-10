@@ -98,13 +98,6 @@ extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
 extern struct bw_array_t *write_array;
 #endif
 
-#ifdef REPHIST_PRIVATE
-typedef struct bw_array_t bw_array_t;
-STATIC uint64_t find_largest_max(bw_array_t *b);
-STATIC void commit_max(bw_array_t *b);
-STATIC void advance_obs(bw_array_t *b);
-#endif /* defined(REPHIST_PRIVATE) */
-
 /**
  * Represents the type of a cell for padding accounting
  */
