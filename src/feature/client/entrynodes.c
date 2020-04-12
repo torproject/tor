@@ -1773,6 +1773,12 @@ first_reachable_filtered_entry_guard(guard_selection_t *gs,
            flags, smartlist_len(reachable_filtered_sample));
 
   if (smartlist_len(reachable_filtered_sample)) {
+    /** Get the first guard of the filtered set builds from
+     * sampled_entry_guards. Proposal 310 suggests this design to overcome
+     * performance and security issues linked to the previous selection
+     * method. The guard selected here should be filtered out if this function
+     * is called again in the same context.
+     */
     result = smartlist_get(reachable_filtered_sample, 0);
     log_info(LD_GUARD, "  (Selected %s.)",
              result ? entry_guard_describe(result) : "<null>");
@@ -2147,10 +2153,10 @@ select_confirmed_guard_for_circuit(guard_selection_t *gs,
 }
 
 /**
- * For use with a circuit, pick a confirmed usable filtered guard
- * at random. Update the <b>last_tried_to_connect</b> time and the
- * <b>is_pending</b> fields of the guard as appropriate. Set <b>state_out</b>
- * to the new guard-state of the circuit.
+ * For use with a circuit, pick a usable filtered guard. Update the
+ * <b>last_tried_to_connect</b> time and the <b>is_pending</b> fields of the
+ * guard as appropriate. Set <b>state_out</b> to the new guard-state of the
+ * circuit.
  */
 static entry_guard_t *
 select_filtered_guard_for_circuit(guard_selection_t *gs,
@@ -2177,7 +2183,7 @@ select_filtered_guard_for_circuit(guard_selection_t *gs,
   chosen_guard->last_tried_to_connect = approx_time();
   *state_out = GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD;
   log_info(LD_GUARD, "No primary or confirmed guards available. Selected "
-           "random guard %s for circuit. Will try other guards before "
+           "guard %s for circuit. Will try other guards before "
            "using this circuit.",
            entry_guard_describe(chosen_guard));
   return chosen_guard;
@@ -2218,8 +2224,8 @@ select_entry_guard_for_circuit(guard_selection_t *gs,
   if (chosen_guard)
     return chosen_guard;
 
-  /* "Otherwise, if there is no such entry, select a member at
-      random from {USABLE_FILTERED_GUARDS}." */
+  /* "Otherwise, if there is no such entry, select a member
+   * {USABLE_FILTERED_GUARDS} following the sample ordering" */
   chosen_guard = select_filtered_guard_for_circuit(gs, usage, rst, state_out);
 
   if (chosen_guard == NULL) {
@@ -2802,7 +2808,9 @@ entry_guards_update_all(guard_selection_t *gs)
 
 /**
  * Return a newly allocated string for encoding the persistent parts of
- * <b>guard</b> to the state file.
+ * <b>guard</b> to the state file. <b>dense_sampled_idx</b> refers to the
+ * sampled_idx made dense for this <b>guard</b>. Encoding all guards should
+ * lead to a dense array of sampled_idx in the state file.
  */
 STATIC char *
 entry_guard_encode_for_state(entry_guard_t *guard, int dense_sampled_idx)
@@ -2923,6 +2931,7 @@ entry_guard_parse_from_state(const char *s)
   char *pb_collapsed_circuits = NULL;
   char *pb_unusable_circuits = NULL;
   char *pb_timeouts = NULL;
+  int unvalid_sampled_idx = get_max_sample_size_absolute();
 
   /* Split up the entries.  Put the ones we know about in strings and the
    * rest in "extra". */
@@ -3081,6 +3090,8 @@ entry_guard_parse_from_state(const char *s)
     if (!ok) {
       log_warn(LD_GUARD, "Guard has invalid sampled_idx %s",
           escaped(sampled_idx));
+      /* set it to a idx higher than the max sample size */
+      guard->sampled_idx = unvalid_sampled_idx++;
     } else {
       guard->sampled_idx = (int)idx;
     }
@@ -3091,8 +3102,9 @@ entry_guard_parse_from_state(const char *s)
     guard->sampled_idx = guard->confirmed_idx;
   } else {
     log_warn(LD_GUARD, "The state file seems to be into a status that could"
-        " yield to weird entry node selection. It might be better to delete"
-        " it");
+        " yield to weird entry node selection: we're missing both a"
+        " sampled_idx and a confirmed_idx.");
+    guard->sampled_idx = unvalid_sampled_idx++;
   }
 
   /* Anything we didn't recognize gets crammed together */
@@ -3241,7 +3253,7 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
       guard->in_selection = gs;
       /* Recompute the next_sampled_id from the state  */
       if (gs->next_sampled_idx <= guard->sampled_idx) {
-        gs->next_sampled_idx = ++guard->sampled_idx;
+        gs->next_sampled_idx = guard->sampled_idx + 1;
       }
 
     } else {
