@@ -1,0 +1,6 @@
+  o Minor features (control port):
+    - Return a descriptive error message from the 'GETINFO
+      status/fresh-relay-descs' command on the control port.
+      Previously, we returned a generic error of "Error
+      generating descriptor". Closes ticket 32873. Patch by
+      Neel Chauhan.
