@@ -248,8 +248,9 @@ struct guard_selection_t {
    * Ordered list (from highest to lowest priority) of guards that we
    * have successfully contacted and decided to use. Every member of
    * this list is a member of sampled_entry_guards. Every member should
-   * have confirmed_on_date set, and have confirmed_idx greater than
-   * any earlier member of the list.
+   * have confirmed_on_date set.
+   * The ordering of the list should be by sampled idx. The reasoning behind
+   * it is linked to Proposal 310.
    *
    * This list is persistent. It is a subset of the elements in
    * sampled_entry_guards, and its pointers point to elements of
