@@ -732,6 +732,10 @@ test_parse_auth_file_content(void *arg)
   /* Bigger key than it should be */
   tt_assert(!parse_auth_file_content("xx:descriptor:x25519:"
                      "vjqea4jbhwwc4hto7ekyvqfbeodghbaq6nxi45hz4wr3qvhqv3yqa"));
+  /* All-zeroes key */
+  tt_assert(!parse_auth_file_content("xx:descriptor:x25519:"
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+
  done:
   tor_free(auth);
 }
