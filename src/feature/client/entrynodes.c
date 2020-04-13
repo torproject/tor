@@ -3161,6 +3161,7 @@ entry_guard_parse_from_state(const char *s)
   tor_free(listed);
   tor_free(confirmed_on);
   tor_free(confirmed_idx);
+  tor_free(sampled_idx);
   tor_free(bridge_addr);
   tor_free(pb_use_attempts);
   tor_free(pb_use_successes);
