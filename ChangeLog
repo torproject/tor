@@ -1,4 +1,4 @@
-Changes in version 0.4.3.4-rc - 2020-04-1?
+Changes in version 0.4.3.4-rc - 2020-04-13
   Tor 0.4.3.4-rc is the first release candidate in its series. It fixes
   several bugs from earlier versions, including one affecting DoS
   defenses on bridges using pluggable transports.
@@ -70,6 +70,9 @@ Changes in version 0.4.3.4-rc - 2020-04-1?
       decoding onion service descriptors as a relay. Also add some
       diagnostics to debug any future bugs in that area. Fixes bug
       31669; bugfix on 0.3.0.1-alpha.
+    - Block a client-side assertion by disallowing the registration of
+      an x25519 client auth key that's all zeroes. Fixes bug 33545;
+      bugfix on 0.4.3.1-alpha. Based on patch from "cypherpunks".
 
   o Code simplification and refactoring:
     - Disable our coding standards best practices tracker in our git
