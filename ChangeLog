@@ -1,3 +1,102 @@
+Changes in version 0.4.3.4-rc - 2020-04-13
+  Tor 0.4.3.4-rc is the first release candidate in its series. It fixes
+  several bugs from earlier versions, including one affecting DoS
+  defenses on bridges using pluggable transports.
+
+  o Major bugfixes (DoS defenses, bridges, pluggable transport):
+    - Fix a bug that was preventing DoS defenses from running on bridges
+      with a pluggable transport. Previously, the DoS subsystem was not
+      given the transport name of the client connection, thus failed to
+      find the GeoIP cache entry for that client address. Fixes bug
+      33491; bugfix on 0.3.3.2-alpha.
+
+  o Minor feature (sendme, flow control):
+    - Default to sending SENDME version 1 cells. (Clients are already
+      sending these, because of a consensus parameter telling them to do
+      so: this change only affects what clients would do if the
+      consensus didn't contain a recommendation.) Closes ticket 33623.
+
+  o Minor features (testing):
+    - The unit tests now support a "TOR_SKIP_TESTCASES" environment
+      variable to specify a list of space-separated test cases that
+      should not be executed. We will use this to disable certain tests
+      that are failing on Appveyor because of mismatched OpenSSL
+      libraries. Part of ticket 33643.
+
+  o Minor bugfixes (--disable-module-relay):
+    - Fix an assertion failure when Tor is built without the relay
+      module, and then invoked with the "User" option. Fixes bug 33668;
+      bugfix on 0.4.3.1-alpha.
+
+  o Minor bugfixes (--disable-module-relay,--disable-module-dirauth):
+    - Set some output arguments in the relay and dirauth module stubs,
+      to guard against future stub argument handling bugs like 33668.
+      Fixes bug 33674; bugfix on 0.4.3.1-alpha.
+
+  o Minor bugfixes (build system):
+    - Correctly output the enabled module in the configure summary.
+      Before that, the list shown was just plain wrong. Fixes bug 33646;
+      bugfix on 0.4.3.2-alpha.
+
+  o Minor bugfixes (client, IPv6):
+    - Stop forcing all non-SocksPorts to prefer IPv6 exit connections.
+      Instead, prefer IPv6 connections by default, but allow users to
+      change their configs using the "NoPreferIPv6" port flag. Fixes bug
+      33608; bugfix on 0.4.3.1-alpha.
+    - Revert PreferIPv6 set by default on the SocksPort because it broke
+      the torsocks use case. Tor doesn't have a way for an application
+      to request the hostname to be resolved for a specific IP version,
+      but torsocks requires that. Up until now, IPv4 was used by default
+      so torsocks is expecting that, and can't handle a possible IPv6
+      being returned. Fixes bug 33804; bugfix on 0.4.3.1-alpha.
+
+  o Minor bugfixes (key portability):
+    - When reading PEM-encoded key data, tolerate CRLF line-endings even
+      if we are not running on Windows. Previously, non-Windows hosts
+      would reject these line-endings in certain positions, making
+      certain key files hard to move from one host to another. Fixes bug
+      33032; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (logging):
+    - Flush stderr, stdout, and file logs during shutdown, if supported
+      by the OS. This change helps make sure that any final logs are
+      recorded. Fixes bug 33087; bugfix on 0.4.1.6.
+    - Stop closing stderr and stdout during shutdown. Closing these file
+      descriptors can hide sanitiser logs. Fixes bug 33087; bugfix
+      on 0.4.1.6.
+
+  o Minor bugfixes (onion services v3):
+    - Relax severity of a log message that can appear naturally when
+      decoding onion service descriptors as a relay. Also add some
+      diagnostics to debug any future bugs in that area. Fixes bug
+      31669; bugfix on 0.3.0.1-alpha.
+    - Block a client-side assertion by disallowing the registration of
+      an x25519 client auth key that's all zeroes. Fixes bug 33545;
+      bugfix on 0.4.3.1-alpha. Based on patch from "cypherpunks".
+
+  o Code simplification and refactoring:
+    - Disable our coding standards best practices tracker in our git
+      hooks. (0.4.3 branches only.) Closes ticket 33678.
+
+  o Testing:
+    - Avoid conflicts between the fake sockets in tor's unit tests, and
+      real file descriptors. Resolves issues running unit tests with
+      GitHub Actions, where the process that embeds or launches the
+      tests has already opened a large number of file descriptors. Fixes
+      bug 33782; bugfix on 0.2.8.1-alpha. Found and fixed by
+      Putta Khunchalee.
+
+  o Testing (CI):
+    - In our Appveyor Windows CI, copy required DLLs to test and app
+      directories, before running tor's tests. This ensures that tor.exe
+      and test*.exe use the correct version of each DLL. This fix is not
+      required, but we hope it will avoid DLL search issues in future.
+      Fixes bug 33673; bugfix on 0.3.4.2-alpha.
+    - On Appveyor, skip the crypto/openssl_version test, which is
+      failing because of a mismatched library installation. Fix
+      for 33643.
+
+
 Changes in version 0.4.3.3-alpha - 2020-03-18
   Tor 0.4.3.3-alpha fixes several bugs in previous releases, including
   TROVE-2020-002, a major denial-of-service vulnerability that affected
