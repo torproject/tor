@@ -185,7 +185,7 @@ problem function-size /src/feature/client/dnsserv.c:evdns_server_callback() 153
 problem file-size /src/feature/client/entrynodes.c 3827
 problem function-size /src/feature/client/entrynodes.c:entry_guards_upgrade_waiting_circuits() 155
 problem function-size /src/feature/client/entrynodes.c:entry_guard_parse_from_state() 246
-problem file-size /src/feature/client/entrynodes.h 639
+problem file-size /src/feature/client/entrynodes.h 700
 problem function-size /src/feature/client/transports.c:handle_proxy_line() 108
 problem function-size /src/feature/client/transports.c:parse_method_line_helper() 110
 problem function-size /src/feature/client/transports.c:create_managed_proxy_environment() 111
