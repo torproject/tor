@@ -467,6 +467,20 @@ test_hs_control_bad_onion_client_auth_add(void *arg)
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "512 Failed to decode x25519 private key\r\n");
 
+  tor_free(cp1);
+  tor_free(args);
+
+  /* Register with an all zero client key */
+  args = tor_strdup("jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd "
+                    "x25519:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Check contents */
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "553 Invalid private key \"AAAAAAAAAAAAAAAAAAAA"
+                        "AAAAAAAAAAAAAAAAAAAAAAA=\"\r\n");
+
   client_auths = get_hs_client_auths_map();
   tt_assert(!client_auths);
 

@@ -2248,6 +2248,13 @@ parse_auth_file_content(const char *client_key_str)
                       "can't be decoded: %s", seckey_b32);
     goto err;
   }
+
+  if (fast_mem_is_zero((const char*)auth->enc_seckey.secret_key,
+                       sizeof(auth->enc_seckey.secret_key))) {
+    log_warn(LD_REND, "Client authorization private key can't be all-zeroes");
+    goto err;
+  }
+
   strncpy(auth->onion_address, onion_address, HS_SERVICE_ADDR_LEN_BASE32);
 
   /* We are reading this from the disk, so set the permanent flag anyway. */
