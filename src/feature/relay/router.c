@@ -2036,7 +2036,7 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   /* For now, at most one IPv6 or-address is being advertised. */
   tor_addr_port_t ipv6_orport;
   router_get_advertised_ipv6_or_ap(options, &ipv6_orport);
-  /* If there is no valud IPv6 ORPort, the address and port are null. */
+  /* If there is no valid IPv6 ORPort, the address and port are null. */
   tor_addr_copy(&ri->ipv6_addr, &ipv6_orport.addr);
   ri->ipv6_orport = ipv6_orport.port;
 
