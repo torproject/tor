@@ -244,14 +244,14 @@ check_extend_cell(const extend_cell_t *cell)
 
   if (tor_digest_is_zero((const char*)cell->node_id))
     return -1;
-  if (tor_addr_family(&cell->orport_ipv4.addr) == AF_UNSPEC) {
+  if (!tor_addr_port_is_valid_ap(&cell->orport_ipv4, 0)) {
     /* EXTEND cells must have an IPv4 address. */
     if (!is_extend2) {
       return -1;
     }
     /* EXTEND2 cells must have at least one IP address.
      * It can be IPv4 or IPv6. */
-    if (tor_addr_family(&cell->orport_ipv6.addr) == AF_UNSPEC) {
+    if (!tor_addr_port_is_valid_ap(&cell->orport_ipv6, 0)) {
       return -1;
     }
   }
