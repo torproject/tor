@@ -909,6 +909,13 @@ connection_or_check_canonicity(or_connection_t *conn, int started_here)
         tor_addr_eq(&conn->base_.addr, &node_ipv6_ap.addr)) {
       connection_or_set_canonical(conn, 1);
     }
+    /* Choose the correct canonical address and port. */
+    tor_addr_port_t *node_ap;
+    if (tor_addr_family(&conn->base_.addr) == AF_INET) {
+      node_ap = &node_ipv4_ap;
+    } else {
+      node_ap = &node_ipv6_ap;
+    }
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by
@@ -920,13 +927,14 @@ connection_or_check_canonicity(or_connection_t *conn, int started_here)
        * right IP address and port 56244, that wouldn't be as helpful. now we
        * log the "right" port too, so we know if it's moria1 or moria2.
        */
-      tor_addr_copy(&conn->base_.addr, &node_ap.addr);
-      conn->base_.port = node_ap.port;
+      /* See #33898 for a ticket that resolves this technical debt. */
+      tor_addr_copy(&conn->base_.addr, &node_ap->addr);
+      conn->base_.port = node_ap->port;
     }
     tor_free(conn->nickname);
     conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->base_.address);
-    conn->base_.address = tor_addr_to_str_dup(&node_ap.addr);
+    conn->base_.address = tor_addr_to_str_dup(&node_ap->addr);
   } else {
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
