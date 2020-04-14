@@ -1206,6 +1206,39 @@ fmt_addr32(uint32_t addr)
   return buf;
 }
 
+/** Return a string representing the family of <b>addr</b>.
+ *
+ * This string is a string constant, and must not be freed.
+ * This function is thread-safe.
+ */
+const char *
+fmt_addr_family(const tor_addr_t *addr)
+{
+  static int default_bug_once = 0;
+
+  IF_BUG_ONCE(!addr)
+    return "NULL pointer";
+
+  switch (tor_addr_family(addr)) {
+    case AF_INET6:
+      return "IPv6";
+    case AF_INET:
+      return "IPv4";
+    case AF_UNIX:
+      return "UNIX socket";
+    case AF_UNSPEC:
+      return "unspecified";
+    default:
+      if (!default_bug_once) {
+        log_warn(LD_BUG, "Called with unknown address family %d",
+                 (int)tor_addr_family(addr));
+        default_bug_once = 1;
+      }
+      return "unknown";
+  }
+  //return "(unreachable code)";
+}
+
 /** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.  The string
  * may be an IPv4 address, or an IPv6 address surrounded by square brackets.
  *
