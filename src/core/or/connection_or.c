@@ -901,12 +901,14 @@ connection_or_check_canonicity(or_connection_t *conn, int started_here)
   }
 
   if (r) {
-    tor_addr_port_t node_ap;
-    node_get_pref_orport(r, &node_ap);
-    /* XXXX proposal 186 is making this more complex.  For now, a conn
-       is canonical when it uses the _preferred_ address. */
-    if (tor_addr_eq(&conn->base_.addr, &node_ap.addr))
+    tor_addr_port_t node_ipv4_ap;
+    tor_addr_port_t node_ipv6_ap;
+    node_get_prim_orport(r, &node_ipv4_ap);
+    node_get_pref_ipv6_orport(r, &node_ipv6_ap);
+    if (tor_addr_eq(&conn->base_.addr, &node_ipv4_ap.addr) ||
+        tor_addr_eq(&conn->base_.addr, &node_ipv6_ap.addr)) {
       connection_or_set_canonical(conn, 1);
+    }
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by
