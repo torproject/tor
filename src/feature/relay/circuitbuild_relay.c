@@ -119,6 +119,33 @@ circuit_extend_add_ed25519_helper(struct extend_cell_t *ec)
   return 0;
 }
 
+/* Check if the address and port in the tor_addr_port_t <b>ap</b> are valid,
+ * and are allowed by the current ExtendAllowPrivateAddresses config.
+ *
+ * If they are valid, return 0.
+ * Otherwise, if they are invalid, log a warning at <b>log_level</b>,
+ * and return -1.
+ */
+static int
+circuit_extend_addr_port_helper(const struct tor_addr_port_t *ap,
+                                int log_level)
+{
+  if (!tor_addr_port_is_valid_ap(ap, 0)) {
+    log_fn(log_level, LD_PROTOCOL,
+           "Client asked me to extend to zero destination port or addr.");
+    return -1;
+  }
+
+  if (tor_addr_is_internal(&ap->addr, 0) &&
+      !get_options()->ExtendAllowPrivateAddresses) {
+    log_fn(log_level, LD_PROTOCOL,
+           "Client asked me to extend to a private address.");
+    return -1;
+  }
+
+  return 0;
+}
+
 /* Before replying to an extend cell, check the link specifiers in the extend
  * cell <b>ec</b>, which was received on the circuit <b>circ</b>.
  *
@@ -139,16 +166,8 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
     return -1;
   }
 
-  if (!tor_addr_port_is_valid_ap(&ec->orport_ipv4, 0)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to zero destination port or addr.");
-    return -1;
-  }
-
-  if (tor_addr_is_internal(&ec->orport_ipv4.addr, 0) &&
-      !get_options()->ExtendAllowPrivateAddresses) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to a private address.");
+  if (circuit_extend_addr_port_helper(&ec->orport_ipv4,
+                                      LOG_PROTOCOL_WARN) < 0) {
     return -1;
   }
 
