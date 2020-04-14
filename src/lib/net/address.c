@@ -903,6 +903,20 @@ tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6)
   tor_addr_from_ipv6_bytes(dest, (const char*)in6->s6_addr);
 }
 
+/** Set the 16 bytes at <b>dest</b> to equal the IPv6 address <b>src</b>.
+ * <b>src</b> must be an IPv6 address, if it is not, log a warning, and clear
+ * <b>dest</b>. */
+void
+tor_addr_get_ipv6_bytes(char *dest, const tor_addr_t *src)
+{
+  tor_assert(dest);
+  tor_assert(src);
+  memset(dest, 0, 16);
+  IF_BUG_ONCE(src->family != AF_INET6)
+    return;
+  memcpy(dest, src->addr.in6_addr.s6_addr, 16);
+}
+
 /** Copy a tor_addr_t from <b>src</b> to <b>dest</b>.
  */
 void

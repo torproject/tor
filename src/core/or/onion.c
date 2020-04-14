@@ -240,11 +240,21 @@ created_cell_parse(created_cell_t *cell_out, const cell_t *cell_in)
 static int
 check_extend_cell(const extend_cell_t *cell)
 {
+  const bool is_extend2 = (cell->cell_type == RELAY_COMMAND_EXTEND2);
+
   if (tor_digest_is_zero((const char*)cell->node_id))
     return -1;
-  /* We don't currently allow EXTEND2 cells without an IPv4 address */
-  if (tor_addr_family(&cell->orport_ipv4.addr) == AF_UNSPEC)
-    return -1;
+  if (tor_addr_family(&cell->orport_ipv4.addr) == AF_UNSPEC) {
+    /* EXTEND cells must have an IPv4 address. */
+    if (!is_extend2) {
+      return -1;
+    }
+    /* EXTEND2 cells must have at least one IP address.
+     * It can be IPv4 or IPv6. */
+    if (tor_addr_family(&cell->orport_ipv6.addr) == AF_UNSPEC) {
+      return -1;
+    }
+  }
   if (cell->create_cell.cell_type == CELL_CREATE) {
     if (cell->cell_type != RELAY_COMMAND_EXTEND)
       return -1;
@@ -364,7 +374,12 @@ extend_cell_from_extend2_cell_body(extend_cell_t *cell_out,
     }
   }
 
-  if (!found_rsa_id || !found_ipv4) /* These are mandatory */
+  /* EXTEND2 cells must have an RSA ID */
+  if (!found_rsa_id)
+    return -1;
+
+  /* EXTEND2 cells must have at least one IP address */
+  if (!found_ipv4 && !found_ipv6)
     return -1;
 
   return create_cell_from_create2_cell_body(&cell_out->create_cell,
@@ -620,12 +635,13 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
     break;
   case RELAY_COMMAND_EXTEND2:
     {
-      uint8_t n_specifiers = 2;
+      uint8_t n_specifiers = 1;
       *command_out = RELAY_COMMAND_EXTEND2;
       extend2_cell_body_t *cell = extend2_cell_body_new();
       link_specifier_t *ls;
-      {
-        /* IPv4 specifier first. */
+      if (tor_addr_port_is_valid_ap(&cell_in->orport_ipv4, 0)) {
+        /* Maybe IPv4 specifier first. */
+        ++n_specifiers;
         ls = link_specifier_new();
         extend2_cell_body_add_ls(cell, ls);
         ls->ls_type = LS_IPV4;
@@ -650,6 +666,17 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
         ls->ls_type = LS_ED25519_ID;
         ls->ls_len = 32;
         memcpy(ls->un_ed25519_id, cell_in->ed_pubkey.pubkey, 32);
+      }
+      if (tor_addr_port_is_valid_ap(&cell_in->orport_ipv6, 0)) {
+        /* Then maybe IPv6 specifier. */
+        ++n_specifiers;
+        ls = link_specifier_new();
+        extend2_cell_body_add_ls(cell, ls);
+        ls->ls_type = LS_IPV6;
+        ls->ls_len = 18;
+        tor_addr_get_ipv6_bytes((char *)ls->un_ipv6_addr,
+                                &cell_in->orport_ipv6.addr);
+        ls->un_ipv6_port = cell_in->orport_ipv6.port;
       }
       cell->n_spec = n_specifiers;
 
