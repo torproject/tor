@@ -18,7 +18,8 @@
  * tortls.c) which it uses as its TLS stream.  It is responsible for
  * sending and receiving cells over that TLS.
  *
- * This module also implements the client side of the v3 Tor link handshake,
+ * This module also implements the client side of the v3 (and greater) Tor
+ * link handshake.
  **/
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
