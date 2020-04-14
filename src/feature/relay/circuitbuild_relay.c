@@ -130,16 +130,24 @@ static int
 circuit_extend_addr_port_helper(const struct tor_addr_port_t *ap,
                                 int log_level)
 {
+  /* It's safe to print the family. But we don't want to print the address,
+   * unless specifically configured to do so. (Zero addresses aren't sensitive,
+   * But some internal addresses might be.)*/
+
   if (!tor_addr_port_is_valid_ap(ap, 0)) {
     log_fn(log_level, LD_PROTOCOL,
-           "Client asked me to extend to zero destination port or addr.");
+           "Client asked me to extend to a zero destination port or "
+           "%s address '%s'.",
+           fmt_addr_family(&ap->addr), safe_str(fmt_addrport_ap(ap)));
     return -1;
   }
 
   if (tor_addr_is_internal(&ap->addr, 0) &&
       !get_options()->ExtendAllowPrivateAddresses) {
     log_fn(log_level, LD_PROTOCOL,
-           "Client asked me to extend to a private address.");
+           "Client asked me to extend to a private %s address '%s'.",
+           fmt_addr_family(&ap->addr),
+           safe_str(fmt_and_decorate_addr(&ap->addr)));
     return -1;
   }
 

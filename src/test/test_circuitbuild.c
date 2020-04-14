@@ -521,21 +521,21 @@ test_circuit_extend_lspec_valid(void *arg)
 
   /* IPv4 addr or port are 0, these should fail */
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or unspecified address '[scrubbed]'.\n");
   mock_clean_saved_logs();
 
   tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv4 address '[scrubbed]'.\n");
   mock_clean_saved_logs();
   tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
 
   ec->orport_ipv4.port = VALID_PORT;
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv4 address '[scrubbed]'.\n");
   mock_clean_saved_logs();
   ec->orport_ipv4.port = 0;
 
@@ -546,7 +546,8 @@ test_circuit_extend_lspec_valid(void *arg)
 
   fake_options->ExtendAllowPrivateAddresses = 0;
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to a private address.\n");
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv4 address '[scrubbed]'.\n");
   mock_clean_saved_logs();
   fake_options->ExtendAllowPrivateAddresses = 0;
 
@@ -1002,8 +1003,8 @@ test_circuit_extend(void *arg)
 
   tt_int_op(circuit_extend(cell, circ), OP_EQ, -1);
   tt_int_op(mock_extend_cell_parse_calls, OP_EQ, 1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or unspecified address '[scrubbed]'.\n");
   mock_clean_saved_logs();
   mock_extend_cell_parse_calls = 0;
 
