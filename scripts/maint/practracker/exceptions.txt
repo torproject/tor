@@ -33,19 +33,19 @@
 #
 # Remember: It is better to fix the problem than to add a new exception!
 
-problem file-size /src/app/config/config.c 7527
+problem file-size /src/app/config/config.c 7525
 problem include-count /src/app/config/config.c 80
 problem function-size /src/app/config/config.c:options_act() 381
 problem function-size /src/app/config/config.c:resolve_my_address() 191
 problem function-size /src/app/config/config.c:options_validate_cb() 794
-problem function-size /src/app/config/config.c:options_init_from_torrc() 188
+problem function-size /src/app/config/config.c:options_init_from_torrc() 192
 problem function-size /src/app/config/config.c:options_init_from_string() 103
 problem function-size /src/app/config/config.c:options_init_logs() 125
 problem function-size /src/app/config/config.c:parse_bridge_line() 104
 problem function-size /src/app/config/config.c:pt_parse_transport_line() 190
 problem function-size /src/app/config/config.c:parse_dir_authority_line() 150
 problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
-problem function-size /src/app/config/config.c:port_parse_config() 450
+problem function-size /src/app/config/config.c:port_parse_config() 435
 problem function-size /src/app/config/config.c:parse_ports() 132
 problem file-size /src/app/config/or_options_st.h 1050
 problem include-count /src/app/main/main.c 68
@@ -60,10 +60,10 @@ problem dependency-violation /src/core/crypto/onion_crypto.c 5
 problem dependency-violation /src/core/crypto/onion_fast.c 1
 problem dependency-violation /src/core/crypto/onion_tap.c 3
 problem dependency-violation /src/core/crypto/relay_crypto.c 9
-problem file-size /src/core/mainloop/connection.c 5680
+problem file-size /src/core/mainloop/connection.c 5700
 problem include-count /src/core/mainloop/connection.c 65
 problem function-size /src/core/mainloop/connection.c:connection_free_minimal() 181
-problem function-size /src/core/mainloop/connection.c:connection_listener_new() 324
+problem function-size /src/core/mainloop/connection.c:connection_listener_new() 325
 problem function-size /src/core/mainloop/connection.c:connection_handle_listener_read() 161
 problem function-size /src/core/mainloop/connection.c:connection_read_proxy_handshake() 153
 problem function-size /src/core/mainloop/connection.c:retry_listener_ports() 112
@@ -242,13 +242,11 @@ problem function-size /src/feature/hs/hs_cell.c:hs_cell_build_establish_intro() 
 problem function-size /src/feature/hs/hs_cell.c:hs_cell_parse_introduce2() 134
 problem function-size /src/feature/hs/hs_client.c:send_introduce1() 108
 problem function-size /src/feature/hs/hs_common.c:hs_get_responsible_hsdirs() 102
-problem function-size /src/feature/hs/hs_config.c:config_service_v3() 128
-problem function-size /src/feature/hs/hs_config.c:config_generic_service() 138
 problem function-size /src/feature/hs/hs_descriptor.c:decrypt_desc_layer() 111
 problem function-size /src/feature/hs/hs_descriptor.c:decode_introduction_point() 122
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_superencrypted_v3() 107
 problem function-size /src/feature/hs/hs_descriptor.c:desc_decode_encrypted_v3() 109
-problem file-size /src/feature/hs/hs_service.c 4247
+problem file-size /src/feature/hs/hs_service.c 4300
 problem function-size /src/feature/keymgt/loadkey.c:ed_key_init_from_file() 326
 problem function-size /src/feature/nodelist/authcert.c:trusted_dirs_load_certs_from_string() 123
 problem function-size /src/feature/nodelist/authcert.c:authority_certs_fetch_missing() 295
@@ -284,9 +282,9 @@ problem function-size /src/feature/rend/rendcommon.c:rend_encode_v2_descriptors(
 problem function-size /src/feature/rend/rendmid.c:rend_mid_establish_intro_legacy() 105
 problem function-size /src/feature/rend/rendparse.c:rend_parse_v2_service_descriptor() 181
 problem function-size /src/feature/rend/rendparse.c:rend_parse_introduction_points() 129
-problem file-size /src/feature/rend/rendservice.c 4522
+problem file-size /src/feature/rend/rendservice.c 4504
 problem function-size /src/feature/rend/rendservice.c:rend_service_prune_list_impl_() 107
-problem function-size /src/feature/rend/rendservice.c:rend_config_service() 162
+problem function-size /src/feature/rend/rendservice.c:rend_config_service() 143
 problem function-size /src/feature/rend/rendservice.c:rend_service_load_auth_keys() 178
 problem function-size /src/feature/rend/rendservice.c:rend_service_receive_introduction() 334
 problem function-size /src/feature/rend/rendservice.c:rend_service_parse_intro_for_v3() 111
