@@ -219,6 +219,7 @@ test_circuit_extend_state_valid(void *arg)
   expect_log_msg("Got an extend cell, but running as a client. Closing.\n");
   mock_clean_saved_logs();
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   tor_capture_bugs_(1);
   server = 1;
@@ -228,6 +229,7 @@ test_circuit_extend_state_valid(void *arg)
             "!(ASSERT_PREDICT_UNLIKELY_(!circ))");
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* n_chan and n_hop are NULL, this should succeed */
   server = 1;
@@ -314,6 +316,7 @@ test_circuit_extend_add_ed25519(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* The extend cell must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend_add_ed25519_helper(NULL), OP_EQ, -1);
@@ -322,6 +325,7 @@ test_circuit_extend_add_ed25519(void *arg)
             "!(ASSERT_PREDICT_UNLIKELY_(!ec))");
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* The node id must be non-zero */
   memcpy(old_ec, ec, sizeof(extend_cell_t));
@@ -495,6 +499,7 @@ test_circuit_extend_lspec_valid(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Extend cell must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend_lspec_valid_helper(NULL, circ), OP_EQ, -1);
@@ -521,6 +526,7 @@ test_circuit_extend_lspec_valid(void *arg)
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* IPv4 and IPv6 addr and port are all zero, this should fail */
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
@@ -619,6 +625,7 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
   tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* If we pass the private address check, but don't have the right
    * OR circuit magic number, we trigger another bug */
   tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
@@ -650,10 +657,12 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
   fake_options->ExtendAllowPrivateAddresses = 0;
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Now set the right magic */
   or_circ->base_.magic = OR_CIRCUIT_MAGIC;
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* If we pass the OR circuit magic check, but don't have p_chan,
    * we trigger another bug */
   fake_options->ExtendAllowPrivateAddresses = 1;
@@ -680,6 +689,7 @@ test_circuit_extend_lspec_valid(void *arg)
 
   tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
   ec->orport_ipv4.port = 0x0000;
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Now let's fake a p_chan and the addresses */
   tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
@@ -855,6 +865,7 @@ test_circuit_open_connection_for_extend(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   mock_circuit_close_calls = 0;
   mock_channel_connect_calls = 0;
@@ -895,6 +906,7 @@ test_circuit_open_connection_for_extend(void *arg)
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Succeed, but don't try to open a connection */
   mock_circuit_close_calls = 0;
@@ -1067,6 +1079,7 @@ test_circuit_extend(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend(cell, NULL), OP_EQ, -1);
@@ -1093,6 +1106,7 @@ test_circuit_extend(void *arg)
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Clients can't extend */
   server = 0;
@@ -1138,6 +1152,7 @@ test_circuit_extend(void *arg)
                  PUBLIC_IPV4);
   mock_extend_cell_parse_cell_out.orport_ipv4.port = VALID_PORT;
 
+#ifndef ALL_BUGS_ARE_FATAL
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend(cell, circ), OP_EQ, -1);
   tt_int_op(mock_extend_cell_parse_calls, OP_EQ, 1);
@@ -1147,6 +1162,7 @@ test_circuit_extend(void *arg)
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
   mock_extend_cell_parse_calls = 0;
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Now add the right magic and a p_chan. */
   or_circ->base_.magic = OR_CIRCUIT_MAGIC;
@@ -1292,6 +1308,7 @@ test_onionskin_answer(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(onionskin_answer(NULL, created_cell,
@@ -1335,6 +1352,7 @@ test_onionskin_answer(void *arg)
             "!(ASSERT_PREDICT_UNLIKELY_(!rend_circ_nonce))");
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Also, the keys length must be CPATH_KEY_MATERIAL_LEN, but we can't catch
    * asserts in unit tests. */
