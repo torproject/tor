@@ -83,6 +83,11 @@
 
 #include "core/or/cell_queue_st.h"
 
+/* Static function prototypes */
+
+static int channel_matches_target_addr_for_extend(channel_t *chan,
+                                                  const tor_addr_t *target);
+
 /* Global lists of channels */
 
 /* All channel_t instances */
