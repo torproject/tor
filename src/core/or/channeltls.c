@@ -564,7 +564,8 @@ channel_tls_get_transport_name_method(channel_t *chan, char **transport_out)
 static const char *
 channel_tls_get_remote_descr_method(channel_t *chan, int flags)
 {
-#define MAX_DESCR_LEN 32
+  /* IPv6 address, colon, port */
+#define MAX_DESCR_LEN (TOR_ADDR_BUF_LEN + 1 + 5)
 
   static char buf[MAX_DESCR_LEN + 1];
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
