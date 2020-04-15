@@ -337,9 +337,13 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
                                   &should_launch);
 
   if (!n_chan) {
-    log_debug(LD_CIRC|LD_OR,"Next router (%s): %s.",
-              fmt_addrport(&ec.orport_ipv4.addr,ec.orport_ipv4.port),
-              msg?msg:"????");
+    /* We can't use fmt_addr*() twice in the same function call,
+     * because it uses a static buffer. */
+    log_debug(LD_CIRC|LD_OR, "Next router IPv4 (%s): %s.",
+              fmt_addrport_ap(&ec.orport_ipv4),
+              msg ? msg : "????");
+    log_debug(LD_CIRC|LD_OR, "Next router IPv6 (%s).",
+              fmt_addrport_ap(&ec.orport_ipv6));
 
     circuit_open_connection_for_extend(&ec, circ, should_launch);
 
