@@ -142,6 +142,8 @@
 #define ALL_BUGS_ARE_FATAL
 #endif
 
+/** Define ALL_BUGS_ARE_FATAL if you want Tor to crash when any problem comes
+ * up, so you can get a coredump and track things down. */
 #ifdef ALL_BUGS_ARE_FATAL
 #define tor_assert_nonfatal_unreached() tor_assert(0)
 #define tor_assert_nonfatal(cond) tor_assert((cond))
@@ -154,6 +156,9 @@
    (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",NULL), \
     tor_abort_(), 1)                                                    \
    : 0)
+#ifndef COCCI
+#define IF_BUG_ONCE(cond) if (BUG(cond))
+#endif
 #elif defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS)
 #define tor_assert_nonfatal_unreached() STMT_NIL
 #define tor_assert_nonfatal(cond) ((void)(cond))
@@ -164,6 +169,9 @@
 #define tor_assert_nonfatal_unreached_once() STMT_NIL
 #define tor_assert_nonfatal_once(cond) ((void)(cond))
 #define BUG(cond) (ASSERT_PREDICT_UNLIKELY_(cond) ? 1 : 0)
+#ifndef COCCI
+#define IF_BUG_ONCE(cond) if (BUG(cond))
+#endif
 #else /* Normal case, !ALL_BUGS_ARE_FATAL, !DISABLE_ASSERTS_IN_UNIT_TESTS */
 #define tor_assert_nonfatal_unreached() STMT_BEGIN                      \
   tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, NULL, 0, NULL);   \
@@ -200,7 +208,6 @@
   (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
   (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",0,NULL),1) \
    : 0)
-#endif /* defined(ALL_BUGS_ARE_FATAL) || ... */
 
 #ifndef COCCI
 #ifdef __GNUC__
@@ -232,7 +239,7 @@
 #define IF_BUG_ONCE_VARNAME__(a)              \
   IF_BUG_ONCE_VARNAME_(a)
 
-/** This macro behaves as 'if (bug(x))', except that it only logs its
+/** This macro behaves as 'if (BUG(x))', except that it only logs its
  * warning once, no matter how many times it triggers.
  */
 
@@ -240,9 +247,15 @@
   IF_BUG_ONCE__(ASSERT_PREDICT_UNLIKELY_(cond),                 \
                 IF_BUG_ONCE_VARNAME__(__LINE__))
 
-/** Define this if you want Tor to crash when any problem comes up,
- * so you can get a coredump and track things down. */
-// #define tor_fragile_assert() tor_assert_unreached(0)
+#endif /* defined(ALL_BUGS_ARE_FATAL) || ... */
+
+/** In older code, we used tor_fragile_assert() to mark optional failure
+ * points. At these points, we could make some debug builds fail.
+ * (But release builds would continue.)
+ *
+ * To get the same behaviour in recent tor versions, define
+ * ALL_BUGS_ARE_FATAL, and use any non-fatal assertion or *BUG() macro.
+ */
 #define tor_fragile_assert() tor_assert_nonfatal_unreached_once()
 
 void tor_assertion_failed_(const char *fname, unsigned int line,
