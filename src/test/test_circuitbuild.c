@@ -525,17 +525,19 @@ test_circuit_extend_lspec_valid(void *arg)
                  "or unspecified address '[scrubbed]'.\n");
   mock_clean_saved_logs();
 
+  /* Now ask for the actual address in the logs */
+  fake_options->SafeLogging_ = SAFELOG_SCRUB_NONE;
   tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   expect_log_msg("Client asked me to extend to a zero destination port "
-                 "or IPv4 address '[scrubbed]'.\n");
+                 "or IPv4 address '1.2.3.4:0'.\n");
   mock_clean_saved_logs();
   tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
 
   ec->orport_ipv4.port = VALID_PORT;
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   expect_log_msg("Client asked me to extend to a zero destination port "
-                 "or IPv4 address '[scrubbed]'.\n");
+                 "or IPv4 address '0.0.0.0:4660'.\n");
   mock_clean_saved_logs();
   ec->orport_ipv4.port = 0;
 
@@ -547,7 +549,7 @@ test_circuit_extend_lspec_valid(void *arg)
   fake_options->ExtendAllowPrivateAddresses = 0;
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   expect_log_msg("Client asked me to extend "
-                 "to a private IPv4 address '[scrubbed]'.\n");
+                 "to a private IPv4 address '0.0.0.1'.\n");
   mock_clean_saved_logs();
   fake_options->ExtendAllowPrivateAddresses = 0;
 
