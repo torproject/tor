@@ -559,11 +559,17 @@ circuit_handle_first_hop(origin_circuit_t *circ)
             fmt_addrport(&firsthop->extend_info->addr,
                          firsthop->extend_info->port));
 
-  n_chan = channel_get_for_extend(firsthop->extend_info->identity_digest,
-                                  &firsthop->extend_info->ed_identity,
-                                  &firsthop->extend_info->addr,
-                                  &msg,
-                                  &should_launch);
+  /* We'll cleanup this code in #33220, when we add an IPv6 address to
+   * extend_info_t. */
+  const bool addr_is_ipv4 =
+    (tor_addr_family(&firsthop->extend_info->addr) == AF_INET);
+  n_chan = channel_get_for_extend(
+                          firsthop->extend_info->identity_digest,
+                          &firsthop->extend_info->ed_identity,
+                          addr_is_ipv4 ? &firsthop->extend_info->addr : NULL,
+                          addr_is_ipv4 ? NULL : &firsthop->extend_info->addr,
+                          &msg,
+                          &should_launch);
 
   if (!n_chan) {
     /* not currently connected in a useful way. */

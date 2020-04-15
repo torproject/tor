@@ -104,6 +104,10 @@ int tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
                            uint16_t *port_out);
 void tor_addr_make_unspec(tor_addr_t *a);
 void tor_addr_make_null(tor_addr_t *a, sa_family_t family);
+#define tor_addr_port_make_null(addr, port, family) \
+  (void)(tor_addr_make_null(addr, family), (port) = 0)
+#define tor_addr_port_make_null_ap(ap, family) \
+  tor_addr_port_make_null(&(ap)->addr, (ap)->port, family)
 char *tor_sockaddr_to_str(const struct sockaddr *sa);
 
 /** Return an in6_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not

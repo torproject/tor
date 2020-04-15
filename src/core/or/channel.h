@@ -661,7 +661,8 @@ channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
 MOCK_DECL(channel_t *, channel_get_for_extend,(
                                    const char *rsa_id_digest,
                                    const struct ed25519_public_key_t *ed_id,
-                                   const tor_addr_t *target_addr,
+                                   const tor_addr_t *target_ipv4_addr,
+                                   const tor_addr_t *target_ipv6_addr,
                                    const char **msg_out,
                                    int *launch_out));
 

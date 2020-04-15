@@ -330,9 +330,20 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
   if (circuit_extend_lspec_valid_helper(&ec, circ) < 0)
     return -1;
 
+  /* Check the addresses, without logging */
+  const int ipv4_valid =
+    (circuit_extend_addr_port_helper(&ec.orport_ipv4, false, false, 0) == 0);
+  const int ipv6_valid =
+    (circuit_extend_addr_port_helper(&ec.orport_ipv6, false, false, 0) == 0);
+  IF_BUG_ONCE(!ipv4_valid && !ipv6_valid) {
+    /* circuit_extend_lspec_valid_helper() should have caught this */
+    return -1;
+  }
+
   n_chan = channel_get_for_extend((const char*)ec.node_id,
                                   &ec.ed_pubkey,
-                                  &ec.orport_ipv4.addr,
+                                  ipv4_valid ? &ec.orport_ipv4.addr : NULL,
+                                  ipv6_valid ? &ec.orport_ipv6.addr : NULL,
                                   &msg,
                                   &should_launch);
 
