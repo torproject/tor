@@ -1,0 +1,12 @@
+  o Major features (IPv6, relay):
+    - Relays may extend circuits over IPv6, if the relay has an IPv6 ORPort,
+      and the client supplies the other relay's IPv6 ORPort in the EXTEND2
+      cell. IPv6 extends will be used by the relay IPv6 ORPort self-tests in
+      33222. Closes ticket 33817.
+    - Consider IPv6-only EXTEND2 cells valid on relays. Log a protocol warning
+      if the IPv4 or IPv6 address is an internal address, and internal
+      addresses are not allowed. But continue to use the other address, if it
+      is valid. Closes ticket 33817.
+    - If a relay can extend over IPv4 and IPv6, it chooses between them
+      uniformly at random. Closes ticket 33817.
+    - Re-use existing IPv6 connections for circuit extends. Closes ticket 33817.
