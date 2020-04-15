@@ -474,6 +474,9 @@ mock_get_options(void)
 #define PUBLIC_IPV4   "1.2.3.4"
 #define INTERNAL_IPV4 "0.0.0.1"
 
+#define PUBLIC_IPV6   "1234::cdef"
+#define INTERNAL_IPV6 "::1"
+
 #define VALID_PORT    0x1234
 
 /* Test the different cases in circuit_extend_lspec_valid_helper(). */
@@ -519,7 +522,7 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
 
-  /* IPv4 addr or port are 0, these should fail */
+  /* IPv4 and IPv6 addr and port are all zero, this should fail */
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   expect_log_msg("Client asked me to extend to a zero destination port "
                  "or unspecified address '[scrubbed]'.\n");
@@ -527,21 +530,28 @@ test_circuit_extend_lspec_valid(void *arg)
 
   /* Now ask for the actual address in the logs */
   fake_options->SafeLogging_ = SAFELOG_SCRUB_NONE;
+
+  /* IPv4 port is 0, IPv6 addr and port are both zero, this should fail */
   tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   expect_log_msg("Client asked me to extend to a zero destination port "
                  "or IPv4 address '1.2.3.4:0'.\n");
   mock_clean_saved_logs();
-  tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
 
+  /* IPv4 addr is 0, IPv6 addr and port are both zero, this should fail */
   ec->orport_ipv4.port = VALID_PORT;
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   expect_log_msg("Client asked me to extend to a zero destination port "
                  "or IPv4 address '0.0.0.0:4660'.\n");
   mock_clean_saved_logs();
   ec->orport_ipv4.port = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
 
   /* IPv4 addr is internal, and port is valid.
+   * (IPv6 addr and port are both zero.)
    * Result depends on ExtendAllowPrivateAddresses. */
   tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
   ec->orport_ipv4.port = VALID_PORT;
@@ -552,15 +562,91 @@ test_circuit_extend_lspec_valid(void *arg)
                  "to a private IPv4 address '0.0.0.1'.\n");
   mock_clean_saved_logs();
   fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Now do the same tests, but for IPv6 */
+
+  /* IPv6 port is 0, IPv4 addr and port are both zero, this should fail */
+  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv6 address '[1234::cdef]:0'.\n");
+  mock_clean_saved_logs();
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* IPv6 addr is 0, IPv4 addr and port are both zero, this should fail */
+  ec->orport_ipv6.port = VALID_PORT;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv6 address '[::]:4660'.\n");
+  mock_clean_saved_logs();
+  ec->orport_ipv4.port = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* IPv6 addr is internal, and port is valid.
+   * (IPv4 addr and port are both zero.)
+   * Result depends on ExtendAllowPrivateAddresses. */
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv6 address '[::1]'.\n");
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Both addresses are internal.
+   * Result depends on ExtendAllowPrivateAddresses. */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv4 address '0.0.0.1'.\n");
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv6 address '[::1]'.\n");
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
 
   /* If we pass the private address check, but don't have the right
    * OR circuit magic number, we trigger another bug */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
   fake_options->ExtendAllowPrivateAddresses = 1;
+
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
             "!(ASSERT_PREDICT_UNLIKELY_(circ->magic != 0x98ABC04Fu))");
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Fail again, but this time only set an IPv4 address. */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  fake_options->ExtendAllowPrivateAddresses = 1;
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  /* Since we're using IF_BUG_ONCE(), expect 0-1 bug logs */
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_GE, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 1);
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
   fake_options->ExtendAllowPrivateAddresses = 0;
@@ -624,6 +710,41 @@ test_circuit_extend_lspec_valid(void *arg)
   /* ed_pubkey is zero, and that's allowed, so we should succeed */
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
   mock_clean_saved_logs();
+
+  /* Now let's check that we warn, but succeed, when only one address is
+   * private */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv4 address '0.0.0.1'.\n");
+  mock_clean_saved_logs();
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Now with private IPv6 */
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv6 address '[::1]'.\n");
+  mock_clean_saved_logs();
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Now reset to public IPv4 and IPv6 */
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
 
   /* Fail on matching non-zero identities */
   memset(&ec->ed_pubkey, 0xEE, sizeof(ec->ed_pubkey));

@@ -123,11 +123,14 @@ circuit_extend_add_ed25519_helper(struct extend_cell_t *ec)
  * and are allowed by the current ExtendAllowPrivateAddresses config.
  *
  * If they are valid, return 0.
- * Otherwise, if they are invalid, log a warning at <b>log_level</b>,
- * and return -1.
+ * Otherwise, if they are invalid, return -1.
+ * If <b>log_zero_addrs</b> is true, log warnings about zero addresses at
+ * <b>log_level</b>. If <b>log_internal_addrs</b> is true, log warnings about
+ * internal addresses at <b>log_level</b>.
  */
 static int
 circuit_extend_addr_port_helper(const struct tor_addr_port_t *ap,
+                                bool log_zero_addrs, bool log_internal_addrs,
                                 int log_level)
 {
   /* It's safe to print the family. But we don't want to print the address,
@@ -135,19 +138,23 @@ circuit_extend_addr_port_helper(const struct tor_addr_port_t *ap,
    * But some internal addresses might be.)*/
 
   if (!tor_addr_port_is_valid_ap(ap, 0)) {
-    log_fn(log_level, LD_PROTOCOL,
-           "Client asked me to extend to a zero destination port or "
-           "%s address '%s'.",
-           fmt_addr_family(&ap->addr), safe_str(fmt_addrport_ap(ap)));
+    if (log_zero_addrs) {
+      log_fn(log_level, LD_PROTOCOL,
+             "Client asked me to extend to a zero destination port or "
+             "%s address '%s'.",
+             fmt_addr_family(&ap->addr), safe_str(fmt_addrport_ap(ap)));
+    }
     return -1;
   }
 
   if (tor_addr_is_internal(&ap->addr, 0) &&
       !get_options()->ExtendAllowPrivateAddresses) {
-    log_fn(log_level, LD_PROTOCOL,
-           "Client asked me to extend to a private %s address '%s'.",
-           fmt_addr_family(&ap->addr),
-           safe_str(fmt_and_decorate_addr(&ap->addr)));
+    if (log_internal_addrs) {
+      log_fn(log_level, LD_PROTOCOL,
+             "Client asked me to extend to a private %s address '%s'.",
+             fmt_addr_family(&ap->addr),
+             safe_str(fmt_and_decorate_addr(&ap->addr)));
+    }
     return -1;
   }
 
@@ -174,9 +181,28 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
     return -1;
   }
 
-  if (circuit_extend_addr_port_helper(&ec->orport_ipv4,
-                                      LOG_PROTOCOL_WARN) < 0) {
+  /* Check the addresses, without logging */
+  const int ipv4_valid =
+    (circuit_extend_addr_port_helper(&ec->orport_ipv4, false, false, 0) == 0);
+  const int ipv6_valid =
+    (circuit_extend_addr_port_helper(&ec->orport_ipv6, false, false, 0) == 0);
+  /* We need at least one valid address */
+  if (!ipv4_valid && !ipv6_valid) {
+    /* Now, log the invalid addresses at protocol warning level */
+    circuit_extend_addr_port_helper(&ec->orport_ipv4, true, true,
+                                    LOG_PROTOCOL_WARN);
+    circuit_extend_addr_port_helper(&ec->orport_ipv6, true, true,
+                                    LOG_PROTOCOL_WARN);
+    /* And fail */
     return -1;
+  } else if (!ipv4_valid) {
+    /* Always log unexpected internal addresses, but go on to use the other
+     * valid address */
+    circuit_extend_addr_port_helper(&ec->orport_ipv4, false, true,
+                                    LOG_PROTOCOL_WARN);
+  } else if (!ipv6_valid) {
+    circuit_extend_addr_port_helper(&ec->orport_ipv6, false, true,
+                                    LOG_PROTOCOL_WARN);
   }
 
   IF_BUG_ONCE(circ->magic != OR_CIRCUIT_MAGIC) {
