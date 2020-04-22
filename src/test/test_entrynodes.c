@@ -1510,9 +1510,9 @@ test_entry_guard_confirming_guards(void *arg)
   g1 = smartlist_get(gs->confirmed_entry_guards, 0);
   g2 = smartlist_get(gs->confirmed_entry_guards, 1);
   g3 = smartlist_get(gs->confirmed_entry_guards, 2);
-  tt_int_op(g1->confirmed_idx, OP_EQ, 0);
-  tt_int_op(g2->confirmed_idx, OP_EQ, 1);
-  tt_int_op(g3->confirmed_idx, OP_EQ, 2);
+  tt_int_op(g1->sampled_idx, OP_EQ, 0);
+  tt_int_op(g2->sampled_idx, OP_EQ, 1);
+  tt_int_op(g3->sampled_idx, OP_EQ, 8);
   tt_assert(g1 != g2);
   tt_assert(g1 != g3);
   tt_assert(g2 != g3);
