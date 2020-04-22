@@ -2899,11 +2899,12 @@ entry_guard_encode_for_state(entry_guard_t *guard, int dense_sampled_idx)
 }
 
 /**
- * Extract key=val from the state string <b>s</s> and duplicate the value to 
+ * Extract key=val from the state string <b>s</s> and duplicate the value to
  * some string target declared in entry_guard_parse_from_state
  */
-static void parse_from_state_set_vals(const char *s, smartlist_t *entries,
-    smartlist_t *extra, strmap_t *vals)
+static void
+parse_from_state_set_vals(const char *s, smartlist_t *entries, smartlist_t
+    *extra, strmap_t *vals)
 {
     smartlist_split_string(entries, s, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -2932,8 +2933,9 @@ static void parse_from_state_set_vals(const char *s, smartlist_t *entries,
 /**
  * Handle part of the parsing state file logic, focused on time related things
  */
-static void parse_from_state_handle_time(entry_guard_t *guard, char *sampled_on,
-    char *unlisted_since, char *confirmed_on)
+static void
+parse_from_state_handle_time(entry_guard_t *guard, char *sampled_on, char
+    *unlisted_since, char *confirmed_on)
 {
 #define HANDLE_TIME(field) do {                                 \
     if (field) {                                                \
@@ -3080,7 +3082,8 @@ entry_guard_parse_from_state(const char *s)
   }
 
   /* Process the various time fields. */
-  parse_from_state_handle_time(guard, sampled_on, unlisted_since, confirmed_on);
+  parse_from_state_handle_time(guard, sampled_on, unlisted_since,
+      confirmed_on);
 
   /* Take sampled_by_version verbatim. */
   guard->sampled_by_version = sampled_by;
