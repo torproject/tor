@@ -1,4 +1,3 @@
-
 /* * Copyright (c) 2012-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
@@ -119,10 +118,10 @@ channel_id_eq(const channel_t *a, const channel_t *b)
   return a->global_identifier == b->global_identifier;
 }
 HT_PROTOTYPE(channel_gid_map, channel_t, gidmap_node,
-             channel_id_hash, channel_id_eq)
+             channel_id_hash, channel_id_eq);
 HT_GENERATE2(channel_gid_map, channel_t, gidmap_node,
              channel_id_hash, channel_id_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             0.6, tor_reallocarray_, tor_free_);
 
 HANDLE_IMPL(channel, channel_t,)
 
@@ -160,9 +159,9 @@ channel_idmap_eq(const channel_idmap_entry_t *a,
 }
 
 HT_PROTOTYPE(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
-             channel_idmap_eq)
+             channel_idmap_eq);
 HT_GENERATE2(channel_idmap, channel_idmap_entry_t, node, channel_idmap_hash,
-             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
+             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_);
 
 /* Functions to maintain the digest map */
 static void channel_remove_from_digest_map(channel_t *chan);
@@ -1859,7 +1858,7 @@ channel_do_open_actions(channel_t *chan)
         tor_free(transport_name);
         /* Notify the DoS subsystem of a new client. */
         if (tlschan && tlschan->conn) {
-          dos_new_client_conn(tlschan->conn);
+          dos_new_client_conn(tlschan->conn, transport_name);
         }
       }
       /* Otherwise the underlying transport can't tell us this, so skip it */
@@ -2335,7 +2334,7 @@ channel_is_better(channel_t *a, channel_t *b)
   if (!a->is_canonical_to_peer && b->is_canonical_to_peer) return 0;
 
   /*
-   * Okay, if we're here they tied on canonicity, the prefer the older
+   * Okay, if we're here they tied on canonicity. Prefer the older
    * connection, so that the adversary can't create a new connection
    * and try to switch us over to it (which will leak information
    * about long-lived circuits). Additionally, switching connections
@@ -2360,19 +2359,22 @@ channel_is_better(channel_t *a, channel_t *b)
 /**
  * Get a channel to extend a circuit.
  *
- * Pick a suitable channel to extend a circuit to given the desired digest
- * the address we believe is correct for that digest; this tries to see
- * if we already have one for the requested endpoint, but if there is no good
- * channel, set *msg_out to a message describing the channel's state
- * and our next action, and set *launch_out to a boolean indicated whether
- * the caller should try to launch a new channel with channel_connect().
+ * Given the desired relay identity, pick a suitable channel to extend a
+ * circuit to the target address requsted by the client. Search for an
+ * existing channel for the requested endpoint. Make sure the channel is
+ * usable for new circuits, and matches the target address.
+ *
+ * Try to return the best channel. But if there is no good channel, set
+ * *msg_out to a message describing the channel's state and our next action,
+ * and set *launch_out to a boolean indicated whether the caller should try to
+ * launch a new channel with channel_connect().
  */
-channel_t *
-channel_get_for_extend(const char *rsa_id_digest,
-                       const ed25519_public_key_t *ed_id,
-                       const tor_addr_t *target_addr,
-                       const char **msg_out,
-                       int *launch_out)
+MOCK_IMPL(channel_t *,
+channel_get_for_extend,(const char *rsa_id_digest,
+                        const ed25519_public_key_t *ed_id,
+                        const tor_addr_t *target_addr,
+                        const char **msg_out,
+                        int *launch_out))
 {
   channel_t *chan, *best = NULL;
   int n_inprogress_goodaddr = 0, n_old = 0;
@@ -2383,9 +2385,7 @@ channel_get_for_extend(const char *rsa_id_digest,
 
   chan = channel_find_by_remote_identity(rsa_id_digest, ed_id);
 
-  /* Walk the list, unrefing the old one and refing the new at each
-   * iteration.
-   */
+  /* Walk the list of channels */
   for (; chan; chan = channel_next_with_rsa_identity(chan)) {
     tor_assert(tor_memeq(chan->identity_digest,
                          rsa_id_digest, DIGEST_LEN));
@@ -2820,8 +2820,8 @@ channel_get_actual_remote_address(channel_t *chan)
  * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
  * may invalidate the return value from this function.
  */
-const char *
-channel_get_canonical_remote_descr(channel_t *chan)
+MOCK_IMPL(const char *,
+channel_get_canonical_remote_descr,(channel_t *chan))
 {
   tor_assert(chan);
   tor_assert(chan->get_remote_descr);

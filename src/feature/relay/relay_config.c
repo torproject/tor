@@ -29,7 +29,6 @@
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
-#include "core/or/circuitbuild.h"
 #include "core/or/connection_or.h"
 #include "core/or/port_cfg_st.h"
 
@@ -44,6 +43,7 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/selftest.h"
 
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
@@ -231,8 +231,8 @@ check_server_ports(const smartlist_t *ports,
 }
 
 /** Parse all relay ports from <b>options</b>. On success, add parsed ports to
- * <b>ports</b>, and return 0.  On failure, set *<b>msg</b> to a description
- * of the problem and return -1.
+ * <b>ports</b>, and return 0.  On failure, set *<b>msg</b> to a newly
+ * allocated string describing the problem, and return -1.
  **/
 int
 port_parse_ports_relay(or_options_t *options,
@@ -334,7 +334,8 @@ port_update_port_set_relay(or_options_t *options,
  * Legacy validation function, which checks that the current OS is usable in
  * relay mode, if options is set to a relay mode.
  *
- * Warns about OSes with potential issues. Always returns 0.
+ * Warns about OSes with potential issues. Does not set *<b>msg</b>.
+ * Always returns 0.
  */
 int
 options_validate_relay_os(const or_options_t *old_options,
@@ -400,10 +401,14 @@ options_validate_relay_info(const or_options_t *old_options,
     }
   }
 
-  if (server_mode(options) && !options->ContactInfo)
-    log_notice(LD_CONFIG, "Your ContactInfo config option is not set. "
-        "Please consider setting it, so we can contact you if your server is "
-        "misconfigured or something else goes wrong.");
+  if (server_mode(options) && !options->ContactInfo) {
+    log_warn(LD_CONFIG,
+             "Your ContactInfo config option is not set. Please strongly "
+             "consider setting it, so we can contact you if your relay is "
+             "misconfigured, end-of-life, or something else goes wrong. "
+             "It is also possible that your relay might get rejected from "
+             "the network due to a missing valid contact address.");
+  }
 
   const char *ContactInfo = options->ContactInfo;
   if (ContactInfo && !string_is_utf8(ContactInfo, strlen(ContactInfo)))

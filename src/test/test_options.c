@@ -307,18 +307,10 @@ test_options_validate(void *arg)
   WANT_ERR("BridgeRelay 1\nDirCache 0",
            "We're a bridge but DirCache is disabled.", PH_VALIDATE);
 
-  // XXXX We should replace this with a more full error message once #29211
-  // XXXX is done.  It is truncated for now because at the current stage
-  // XXXX of refactoring, we can't give a full error message like before.
-  WANT_ERR_LOG("HeartbeatPeriod 21 snarks",
-               "malformed or out of bounds", LOG_WARN,
-               "Unknown unit 'snarks'.",
-               PH_ASSIGN);
-  // XXXX As above.
-  WANT_ERR_LOG("LogTimeGranularity 21 snarks",
-               "malformed or out of bounds", LOG_WARN,
-               "Unknown unit 'snarks'.",
-               PH_ASSIGN);
+  WANT_ERR("HeartbeatPeriod 21 snarks",
+           "Unknown unit in 21 snarks", PH_ASSIGN);
+  WANT_ERR("LogTimeGranularity 21 snarks",
+           "Unknown unit in 21 snarks", PH_ASSIGN);
   OK("HeartbeatPeriod 1 hour", PH_VALIDATE);
   OK("LogTimeGranularity 100 milliseconds", PH_VALIDATE);
 
@@ -498,7 +490,8 @@ test_options_validate__uname_for_server(void *ignored)
 #endif
 
   options_test_data_t *tdata = get_options_test_data(
-                                      "ORPort 127.0.0.1:5555");
+                                      "ORPort 127.0.0.1:5555\n"
+                                      "ContactInfo nobody@example.com");
   setup_capture_of_logs(LOG_WARN);
 
   MOCK(get_uname, fixed_get_uname);
@@ -644,9 +637,11 @@ test_options_validate__contactinfo(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_log_msg(
-            "Your ContactInfo config option is not"
-            " set. Please consider setting it, so we can contact you if your"
-            " server is misconfigured or something else goes wrong.\n");
+           "Your ContactInfo config option is not set. Please strongly "
+           "consider setting it, so we can contact you if your relay is "
+           "misconfigured, end-of-life, or something else goes wrong. It "
+           "is also possible that your relay might get rejected from the "
+           "network due to a missing valid contact address.\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -656,9 +651,11 @@ test_options_validate__contactinfo(void *ignored)
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, 0);
   expect_no_log_msg(
-            "Your ContactInfo config option is not"
-            " set. Please consider setting it, so we can contact you if your"
-            " server is misconfigured or something else goes wrong.\n");
+           "Your ContactInfo config option is not set. Please strongly "
+           "consider setting it, so we can contact you if your relay is "
+           "misconfigured, end-of-life, or something else goes wrong. It "
+           "is also possible that your relay might get rejected from the "
+           "network due to a missing valid contact address.\n");
   tor_free(msg);
 
  done:
@@ -4276,7 +4273,9 @@ test_options_trial_assign(void *arg)
   tt_int_op(r, OP_EQ, 0);
   v = options_trial_assign(lines, 0, &msg);
   tt_int_op(v, OP_EQ, SETOPT_ERR_PARSE);
-  tt_str_op(msg, OP_EQ, "Unrecognized value ambidextrous.");
+  tt_str_op(msg, OP_EQ,
+            "Could not parse UseBridges: Unrecognized value ambidextrous. "
+            "Allowed values are 0 and 1.");
   tor_free(msg);
   config_free_lines(lines);
 

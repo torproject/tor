@@ -11,6 +11,8 @@
 
 #include "core/or/or.h"
 
+#ifdef HAVE_MODULE_DIRAUTH
+
 /** Scheduling information for a voting interval. */
 typedef struct {
   /** When do we generate and distribute our vote for this interval? */
@@ -25,6 +27,9 @@ typedef struct {
   time_t fetch_missing_signatures;
   /** When do we publish the consensus? */
   time_t interval_starts;
+
+  /** Our computed dirauth interval */
+  int interval;
 
   /** True iff we have generated and distributed our vote. */
   int have_voted;
@@ -53,12 +58,36 @@ typedef struct {
 
 extern voting_schedule_t voting_schedule;
 
-void voting_schedule_recalculate_timing(const or_options_t *options,
+void dirauth_sched_recalculate_timing(const or_options_t *options,
                                         time_t now);
 
-time_t voting_schedule_get_start_of_next_interval(time_t now,
-                                                  int interval,
-                                                  int offset);
-time_t voting_schedule_get_next_valid_after_time(void);
+time_t dirauth_sched_get_next_valid_after_time(void);
+time_t dirauth_sched_get_cur_valid_after_time(void);
+int dirauth_sched_get_configured_interval(void);
+
+#else /* !defined(HAVE_MODULE_DIRAUTH) */
+
+#define dirauth_sched_recalculate_timing(opt,now) \
+  ((void)(opt), (void)(now))
+
+static inline time_t
+dirauth_sched_get_next_valid_after_time(void)
+{
+  tor_assert_unreached();
+  return 0;
+}
+static inline time_t
+dirauth_sched_get_cur_valid_after_time(void)
+{
+  tor_assert_unreached();
+  return 0;
+}
+static inline int
+dirauth_sched_get_configured_interval(void)
+{
+  tor_assert_unreached();
+  return 1;
+}
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
 #endif /* !defined(TOR_VOTING_SCHEDULE_H) */

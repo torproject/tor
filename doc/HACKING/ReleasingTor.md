@@ -1,11 +1,9 @@
-
-Putting out a new release
--------------------------
+# Putting out a new release
 
 Here are the steps that the maintainer should take when putting out a
 new Tor release:
 
-### 0. Preliminaries
+## 0. Preliminaries
 
 1. Get at least two of weasel/arma/Sebastian to put the new
    version number in their approved versions list.  Give them a few
@@ -18,7 +16,7 @@ new Tor release:
    date of a TB that contains it.  See note below in "commit, upload,
    announce".
 
-### I. Make sure it works
+## I. Make sure it works
 
 1. Make sure that CI passes: have a look at Travis
    (https://travis-ci.org/torproject/tor/branches), Appveyor
@@ -51,9 +49,7 @@ new Tor release:
       libevent and openssl, so using valgrind will sometimes find extra
       memory leaks.)
 
-
-### II. Write a changelog
-
+## II. Write a changelog
 
 1a. (Alpha release variant)
 
@@ -138,8 +134,7 @@ new Tor release:
    to start sorting and condensing entries.  (Generally, we don't edit the
    text of existing entries, though.)
 
-
-### III. Making the source release.
+## III. Making the source release.
 
 1. In `maint-0.?.x`, bump the version number in `configure.ac` and run
    `make update-versions` to update version numbers in other
@@ -165,7 +160,7 @@ new Tor release:
    If it is not, you'll need to poke Roger, Weasel, and Sebastian again: see
    item 0.1 at the start of this document.
 
-### IV. Commit, upload, announce
+## IV. Commit, upload, announce
 
 1. Sign the tarball, then sign and push the git tag:
 
@@ -215,7 +210,6 @@ new Tor release:
 
    Include a link to the changelog.
 
-
 4. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
     the menu on the left.  At the right, there will be an "Add version"
@@ -241,7 +235,7 @@ new Tor release:
    For templates to use when announcing, see:
        https://trac.torproject.org/projects/tor/wiki/org/teams/NetworkTeam/AnnouncementTemplates
 
-### V. Aftermath and cleanup
+## V. Aftermath and cleanup
 
 1. If it's a stable release, bump the version number in the
     `maint-x.y.z` branch to "newversion-dev", and do a `merge -s ours`

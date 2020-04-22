@@ -38,7 +38,7 @@ struct addr_policy_t {
   /** Base address to accept or reject.
    *
    * Note that wildcards are treated
-   * differntly depending on address family. An AF_UNSPEC address means
+   * differently depending on address family. An AF_UNSPEC address means
    * "All addresses, IPv4 or IPv6." An AF_INET address with maskbits==0 means
    * "All IPv4 addresses" and an AF_INET6 address with maskbits == 0 means
    * "All IPv6 addresses".

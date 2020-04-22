@@ -24,9 +24,8 @@ Making applications work with Tor:
 Frequently Asked Questions:
         https://www.torproject.org/docs/faq.html
 
+Release timeline:
+         https://trac.torproject.org/projects/tor/wiki/org/teams/NetworkTeam/CoreTorReleases
 
 To get started working on Tor development:
         See the doc/HACKING directory.
-
-Release timeline:
-         https://trac.torproject.org/projects/tor/wiki/org/teams/NetworkTeam/CoreTorReleases

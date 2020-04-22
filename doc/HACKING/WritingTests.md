@@ -1,6 +1,4 @@
-
-Writing tests for Tor: an incomplete guide
-==========================================
+# Writing tests for Tor: an incomplete guide
 
 Tor uses a variety of testing frameworks and methodologies to try to
 keep from introducing bugs.  The major ones are:
@@ -19,8 +17,7 @@ keep from introducing bugs.  The major ones are:
 
    5. The Shadow network simulator.
 
-How to run these tests
-----------------------
+## How to run these tests
 
 ### The easy version
 
@@ -64,7 +61,7 @@ The former are those that should finish in a few seconds; the latter tend to
 take more time, and may include CPU-intensive operations, deliberate delays,
 and stuff like that.
 
-### Finding test coverage
+## Finding test coverage
 
 Test coverage is a measurement of which lines your tests actually visit.
 
@@ -112,7 +109,7 @@ To count new or modified uncovered lines in D2, you can run:
 
     ./scripts/test/cov-diff ${D1} ${D2}" | grep '^+ *\#' | wc -l
 
-### Marking lines as unreachable by tests
+## Marking lines as unreachable by tests
 
 You can mark a specific line as unreachable by using the special
 string LCOV_EXCL_LINE.  You can mark a range of lines as unreachable
@@ -126,9 +123,7 @@ unreached lines with 'x', and excluded reached lines with '!!!'.
 Note: you should never do this unless the line is meant to 100%
 unreachable by actual code.
 
-
-What kinds of test should I write?
-----------------------------------
+## What kinds of test should I write?
 
 Integration testing and unit testing are complementary: it's probably a
 good idea to make sure that your code is hit by both if you can.
@@ -143,8 +138,7 @@ If your code adds new externally visible functionality to Tor, it would
 be great to have a test for that functionality.  That's where
 integration tests more usually come in.
 
-Unit and regression tests: Does this function do what it's supposed to?
------------------------------------------------------------------------
+## Unit and regression tests: Does this function do what it's supposed to?
 
 Most of Tor's unit tests are made using the "tinytest" testing framework.
 You can see a guide to using it in the tinytest manual at
@@ -165,7 +159,7 @@ If you have created a new test file, you will need to:
 
 I use the term "unit test" and "regression tests" very sloppily here.
 
-### A simple example
+## A simple example
 
 Here's an example of a test function for a simple function in util.c:
 
@@ -207,7 +201,7 @@ Finally, remember that by convention, all `*_free()` functions that
 Tor defines are defined to accept NULL harmlessly.  Thus, you don't
 need to say `if (contents)` in the cleanup block.
 
-### Exposing static functions for testing
+## Exposing static functions for testing
 
 Sometimes you need to test a function, but you don't want to expose
 it outside its usual module.
@@ -228,7 +222,7 @@ For example, `crypto_curve25519.h` contains:
 The `crypto_curve25519.c` file and the `test_crypto.c` file both define
 `CRYPTO_CURVE25519_PRIVATE`, so they can see this declaration.
 
-### STOP!  Does this test really test?
+## STOP!  Does this test really test?
 
 When writing tests, it's not enough to just generate coverage on all the
 lines of the code that you're testing:  It's important to make sure that
@@ -269,8 +263,7 @@ it's supposed to do, and fail otherwise.  Try to design your tests so
 that they check for the code's intended and documented functionality
 as much as possible.
 
-
-### Mock functions for testing in isolation
+## Mock functions for testing in isolation
 
 Often we want to test that a function works right, but the function to
 be tested depends on other functions whose behavior is hard to observe,
@@ -311,7 +304,7 @@ And later, you can restore the original function with:
 For more information, see the definitions of this mocking logic in
 `testsupport.h`.
 
-### Okay but what should my tests actually do?
+## Okay but what should my tests actually do?
 
 We talk above about "test coverage" -- making sure that your tests visit
 every line of code, or every branch of code.  But visiting the code isn't
@@ -382,8 +375,7 @@ Based on the implementation, we now see three more edge cases to test:
    * Removing an element from the end of the list
    * Removing an element from a position other than the end of the list.
 
-
-### What should my tests NOT do?
+## What should my tests NOT do?
 
 Tests shouldn't require a network connection.
 
@@ -401,8 +393,7 @@ When possible, tests should not be over-fit to the implementation.  That is,
 the test should verify that the documented behavior is implemented, but
 should not break if other permissible behavior is later implemented.
 
-
-### Advanced techniques: Namespaces
+## Advanced techniques: Namespaces
 
 Sometimes, when you're doing a lot of mocking at once, it's convenient to
 isolate your identifiers within a single namespace.  If this were C++, we'd
@@ -414,9 +405,7 @@ them, you define `NS_MODULE` to a prefix to be used for your identifiers, and
 then use other macros in place of identifier names.  See `src/test/test.h` for
 more documentation.
 
-
-Integration tests: Calling Tor from the outside
------------------------------------------------
+## Integration tests: Calling Tor from the outside
 
 Some tests need to invoke Tor from the outside, and shouldn't run from the
 same process as the Tor test program.  Reasons for doing this might include:
@@ -436,8 +425,7 @@ wrapped, add a new shell script to `TESTS`, and the new program to
 makefile (eg `${PYTHON}` for a python interpreter), then make sure that the
 makefile exports them.
 
-Writing integration tests with Stem
------------------------------------
+## Writing integration tests with Stem
 
 The 'stem' library includes extensive tests for the Tor controller protocol.
 You can run stem tests from tor with `make test-stem`, or see
@@ -483,8 +471,7 @@ you notice any strange behaviour that seems totally unreasonable.
 Check out the `test_exit_policy()` function in abovementioned file to see the
 final implementation for this test.
 
-System testing with Chutney
----------------------------
+## System testing with Chutney
 
 The 'chutney' program configures and launches a set of Tor relays,
 authorities, and clients on your local host.  It has a `test network`

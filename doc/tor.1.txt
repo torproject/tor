@@ -186,6 +186,13 @@ The following options in this section are only recognized on the
     ISO-8601 format.  For example, the output sent to stdout will be
     of the form: "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
 
+[[opt-dbg]] **--dbg-**...::
+    Tor may support other options beginning with the string "dbg". These
+    are intended for use by developers to debug and test Tor. They are
+    not supported or guaranteed to be stable, and you should probably
+    not use them.
+
+
 [[conf-format]]
 == THE CONFIGURATION FILE FORMAT
 
@@ -525,9 +532,9 @@ forward slash (/) in the configuration file and on the command line.
 
 [[ExtendByEd25519ID]] **ExtendByEd25519ID** **0**|**1**|**auto**::
     If this option is set to 1, we always try to include a relay's Ed25519 ID
-    when telling the proceeding relay in a circuit to extend to it.
+    when telling the preceding relay in a circuit to extend to it.
     If this option is set to 0, we never include Ed25519 IDs when extending
-    circuits.  If the option is set to "default", we obey a
+    circuits.  If the option is set to "auto", we obey a
     parameter in the consensus document. (Default: auto)
 
 [[ExtORPort]] **ExtORPort** ['address'**:**]{empty}__port__|**auto**::
@@ -759,6 +766,11 @@ forward slash (/) in the configuration file and on the command line.
     address. IPv6 addresses should be wrapped in square brackets.
     This setting will be ignored for connections to the loopback
     addresses (127.0.0.0/8 and ::1).
+
+[[OwningControllerProcess]] **{dbl_}OwningControllerProcess** __PID__::
+    Make Tor instance periodically check for presence of a controller process
+    with given PID and terminate itself if this process is no longer alive.
+    Polling interval is 15 seconds.
 
 [[PerConnBWBurst]] **PerConnBWBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If this option is set manually, or via the "perconnbwburst" consensus
@@ -1017,13 +1029,6 @@ The following options are useful only for clients (that is, if
     overhead. Only clients may set this option. This option should be offered
     via the UI to mobile users for use where bandwidth may be expensive.
     (Default: 0)
-
-[[ClientAutoIPv6ORPort]] **ClientAutoIPv6ORPort** **0**|**1**::
-    If this option is set to 1, Tor clients randomly prefer a node's IPv4 or
-    IPv6 ORPort. The random preference is set every time a node is loaded
-    from a new consensus or bridge config. When this option is set to 1,
-    **ClientPreferIPv6ORPort** is ignored. (Default: 0) (DEPRECATED: This
-    option is unreliable if a connection isn't reliably dual-stack.)
 
 [[ClientBootstrapConsensusAuthorityDownloadInitialDelay]] **ClientBootstrapConsensusAuthorityDownloadInitialDelay** __N__::
     Initial delay in seconds for when clients should download consensuses from authorities
@@ -1558,15 +1563,13 @@ The following options are useful only for clients (that is, if
 
           X'F2' Onion Service Introduction Failed
 
-            Client failed to introduce to the service meaning the descriptor
-            was found but the service is not connected anymore to the
-            introduction point. The service has likely changed its descriptor
-            or is not running. (v3 only)
+            All introduction attempts failed either due to a combination of
+            NACK by the intro point or time out. (v3 only)
 
           X'F3' Onion Service Rendezvous Failed
 
-            Client failed to rendezvous with the service which means that the
-            client is unable to finalize the connection. (v3 only)
+            Every rendezvous circuit has timed out and thus the client is
+            unable to rendezvous with the service. (v3 only)
 
           X'F4' Onion Service Missing Client Authorization
 
@@ -1586,6 +1589,11 @@ The following options are useful only for clients (that is, if
             The given .onion address is invalid. In one of these cases this
             error is returned: address checksum doesn't match, ed25519 public
             key is invalid or the encoding is invalid. (v3 only)
+
+          X'F7' Onion Service Introduction Timed Out
+
+            Similar to X'F2' code but in this case, all introduction attempts
+            have failed due to a time out. (v3 only)
 
 // Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::
@@ -2149,7 +2157,8 @@ is non-zero):
     GeoIP data, Tor keeps a per-country count of how many client
     addresses have contacted it so that it can help the bridge authority guess
     which countries have blocked access to it. If ExtraInfoStatistics is
-    enabled, it will be published as part of extra-info document. (Default: 1)
+    enabled, it will be published as part of the extra-info document.
+    (Default: 1)
 
 //Out of order because it logically belongs after BridgeRelay.
 [[BridgeDistribution]] **BridgeDistribution** __string__::
@@ -2363,14 +2372,11 @@ is non-zero):
     list itself, but it won't hurt if it does.) Do not list any bridge relay as it would
     compromise its concealment. +
      +
-    When listing a node, it's better to list it by fingerprint than by
-    nickname: fingerprints are more reliable. +
-     +
     If you run more than one relay, the MyFamily option on each relay
     **must** list all other relays, as described above. +
      +
     Note: do not use MyFamily when configuring your Tor instance as a
-    brigde.
+    bridge.
 
 [[Nickname]] **Nickname** __name__::
     Set the server's nickname to \'name'. Nicknames must be between 1 and 19
@@ -2618,7 +2624,7 @@ types of statistics that Tor relays collect and publish:
     circuit) and writes them into disk every 24 hours. Onion router
     operators may use the statistics for performance monitoring.
     If ExtraInfoStatistics is enabled, it will published as part of
-    extra-info document. (Default: 0)
+    the extra-info document. (Default: 0)
 
 [[ConnDirectionStatistics]] **ConnDirectionStatistics** **0**|**1**::
     Relays only.
@@ -2626,7 +2632,7 @@ types of statistics that Tor relays collect and publish:
     traffic it passes between itself and other relays to disk every 24
     hours. Enables relay operators to monitor how much their relay is
     being used as middle node in the circuit. If ExtraInfoStatistics is
-    enabled, it will be published as part of extra-info document.
+    enabled, it will be published as part of the extra-info document.
     (Default: 0)
 
 [[DirReqStatistics]] **DirReqStatistics** **0**|**1**::
@@ -2636,7 +2642,7 @@ types of statistics that Tor relays collect and publish:
     hours. Enables relay and bridge operators to monitor how much their
     server is being used by clients to learn about Tor network.
     If ExtraInfoStatistics is enabled, it will published as part of
-    extra-info document. (Default: 1)
+    the extra-info document. (Default: 1)
 
 [[EntryStatistics]] **EntryStatistics** **0**|**1**::
     Relays only.
@@ -2645,7 +2651,7 @@ types of statistics that Tor relays collect and publish:
     operators to monitor how much inbound traffic that originates from
     Tor clients passes through their server to go further down the
     Tor network. If ExtraInfoStatistics is enabled, it will be published
-    as part of extra-info document. (Default: 0)
+    as part of the extra-info document. (Default: 0)
 
 [[ExitPortStatistics]] **ExitPortStatistics** **0**|**1**::
     Exit relays only.
@@ -2653,7 +2659,7 @@ types of statistics that Tor relays collect and publish:
     relayed bytes and opened stream per exit port to disk every 24 hours.
     Enables exit relay operators to measure and monitor amounts of traffic
     that leaves Tor network through their exit node. If ExtraInfoStatistics
-    is enabled, it will be published as part of extra-info document.
+    is enabled, it will be published as part of the extra-info document.
     (Default: 0)
 
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
@@ -2661,7 +2667,7 @@ types of statistics that Tor relays collect and publish:
     its extra-info documents that it uploads to the directory authorities.
     Disabling this option also removes bandwidth usage statistics, and
     GeoIPFile and GeoIPv6File hashes from the extra-info file. Bridge
-    ServerTransportPlugin lines are always includes in the extra-info file,
+    ServerTransportPlugin lines are always included in the extra-info file,
     because they are required by BridgeDB.
     (Default: 1)
 
@@ -2669,9 +2675,9 @@ types of statistics that Tor relays collect and publish:
     Relays only.
     When this option is enabled, a Tor relay writes obfuscated
     statistics on its role as hidden-service directory, introduction
-    point, or rendezvous point to disk every 24 hours. If
-    ExtraInfoStatistics is also enabled, these statistics are further
-    published to the directory authorities. (Default: 1)
+    point, or rendezvous point to disk every 24 hours.  If ExtraInfoStatistics
+    is enabled, it will be published as part of the extra-info document.
+    (Default: 1)
 
 [[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
     Relays and bridges only.
@@ -2680,7 +2686,7 @@ types of statistics that Tor relays collect and publish:
     These statistics are rounded, and omitted if traffic is low. This
     information is important for load balancing decisions related to padding.
     If ExtraInfoStatistics is enabled, it will be published
-    as a part of extra-info document. (Default: 1)
+    as a part of the extra-info document. (Default: 1)
 
 == DIRECTORY SERVER OPTIONS
 
@@ -3719,14 +3725,15 @@ __DataDirectory__/**`hashed-fingerprint`**::
     identity key. (That is, the hash of the hash of the identity key.)
 
 __DataDirectory__/**`approved-routers`**::
-    Only used by authoritative directory servers. This file lists the status
-    and a fingerprint/pubkey. Each line lists a status and a fingerprint
-    separated by whitespace. See your **fingerprint** file in the
-    __DataDirectory__ for an example fingerprint line. If the status is
-    **!reject** then descriptors from the given identity (fingerprint/pubkey)
-    are rejected by this server. If it is **!invalid** then descriptors are
-    accepted but marked in the directory as not valid, that is, not
-    recommended.
+    Only used by authoritative directory servers. Each line lists a status and
+    an identity, separated by whitespace. Identities can be hex-encoded RSA
+    fingerprints, or base-64 encoded ed25519 public keys. See the
+    **fingerprint** file in a tor relay's __DataDirectory__ for an example
+    fingerprint line. If the status is **!reject**, then descriptors from the
+    given identity are rejected by this server. If it is **!invalid** then
+    descriptors are accepted, but marked in the directory as not valid, that
+    is, not recommended. In either case, the corresponding relays are not
+    included in the consensus.
 
 __DataDirectory__/**`v3-status-votes`**::
     Only for v3 authoritative directory servers. This file contains status

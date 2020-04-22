@@ -3,12 +3,11 @@
 
 /**
  * \file voting_schedule.c
- * \brief This file contains functions that are from the directory authority
- *        subsystem related to voting specifically but used by many part of
- *        tor. The full feature is built as part of the dirauth module.
+ * \brief Compute information about our voting schedule as a directory
+ *    authority.
  **/
 
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "core/or/or.h"
 #include "app/config/config.h"
@@ -20,55 +19,11 @@
  * Vote scheduling
  * ===== */
 
-/** Return the start of the next interval of size <b>interval</b> (in
- * seconds) after <b>now</b>, plus <b>offset</b>. Midnight always
- * starts a fresh interval, and if the last interval of a day would be
- * truncated to less than half its size, it is rolled into the
- * previous interval. */
-time_t
-voting_schedule_get_start_of_next_interval(time_t now, int interval,
-                                           int offset)
-{
-  struct tm tm;
-  time_t midnight_today=0;
-  time_t midnight_tomorrow;
-  time_t next;
-
-  tor_gmtime_r(&now, &tm);
-  tm.tm_hour = 0;
-  tm.tm_min = 0;
-  tm.tm_sec = 0;
-
-  if (tor_timegm(&tm, &midnight_today) < 0) {
-    // LCOV_EXCL_START
-    log_warn(LD_BUG, "Ran into an invalid time when trying to find midnight.");
-    // LCOV_EXCL_STOP
-  }
-  midnight_tomorrow = midnight_today + (24*60*60);
-
-  next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
-
-  /* Intervals never cross midnight. */
-  if (next > midnight_tomorrow)
-    next = midnight_tomorrow;
-
-  /* If the interval would only last half as long as it's supposed to, then
-   * skip over to the next day. */
-  if (next + interval/2 > midnight_tomorrow)
-    next = midnight_tomorrow;
-
-  next += offset;
-  if (next - interval > now)
-    next -= interval;
-
-  return next;
-}
-
 /* Populate and return a new voting_schedule_t that can be used to schedule
  * voting. The object is allocated on the heap and it's the responsibility of
  * the caller to free it. Can't fail. */
 static voting_schedule_t *
-get_voting_schedule(const or_options_t *options, time_t now, int severity)
+create_voting_schedule(const or_options_t *options, time_t now, int severity)
 {
   int interval, vote_delay, dist_delay;
   time_t start;
@@ -95,14 +50,15 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
   }
 
   tor_assert(interval > 0);
+  new_voting_schedule->interval = interval;
 
   if (vote_delay + dist_delay > interval/2)
     vote_delay = dist_delay = interval / 4;
 
   start = new_voting_schedule->interval_starts =
-    voting_schedule_get_start_of_next_interval(now,interval,
+    voting_sched_get_start_of_interval_after(now,interval,
                                       options->TestingV3AuthVotingStartOffset);
-  end = voting_schedule_get_start_of_next_interval(start+1, interval,
+  end = voting_sched_get_start_of_interval_after(start+1, interval,
                                       options->TestingV3AuthVotingStartOffset);
 
   tor_assert(end > start);
@@ -139,9 +95,13 @@ voting_schedule_free_(voting_schedule_t *voting_schedule_to_free)
 
 voting_schedule_t voting_schedule;
 
-/* Using the time <b>now</b>, return the next voting valid-after time. */
-time_t
-voting_schedule_get_next_valid_after_time(void)
+/**
+ * Return the current voting schedule, recreating it if necessary.
+ *
+ * Dirauth only.
+ **/
+static const voting_schedule_t *
+dirauth_get_voting_schedule(void)
 {
   time_t now = approx_time();
   bool need_to_recalculate_voting_schedule = false;
@@ -167,27 +127,62 @@ voting_schedule_get_next_valid_after_time(void)
 
  done:
   if (need_to_recalculate_voting_schedule) {
-    voting_schedule_recalculate_timing(get_options(), approx_time());
+    dirauth_sched_recalculate_timing(get_options(), approx_time());
     voting_schedule.created_on_demand = 1;
   }
 
-  return voting_schedule.interval_starts;
+  return &voting_schedule;
+}
+
+/** Return the next voting valid-after time.
+ *
+ * Dirauth only. */
+time_t
+dirauth_sched_get_next_valid_after_time(void)
+{
+  return dirauth_get_voting_schedule()->interval_starts;
+}
+
+/**
+ * Return our best idea of what the valid-after time for the _current_
+ * consensus, whether we have one or not.
+ *
+ * Dirauth only.
+ **/
+time_t
+dirauth_sched_get_cur_valid_after_time(void)
+{
+  const voting_schedule_t *sched = dirauth_get_voting_schedule();
+  time_t next_start = sched->interval_starts;
+  int interval = sched->interval;
+  int offset = get_options()->TestingV3AuthVotingStartOffset;
+  return voting_sched_get_start_of_interval_after(next_start - interval - 1,
+                                                  interval,
+                                                  offset);
+}
+
+/** Return the voting interval that we are configured to use.
+ *
+ * Dirauth only. */
+int
+dirauth_sched_get_configured_interval(void)
+{
+  return get_options()->V3AuthVotingInterval;
 }
 
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. All type of tor do that because HS subsystem needs the timing as
  * well to function properly. */
 void
-voting_schedule_recalculate_timing(const or_options_t *options, time_t now)
+dirauth_sched_recalculate_timing(const or_options_t *options, time_t now)
 {
   voting_schedule_t *new_voting_schedule;
 
   /* get the new voting schedule */
-  new_voting_schedule = get_voting_schedule(options, now, LOG_INFO);
+  new_voting_schedule = create_voting_schedule(options, now, LOG_INFO);
   tor_assert(new_voting_schedule);
 
   /* Fill in the global static struct now */
   memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
   voting_schedule_free(new_voting_schedule);
 }
-

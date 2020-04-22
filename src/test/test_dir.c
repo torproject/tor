@@ -47,7 +47,7 @@
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/dircommon/fp_pair.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
@@ -3005,6 +3005,7 @@ test_dir_param_voting_lookup(void *arg)
   tt_int_op(99, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "abcd", 1000));
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* moomin appears twice. That's a bug. */
   tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
@@ -3022,7 +3023,7 @@ test_dir_param_voting_lookup(void *arg)
             dirvote_get_intermediate_param_value(lst, "jack", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+            "!(!ok)");
   tor_end_capture_bugs_();
   /* electricity and opa aren't integers. */
   tor_capture_bugs_(1);
@@ -3030,7 +3031,7 @@ test_dir_param_voting_lookup(void *arg)
             dirvote_get_intermediate_param_value(lst, "electricity", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+            "!(!ok)");
   tor_end_capture_bugs_();
 
   tor_capture_bugs_(1);
@@ -3038,8 +3039,9 @@ test_dir_param_voting_lookup(void *arg)
             dirvote_get_intermediate_param_value(lst, "opa", -100));
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
-            "!(! ok)");
+            "!(!ok)");
   tor_end_capture_bugs_();
+#endif
 
  done:
   SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
@@ -3610,7 +3612,7 @@ test_a_networkstatus(
   sign_skey_2 = crypto_pk_new();
   sign_skey_3 = crypto_pk_new();
   sign_skey_leg1 = pk_generate(4);
-  voting_schedule_recalculate_timing(get_options(), now);
+  dirauth_sched_recalculate_timing(get_options(), now);
   sr_state_init(0, 0);
 
   tt_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
@@ -4988,6 +4990,14 @@ static void
 test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
 {
   (void)arg;
+
+#ifdef ALL_BUGS_ARE_FATAL
+  /* Coverity (and maybe clang analyser) complain that the code following
+   * tt_skip() is unconditionally unreachable. */
+#if !defined(__COVERITY__) && !defined(__clang_analyzer__)
+  tt_skip();
+#endif
+#endif
 
   tor_capture_bugs_(1);
   setup_full_capture_of_logs(LOG_WARN);

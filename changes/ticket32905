@@ -1,0 +1,6 @@
+  o Removed features:
+    - Remove the ClientAutoIPv6ORPort option. This option attempted
+      to randomly choose between IPv4 and IPv6 for client connections,
+      and isn't a true implementation of Happy Eyeballs. Often, this
+      option failed on IPv4-only or IPv6-only connections. Closes
+      ticket 32905. Patch by Neel Chauhan.

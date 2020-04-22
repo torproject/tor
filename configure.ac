@@ -228,6 +228,13 @@ if test "x$enable_expensive_hardening" = "xyes" || test "x$enable_fragile_harden
   AC_DEFINE(DEBUG_SMARTLIST, 1, [Enable smartlist debugging])
 fi
 
+AC_ARG_ENABLE(all-bugs-are-fatal,
+   AS_HELP_STRING(--enable-all-bugs-are-fatal, [force all soft asserts in Tor codebase (tor_assert_nonfatal(), BUG(), etc.) to act as hard asserts (tor_assert() and equivalents); makes Tor fragile; only recommended for dev builds]))
+
+if test "x$enable_all_bugs_are_fatal" = "xyes"; then
+  AC_DEFINE(ALL_BUGS_ARE_FATAL, 1, [All assert failures are fatal])
+fi
+
 dnl Linker hardening options
 dnl Currently these options are ELF specific - you can't use this with MacOSX
 AC_ARG_ENABLE(linker-hardening,
@@ -649,6 +656,7 @@ AC_CHECK_FUNCS(
 	explicit_bzero \
 	timingsafe_memcmp \
 	flock \
+	fsync \
 	ftime \
 	get_current_dir_name \
 	getaddrinfo \
@@ -2665,7 +2673,7 @@ PPRINT_SUBTITLE([Modules])
 
 m4_foreach_w([mname], MODULES,
   [
-    test "xenable_module_mname" != "xno" && value=1 || value=0
+    AM_COND_IF(m4_join([], [BUILD_MODULE_], m4_toupper([]mname[])), value=1, value=0)
     PPRINT_PROP_BOOL([mname (--disable-module-mname)], $value)
   ]
 )

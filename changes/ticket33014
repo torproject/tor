@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (onion service):
+    - Refactor configuration parsing to use the new config subsystem code.
+      Closes ticket 33014.

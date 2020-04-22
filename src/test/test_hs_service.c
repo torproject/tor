@@ -44,7 +44,7 @@
 #include "core/or/versions.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
@@ -87,6 +87,13 @@ mock_networkstatus_get_live_consensus(time_t now)
 {
   (void) now;
   return &mock_ns;
+}
+
+static networkstatus_t *
+mock_networkstatus_get_live_consensus_null(time_t now)
+{
+  (void) now;
+  return NULL;
 }
 
 static or_state_t *dummy_state = NULL;
@@ -133,6 +140,20 @@ mock_relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
   memcpy(relay_payload, payload, payload_len);
   relay_payload_len = payload_len;
 
+  return 0;
+}
+
+static unsigned int num_intro_points = 0;
+static unsigned int
+mock_count_desc_circuit_established(const hs_service_descriptor_t *desc)
+{
+  (void) desc;
+  return num_intro_points;
+}
+
+static int
+mock_router_have_minimum_dir_info_false(void)
+{
   return 0;
 }
 
@@ -1365,7 +1386,7 @@ test_rotate_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
   now = mock_ns.valid_after+1;
@@ -1406,7 +1427,7 @@ test_rotate_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 27 Oct 1985 02:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
   now = mock_ns.valid_after+1;
@@ -1474,7 +1495,7 @@ test_build_update_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
 
@@ -1705,7 +1726,7 @@ test_build_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 04:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   /* Generate a valid number of fake auth clients when a client authorization
    * is disabled. */
@@ -1806,7 +1827,7 @@ test_upload_descriptors(void *arg)
   ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
                            &mock_ns.fresh_until);
   tt_int_op(ret, OP_EQ, 0);
-  voting_schedule_recalculate_timing(get_options(), mock_ns.valid_after);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
 
   update_approx_time(mock_ns.valid_after+1);
   now = mock_ns.valid_after+1;
@@ -2499,7 +2520,7 @@ test_intro2_handling(void *arg)
   /* Start cleaning up X */
   replaycache_free(x_service.state.replay_cache_rend_cookie);
   smartlist_free(x_service.config.ob_master_pubkeys);
-  tor_free(x_service.ob_subcreds);
+  tor_free(x_service.state.ob_subcreds);
   service_descriptor_free(x_service.desc_current);
   service_descriptor_free(x_service.desc_next);
   service_intro_point_free(x_ip);
@@ -2518,6 +2539,148 @@ test_intro2_handling(void *arg)
   UNMOCK(relay_send_command_from_edge_);
   UNMOCK(node_get_link_specifier_smartlist);
   UNMOCK(launch_rendezvous_point_circuit);
+}
+
+static void
+test_cannot_upload_descriptors(void *arg)
+{
+  int ret;
+  time_t now;
+  hs_service_t *service;
+
+  (void) arg;
+
+  hs_init();
+  MOCK(get_or_state,
+       get_or_state_replacement);
+  MOCK(networkstatus_get_live_consensus,
+       mock_networkstatus_get_live_consensus);
+
+  dummy_state = or_state_new();
+
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
+                           &mock_ns.valid_after);
+  tt_int_op(ret, OP_EQ, 0);
+  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
+                           &mock_ns.fresh_until);
+  tt_int_op(ret, OP_EQ, 0);
+  dirauth_sched_recalculate_timing(get_options(), mock_ns.valid_after);
+
+  update_approx_time(mock_ns.valid_after + 1);
+  now = mock_ns.valid_after + 1;
+
+  /* Create a service with no descriptor. It's added to the global map. */
+  service = hs_service_new(get_options());
+  tt_assert(service);
+  service->config.version = HS_VERSION_THREE;
+  ed25519_secret_key_generate(&service->keys.identity_sk, 0);
+  ed25519_public_key_generate(&service->keys.identity_pk,
+                              &service->keys.identity_sk);
+  /* Register service to global map. */
+  ret = register_service(get_hs_service_map(), service);
+  tt_int_op(ret, OP_EQ, 0);
+  /* But first, build our descriptor. */
+  build_all_descriptors(now);
+
+  /* 1. Testing missing intro points reason. */
+  {
+    digest256map_t *cur = service->desc_current->intro_points.map;
+    digest256map_t *tmp = digest256map_new();
+    service->desc_current->intro_points.map = tmp;
+    service->desc_current->missing_intro_points = 1;
+    setup_full_capture_of_logs(LOG_INFO);
+    run_upload_descriptor_event(now);
+    digest256map_free(tmp, tor_free_);
+    service->desc_current->intro_points.map = cur;
+    expect_log_msg_containing(
+      "Service [scrubbed] can't upload its current descriptor: "
+      "Missing intro points");
+    teardown_capture_of_logs();
+    /* Reset. */
+    service->desc_current->missing_intro_points = 0;
+  }
+
+  /* 2. Testing non established intro points. */
+  {
+    setup_full_capture_of_logs(LOG_INFO);
+    run_upload_descriptor_event(now);
+    expect_log_msg_containing(
+      "Service [scrubbed] can't upload its current descriptor: "
+      "Intro circuits aren't yet all established (0/3).");
+    teardown_capture_of_logs();
+  }
+
+  /* We need to pass the established circuit tests and thus from now on, we
+   * MOCK this to return 3 intro points. */
+  MOCK(count_desc_circuit_established, mock_count_desc_circuit_established);
+  num_intro_points = 3;
+
+  /* 3. Testing non established intro points. */
+  {
+    service->desc_current->next_upload_time = now + 1000;
+    setup_full_capture_of_logs(LOG_INFO);
+    run_upload_descriptor_event(now);
+    expect_log_msg_containing(
+      "Service [scrubbed] can't upload its current descriptor: "
+      "Next upload time is");
+    teardown_capture_of_logs();
+    /* Reset. */
+    service->desc_current->next_upload_time = 0;
+  }
+
+  /* 4. Testing missing live consensus. */
+  {
+    MOCK(networkstatus_get_live_consensus,
+         mock_networkstatus_get_live_consensus_null);
+    setup_full_capture_of_logs(LOG_INFO);
+    run_upload_descriptor_event(now);
+    expect_log_msg_containing(
+      "Service [scrubbed] can't upload its current descriptor: "
+      "No live consensus");
+    teardown_capture_of_logs();
+    /* Reset. */
+    MOCK(networkstatus_get_live_consensus,
+         mock_networkstatus_get_live_consensus);
+  }
+
+  /* 5. Test missing minimum directory information. */
+  {
+    MOCK(router_have_minimum_dir_info,
+         mock_router_have_minimum_dir_info_false);
+    setup_full_capture_of_logs(LOG_INFO);
+    run_upload_descriptor_event(now);
+    expect_log_msg_containing(
+      "Service [scrubbed] can't upload its current descriptor: "
+      "Not enough directory information");
+    teardown_capture_of_logs();
+
+    /* Running it again shouldn't trigger anything due to rate limitation. */
+    setup_full_capture_of_logs(LOG_INFO);
+    run_upload_descriptor_event(now);
+    expect_no_log_entry();
+    teardown_capture_of_logs();
+    UNMOCK(router_have_minimum_dir_info);
+  }
+
+  /* Increase time and redo test (5) in order to test the rate limiting. */
+  update_approx_time(mock_ns.valid_after + 61);
+  {
+    MOCK(router_have_minimum_dir_info,
+         mock_router_have_minimum_dir_info_false);
+    setup_full_capture_of_logs(LOG_INFO);
+    run_upload_descriptor_event(now);
+    expect_log_msg_containing(
+      "Service [scrubbed] can't upload its current descriptor: "
+      "Not enough directory information");
+    teardown_capture_of_logs();
+    UNMOCK(router_have_minimum_dir_info);
+  }
+
+ done:
+  hs_free_all();
+  UNMOCK(count_desc_circuit_established);
+  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(get_or_state);
 }
 
 struct testcase_t hs_service_tests[] = {
@@ -2556,6 +2719,8 @@ struct testcase_t hs_service_tests[] = {
   { "build_descriptors", test_build_descriptors, TT_FORK,
     NULL, NULL },
   { "upload_descriptors", test_upload_descriptors, TT_FORK,
+    NULL, NULL },
+  { "cannot_upload_descriptors", test_cannot_upload_descriptors, TT_FORK,
     NULL, NULL },
   { "rendezvous1_parsing", test_rendezvous1_parsing, TT_FORK,
     NULL, NULL },

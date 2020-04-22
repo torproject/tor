@@ -90,10 +90,10 @@ microdesc_eq_(microdesc_t *a, microdesc_t *b)
 }
 
 HT_PROTOTYPE(microdesc_map, microdesc_t, node,
-             microdesc_hash_, microdesc_eq_)
+             microdesc_hash_, microdesc_eq_);
 HT_GENERATE2(microdesc_map, microdesc_t, node,
              microdesc_hash_, microdesc_eq_, 0.6,
-             tor_reallocarray_, tor_free_)
+             tor_reallocarray_, tor_free_);
 
 /************************* md fetch fail cache *****************************/
 

@@ -90,9 +90,9 @@ ddmap_entry_set_digests(ddmap_entry_t *ent,
 }
 
 HT_PROTOTYPE(double_digest_map, ddmap_entry_t, node, ddmap_entry_hash,
-             ddmap_entry_eq)
+             ddmap_entry_eq);
 HT_GENERATE2(double_digest_map, ddmap_entry_t, node, ddmap_entry_hash,
-             ddmap_entry_eq, 0.6, tor_reallocarray, tor_free_)
+             ddmap_entry_eq, 0.6, tor_reallocarray, tor_free_);
 
 /** Helper: add a single vote_routerstatus_t <b>vrs</b> to the collator
  * <b>dc</b>, indexing it by its RSA key digest, and by the 2-tuple of its RSA
@@ -324,4 +324,3 @@ dircollator_get_votes_for_router(dircollator_t *dc, int idx)
   return digestmap_get(dc->by_collated_rsa_sha1,
                        smartlist_get(dc->all_rsa_sha1_lst, idx));
 }
-

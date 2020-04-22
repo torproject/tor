@@ -21,7 +21,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/dirparse/authcert_parse.h"
 #include "feature/hs_common/shared_random_client.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirclient/dir_server_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -193,7 +193,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     /* Compare it with the correct result */
@@ -205,7 +205,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 19:22:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -216,7 +216,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -227,7 +227,7 @@ test_get_state_valid_until_time(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     valid_until_time = get_state_valid_until_time(current_time);
 
     format_iso_time(tbuf, valid_until_time);
@@ -265,7 +265,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:01 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
@@ -277,7 +277,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 23:59:59 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
@@ -289,7 +289,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:00:00 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
@@ -319,7 +319,7 @@ test_get_start_time_of_current_run(void *arg)
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
     update_approx_time(current_time);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
 
     run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
@@ -327,7 +327,7 @@ test_get_start_time_of_current_run(void *arg)
     format_iso_time(tbuf, run_start_time);
     tt_str_op("2015-04-19 00:00:00", OP_EQ, tbuf);
     /* Check that voting_schedule.interval_starts is at 01:00 (see above) */
-    time_t interval_starts = voting_schedule_get_next_valid_after_time();
+    time_t interval_starts = dirauth_sched_get_next_valid_after_time();
     format_iso_time(tbuf, interval_starts);
     tt_str_op("2015-04-20 01:00:00", OP_EQ, tbuf);
   }
@@ -346,7 +346,7 @@ test_get_start_time_of_current_run(void *arg)
     retval = parse_rfc1123_time("Mon, 20 Apr 2015 00:15:32 UTC",
                                 &current_time);
     tt_int_op(retval, OP_EQ, 0);
-    voting_schedule_recalculate_timing(get_options(), current_time);
+    dirauth_sched_recalculate_timing(get_options(), current_time);
     run_start_time = sr_state_get_start_time_of_current_protocol_run();
 
     /* Compare it with the correct result */
@@ -378,13 +378,13 @@ test_get_start_time_functions(void *arg)
   tt_int_op(retval, OP_EQ, 0);
   time_t now = mock_consensus.valid_after;
 
-  voting_schedule_recalculate_timing(get_options(), now);
+  dirauth_sched_recalculate_timing(get_options(), now);
   time_t start_time_of_protocol_run =
     sr_state_get_start_time_of_current_protocol_run();
   tt_assert(start_time_of_protocol_run);
 
   /* Check that the round start time of the beginning of the run, is itself */
-  tt_int_op(get_start_time_of_current_round(), OP_EQ,
+  tt_int_op(dirauth_sched_get_cur_valid_after_time(), OP_EQ,
             start_time_of_protocol_run);
 
  done:

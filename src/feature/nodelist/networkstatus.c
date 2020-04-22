@@ -66,7 +66,7 @@
 #include "feature/dirclient/dirclient_modes.h"
 #include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 #include "feature/dirparse/ns_parse.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_dos.h"
@@ -2120,7 +2120,7 @@ networkstatus_set_current_consensus(const char *consensus,
      * the first thing we need to do is recalculate the voting schedule static
      * object so we can use the timings in there needed by some subsystems
      * such as hidden service and shared random. */
-    voting_schedule_recalculate_timing(options, now);
+    dirauth_sched_recalculate_timing(options, now);
     reschedule_dirvote(options);
 
     nodelist_set_consensus(c);
@@ -2167,7 +2167,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
   warn_early_consensus(c, flavor, now);
 
-  /* We got a new consesus. Reset our md fetch fail cache */
+  /* We got a new consensus. Reset our md fetch fail cache */
   microdesc_reset_outdated_dirservers_list();
 
   router_dir_info_changed();
@@ -2764,4 +2764,48 @@ networkstatus_free_all(void)
       waiting->consensus = NULL;
     }
   }
+}
+
+/** Return the start of the next interval of size <b>interval</b> (in
+ * seconds) after <b>now</b>, plus <b>offset</b>. Midnight always
+ * starts a fresh interval, and if the last interval of a day would be
+ * truncated to less than half its size, it is rolled into the
+ * previous interval. */
+time_t
+voting_sched_get_start_of_interval_after(time_t now, int interval,
+                                           int offset)
+{
+  struct tm tm;
+  time_t midnight_today=0;
+  time_t midnight_tomorrow;
+  time_t next;
+
+  tor_gmtime_r(&now, &tm);
+  tm.tm_hour = 0;
+  tm.tm_min = 0;
+  tm.tm_sec = 0;
+
+  if (tor_timegm(&tm, &midnight_today) < 0) {
+    // LCOV_EXCL_START
+    log_warn(LD_BUG, "Ran into an invalid time when trying to find midnight.");
+    // LCOV_EXCL_STOP
+  }
+  midnight_tomorrow = midnight_today + (24*60*60);
+
+  next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
+
+  /* Intervals never cross midnight. */
+  if (next > midnight_tomorrow)
+    next = midnight_tomorrow;
+
+  /* If the interval would only last half as long as it's supposed to, then
+   * skip over to the next day. */
+  if (next + interval/2 > midnight_tomorrow)
+    next = midnight_tomorrow;
+
+  next += offset;
+  if (next - interval > now)
+    next -= interval;
+
+  return next;
 }

@@ -13,7 +13,7 @@
 #include "feature/dirparse/authcert_parse.h"
 #include "feature/dirparse/ns_parse.h"
 #include "test/test_dir_common.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/networkstatus_st.h"

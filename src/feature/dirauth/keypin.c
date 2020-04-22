@@ -118,14 +118,14 @@ return (unsigned) siphash24g(a->ed25519_key, sizeof(a->ed25519_key));
 }
 
 HT_PROTOTYPE(rsamap, keypin_ent_st, rsamap_node, keypin_ent_hash_rsa,
-               keypin_ents_eq_rsa)
+             keypin_ents_eq_rsa);
 HT_GENERATE2(rsamap, keypin_ent_st, rsamap_node, keypin_ent_hash_rsa,
-               keypin_ents_eq_rsa, 0.6, tor_reallocarray, tor_free_)
+             keypin_ents_eq_rsa, 0.6, tor_reallocarray, tor_free_);
 
 HT_PROTOTYPE(edmap, keypin_ent_st, edmap_node, keypin_ent_hash_ed,
-               keypin_ents_eq_ed)
+             keypin_ents_eq_ed);
 HT_GENERATE2(edmap, keypin_ent_st, edmap_node, keypin_ent_hash_ed,
-               keypin_ents_eq_ed, 0.6, tor_reallocarray, tor_free_)
+             keypin_ents_eq_ed, 0.6, tor_reallocarray, tor_free_);
 
 /**
  * Check whether we already have an entry in the key pinning table for a

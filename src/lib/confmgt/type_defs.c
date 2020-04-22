@@ -121,8 +121,9 @@ int_parse(void *target, const char *value, char **errmsg, const void *params)
   int ok=0;
   *p = (int)tor_parse_long(value, 10, pp->minval, pp->maxval, &ok, NULL);
   if (!ok) {
-    tor_asprintf(errmsg, "Integer %s is malformed or out of bounds.",
-                 value);
+    tor_asprintf(errmsg, "Integer %s is malformed or out of bounds. "
+                 "Allowed values are between %d and %d.",
+                 value, pp->minval, pp->maxval);
     return -1;
   }
   return 0;
@@ -228,10 +229,16 @@ units_parse_u64(void *target, const char *value, char **errmsg,
   tor_assert(table);
   uint64_t *v = (uint64_t*)target;
   int ok=1;
-  *v = config_parse_units(value, table, &ok);
+  char *msg = NULL;
+  *v = config_parse_units(value, table, &ok, &msg);
   if (!ok) {
-    *errmsg = tor_strdup("Provided value is malformed or out of bounds.");
+    tor_asprintf(errmsg, "Provided value is malformed or out of bounds: %s",
+                 msg);
+    tor_free(msg);
     return -1;
+  }
+  if (BUG(msg)) {
+    tor_free(msg);
   }
   return 0;
 }
@@ -244,10 +251,16 @@ units_parse_int(void *target, const char *value, char **errmsg,
   tor_assert(table);
   int *v = (int*)target;
   int ok=1;
-  uint64_t u64 = config_parse_units(value, table, &ok);
+  char *msg = NULL;
+  uint64_t u64 = config_parse_units(value, table, &ok, &msg);
   if (!ok) {
-    *errmsg = tor_strdup("Provided value is malformed or out of bounds.");
+    tor_asprintf(errmsg, "Provided value is malformed or out of bounds: %s",
+                 msg);
+    tor_free(msg);
     return -1;
+  }
+  if (BUG(msg)) {
+    tor_free(msg);
   }
   if (u64 > INT_MAX) {
     tor_asprintf(errmsg, "Provided value %s is too large", value);
@@ -348,11 +361,17 @@ typedef struct enumeration_table_t {
   int value;
 } enumeration_table_t;
 
+typedef struct enumeration_params_t {
+  const char *allowed_val_string;
+  const enumeration_table_t *table;
+} enumeration_params_t;
+
 static int
 enum_parse(void *target, const char *value, char **errmsg,
-           const void *params)
+           const void *params_)
 {
-  const enumeration_table_t *table = params;
+  const enumeration_params_t *params = params_;
+  const enumeration_table_t *table = params->table;
   int *p = (int *)target;
   for (; table->name; ++table) {
     if (!strcasecmp(value, table->name)) {
@@ -360,15 +379,17 @@ enum_parse(void *target, const char *value, char **errmsg,
       return 0;
     }
   }
-  tor_asprintf(errmsg, "Unrecognized value %s.", value);
+  tor_asprintf(errmsg, "Unrecognized value %s. %s",
+               value, params->allowed_val_string);
   return -1;
 }
 
 static char *
-enum_encode(const void *value, const void *params)
+enum_encode(const void *value, const void *params_)
 {
   int v = *(const int*)value;
-  const enumeration_table_t *table = params;
+  const enumeration_params_t *params = params_;
+  const enumeration_table_t *table = params->table;
   for (; table->name; ++table) {
     if (v == table->value)
       return tor_strdup(table->name);
@@ -377,19 +398,21 @@ enum_encode(const void *value, const void *params)
 }
 
 static void
-enum_clear(void *value, const void *params)
+enum_clear(void *value, const void *params_)
 {
   int *p = (int*)value;
-  const enumeration_table_t *table = params;
+  const enumeration_params_t *params = params_;
+  const enumeration_table_t *table = params->table;
   tor_assert(table->name);
   *p = table->value;
 }
 
 static bool
-enum_ok(const void *value, const void *params)
+enum_ok(const void *value, const void *params_)
 {
   int v = *(const int*)value;
-  const enumeration_table_t *table = params;
+  const enumeration_params_t *params = params_;
+  const enumeration_table_t *table = params->table;
   for (; table->name; ++table) {
     if (v == table->value)
       return true;
@@ -403,11 +426,21 @@ static const enumeration_table_t enum_table_bool[] = {
   { NULL, 0 },
 };
 
+static const enumeration_params_t enum_params_bool = {
+  "Allowed values are 0 and 1.",
+  enum_table_bool
+};
+
 static const enumeration_table_t enum_table_autobool[] = {
   { "0", 0 },
   { "1", 1 },
   { "auto", -1 },
   { NULL, 0 },
+};
+
+static const enumeration_params_t enum_params_autobool = {
+  "Allowed values are 0, 1, and auto.",
+  enum_table_autobool
 };
 
 static const var_type_fns_t enum_fns = {
@@ -740,10 +773,10 @@ const var_type_def_t DOUBLE_type_defn = {
   .name="Float", .fns=&double_fns, };
 const var_type_def_t BOOL_type_defn = {
   .name="Boolean", .fns=&enum_fns,
-  .params=&enum_table_bool };
+  .params=&enum_params_bool };
 const var_type_def_t AUTOBOOL_type_defn = {
   .name="Boolean+Auto", .fns=&enum_fns,
-  .params=&enum_table_autobool };
+  .params=&enum_params_autobool };
 const var_type_def_t ISOTIME_type_defn = {
   .name="Time", .fns=&time_fns, };
 const var_type_def_t CSV_type_defn = {

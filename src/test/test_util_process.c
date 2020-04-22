@@ -67,15 +67,16 @@ test_util_process_clear_waitpid_callback(void *ignored)
 }
 #endif /* !defined(_WIN32) */
 
+#ifndef COCCI
 #ifndef _WIN32
-#define TEST(name) { #name, test_util_process_##name, 0, NULL, NULL }
+#define TEST(name) { (#name), test_util_process_##name, 0, NULL, NULL }
 #else
-#define TEST(name) { #name, NULL, TT_SKIP, NULL, NULL }
+#define TEST(name) { (#name), NULL, TT_SKIP, NULL, NULL }
 #endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t util_process_tests[] = {
   TEST(set_waitpid_callback),
   TEST(clear_waitpid_callback),
   END_OF_TESTCASES
 };
-

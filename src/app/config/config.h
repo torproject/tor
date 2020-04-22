@@ -42,6 +42,8 @@ const char *escaped_safe_str(const char *address);
 void init_protocol_warning_severity_level(void);
 int get_protocol_warning_severity_level(void);
 
+#define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())
+
 /** An error from options_trial_assign() or options_init_from_string(). */
 typedef enum setopt_err_t {
   SETOPT_OK = 0,
@@ -318,6 +320,10 @@ int options_validate(const or_options_t *old_options,
                      or_options_t *options,
                      char **msg);
 #endif
+
+STATIC int parse_ports(or_options_t *options, int validate_only,
+                       char **msg, int *n_ports_out,
+                       int *world_writable_control_socket);
 
 #endif /* defined(CONFIG_PRIVATE) */
 

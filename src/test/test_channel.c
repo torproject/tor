@@ -1381,7 +1381,7 @@ test_channel_for_extend(void *arg)
   tt_str_op(msg, OP_EQ, "Connection is fine; using it.");
 
   /* Same creation time, num circuits will be used and they both have 0 so the
-   * channel 2 should be picked due to how channel_is_better() work. */
+   * channel 2 should be picked due to how channel_is_better() works. */
   chan2->timestamp_created = chan1->timestamp_created;
   ret_chan = channel_get_for_extend(digest, &ed_id, &addr, &msg, &launch);
   tt_assert(ret_chan);

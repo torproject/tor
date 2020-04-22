@@ -5,7 +5,6 @@
    tp fn():./dubious.c:15
       Wide:./dubious.c:17
        TAB:./dubious.c:24
- nosplabel:./dubious.c:26
         CR:./dubious.c:30
  Space@EOL:./dubious.c:32
  non-K&R {:./dubious.c:39

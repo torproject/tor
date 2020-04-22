@@ -153,9 +153,9 @@ node_id_eq(const node_t *node1, const node_t *node2)
   return tor_memeq(node1->identity, node2->identity, DIGEST_LEN);
 }
 
-HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq)
+HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq);
 HT_GENERATE2(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             0.6, tor_reallocarray_, tor_free_);
 
 static inline unsigned int
 node_ed_id_hash(const node_t *node)
@@ -170,9 +170,9 @@ node_ed_id_eq(const node_t *node1, const node_t *node2)
 }
 
 HT_PROTOTYPE(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
-             node_ed_id_eq)
+             node_ed_id_eq);
 HT_GENERATE2(nodelist_ed_map, node_t, ed_ht_ent, node_ed_id_hash,
-             node_ed_id_eq, 0.6, tor_reallocarray_, tor_free_)
+             node_ed_id_eq, 0.6, tor_reallocarray_, tor_free_);
 
 /** The global nodelist. */
 static nodelist_t *the_nodelist=NULL;
@@ -1074,8 +1074,8 @@ node_get_by_nickname,(const char *nickname, unsigned flags))
 
 /** Return the Ed25519 identity key for the provided node, or NULL if it
  * doesn't have one. */
-const ed25519_public_key_t *
-node_get_ed25519_id(const node_t *node)
+MOCK_IMPL(const ed25519_public_key_t *,
+node_get_ed25519_id,(const node_t *node))
 {
   const ed25519_public_key_t *ri_pk = NULL;
   const ed25519_public_key_t *md_pk = NULL;
@@ -1158,9 +1158,9 @@ node_get_protover_summary_flags(const node_t *node)
  * by ed25519 ID during the link handshake.  If <b>compatible_with_us</b>,
  * it needs to be using a link authentication method that we understand.
  * If not, any plausible link authentication method will do. */
-int
-node_supports_ed25519_link_authentication(const node_t *node,
-                                          int compatible_with_us)
+MOCK_IMPL(int,
+node_supports_ed25519_link_authentication,(const node_t *node,
+                                           int compatible_with_us))
 {
   if (! node_get_ed25519_id(node))
     return 0;

@@ -36,7 +36,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/client/entrynodes.h" /* needed for guardfraction methods */
 #include "feature/nodelist/torcert.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
@@ -886,7 +886,7 @@ dirvote_get_intermediate_param_value(const smartlist_t *param_list,
       int ok;
       value = (int32_t)
         tor_parse_long(integer_str, 10, INT32_MIN, INT32_MAX, &ok, NULL);
-      if (BUG(! ok))
+      if (BUG(!ok))
         return default_val;
       ++n_found;
     }
@@ -2527,9 +2527,12 @@ compute_consensus_package_lines(smartlist_t *votes)
  * any new signatures in <b>src_voter_list</b> that should be added to
  * <b>target</b>. (A signature should be added if we have no signature for that
  * voter in <b>target</b> yet, or if we have no verifiable signature and the
- * new signature is verifiable.)  Return the number of signatures added or
- * changed, or -1 if the document signed by <b>sigs</b> isn't the same
- * document as <b>target</b>. */
+ * new signature is verifiable.)
+ *
+ * Return the number of signatures added or changed, or -1 if the document
+ * signatures are invalid. Sets *<b>msg_out</b> to a string constant
+ * describing the signature status.
+ */
 STATIC int
 networkstatus_add_detached_signatures(networkstatus_t *target,
                                       ns_detached_signatures_t *sigs,
@@ -2850,7 +2853,7 @@ dirvote_act(const or_options_t *options, time_t now)
                "Mine is %s.",
                keys, hex_str(c->cache_info.identity_digest, DIGEST_LEN));
     tor_free(keys);
-    voting_schedule_recalculate_timing(options, now);
+    dirauth_sched_recalculate_timing(options, now);
   }
 
 #define IF_TIME_FOR_NEXT_ACTION(when_field, done_field) \
@@ -2896,7 +2899,7 @@ dirvote_act(const or_options_t *options, time_t now)
                 networkstatus_get_latest_consensus_by_flavor(FLAV_NS));
     /* XXXX We will want to try again later if we haven't got enough
      * signatures yet.  Implement this if it turns out to ever happen. */
-    voting_schedule_recalculate_timing(options, now);
+    dirauth_sched_recalculate_timing(options, now);
     return voting_schedule.voting_starts;
   } ENDIF
 
@@ -3595,6 +3598,14 @@ dirvote_add_signatures_to_pending_consensus(
   return r;
 }
 
+/** Helper: we just got the <b>detached_signatures_body</b> sent to us as
+ * signatures on the currently pending consensus.  Add them to the pending
+ * consensus (if we have one).
+ *
+ * Set *<b>msg</b> to a string constant describing the status, regardless of
+ * success or failure.
+ *
+ * Return negative on failure, nonnegative on success. */
 static int
 dirvote_add_signatures_to_all_pending_consensuses(
                        const char *detached_signatures_body,
@@ -3657,7 +3668,12 @@ dirvote_add_signatures_to_all_pending_consensuses(
 /** Helper: we just got the <b>detached_signatures_body</b> sent to us as
  * signatures on the currently pending consensus.  Add them to the pending
  * consensus (if we have one); otherwise queue them until we have a
- * consensus.  Return negative on failure, nonnegative on success. */
+ * consensus.
+ *
+ * Set *<b>msg</b> to a string constant describing the status, regardless of
+ * success or failure.
+ *
+ * Return negative on failure, nonnegative on success. */
 int
 dirvote_add_signatures(const char *detached_signatures_body,
                        const char *source,
@@ -4628,7 +4644,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     else
       last_consensus_interval = options->TestingV3AuthInitialVotingInterval;
     v3_out->valid_after =
-      voting_schedule_get_start_of_next_interval(now,
+      voting_sched_get_start_of_interval_after(now,
                                    (int)last_consensus_interval,
                                    options->TestingV3AuthVotingStartOffset);
     format_iso_time(tbuf, v3_out->valid_after);

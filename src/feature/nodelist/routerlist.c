@@ -117,9 +117,9 @@
 /* Typed wrappers for different digestmap types; used to avoid type
  * confusion. */
 
-DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
-DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
-DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
+DECLARE_TYPED_DIGESTMAP_FNS(sdmap, digest_sd_map_t, signed_descriptor_t)
+DECLARE_TYPED_DIGESTMAP_FNS(rimap, digest_ri_map_t, routerinfo_t)
+DECLARE_TYPED_DIGESTMAP_FNS(eimap, digest_ei_map_t, extrainfo_t)
 #define SDMAP_FOREACH(map, keyvar, valvar)                              \
   DIGESTMAP_FOREACH(sdmap_to_digestmap(map), keyvar, signed_descriptor_t *, \
                     valvar)
@@ -2922,7 +2922,7 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
       (r1->bandwidthburst != r2->bandwidthburst))
     return 0;
 
-  /* Did more than 12 hours pass? */
+  /* Has enough time passed between the publication times? */
   if (r1->cache_info.published_on + ROUTER_MAX_COSMETIC_TIME_DIFFERENCE
       < r2->cache_info.published_on)
     return 0;

@@ -18,7 +18,8 @@
  * tortls.c) which it uses as its TLS stream.  It is responsible for
  * sending and receiving cells over that TLS.
  *
- * This module also implements the client side of the v3 Tor link handshake,
+ * This module also implements the client side of the v3 (and greater) Tor
+ * link handshake.
  **/
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
@@ -1212,11 +1213,11 @@ or_connect_failure_ht_hash(const or_connect_failure_entry_t *entry)
 }
 
 HT_PROTOTYPE(or_connect_failure_ht, or_connect_failure_entry_t, node,
-             or_connect_failure_ht_hash, or_connect_failure_ht_eq)
+             or_connect_failure_ht_hash, or_connect_failure_ht_eq);
 
 HT_GENERATE2(or_connect_failure_ht, or_connect_failure_entry_t, node,
              or_connect_failure_ht_hash, or_connect_failure_ht_eq,
-             0.6, tor_reallocarray_, tor_free_)
+             0.6, tor_reallocarray_, tor_free_);
 
 /* Initialize a given connect failure entry with the given identity_digest,
  * addr and port. All field are optional except ocf. */

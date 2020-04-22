@@ -81,6 +81,7 @@
 /****************************************************************************/
 
 /** List of tokens recognized in router descriptors */
+// clang-format off
 const token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
@@ -123,8 +124,10 @@ const token_rule_t routerdesc_token_table[] = {
 
   END_OF_TABLE
 };
+// clang-format on
 
 /** List of tokens recognized in extra-info documents. */
+// clang-format off
 static token_rule_t extrainfo_token_table[] = {
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
@@ -162,6 +165,7 @@ static token_rule_t extrainfo_token_table[] = {
 
   END_OF_TABLE
 };
+// clang-format on
 
 #undef T
 

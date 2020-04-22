@@ -967,9 +967,14 @@ test_failed_orconn_tracker(void *arg)
 #define CONNECTION_TESTCASE(name, fork, setup)                           \
   { #name, test_conn_##name, fork, &setup, NULL }
 
+#define STR(x) #x
 /* where arg is an expression (constant, variable, compound expression) */
-#define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)                  \
-  { #name "_" #arg, test_conn_##name, fork, &setup, (void *)arg }
+#define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)                 \
+  { #name "_" STR(x),                                                   \
+      test_conn_##name,                                                 \
+      fork,                                                             \
+      &setup,                                                           \
+      (void *)arg }
 #endif /* !defined(COCCI) */
 
 static const unsigned int PROXY_CONNECT_ARG = PROXY_CONNECT;

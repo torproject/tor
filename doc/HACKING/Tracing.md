@@ -1,16 +1,16 @@
-# Tracing #
+# Tracing
 
 This document describes how the event tracing subsystem works in tor so
 developers can add events to the code base but also hook them to an event
 tracing framework.
 
-## Basics ###
+## Basics
 
 Event tracing is separated in two concepts, trace events and a tracer. The
 tracing subsystem can be found in `src/trace`. The `events.h` header file is
 the main file that maps the different tracers to trace events.
 
-### Events ###
+### Events
 
 A trace event is basically a function from which we can pass any data that
 we want to collect. In addition, we specify a context for the event such as
@@ -39,7 +39,7 @@ How `argc` is collected or used has nothing to do with the instrumentation
 the trace events and collection framework (tracer) are decoupled. You _can_
 have trace events without a tracer.
 
-### Tracer ###
+### Tracer
 
 In `src/trace/events.h`, we map the `tor_trace()` function to the right
 tracer. A tracer support is only enabled at compile time. For instance, the
@@ -47,7 +47,7 @@ file `src/trace/debug.h` contains the mapping of the generic tracing function
 `tor_trace()` to the `log_debug()` function. More specialized function can be
 mapped depending on the tracepoint.
 
-## Build System ##
+## Build System
 
 This section describes how it is integrated into the build system of tor.
 
@@ -66,7 +66,7 @@ configure option:
 
 	--enable-tracing-debug
 
-## Instrument Tor ##
+## Instrument Tor
 
 This is pretty easy. Let's say you want to add a trace event in
 `src/feature/rend/rendcache.c`, you only have to add this include statement:

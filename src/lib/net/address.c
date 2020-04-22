@@ -97,7 +97,7 @@
  * work correctly. Bail out here if we've found a platform where AF_UNSPEC
  * isn't 0. */
 #if AF_UNSPEC != 0
-#error We rely on AF_UNSPEC being 0. Let us know about your platform, please!
+#error "We rely on AF_UNSPEC being 0. Yours isn't. Please tell us more!"
 #endif
 CTASSERT(AF_UNSPEC == 0);
 
@@ -817,8 +817,12 @@ tor_addr_is_loopback(const tor_addr_t *addr)
 
 /* Is addr valid?
  * Checks that addr is non-NULL and not tor_addr_is_null().
- * If for_listening is true, IPv4 addr 0.0.0.0 is allowed.
- * It means "bind to all addresses on the local machine". */
+ * If for_listening is true, all IPv4 and IPv6 addresses are valid, including
+ * 0.0.0.0 (for IPv4) and :: (for IPv6). When listening, these addresses mean
+ * "bind to all addresses on the local machine".
+ * Otherwise, 0.0.0.0 and ::  are invalid, because they are null addresses.
+ * All unspecified and unix addresses are invalid, regardless of for_listening.
+ */
 int
 tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
 {
@@ -827,10 +831,11 @@ tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
     return 0;
   }
 
-  /* Only allow IPv4 0.0.0.0 for_listening. */
-  if (for_listening && addr->family == AF_INET
-      && tor_addr_to_ipv4h(addr) == 0) {
-    return 1;
+  /* Allow all IPv4 and IPv6 addresses, when for_listening is true */
+  if (for_listening) {
+    if (addr->family == AF_INET || addr->family == AF_INET6) {
+      return 1;
+    }
   }
 
   /* Otherwise, the address is valid if it's not tor_addr_is_null() */

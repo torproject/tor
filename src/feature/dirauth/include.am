@@ -19,7 +19,8 @@ MODULE_DIRAUTH_SOURCES =					\
 	src/feature/dirauth/recommend_pkg.c			\
 	src/feature/dirauth/shared_random.c			\
 	src/feature/dirauth/shared_random_state.c		\
-	src/feature/dirauth/voteflags.c
+	src/feature/dirauth/voteflags.c				\
+	src/feature/dirauth/voting_schedule.c
 
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
@@ -43,7 +44,8 @@ noinst_HEADERS +=					\
 	src/feature/dirauth/shared_random.h		\
 	src/feature/dirauth/shared_random_state.h	\
 	src/feature/dirauth/vote_microdesc_hash_st.h	\
-	src/feature/dirauth/voteflags.h
+	src/feature/dirauth/voteflags.h			\
+	src/feature/dirauth/voting_schedule.h
 
 if BUILD_MODULE_DIRAUTH
 LIBTOR_APP_A_SOURCES += $(MODULE_DIRAUTH_SOURCES)

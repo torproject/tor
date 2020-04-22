@@ -99,7 +99,7 @@
 #include "feature/nodelist/dirlist.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/dirauth/shared_random_state.h"
-#include "feature/dircommon/voting_schedule.h"
+#include "feature/dirauth/voting_schedule.h"
 
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
@@ -1261,7 +1261,7 @@ sr_act_post_consensus(const networkstatus_t *consensus)
   }
 
   /* Prepare our state so that it's ready for the next voting period. */
-  sr_state_update(voting_schedule_get_next_valid_after_time());
+  sr_state_update(dirauth_sched_get_next_valid_after_time());
 }
 
 /** Initialize shared random subsystem. This MUST be called early in the boot

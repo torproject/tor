@@ -44,7 +44,8 @@ def is_c_file(fn):
        False
     """
     fn = os.path.split(fn)[1]
-    if fn.startswith("."):
+    # Avoid editor temporary files
+    if fn.startswith(".") or fn.startswith("#"):
         return False
     ext = os.path.splitext(fn)[1]
     return ext in {".c", ".h", ".i", ".inc"}

@@ -1850,6 +1850,56 @@ test_util_config_line_crlf(void *arg)
   tor_free(k); tor_free(v);
 }
 
+static void
+test_util_config_line_partition(void *arg)
+{
+  (void)arg;
+  config_line_t *lines = NULL, *orig, *rest = NULL;
+
+  config_line_append(&lines, "Header", "X");
+  config_line_append(&lines, "Item", "Y");
+  config_line_append(&lines, "Thing", "Z");
+
+  config_line_append(&lines, "HEADER", "X2");
+
+  config_line_append(&lines, "header", "X3");
+  config_line_append(&lines, "Item3", "Foob");
+
+  /* set up h2 and h3 to point to the places where we hope the headers will
+     be. */
+  config_line_t *h2 = lines->next->next->next;
+  config_line_t *h3 = h2->next;
+  tt_str_op(h2->key, OP_EQ, "HEADER");
+  tt_str_op(h3->key, OP_EQ, "header");
+
+  orig = lines;
+  rest = config_lines_partition(lines, "Header");
+  tt_ptr_op(lines, OP_EQ, orig);
+  tt_ptr_op(rest, OP_EQ, h2);
+  tt_str_op(lines->next->key, OP_EQ, "Item");
+  tt_str_op(lines->next->next->key, OP_EQ, "Thing");
+  tt_ptr_op(lines->next->next->next, OP_EQ, NULL);
+  config_free_lines(lines);
+
+  orig = lines = rest;
+  rest = config_lines_partition(lines, "Header");
+  tt_ptr_op(lines, OP_EQ, orig);
+  tt_ptr_op(rest, OP_EQ, h3);
+  tt_ptr_op(lines->next, OP_EQ, NULL);
+  config_free_lines(lines);
+
+  orig = lines = rest;
+  rest = config_lines_partition(lines, "Header");
+  tt_ptr_op(lines, OP_EQ, orig);
+  tt_ptr_op(rest, OP_EQ, NULL);
+  tt_str_op(lines->next->key, OP_EQ, "Item3");
+  tt_ptr_op(lines->next->next, OP_EQ, NULL);
+
+ done:
+  config_free_lines(lines);
+  config_free_lines(rest);
+}
+
 #ifndef DISABLE_PWDB_TESTS
 static void
 test_util_expand_filename(void *arg)
@@ -6334,42 +6384,42 @@ test_util_map_anon_nofork(void *arg)
 
 #ifndef COCCI
 #define UTIL_LEGACY(name)                                               \
-  { #name, test_util_ ## name , 0, NULL, NULL }
+  { (#name), test_util_ ## name , 0, NULL, NULL }
 
 #define UTIL_TEST(name, flags)                          \
-  { #name, test_util_ ## name, flags, NULL, NULL }
+  { (#name), test_util_ ## name, flags, NULL, NULL }
 
 #define COMPRESS(name, identifier)              \
-  { "compress/" #name, test_util_compress, 0, &compress_setup,          \
+  { ("compress/" #name), test_util_compress, 0, &compress_setup,        \
     (char*)(identifier) }
 
 #define COMPRESS_CONCAT(name, identifier)                               \
-  { "compress_concat/" #name, test_util_decompress_concatenated, 0,     \
+  { ("compress_concat/" #name), test_util_decompress_concatenated, 0,   \
     &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_JUNK(name, identifier)                                 \
-  { "compress_junk/" #name, test_util_decompress_junk, 0,               \
+  { ("compress_junk/" #name), test_util_decompress_junk, 0,             \
     &compress_setup,                                                    \
     (char*)(identifier) }
 
 #define COMPRESS_DOS(name, identifier)                                  \
-  { "compress_dos/" #name, test_util_decompress_dos, 0,                 \
+  { ("compress_dos/" #name), test_util_decompress_dos, 0,               \
     &compress_setup,                                                    \
     (char*)(identifier) }
-#endif /* !defined(COCCI) */
 
 #ifdef _WIN32
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
 #else
-#define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#define UTIL_TEST_WIN_ONLY(n, f) { (#n), NULL, TT_SKIP, NULL, NULL }
 #endif
 
 #ifdef DISABLE_PWDB_TESTS
-#define UTIL_TEST_PWDB(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#define UTIL_TEST_PWDB(n, f) { (#n), NULL, TT_SKIP, NULL, NULL }
 #else
 #define UTIL_TEST_PWDB(n, f) UTIL_TEST(n, (f))
 #endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
@@ -6379,6 +6429,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
   UTIL_LEGACY(config_line_crlf),
+  UTIL_TEST(config_line_partition, 0),
   UTIL_TEST_PWDB(expand_filename, 0),
   UTIL_LEGACY(escape_string_socks),
   UTIL_LEGACY(string_is_key_value),

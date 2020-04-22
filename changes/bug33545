@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden services):
+    - Block a client-side assert by disallowing the registration of an x25519
+      client auth key that's all zeroes. Fixes bug 33545; bugfix on
+      0.4.3.1-alpha. Patch based on patch from "cypherpunks".

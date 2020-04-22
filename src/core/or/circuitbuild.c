@@ -21,8 +21,7 @@
  * cells arrive, the client will invoke circuit_send_next_onion_skin() to send
  * CREATE or RELAY_EXTEND cells.
  *
- * On the server side, this module also handles the logic of responding to
- * RELAY_EXTEND requests, using circuit_extend().
+ * The server side is handled in feature/relay/circuitbuild_relay.c.
  **/
 
 #define CIRCUITBUILD_PRIVATE
@@ -35,7 +34,6 @@
 #include "core/crypto/onion_crypto.h"
 #include "core/crypto/onion_fast.h"
 #include "core/crypto/onion_tap.h"
-#include "core/crypto/relay_crypto.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
 #include "core/or/channel.h"
@@ -84,13 +82,6 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
 
-static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
-                                            uint16_t port,
-                                            const char *id_digest,
-                                            const ed25519_public_key_t *ed_id);
-static int circuit_deliver_create_cell(circuit_t *circ,
-                                       const create_cell_t *create_cell,
-                                       int relayed);
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
 static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
@@ -104,10 +95,10 @@ static const node_t *choose_good_middle_server(uint8_t purpose,
  * and then calls command_setup_channel() to give it the right
  * callbacks.
  */
-static channel_t *
-channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
-                            const char *id_digest,
-                            const ed25519_public_key_t *ed_id)
+MOCK_IMPL(channel_t *,
+channel_connect_for_circuit,(const tor_addr_t *addr, uint16_t port,
+                             const char *id_digest,
+                             const struct ed25519_public_key_t *ed_id))
 {
   channel_t *chan;
 
@@ -707,9 +698,10 @@ circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits)
  * gave us via an EXTEND cell, so we shouldn't worry if we don't understand
  * it. Return -1 if we failed to find a suitable circid, else return 0.
  */
-static int
-circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
-                            int relayed)
+MOCK_IMPL(int,
+circuit_deliver_create_cell,(circuit_t *circ,
+                             const struct create_cell_t *create_cell,
+                             int relayed))
 {
   cell_t cell;
   circid_t id;
@@ -765,40 +757,6 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
  error:
   circ->n_chan = NULL;
   return -1;
-}
-
-/** We've decided to start our reachability testing. If all
- * is set, log this to the user. Return 1 if we did, or 0 if
- * we chose not to log anything. */
-int
-inform_testing_reachability(void)
-{
-  char dirbuf[128];
-  char *address;
-  const routerinfo_t *me = router_get_my_routerinfo();
-  if (!me)
-    return 0;
-  address = tor_dup_ip(me->addr);
-  control_event_server_status(LOG_NOTICE,
-                              "CHECKING_REACHABILITY ORADDRESS=%s:%d",
-                              address, me->or_port);
-  if (me->dir_port) {
-    tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
-                 address, me->dir_port);
-    control_event_server_status(LOG_NOTICE,
-                                "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
-                                address, me->dir_port);
-  }
-  log_notice(LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... "
-                         "(this may take up to %d minutes -- look for log "
-                         "messages indicating success)",
-      address, me->or_port,
-      me->dir_port ? dirbuf : "",
-      me->dir_port ? "are" : "is",
-      TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
-
-  tor_free(address);
-  return 1;
 }
 
 /** Return true iff we should send a create_fast cell to start building a given
@@ -1200,164 +1158,6 @@ circuit_note_clock_jumped(int64_t seconds_elapsed, bool was_idle)
   }
 }
 
-/** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
- * skin and identity digest for the next hop. If we're already connected,
- * pass the onion skin to the next hop using a create cell; otherwise
- * launch a new OR connection, and <b>circ</b> will notice when the
- * connection succeeds or fails.
- *
- * Return -1 if we want to warn and tear down the circuit, else return 0.
- */
-int
-circuit_extend(cell_t *cell, circuit_t *circ)
-{
-  channel_t *n_chan;
-  relay_header_t rh;
-  extend_cell_t ec;
-  const char *msg = NULL;
-  int should_launch = 0;
-
-  if (circ->n_chan) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "n_chan already set. Bug/attack. Closing.");
-    return -1;
-  }
-  if (circ->n_hop) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "conn to next hop already launched. Bug/attack. Closing.");
-    return -1;
-  }
-
-  if (!server_mode(get_options())) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Got an extend cell, but running as a client. Closing.");
-    return -1;
-  }
-
-  relay_header_unpack(&rh, cell->payload);
-
-  if (extend_cell_parse(&ec, rh.command,
-                        cell->payload+RELAY_HEADER_SIZE,
-                        rh.length) < 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Can't parse extend cell. Closing circuit.");
-    return -1;
-  }
-
-  if (!ec.orport_ipv4.port || tor_addr_is_null(&ec.orport_ipv4.addr)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to zero destination port or addr.");
-    return -1;
-  }
-
-  if (tor_addr_is_internal(&ec.orport_ipv4.addr, 0) &&
-      !get_options()->ExtendAllowPrivateAddresses) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to a private address");
-    return -1;
-  }
-
-  /* Check if they asked us for 0000..0000. We support using
-   * an empty fingerprint for the first hop (e.g. for a bridge relay),
-   * but we don't want to let clients send us extend cells for empty
-   * fingerprints -- a) because it opens the user up to a mitm attack,
-   * and b) because it lets an attacker force the relay to hold open a
-   * new TLS connection for each extend request. */
-  if (tor_digest_is_zero((const char*)ec.node_id)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend without specifying an id_digest.");
-    return -1;
-  }
-
-  /* Fill in ed_pubkey if it was not provided and we can infer it from
-   * our networkstatus */
-  if (ed25519_public_key_is_zero(&ec.ed_pubkey)) {
-    const node_t *node = node_get_by_id((const char*)ec.node_id);
-    const ed25519_public_key_t *node_ed_id = NULL;
-    if (node &&
-        node_supports_ed25519_link_authentication(node, 1) &&
-        (node_ed_id = node_get_ed25519_id(node))) {
-      ed25519_pubkey_copy(&ec.ed_pubkey, node_ed_id);
-    }
-  }
-
-  /* Next, check if we're being asked to connect to the hop that the
-   * extend cell came from. There isn't any reason for that, and it can
-   * assist circular-path attacks. */
-  if (tor_memeq(ec.node_id,
-                TO_OR_CIRCUIT(circ)->p_chan->identity_digest,
-                DIGEST_LEN)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend back to the previous hop.");
-    return -1;
-  }
-
-  /* Check the previous hop Ed25519 ID too */
-  if (! ed25519_public_key_is_zero(&ec.ed_pubkey) &&
-      ed25519_pubkey_eq(&ec.ed_pubkey,
-                        &TO_OR_CIRCUIT(circ)->p_chan->ed25519_identity)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend back to the previous hop "
-           "(by Ed25519 ID).");
-    return -1;
-  }
-
-  n_chan = channel_get_for_extend((const char*)ec.node_id,
-                                  &ec.ed_pubkey,
-                                  &ec.orport_ipv4.addr,
-                                  &msg,
-                                  &should_launch);
-
-  if (!n_chan) {
-    log_debug(LD_CIRC|LD_OR,"Next router (%s): %s",
-              fmt_addrport(&ec.orport_ipv4.addr,ec.orport_ipv4.port),
-              msg?msg:"????");
-
-    circ->n_hop = extend_info_new(NULL /*nickname*/,
-                                  (const char*)ec.node_id,
-                                  &ec.ed_pubkey,
-                                  NULL, /*onion_key*/
-                                  NULL, /*curve25519_key*/
-                                  &ec.orport_ipv4.addr,
-                                  ec.orport_ipv4.port);
-
-    circ->n_chan_create_cell = tor_memdup(&ec.create_cell,
-                                          sizeof(ec.create_cell));
-
-    circuit_set_state(circ, CIRCUIT_STATE_CHAN_WAIT);
-
-    if (should_launch) {
-      /* we should try to open a connection */
-      n_chan = channel_connect_for_circuit(&ec.orport_ipv4.addr,
-                                           ec.orport_ipv4.port,
-                                           (const char*)ec.node_id,
-                                           &ec.ed_pubkey);
-      if (!n_chan) {
-        log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
-        circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
-        return 0;
-      }
-      log_debug(LD_CIRC,"connecting in progress (or finished). Good.");
-    }
-    /* return success. The onion/circuit/etc will be taken care of
-     * automatically (may already have been) whenever n_chan reaches
-     * OR_CONN_STATE_OPEN.
-     */
-    return 0;
-  }
-
-  tor_assert(!circ->n_hop); /* Connection is already established. */
-  circ->n_chan = n_chan;
-  log_debug(LD_CIRC,
-            "n_chan is %s",
-            channel_get_canonical_remote_descr(n_chan));
-
-  if (circuit_deliver_create_cell(circ, &ec.create_cell, 1) < 0)
-    return -1;
-
-  return 0;
-}
-
 /** A "created" cell <b>reply</b> came back to us on circuit <b>circ</b>.
  * (The body of <b>reply</b> varies depending on what sort of handshake
  * this is.)
@@ -1465,61 +1265,6 @@ circuit_truncated(origin_circuit_t *circ, int reason)
   log_info(LD_CIRC, "finished");
   return 0;
 #endif /* 0 */
-}
-
-/** Given a response payload and keys, initialize, then send a created
- * cell back.
- */
-int
-onionskin_answer(or_circuit_t *circ,
-                 const created_cell_t *created_cell,
-                 const char *keys, size_t keys_len,
-                 const uint8_t *rend_circ_nonce)
-{
-  cell_t cell;
-
-  tor_assert(keys_len == CPATH_KEY_MATERIAL_LEN);
-
-  if (created_cell_format(&cell, created_cell) < 0) {
-    log_warn(LD_BUG,"couldn't format created cell (type=%d, len=%d)",
-             (int)created_cell->cell_type, (int)created_cell->handshake_len);
-    return -1;
-  }
-  cell.circ_id = circ->p_circ_id;
-
-  circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-
-  log_debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
-            (unsigned int)get_uint32(keys),
-            (unsigned int)get_uint32(keys+20));
-  if (relay_crypto_init(&circ->crypto, keys, keys_len, 0, 0)<0) {
-    log_warn(LD_BUG,"Circuit initialization failed");
-    return -1;
-  }
-
-  memcpy(circ->rend_circ_nonce, rend_circ_nonce, DIGEST_LEN);
-
-  int used_create_fast = (created_cell->cell_type == CELL_CREATED_FAST);
-
-  append_cell_to_circuit_queue(TO_CIRCUIT(circ),
-                               circ->p_chan, &cell, CELL_DIRECTION_IN, 0);
-  log_debug(LD_CIRC,"Finished sending '%s' cell.",
-            used_create_fast ? "created_fast" : "created");
-
-  /* Ignore the local bit when ExtendAllowPrivateAddresses is set:
-   * it violates the assumption that private addresses are local.
-   * Also, many test networks run on local addresses, and
-   * TestingTorNetwork sets ExtendAllowPrivateAddresses. */
-  if ((!channel_is_local(circ->p_chan)
-       || get_options()->ExtendAllowPrivateAddresses)
-      && !channel_is_outgoing(circ->p_chan)) {
-    /* record that we could process create cells from a non-local conn
-     * that we didn't initiate; presumably this means that create cells
-     * can reach us too. */
-    router_orport_found_reachable();
-  }
-
-  return 0;
 }
 
 /** Helper for new_route_len().  Choose a circuit length for purpose
