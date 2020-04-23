@@ -2899,7 +2899,7 @@ entry_guard_encode_for_state(entry_guard_t *guard, int dense_sampled_idx)
 }
 
 /**
- * Extract key=val from the state string <b>s</s> and duplicate the value to
+ * Extract key=val from the state string <b>s</b> and duplicate the value to
  * some string target declared in entry_guard_parse_from_state
  */
 static void
