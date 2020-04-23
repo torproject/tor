@@ -548,9 +548,10 @@ circuit_expire_building(void)
              MAX(get_circuit_build_close_time_ms()*2 + 1000,
                  options->SocksTimeout * 1000));
 
+  bool fixed_time = circuit_build_times_disabled(get_options());
+
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *,victim) {
     struct timeval cutoff;
-    bool fixed_time = circuit_build_times_disabled(get_options());
 
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
         victim->marked_for_close)     /* don't mess with marked circs */
