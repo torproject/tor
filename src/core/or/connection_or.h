@@ -22,10 +22,6 @@ or_connection_t *TO_OR_CONN(connection_t *);
 void connection_or_clear_identity(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
 void clear_broken_connection_map(int disable);
-or_connection_t *connection_or_get_for_extend(const char *digest,
-                                              const tor_addr_t *target_addr,
-                                              const char **msg_out,
-                                              int *launch_out);
 
 void connection_or_block_renegotiation(or_connection_t *conn);
 int connection_or_reached_eof(or_connection_t *conn);

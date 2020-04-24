@@ -1,0 +1,9 @@
+  o Minor bugfixes (IPv6, relay):
+    - Consider IPv6 addresses when checking if a connection is canonical.
+      In 17604, relays assumed that a remote relay could consider an IPv6
+      connection canonical, but did not set the canonical flag on their side
+      of the connection. Fixes bug 33899; bugfix on 0.3.1.1-alpha.
+    - Log IPv6 addresses on connections where this relay is the responder.
+      Previously, responding relays would replace the remote IPv6 address with
+      the IPv4 address from the consensus.
+      Fixes bug 33899; bugfix on 0.3.1.1-alpha.
