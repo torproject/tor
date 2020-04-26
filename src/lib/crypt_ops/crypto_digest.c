@@ -48,10 +48,14 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
       return "sha1";
     case DIGEST_SHA256:
       return "sha256";
+    case DIGEST_SHA384:
+      return "sha384";
     case DIGEST_SHA512:
       return "sha512";
     case DIGEST_SHA3_256:
       return "sha3-256";
+    case DIGEST_SHA3_384:
+      return "sha3-384";
     case DIGEST_SHA3_512:
       return "sha3-512";
       // LCOV_EXCL_START
@@ -71,10 +75,14 @@ crypto_digest_algorithm_parse_name(const char *name)
     return DIGEST_SHA1;
   else if (!strcmp(name, "sha256"))
     return DIGEST_SHA256;
+  else if (!strcmp(name, "sha384"))
+    return DIGEST_SHA384;
   else if (!strcmp(name, "sha512"))
     return DIGEST_SHA512;
   else if (!strcmp(name, "sha3-256"))
     return DIGEST_SHA3_256;
+  else if (!strcmp(name, "sha3-384"))
+    return DIGEST_SHA3_384;
   else if (!strcmp(name, "sha3-512"))
     return DIGEST_SHA3_512;
   else
@@ -90,10 +98,14 @@ crypto_digest_algorithm_get_length(digest_algorithm_t alg)
       return DIGEST_LEN;
     case DIGEST_SHA256:
       return DIGEST256_LEN;
+    case DIGEST_SHA384:
+      return DIGEST384_LEN;
     case DIGEST_SHA512:
       return DIGEST512_LEN;
     case DIGEST_SHA3_256:
       return DIGEST256_LEN;
+    case DIGEST_SHA3_384:
+      return DIGEST384_LEN;
     case DIGEST_SHA3_512:
       return DIGEST512_LEN;
     default:

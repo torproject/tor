@@ -27,6 +27,9 @@
 /** Length of a sha256 message digest when encoded in base64 with trailing =
  * signs removed. */
 #define BASE64_DIGEST256_LEN 43
+/** Length of a sha384 message digest when encoded in base64 with trailing =
+ * signs removed. */
+#define BASE64_DIGEST384_LEN 64
 /** Length of a sha512 message digest when encoded in base64 with trailing =
  * signs removed. */
 #define BASE64_DIGEST512_LEN 86
@@ -35,6 +38,8 @@
 #define HEX_DIGEST_LEN 40
 /** Length of hex encoding of SHA256 digest, not including final NUL. */
 #define HEX_DIGEST256_LEN 64
+/** Length of hex encoding of SHA384 digest, not including final NUL. */
+#define HEX_DIGEST384_LEN 96
 /** Length of hex encoding of SHA512 digest, not including final NUL. */
 #define HEX_DIGEST512_LEN 128
 
@@ -44,9 +49,11 @@
 typedef enum {
   DIGEST_SHA1 = 0,
   DIGEST_SHA256 = 1,
-  DIGEST_SHA512 = 2,
-  DIGEST_SHA3_256 = 3,
-  DIGEST_SHA3_512 = 4,
+  DIGEST_SHA384 = 2,
+  DIGEST_SHA512 = 3,
+  DIGEST_SHA3_256 = 4,
+  DIGEST_SHA3_384 = 5,
+  DIGEST_SHA3_512 = 6,
 } digest_algorithm_t;
 /** Number of digest algorithms that we know */
 #define  N_DIGEST_ALGORITHMS (DIGEST_SHA3_512+1)
@@ -106,6 +113,8 @@ struct smartlist_t;
 MOCK_DECL(int, crypto_digest,(char *digest, const char *m, size_t len));
 int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
+int crypto_digest384(char *digest, const char *m, size_t len,
+                     digest_algorithm_t algorithm);
 int crypto_digest512(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
 int crypto_common_digests(common_digests_t *ds_out, const char *m, size_t len);
@@ -122,6 +131,7 @@ size_t crypto_digest_algorithm_get_length(digest_algorithm_t alg);
 int crypto_digest_algorithm_parse_name(const char *name);
 crypto_digest_t *crypto_digest_new(void);
 crypto_digest_t *crypto_digest256_new(digest_algorithm_t algorithm);
+crypto_digest_t *crypto_digest384_new(digest_algorithm_t algorithm);
 crypto_digest_t *crypto_digest512_new(digest_algorithm_t algorithm);
 void crypto_digest_free_(crypto_digest_t *digest);
 /**

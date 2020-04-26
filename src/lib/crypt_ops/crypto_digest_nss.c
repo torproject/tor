@@ -36,8 +36,10 @@ digest_alg_to_nss_oid(digest_algorithm_t alg)
   switch (alg) {
     case DIGEST_SHA1: return SEC_OID_SHA1;
     case DIGEST_SHA256: return SEC_OID_SHA256;
+    case DIGEST_SHA384: return SEC_OID_SHA384;
     case DIGEST_SHA512: return SEC_OID_SHA512;
     case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_384: FALLTHROUGH;
     case DIGEST_SHA3_512: FALLTHROUGH;
     default:
       return SEC_OID_UNKNOWN;
@@ -91,9 +93,11 @@ library_supports_digest(digest_algorithm_t alg)
   switch (alg) {
     case DIGEST_SHA1: FALLTHROUGH;
     case DIGEST_SHA256: FALLTHROUGH;
+    case DIGEST_SHA384: FALLTHROUGH;
     case DIGEST_SHA512:
       return true;
     case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_384: FALLTHROUGH;
     case DIGEST_SHA3_512: FALLTHROUGH;
     default:
       return false;
@@ -130,6 +134,30 @@ crypto_digest256(char *digest, const char *m, size_t len,
     return digest_nss_internal(SEC_OID_SHA256, digest, DIGEST256_LEN, m, len);
   } else {
     ret = (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
+           > -1);
+  }
+
+  if (!ret)
+    return -1;
+  return 0;
+}
+
+/** Compute a 384-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
+ * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN384-byte result
+ * into <b>digest</b>.  Return 0 on success, -1 on failure. */
+int
+crypto_digest384(char *digest, const char *m, size_t len,
+                 digest_algorithm_t algorithm)
+{
+  tor_assert(m);
+  tor_assert(digest);
+  tor_assert(algorithm == DIGEST_SHA384 || algorithm == DIGEST_SHA3_384);
+
+  int ret = 0;
+  if (algorithm == DIGEST_SHA384) {
+    return digest_nss_internal(SEC_OID_SHA384, digest, DIGEST384_LEN, m, len);
+  } else {
+    ret = (sha3_384((uint8_t*)digest, DIGEST384_LEN, (const uint8_t*)m, len)
            > -1);
   }
 
@@ -203,9 +231,11 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
   switch (alg) {
     case DIGEST_SHA1: FALLTHROUGH;
     case DIGEST_SHA256: FALLTHROUGH;
+    case DIGEST_SHA384: FALLTHROUGH;
     case DIGEST_SHA512:
       return END_OF_FIELD(d.ctx);
     case DIGEST_SHA3_256:
+    case DIGEST_SHA3_384:
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.sha3);
     default:
@@ -230,6 +260,7 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
     {
     case DIGEST_SHA1: FALLTHROUGH;
     case DIGEST_SHA256: FALLTHROUGH;
+    case DIGEST_SHA384: FALLTHROUGH;
     case DIGEST_SHA512:
       r->d.ctx = PK11_CreateDigestContext(digest_alg_to_nss_oid(algorithm));
       if (BUG(!r->d.ctx)) {
@@ -243,6 +274,9 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
       break;
     case DIGEST_SHA3_256:
       keccak_digest_init(&r->d.sha3, 256);
+      break;
+    case DIGEST_SHA3_384:
+      keccak_digest_init(&r->d.sha3, 384);
       break;
     case DIGEST_SHA3_512:
       keccak_digest_init(&r->d.sha3, 512);
@@ -272,6 +306,15 @@ crypto_digest_t *
 crypto_digest256_new(digest_algorithm_t algorithm)
 {
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
+  return crypto_digest_new_internal(algorithm);
+}
+
+/** Allocate and return a new digest object to compute 384-bit digests
+ * using <b>algorithm</b>. */
+crypto_digest_t *
+crypto_digest384_new(digest_algorithm_t algorithm)
+{
+  tor_assert(algorithm == DIGEST_SHA384 || algorithm == DIGEST_SHA3_384);
   return crypto_digest_new_internal(algorithm);
 }
 
@@ -318,6 +361,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
   switch (digest->algorithm) {
     case DIGEST_SHA1: FALLTHROUGH;
     case DIGEST_SHA256: FALLTHROUGH;
+    case DIGEST_SHA384: FALLTHROUGH;
     case DIGEST_SHA512:
       tor_assert(len <= UINT_MAX);
       SECStatus s = PK11_DigestOp(digest->d.ctx,
@@ -326,6 +370,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       tor_assert(s == SECSuccess);
       break;
     case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_384: FALLTHROUGH;
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
@@ -356,6 +401,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
   /* The SHA-3 code handles copying into a temporary ctx, and also can handle
    * short output buffers by truncating appropriately. */
   if (digest->algorithm == DIGEST_SHA3_256 ||
+      digest->algorithm == DIGEST_SHA3_384 ||
       digest->algorithm == DIGEST_SHA3_512) {
     keccak_digest_sum(&digest->d.sha3, (uint8_t *)out, out_len);
     return;

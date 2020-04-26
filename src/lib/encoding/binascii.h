@@ -41,6 +41,7 @@ const char *hex_str(const char *from, size_t fromlen);
 /** @} */
 
 #define BASE64_ENCODE_MULTILINE 1
+int hex_to_bin(uint8_t **dest, size_t *destlen, const char *src);
 size_t base64_encode_size(size_t srclen, int flags);
 size_t base64_decode_maxsize(size_t srclen);
 int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
@@ -54,6 +55,13 @@ int base64_encode_nopad(char *dest, size_t destlen,
 void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base32_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 size_t base32_encoded_size(size_t srclen);
+
+/** Characters that can appear (case-insensitively) in a base32hex encoding. */
+#define BASE32HEX_CHARS "0123456789ABCDEFGHIJKLMNOPQRSTUV"
+void base32hex_encode(char *dest, size_t destlen, const char *src,
+                      size_t srclen);
+int base32hex_decode(char *dest, size_t destlen, const char *src,
+                     size_t srclen);
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);

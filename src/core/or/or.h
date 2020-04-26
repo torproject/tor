@@ -457,7 +457,7 @@ typedef struct rend_data_v2_t {
   char rend_pk_digest[DIGEST_LEN];
 } rend_data_v2_t;
 
-/* From a base rend_data_t object <b>d</d>, return the v2 object. */
+/* From a base rend_data_t object <b>d</b>, return the v2 object. */
 static inline
 rend_data_v2_t *TO_REND_DATA_V2(const rend_data_t *d)
 {
@@ -642,6 +642,7 @@ typedef struct {
   uint16_t length; /**< How long is the payload body? */
 } relay_header_t;
 
+typedef struct dns_lookup_t dns_lookup_t;
 typedef struct socks_request_t socks_request_t;
 typedef struct entry_port_cfg_t entry_port_cfg_t;
 typedef struct server_port_cfg_t server_port_cfg_t;
@@ -985,6 +986,8 @@ typedef enum path_state_t path_state_t;
 #define SESSION_GROUP_CONTROL_RESOLVE -3
 /** First automatically allocated session group number */
 #define SESSION_GROUP_FIRST_AUTO -4
+/** Session group reserved for DNS lookup connections */
+#define SESSION_GROUP_DNS_LOOKUP -5
 
 typedef struct port_cfg_t port_cfg_t;
 typedef struct routerset_t routerset_t;

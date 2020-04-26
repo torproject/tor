@@ -34,6 +34,7 @@ void tor_strupper(char *s);
 int tor_strisprint(const char *s);
 int tor_strisnonupper(const char *s);
 int tor_strisspace(const char *s);
+void tor_strwhitespace(char *s);
 int strcmp_opt(const char *s1, const char *s2);
 int strcmpstart(const char *s1, const char *s2);
 int strcasecmpstart(const char *s1, const char *s2);

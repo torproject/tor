@@ -78,6 +78,34 @@ crypto_digest256(char *digest, const char *m, size_t len,
   return 0;
 }
 
+/** Compute a 384-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
+ * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN384-byte result
+ * into <b>digest</b>.  Return 0 on success, -1 on failure. */
+int
+crypto_digest384(char *digest, const char *m, size_t len,
+                 digest_algorithm_t algorithm)
+{
+  tor_assert(m);
+  tor_assert(digest);
+  tor_assert(algorithm == DIGEST_SHA384 || algorithm == DIGEST_SHA3_384);
+
+  int ret = 0;
+  if (algorithm == DIGEST_SHA384) {
+#ifdef ENABLE_NSS
+    return digest_nss_internal(SEC_OID_SHA384, digest, DIGEST384_LEN, m, len);
+#else
+    ret = (SHA384((const uint8_t*)m,len,(uint8_t*)digest) != NULL);
+#endif
+  } else {
+    ret = (sha3_384((uint8_t *)digest, DIGEST384_LEN,(const uint8_t *)m, len)
+           > -1);
+  }
+
+  if (!ret)
+    return -1;
+  return 0;
+}
+
 /** Compute a 512-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
  * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN512-byte result
  * into <b>digest</b>.  Return 0 on success, -1 on failure. */
@@ -118,11 +146,11 @@ struct crypto_digest_t {
   union {
     SHA_CTX sha1; /**< state for SHA1 */
     SHA256_CTX sha2; /**< state for SHA256 */
-    SHA512_CTX sha512; /**< state for SHA512 */
+    SHA512_CTX sha512; /**< state for SHA[384,512] */
 #ifdef OPENSSL_HAS_SHA3
     EVP_MD_CTX *md;
 #else
-    keccak_state sha3; /**< state for SHA3-[256,512] */
+    keccak_state sha3; /**< state for SHA3-[256,384,512] */
 #endif
   } d;
 };
@@ -157,6 +185,7 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
       return END_OF_FIELD(d.sha1);
     case DIGEST_SHA256:
       return END_OF_FIELD(d.sha2);
+    case DIGEST_SHA384: FALLTHROUGH;
     case DIGEST_SHA512:
       return END_OF_FIELD(d.sha512);
 #ifdef OPENSSL_HAS_SHA3
@@ -165,6 +194,7 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
       return END_OF_FIELD(d.md);
 #else
     case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_384: FALLTHROUGH;
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.sha3);
 #endif /* defined(OPENSSL_HAS_SHA3) */
@@ -194,6 +224,9 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
     case DIGEST_SHA256:
       SHA256_Init(&r->d.sha2);
       break;
+    case DIGEST_SHA384:
+      SHA384_Init(&r->d.sha512);
+      break;
     case DIGEST_SHA512:
       SHA512_Init(&r->d.sha512);
       break;
@@ -201,6 +234,13 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
     case DIGEST_SHA3_256:
       r->d.md = EVP_MD_CTX_new();
       if (!EVP_DigestInit(r->d.md, EVP_sha3_256())) {
+        crypto_digest_free(r);
+        return NULL;
+      }
+      break;
+    case DIGEST_SHA3_384:
+      r->d.md = EVP_MD_CTX_new();
+      if (!EVP_DigestInit(r->d.md, EVP_sha3_384())) {
         crypto_digest_free(r);
         return NULL;
       }
@@ -215,6 +255,9 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
 #else /* !defined(OPENSSL_HAS_SHA3) */
     case DIGEST_SHA3_256:
       keccak_digest_init(&r->d.sha3, 256);
+      break;
+    case DIGEST_SHA3_384:
+      keccak_digest_init(&r->d.sha3, 384);
       break;
     case DIGEST_SHA3_512:
       keccak_digest_init(&r->d.sha3, 512);
@@ -248,6 +291,16 @@ crypto_digest256_new(digest_algorithm_t algorithm)
   return crypto_digest_new_internal(algorithm);
 }
 
+/** Allocate and return a new digest object to compute 384-bit digests
+ * using <b>algorithm</b>.
+ */
+crypto_digest_t *
+crypto_digest384_new(digest_algorithm_t algorithm)
+{
+  tor_assert(algorithm == DIGEST_SHA384 || algorithm == DIGEST_SHA3_384);
+  return crypto_digest_new_internal(algorithm);
+}
+
 /** Allocate and return a new digest object to compute 512-bit digests
  * using <b>algorithm</b>. */
 crypto_digest_t *
@@ -266,6 +319,7 @@ crypto_digest_free_(crypto_digest_t *digest)
     return;
 #ifdef OPENSSL_HAS_SHA3
   if (digest->algorithm == DIGEST_SHA3_256 ||
+      digest->algorithm == DIGEST_SHA3_384 ||
       digest->algorithm == DIGEST_SHA3_512) {
     if (digest->d.md) {
       EVP_MD_CTX_free(digest->d.md);
@@ -300,11 +354,15 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
     case DIGEST_SHA256:
       SHA256_Update(&digest->d.sha2, (void*)data, len);
       break;
+    case DIGEST_SHA384:
+      SHA384_Update(&digest->d.sha512, (void*)data, len);
+      break;
     case DIGEST_SHA512:
       SHA512_Update(&digest->d.sha512, (void*)data, len);
       break;
 #ifdef OPENSSL_HAS_SHA3
     case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_384: FALLTHROUGH;
     case DIGEST_SHA3_512: {
       int r = EVP_DigestUpdate(digest->d.md, data, len);
       tor_assert(r);
@@ -312,6 +370,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       break;
 #else /* !defined(OPENSSL_HAS_SHA3) */
     case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_384: FALLTHROUGH;
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
@@ -343,6 +402,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
   /* The SHA-3 code handles copying into a temporary ctx, and also can handle
    * short output buffers by truncating appropriately. */
   if (digest->algorithm == DIGEST_SHA3_256 ||
+      digest->algorithm == DIGEST_SHA3_384 ||
       digest->algorithm == DIGEST_SHA3_512) {
 #ifdef OPENSSL_HAS_SHA3
     unsigned dlen = (unsigned)
@@ -373,11 +433,15 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     case DIGEST_SHA256:
       SHA256_Final(r, &tmpenv.d.sha2);
       break;
+    case DIGEST_SHA384:
+      SHA384_Final(r, &tmpenv.d.sha512);
+      break;
     case DIGEST_SHA512:
       SHA512_Final(r, &tmpenv.d.sha512);
       break;
 //LCOV_EXCL_START
     case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_384: FALLTHROUGH;
     case DIGEST_SHA3_512:
     default:
       log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
@@ -408,6 +472,7 @@ crypto_digest_dup(const crypto_digest_t *digest)
 
 #ifdef OPENSSL_HAS_SHA3
   if (digest->algorithm == DIGEST_SHA3_256 ||
+      digest->algorithm == DIGEST_SHA3_384 ||
       digest->algorithm == DIGEST_SHA3_512) {
     result->d.md = EVP_MD_CTX_new();
     EVP_MD_CTX_copy(result->d.md, digest->d.md);
@@ -454,6 +519,7 @@ crypto_digest_assign(crypto_digest_t *into,
 
 #ifdef OPENSSL_HAS_SHA3
   if (from->algorithm == DIGEST_SHA3_256 ||
+      from->algorithm == DIGEST_SHA3_384 ||
       from->algorithm == DIGEST_SHA3_512) {
     EVP_MD_CTX_copy(into->d.md, from->d.md);
     return;

@@ -24,6 +24,7 @@
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
+#include "core/or/dns_resolver.h"
 #include "core/or/dos.h"
 #include "core/or/scheduler.h"
 #include "feature/client/addressmap.h"
@@ -141,6 +142,7 @@ tor_free_all(int postfork)
   circuitmux_ewma_free_all();
   accounting_free_all();
   circpad_free_all();
+  dns_resolver_free_all();
 
   if (!postfork) {
     config_free_all();

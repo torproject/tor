@@ -65,6 +65,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/dns_resolver.h"
 #include "core/or/dos.h"
 #include "core/or/status.h"
 #include "feature/client/addressmap.h"
@@ -247,6 +248,8 @@ connection_add_impl(connection_t *conn, int is_connecting)
   tor_assert(conn);
   tor_assert(SOCKET_OK(conn->s) ||
              conn->linked ||
+             (conn->type == CONN_TYPE_AP &&
+              TO_ENTRY_CONN(conn)->dns_lookup) ||
              (conn->type == CONN_TYPE_AP &&
               TO_EDGE_CONN(conn)->is_dns_request));
 
@@ -573,8 +576,10 @@ connection_check_event(connection_t *conn, struct event *ev)
 {
   int bad;
 
-  if (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request) {
-    /* DNS requests which we launch through the dnsserv.c module do not have
+  if ((conn->type == CONN_TYPE_AP && TO_ENTRY_CONN(conn)->dns_lookup) ||
+      (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request)) {
+    /* DNS lookup requests which we launch through the dns_resolver.c module or
+     * DNS requests which we launch through the dnsserv.c module do not have
      * any underlying socket or any underlying linked connection, so they
      * shouldn't have any attached events either.
      */
@@ -641,6 +646,13 @@ connection_start_reading,(connection_t *conn))
     conn->reading_from_linked_conn = 1;
     if (connection_should_read_from_linked_conn(conn))
       connection_start_reading_from_linked_conn(conn);
+  } else if (conn->magic == ENTRY_CONNECTION_MAGIC &&
+             TO_ENTRY_CONN(conn)->dns_lookup) {
+    /* DNS lookup requests which we launch through the dns_resolver.c module do
+     * not have any underlying socket or any underlying linked connection, so
+     * there is nothing to read from.
+     */
+    return;
   } else {
     if (event_add(conn->read_event, NULL))
       log_warn(LD_NET, "Error from libevent setting read event state for %d "
@@ -1365,6 +1377,7 @@ CALLBACK(fetch_networkstatus);
 CALLBACK(heartbeat);
 CALLBACK(hs_service);
 CALLBACK(launch_descriptor_fetches);
+CALLBACK(ping_nameserver);
 CALLBACK(prune_old_routers);
 CALLBACK(record_bridge_stats);
 CALLBACK(rend_cache_failure_clean);
@@ -1422,6 +1435,7 @@ STATIC periodic_event_item_t mainloop_periodic_events[] = {
   CALLBACK(record_bridge_stats, BRIDGE, 0),
 
   /* Client only. */
+  CALLBACK(ping_nameserver, CLIENT, FL(NEED_NET)),
   /* XXXX this could be restricted to CLIENT+NET_PARTICIPANT */
   CALLBACK(rend_cache_failure_clean, NET_PARTICIPANT, FL(RUN_ON_DISABLE)),
 
@@ -2018,6 +2032,19 @@ clean_caches_callback(time_t now, const or_options_t *options)
   microdesc_cache_rebuild(NULL, 0);
 #define CLEAN_CACHES_INTERVAL (30*60)
   return CLEAN_CACHES_INTERVAL;
+}
+
+/**
+ * Periodic callback: Ping DNS resolver nameservers.
+ */
+static int
+ping_nameserver_callback(time_t now, const or_options_t *options)
+{
+  (void)now;
+  if (options->DNSResolver) {
+    dns_resolver_ping_nameserver();
+  }
+  return 1;
 }
 
 /**

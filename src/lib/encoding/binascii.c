@@ -40,6 +40,38 @@ hex_str(const char *from, size_t fromlen)
   return buf;
 }
 
+/** Convert a NUL-terminated hexadecimal string to bytes.
+* Returns 0 if successful, -1 otherwise.
+ */
+int
+hex_to_bin(uint8_t **dest, size_t *destlen, const char *src)
+{
+  tor_assert(dest);
+  tor_assert(destlen);
+
+  if (!src) {
+    return -1;
+  }
+
+  size_t src_len = strlen(src);
+  if (src_len == 0) {
+    return -1;
+  }
+
+  *destlen = src_len / 2;
+  tor_free(*dest);
+  *dest = tor_malloc_zero(*destlen);
+
+  for (size_t i = 0; i < src_len; i++) {
+    int value = hex_decode_digit(src[i]);
+    if (value < 0) {
+      return value;
+    }
+    (*dest)[i / 2] += (value << (((i + 1) % 2) * 4));
+  }
+  return 0;
+}
+
 /* Return the base32 encoded size in bytes using the source length srclen.
  *
  * (WATCH OUT: This API counts the terminating NUL byte, but
@@ -148,6 +180,100 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_free(tmp);
   tmp = NULL;
   return i;
+}
+
+/** Implements base32hex encoding as in RFC 4648. */
+void
+base32hex_encode(char *dest, size_t destlen, const char *src, size_t srclen)
+{
+  unsigned int i, v, u;
+  size_t nbits = srclen * 8;
+  size_t bit;
+
+  /* We need enough space for the encoded data and the extra NUL byte. */
+  tor_assert(base32_encoded_size(srclen) <= destlen);
+  tor_assert(destlen < SIZE_T_CEILING);
+
+  /* Make sure we leave no uninitialized data in the destination buffer. */
+  memset(dest, 0, destlen);
+
+  for (i=0,bit=0; bit < nbits; ++i, bit+=5) {
+    /* set v to the 16-bit value starting at src[bits/8], 0-padded. */
+    size_t idx = bit / 8;
+    v = ((uint8_t)src[idx]) << 8;
+    if (idx+1 < srclen)
+      v += (uint8_t)src[idx+1];
+    /* set u to the 5-bit value at the bit'th bit of buf. */
+    u = (v >> (11-(bit%8))) & 0x1F;
+    dest[i] = BASE32HEX_CHARS[u];
+  }
+  dest[i] = '\0';
+}
+
+/** Implements base32hex decoding as in RFC 4648.
+ * Returns 0 if successful, -1 otherwise.
+ */
+int
+base32hex_decode(char *dest, size_t destlen, const char *src, size_t srclen)
+{
+  unsigned int i;
+  size_t nbits, j, bit;
+  char *tmp;
+  nbits = ((srclen * 5) / 8) * 8;
+
+  tor_assert(srclen < SIZE_T_CEILING / 5);
+  tor_assert((nbits/8) <= destlen); /* We need enough space. */
+  tor_assert(destlen < SIZE_T_CEILING);
+
+  /* Make sure we leave no uninitialized data in the destination buffer. */
+  memset(dest, 0, destlen);
+
+  /* Convert base32hex encoded chars to the 5-bit values that they
+   * represent. */
+  tmp = tor_malloc_zero(srclen);
+  for (j = 0; j < srclen; ++j) {
+    if (src[j] > 0x60 && src[j] < 0x77) tmp[j] = src[j] - 0x57;
+    else if (src[j] > 0x2f && src[j] < 0x3a) tmp[j] = src[j] - 0x30;
+    else if (src[j] > 0x40 && src[j] < 0x57) tmp[j] = src[j] - 0x37;
+    else {
+      log_warn(LD_GENERAL, "illegal character in base32hex encoded string");
+      tor_free(tmp);
+      return -1;
+    }
+  }
+
+  /* Assemble result byte-wise by applying five possible cases. */
+  for (i = 0, bit = 0; bit < nbits; ++i, bit += 8) {
+    switch (bit % 40) {
+      case 0:
+        dest[i] = (((uint8_t)tmp[(bit/5)]) << 3) +
+                  (((uint8_t)tmp[(bit/5)+1]) >> 2);
+        break;
+      case 8:
+        dest[i] = (((uint8_t)tmp[(bit/5)]) << 6) +
+                  (((uint8_t)tmp[(bit/5)+1]) << 1) +
+                  (((uint8_t)tmp[(bit/5)+2]) >> 4);
+        break;
+      case 16:
+        dest[i] = (((uint8_t)tmp[(bit/5)]) << 4) +
+                  (((uint8_t)tmp[(bit/5)+1]) >> 1);
+        break;
+      case 24:
+        dest[i] = (((uint8_t)tmp[(bit/5)]) << 7) +
+                  (((uint8_t)tmp[(bit/5)+1]) << 2) +
+                  (((uint8_t)tmp[(bit/5)+2]) >> 3);
+        break;
+      case 32:
+        dest[i] = (((uint8_t)tmp[(bit/5)]) << 5) +
+                  ((uint8_t)tmp[(bit/5)+1]);
+        break;
+    }
+  }
+
+  memset(tmp, 0, srclen); /* on the heap, this should be safe */
+  tor_free(tmp);
+  tmp = NULL;
+  return 0;
 }
 
 #define BASE64_OPENSSL_LINELEN 64

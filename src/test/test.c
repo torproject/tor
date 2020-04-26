@@ -691,6 +691,10 @@ struct testgroup_t testgroups[] = {
   { "control/btrack/", btrack_tests },
   { "control/event/", controller_event_tests },
   { "crypto/", crypto_tests },
+  { "crypto/dnssec/", crypto_dnssec_tests },
+#ifdef ENABLE_OPENSSL
+  { "crypto/dnssec/", crypto_dnssec_openssl_tests },
+#endif
   { "crypto/ope/", crypto_ope_tests },
 #ifdef ENABLE_OPENSSL
   { "crypto/openssl/", crypto_openssl_tests },
@@ -705,6 +709,10 @@ struct testgroup_t testgroups[] = {
   { "dir_handle_get/", dir_handle_get_tests },
   { "dispatch/", dispatch_tests, },
   { "dns/", dns_tests },
+  { "dns_message/", dns_message_tests },
+  { "dns_resolver/", dns_resolver_tests },
+  { "dns_string/", dns_string_tests },
+  { "dns_wireformat/", dns_wireformat_tests },
   { "dos/", dos_tests },
   { "entryconn/", entryconn_tests },
   { "entrynodes/", entrynodes_tests },

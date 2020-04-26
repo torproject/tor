@@ -70,6 +70,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/dns_resolver.h"
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
@@ -2295,6 +2296,14 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     int socks_family = tor_addr_parse(&dummy_addr, socks->address);
     /* family will be -1 for a non-onion hostname that's not an IP */
     if (socks_family == -1) {
+      if (options->DNSResolver) {
+        /* Drop connections with unresolved hostname when the DNS resolver
+         * module is enabled. */
+        log_warn(LD_APP, "Refusing to connect to unresolved hostname %s.",
+                 safe_str_client(socks->address));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+        return -1;
+      }
       if (!conn->entry_cfg.dns_request) {
         log_warn(LD_APP, "Refusing to connect to hostname %s "
                  "because Port has NoDNSRequest set.",
@@ -2806,6 +2815,26 @@ connection_ap_handshake_process_socks(entry_connection_t *conn)
                               END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
     return -1;
   } /* else socks handshake is done, continue processing */
+
+  if (options->DNSResolver) {
+    /* Now, we parse the address to see if it's an .onion or .exit or
+    * other special address. */
+    char *address = tor_strdup(socks->address);
+
+    hostname_type_t addresstype;
+    parse_extended_hostname(address, &addresstype);
+
+    /* Then check if we have a hostname or IP address, and whether DNS or
+     * the IP address family are permitted.  Reject if not. */
+    tor_addr_t dummy_addr;
+    int socks_family = tor_addr_parse(&dummy_addr, address);
+    tor_free(address);
+
+    /* family will be -1 for a non-onion hostname that's not an IP */
+    if (addresstype == NORMAL_HOSTNAME && socks_family == -1) {
+      return dns_resolver_initiate_socks_address_resolution(conn);
+    }
+  }
 
   if (SOCKS_COMMAND_IS_CONNECT(socks->command))
     control_event_stream_status(conn, STREAM_EVENT_NEW, 0);

@@ -11,6 +11,7 @@ src_lib_libtor_crypt_ops_a_SOURCES =			\
 	src/lib/crypt_ops/crypto_curve25519.c		\
 	src/lib/crypt_ops/crypto_dh.c			\
 	src/lib/crypt_ops/crypto_digest.c		\
+	src/lib/crypt_ops/crypto_dnssec.c		\
 	src/lib/crypt_ops/crypto_ed25519.c		\
 	src/lib/crypt_ops/crypto_format.c		\
 	src/lib/crypt_ops/crypto_hkdf.c			\
@@ -36,11 +37,13 @@ else
 src_lib_libtor_crypt_ops_a_SOURCES +=			\
 	src/lib/crypt_ops/aes_openssl.c			\
 	src/lib/crypt_ops/crypto_digest_openssl.c	\
+	src/lib/crypt_ops/crypto_dnssec_openssl.c	\
 	src/lib/crypt_ops/crypto_rsa_openssl.c
 endif
 
 if USE_OPENSSL
 src_lib_libtor_crypt_ops_a_SOURCES +=			\
+	src/lib/crypt_ops/compat_openssl.c			\
 	src/lib/crypt_ops/crypto_dh_openssl.c		\
 	src/lib/crypt_ops/crypto_openssl_mgt.c
 endif
@@ -60,6 +63,7 @@ noinst_HEADERS +=					\
 	src/lib/crypt_ops/crypto_curve25519.h		\
 	src/lib/crypt_ops/crypto_dh.h			\
 	src/lib/crypt_ops/crypto_digest.h		\
+	src/lib/crypt_ops/crypto_dnssec.h		\
 	src/lib/crypt_ops/crypto_ed25519.h		\
 	src/lib/crypt_ops/crypto_format.h		\
 	src/lib/crypt_ops/crypto_cipher.h		\

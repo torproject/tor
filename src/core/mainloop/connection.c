@@ -78,6 +78,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/dns_resolver.h"
 #include "core/or/dos.h"
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
@@ -684,6 +685,8 @@ connection_free_minimal(connection_t *conn)
     entry_connection_t *entry_conn = TO_ENTRY_CONN(conn);
     tor_free(entry_conn->chosen_exit_name);
     tor_free(entry_conn->original_dest_address);
+    if (entry_conn->dns_lookup)
+      dns_lookup_free(entry_conn->dns_lookup);
     if (entry_conn->socks_request)
       socks_request_free(entry_conn->socks_request);
     if (entry_conn->pending_optimistic_data) {
@@ -5406,6 +5409,7 @@ assert_connection_ok(connection_t *conn, time_t now)
                 conn->state == EXIT_CONN_STATE_RESOLVING) ||
                connection_is_writing(conn) ||
                conn->write_blocked_on_bw ||
+               TO_ENTRY_CONN(conn)->dns_lookup ||
                (CONN_IS_EDGE(conn) &&
                 TO_EDGE_CONN(conn)->edge_blocked_on_circ));
   }

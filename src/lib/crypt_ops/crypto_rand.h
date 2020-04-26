@@ -42,6 +42,7 @@ struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
 void smartlist_shuffle(struct smartlist_t *sl);
 int crypto_force_rand_ssleay(void);
+void str_shuffle_case(char *s);
 
 /**
  * A fast PRNG, for use when the PRNG provided by our crypto library isn't

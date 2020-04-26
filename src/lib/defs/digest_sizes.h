@@ -21,6 +21,8 @@
 /** Length of the output of our second (improved) message digests.  (For now
  * this is just sha256, but it could be any other 256-bit digest.) */
 #define DIGEST256_LEN 32
+/** Length of the output SHA384. */
+#define DIGEST384_LEN 48
 /** Length of the output of our 64-bit optimized message digests (SHA512). */
 #define DIGEST512_LEN 64
 

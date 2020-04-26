@@ -1207,6 +1207,73 @@ The following options are useful only for clients (that is, if
     services whose virtual port is in this list. (Default: 21, 22, 706,
     1863, 5050, 5190, 5222, 5223, 6523, 6667, 6697, 8300)
 
+[[DNSResolver]] **DNSResolver** **0**|**1**::
+    If DNSResolver is set to 1, Tor will resolve SOCKS addresses for requests
+    to SocksPort and will forward incoming DNS requests from DNSPort.
+    For requests to SocksPort we resolve the SOCKS address after we have a
+    successful SOCKS handshake before we attach the connection.
+    For requests to DNSPort we forward the incoming DNS request to one of the
+    available nameservers and reply once we receive an answer. (Default: 0)
+
+[[DNSResolverIPv4]] **DNSResolverIPv4** **0**|**1**::
+    If DNSResolverIPv4 is set to 1, Tor will attampt to resolve SOCKS addresses
+    to IPv4 addresses. In case DNSResolverIPv6 is set to 1 as well this is used
+    as fallback. (Default: 1)
+
+[[DNSResolverIPv6]] **DNSResolverIPv6** **0**|**1**::
+    If DNSResolverIPv6 is set to 1, Tor will attampt to resolve SOCKS addresses
+    to IPv6 addresses. (Default: 0)
+
+[[DNSResolverRandomizeCase]] **DNSResolverRandomizeCase** **0**|**1**::
+    If DNSResolverRandomizeCase is set to 1, Tor sets the case of each
+    character randomly in outgoing DNS requests. This so-called "0x20 hack"
+    helps resist some types of DNS poisoning attack. For more information, see
+    "Increased DNS Forgery Resistance through 0x20-Bit Encoding". (Default: 0)
+
+[[DNSResolverNameservers]] **DNSResolverNameservers** __address__[:__port__][ __zone__][ __zone__],__address__[:__port__][ __zone__][ __zone__],__...__::
+    A comma-separated list of nameservers to use with **DNSResolver**.
+    We support the following address formats: IPv4, IPv6, and onion, however we
+    strongly recommend to use onion addresses. When no port is set we use 53 as
+    default.
+    Additionally, if you want to restrict the nameserver to certain zones you
+    can do so by defining zones, otherwise we assume that the nameserver is a
+    recursor and supports all zones.
+
+[[DNSResolverHiddenServiceZones]] **DNSResolverHiddenServiceZones**  __zone__,__zone__,__...__::
+    A comma-separated list of hidden service zones to use with **DNSResolver**.
+    When we resolve a SOCKS address that is within one of these zones we
+    never get an IPv4 or IPv6 address, but always a hidden service address.
+
+[[DNSResolverDNSSECMode]] **DNSResolverDNSSECMode**  __MODE__::
+    The DNSSEC validation mode that is used by **DNSResolver**. Available modes
+    are:
+    **Off**;;
+        We don't perform any DNSSEC validation and we don't set the DO bit in
+        outgoing DNS requests.
+    **Trust**;;
+        We don't perform any DNSSEC validation and we don't set the DO and CD
+        bit in outgoing DNS requests.
+    **Process**;;
+        We do the whole DNSSEC trust chain validation, however we ignore the
+        result.
+    **Validate**;;
+        We do the whole DNSSEC trust chain validation, and reject insecure
+        data.
+    (Default: trust)
+
+[[DNSResolverTrustAnchors]] **DNSResolverTrustAnchors**  __trustanchor__,__trustanchor__,__...__::
+    A comma-separated list of trust anchors to use with **DNSResolver**.
+    We expect DS records as trust anchors. You can find the official trust
+    anchors here: http://data.iana.org/root-anchors/root-anchors.xml
+
+[[DNSResolverMaxCacheEntries]] **DNSResolverMaxCacheEntries** __NUM__::
+    Do not allow more than NUM cache entries when using **DNSResolver**.
+    (Default: 1000)
+
+[[DNSResolverMaxCacheTTL]] **DNSResolverMaxCacheTTL** __NUM__::
+    Do not keep cache entries that are older than NUM seconds ago.
+    (Default: 86400 seconds)
+
 [[MapAddress]] **MapAddress** __address__ __newaddress__::
     When a request for address arrives to Tor, it will transform to newaddress
     before processing it. For example, if you always want connections to

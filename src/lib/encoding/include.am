@@ -9,6 +9,8 @@ src_lib_libtor_encoding_a_SOURCES =			\
 	src/lib/encoding/binascii.c			\
 	src/lib/encoding/confline.c			\
 	src/lib/encoding/cstring.c			\
+	src/lib/encoding/dns_string.c		\
+	src/lib/encoding/dns_wireformat.c	\
 	src/lib/encoding/keyval.c			\
 	src/lib/encoding/kvline.c			\
 	src/lib/encoding/pem.c				\
@@ -25,6 +27,8 @@ noinst_HEADERS +=					\
 	src/lib/encoding/binascii.h			\
 	src/lib/encoding/confline.h			\
 	src/lib/encoding/cstring.h			\
+	src/lib/encoding/dns_string.h		\
+	src/lib/encoding/dns_wireformat.h	\
 	src/lib/encoding/keyval.h			\
 	src/lib/encoding/kvline.h			\
 	src/lib/encoding/pem.h				\

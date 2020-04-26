@@ -1,0 +1,2 @@
+  o Major features (Security-aware DNS resolver):
+    - Support for full DNS and DNSSEC resolution in Tor. Closes ticket 34004.

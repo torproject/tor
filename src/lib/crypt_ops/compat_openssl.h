@@ -44,6 +44,8 @@
   (((st) == SSL3_ST_SW_SRVR_HELLO_A) ||    \
    ((st) == SSL3_ST_SW_SRVR_HELLO_B))
 #define OSSL_HANDSHAKE_STATE int
+int RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d);
+int ECDSA_SIG_set0(ECDSA_SIG *sig, BIGNUM *r, BIGNUM *s);
 #define CONST_IF_OPENSSL_1_1_API
 #else /* defined(OPENSSL_1_1_API) */
 #define STATE_IS_SW_SERVER_HELLO(st) \

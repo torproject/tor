@@ -24,6 +24,8 @@ struct entry_connection_t {
    * That's logically part of the UI parts for prop220 though. */
   char *chosen_exit_name;
 
+  dns_lookup_t *dns_lookup; /**< Holds the state of a DNS lookup (AP only.) */
+
   socks_request_t *socks_request; /**< SOCKS structure describing request (AP
                                    * only.) */
 

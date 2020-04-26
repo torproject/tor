@@ -36,6 +36,7 @@
 problem file-size /src/app/config/config.c 7525
 problem include-count /src/app/config/config.c 80
 problem function-size /src/app/config/config.c:options_act() 381
+problem function-size /src/app/config/config.c:resolve_my_address() 191
 problem function-size /src/app/config/config.c:options_validate_cb() 794
 problem function-size /src/app/config/config.c:options_init_from_torrc() 192
 problem function-size /src/app/config/config.c:options_init_from_string() 103
@@ -47,7 +48,7 @@ problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
 problem function-size /src/app/config/config.c:port_parse_config() 435
 problem function-size /src/app/config/config.c:parse_ports() 132
 problem function-size /src/app/config/resolve_addr.c:resolve_my_address() 191
-problem file-size /src/app/config/or_options_st.h 1050
+problem file-size /src/app/config/or_options_st.h 1073
 problem include-count /src/app/main/main.c 68
 problem function-size /src/app/main/main.c:dumpstats() 102
 problem function-size /src/app/main/main.c:tor_init() 101
@@ -305,7 +306,7 @@ problem function-size /src/lib/encoding/confline.c:parse_config_line_from_str_ve
 problem function-size /src/lib/encoding/cstring.c:unescape_string() 108
 problem function-size /src/lib/fs/dir.c:check_private_dir() 230
 problem function-size /src/lib/math/prob_distr.c:sample_uniform_interval() 145
-problem function-size /src/lib/net/address.c:tor_addr_parse_mask_ports() 195
+problem function-size /src/lib/net/address.c:tor_addr_parse_mask_ports() 194
 problem function-size /src/lib/net/address.c:tor_addr_compare_masked() 110
 problem function-size /src/lib/net/inaddr.c:tor_inet_pton() 107
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102
@@ -323,3 +324,6 @@ problem function-size /src/tools/tor-gencert.c:parse_commandline() 111
 problem function-size /src/tools/tor-resolve.c:build_socks5_resolve_request() 102
 problem function-size /src/tools/tor-resolve.c:do_resolve() 171
 problem function-size /src/tools/tor-resolve.c:main() 112
+problem dependency-violation /src/core/or/dns_resolver.c 6
+problem function-size /src/lib/encoding/dns_string.c:dns_type_str() 148
+problem function-size /src/lib/encoding/dns_string.c:dns_type_value_of() 215

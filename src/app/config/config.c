@@ -77,6 +77,7 @@
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
 #include "core/or/connection_edge.h"
+#include "core/or/dns_resolver.h"
 #include "core/or/dos.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
@@ -548,6 +549,31 @@ static const config_var_t option_vars_[] = {
   V_IMMUTABLE(AndroidIdentityTag,STRING,   NULL),
   V(LongLivedPorts,              CSV,
         "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
+  V(DNSResolver,                 BOOL,     "0"),
+  V(DNSResolverIPv4,             BOOL,     "1"),
+  V(DNSResolverIPv6,             BOOL,     "0"),
+  V(DNSResolverRandomizeCase,    BOOL,     "0"),
+  VAR("DNSResolverNameservers",  CSV,      DNSResolverNameservers_raw,
+    "dns4torpnlfs2ifuz2s2yf3fc7rdmsbhm6rw75euj35pac6ap25zgqad.onion,"
+    "tordnsfanc6rqaq7u6lyv6sq5qtwyqg53jtspiwydjpu5pgfd56ihgid.onion . tor,"
+    "tordnsfbzbqzzq2im5uubozt6llt5wvtqig6tc3apjlabrgv3rwlufid.onion . tor,"
+    "tordnsfcyujmmhvm7z5b7uhuminy4cnx5sc7nowhqcjrqzaez3mzo7id.onion . tor,"
+    "tordnsfdchbwjsznvo52otmpt3cexekom57paw6muakgd2ayc4gyy2id.onion . tor,"
+    "tordnsfecgwugd62irjyuetffpxgamwfpznu3kspmeegaqfc2xy2n6id.onion . tor,"
+    "tordnsffcrgvxtuot4tpmkyydtyaftexwu3uyeltmr67himfu7rgvdid.onion . tor,"
+    "tordnsfgfpe5kv7ang5prrxqti6chr5xncsod4xm4e6ltykmc73keaid.onion . tor,"
+    "tordnsfhntcnsjn2umxkmnfimeqv2bjbgv5546a56mkumozdxlajxvid.onion . tor,"
+    "tordnsfiy677ua4tbxmfovhxwvzaw7pnkyab2kihm5o4ztm4sfxq62id.onion . tor"),
+  V(DNSResolverHiddenServiceZones, CSV,    "tor"),
+  VAR("DNSResolverDNSSECMode",   STRING,   DNSResolverDNSSECMode_string,
+    "trust"),
+  VAR("DNSResolverTrustAnchors", CSV,      DNSResolverTrustAnchors_raw,
+    ". 3475 IN DS 20326 8 2 "
+      "e06d44b80b8f1d39a95c0b0d7c65d08458e880409bbc683457104237c7f8ec8d,"
+    "tor 3475 IN DS 52234 8 2 "
+      "ff1d2fd0f868fca768fd527f5886c6d902d300a697600e5b1373dc23bc020c3c"),
+  V(DNSResolverMaxCacheEntries,  INT,      "1000"),
+  V(DNSResolverMaxCacheTTL,      INTERVAL, "86400 seconds"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
@@ -1022,6 +1048,10 @@ options_clear_cb(const config_mgr_t *mgr, void *opts)
     SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, tor_free(f));
     smartlist_free(options->FilesOpenedByIncludes);
   }
+  dns_resolver_config_free_nameservers(options->DNSResolverNameservers);
+  dns_resolver_config_free_nameserver_zone_map(
+    options->DNSResolverNameserverZoneMap);
+  dns_resolver_config_free_trust_anchors(options->DNSResolverTrustAnchors);
   tor_free(options->DataDirectory);
   tor_free(options->CacheDirectory);
   tor_free(options->KeyDirectory);
@@ -2206,6 +2236,21 @@ options_act,(const or_options_t *old_options))
               escaped(options->PidFile));
       return -1;
     }
+  }
+
+  /* Handle DNSResolver settings. */
+  if (options->DNSResolver) {
+    options->DNSResolverDNSSECMode = dns_resolver_config_revise_dnssec_mode(
+                                       options->DNSResolverDNSSECMode_string);
+    options->DNSResolverNameservers = dns_resolver_config_revise_nameservers(
+                                        options->DNSResolverNameservers_raw,
+                                        old_options);
+    options->DNSResolverNameserverZoneMap =
+      dns_resolver_config_revise_nameserver_zone_map(
+        options->DNSResolverNameservers);
+    options->DNSResolverTrustAnchors =
+      dns_resolver_config_revise_trust_anchors(
+        options->DNSResolverTrustAnchors_raw);
   }
 
   /* Register addressmap directives */

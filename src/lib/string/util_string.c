@@ -182,6 +182,19 @@ tor_strisspace(const char *s)
   return 1;
 }
 
+/** Convert all whitespace characters in the nul-terminated string <b>s</b> to
+ * space. */
+void
+tor_strwhitespace(char *s)
+{
+  while (*s) {
+    if (TOR_ISSPACE(*s)) {
+      *s = ' ';
+    }
+    ++s;
+  }
+}
+
 /** As strcmp, except that either string may be NULL.  The NULL string is
  * considered to be before any non-NULL string. */
 int

@@ -56,6 +56,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/dns_resolver.h"
 #include "lib/compress/compress.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
@@ -1701,6 +1702,13 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
         ++(TO_DIR_CONN(linked_conn)->data_cells_received);
       }
 #endif /* defined(MEASUREMENTS_21206) */
+
+      /* In case we are looking up a DNS name, handle the response within dns
+       * resolver. */
+      if (conn->base_.type == CONN_TYPE_AP &&
+          EDGE_TO_ENTRY_CONN(conn)->dns_lookup) {
+        dns_resolver_process_reply(EDGE_TO_ENTRY_CONN(conn));
+      }
 
       if (!optimistic_data) {
         /* Only send a SENDME if we're not getting optimistic data; otherwise

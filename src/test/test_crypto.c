@@ -493,6 +493,12 @@ test_crypto_sha(void *arg)
                        "96177A9CB410FF61F20015AD");
   tt_int_op(i, OP_EQ, 0);
 
+  /* Test SHA-384 with a test vector from the specification. */
+  i = crypto_digest384(data, "abc", 3, DIGEST_SHA384);
+  test_memeq_hex(data, "CB00753F45A35E8BB5A03D699AC65007272C32AB0EDE"
+                       "D1631A8B605A43FF5BED8086072BA1E7CC2358BAECA1");
+  tt_int_op(i, OP_EQ, 0);
+
   /* Test SHA-512 with a test vector from the specification. */
   i = crypto_digest512(data, "abc", 3, DIGEST_SHA512);
   test_memeq_hex(data, "ddaf35a193617abacc417349ae20413112e6fa4e89a97"
@@ -611,6 +617,27 @@ test_crypto_sha(void *arg)
   crypto_digest_free(d1);
   crypto_digest_free(d2);
 
+  /* Incremental digest code with sha384 */
+  d1 = crypto_digest384_new(DIGEST_SHA384);
+  tt_assert(d1);
+  crypto_digest_add_bytes(d1, "abcdef", 6);
+  d2 = crypto_digest_dup(d1);
+  tt_assert(d2);
+  crypto_digest_add_bytes(d2, "ghijkl", 6);
+  crypto_digest_get_digest(d2, d_out1, DIGEST384_LEN);
+  crypto_digest384(d_out2, "abcdefghijkl", 12, DIGEST_SHA384);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST384_LEN);
+  crypto_digest_assign(d2, d1);
+  crypto_digest_add_bytes(d2, "mno", 3);
+  crypto_digest_get_digest(d2, d_out1, DIGEST384_LEN);
+  crypto_digest384(d_out2, "abcdefmno", 9, DIGEST_SHA384);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST384_LEN);
+  crypto_digest_get_digest(d1, d_out1, DIGEST384_LEN);
+  crypto_digest384(d_out2, "abcdef", 6, DIGEST_SHA384);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST384_LEN);
+  crypto_digest_free(d1);
+  crypto_digest_free(d2);
+
   /* Incremental digest code with sha512 */
   d1 = crypto_digest512_new(DIGEST_SHA512);
   tt_assert(d1);
@@ -661,6 +688,11 @@ test_crypto_sha3(void *arg)
   test_memeq_hex(data, "677035391CD3701293D385F037BA3279"
                        "6252BB7CE180B00B582DD9B20AAAD7F0");
   tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg8, 1, DIGEST_SHA3_384);
+  test_memeq_hex(data, "5EE7F374973CD4BB3DC41E3081346798"
+                       "497FF6E36CB9352281DFE07D07FC530C"
+                       "A9AD8EF7AAD56EF5D41BE83D5E543807");
+  tt_int_op(i, OP_EQ, 0);
   i = crypto_digest512(data, (const char*)keccak_kat_msg8, 1, DIGEST_SHA3_512);
   test_memeq_hex(data, "3939FCC8B57B63612542DA31A834E5DC"
                        "C36E2EE0F652AC72E02624FA2E5ADEEC"
@@ -674,6 +706,12 @@ test_crypto_sha3(void *arg)
                        DIGEST_SHA3_256);
   test_memeq_hex(data, "BC22345E4BD3F792A341CF18AC0789F1"
                        "C9C966712A501B19D1B6632CCD408EC5");
+  tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg24, 3,
+                       DIGEST_SHA3_384);
+  test_memeq_hex(data, "14F6F486FB98ED46A4A198040DA8079E"
+                       "79E448DAACEBE905FB4CF0DF86EF2A71"
+                       "51F62FE095BF8516EB0677FE607734E2");
   tt_int_op(i, OP_EQ, 0);
   i = crypto_digest512(data, (const char*)keccak_kat_msg24, 3,
                        DIGEST_SHA3_512);
@@ -705,6 +743,12 @@ test_crypto_sha3(void *arg)
   test_memeq_hex(data, "A19EEE92BB2097B64E823D597798AA18"
                        "BE9B7C736B8059ABFD6779AC35AC81B5");
   tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg1080, 135,
+                       DIGEST_SHA3_384);
+  test_memeq_hex(data, "0F8BA7214DE0E3A9E13C282BFA09CEA7"
+                       "82C31C052F516D0AAA403D97716E0D08"
+                       "B1F7F9BB4085B555740C813C4ECE1B90");
+  tt_int_op(i, OP_EQ, 0);
   i = crypto_digest512(data, (const char*)keccak_kat_msg1080, 135,
                        DIGEST_SHA3_512);
   test_memeq_hex(data, "7575A1FB4FC9A8F9C0466BD5FCA496D1"
@@ -735,6 +779,12 @@ test_crypto_sha3(void *arg)
   test_memeq_hex(data, "DF673F4105379FF6B755EEAB20CEB0DC"
                        "77B5286364FE16C59CC8A907AFF07732");
   tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg1088, 136,
+                       DIGEST_SHA3_384);
+  test_memeq_hex(data, "CAD2D28FBDCC3A5D71FB3ADCEEC52313"
+                       "AD41D4FF1F915CAA34EE127839DBF2E9"
+                       "A7B06E1C4ECD6255926C16C06E51EFD0");
+  tt_int_op(i, OP_EQ, 0);
   i = crypto_digest512(data, (const char*)keccak_kat_msg1088, 136,
                        DIGEST_SHA3_512);
   test_memeq_hex(data, "2E293765022D48996CE8EFF0BE54E87E"
@@ -764,6 +814,12 @@ test_crypto_sha3(void *arg)
                        DIGEST_SHA3_256);
   test_memeq_hex(data, "D52432CF3B6B4B949AA848E058DCD62D"
                        "735E0177279222E7AC0AF8504762FAA0");
+  tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg1096, 137,
+                       DIGEST_SHA3_384);
+  test_memeq_hex(data, "5B192EBAB47215A8E9FB8E4D561B220B"
+                       "1DC36707A3F085F7BB0175335C393251"
+                       "E3467F945570420C743365D0F09B9E09");
   tt_int_op(i, OP_EQ, 0);
   i = crypto_digest512(data, (const char*)keccak_kat_msg1096, 137,
                        DIGEST_SHA3_512);
@@ -798,6 +854,12 @@ test_crypto_sha3(void *arg)
                        "7BE35D2A8F3CF6620D0C2DBA2C560D68"
                        "295F284BE7F82F3B92919033C9CE5D80");
   tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg1144, 143,
+                       DIGEST_SHA3_384);
+  test_memeq_hex(data, "ED085D830AFD2D8F79627281C2A8163C"
+                       "391FEC2C58268F66F74CFF9751BB29E0"
+                       "D071EA8FD2FCF943020D0AD758281BFD");
+  tt_int_op(i, OP_EQ, 0);
   i = crypto_digest256(data, (const char*)keccak_kat_msg1144, 143,
                        DIGEST_SHA3_256);
   test_memeq_hex(data, "E58A947E98D6DD7E932D2FE02D9992E6"
@@ -828,6 +890,12 @@ test_crypto_sha3(void *arg)
                        "22775DCB6019DCD22B8885994672A088"
                        "9C69E8115C641DC8B83E39F7311815A1"
                        "64DC46E0BA2FCA344D86D4BC2EF2532C");
+  tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg1152, 144,
+                       DIGEST_SHA3_384);
+  test_memeq_hex(data, "29124752CCD4AC724A9C3D53B0B352AF"
+                       "2DBD76729F8C5C648B1E9D77819F32E2"
+                       "A7DE0E15286478A24DF9BB370F855C1C");
   tt_int_op(i, OP_EQ, 0);
   i = crypto_digest256(data, (const char*)keccak_kat_msg1152, 144,
                        DIGEST_SHA3_256);
@@ -860,16 +928,27 @@ test_crypto_sha3(void *arg)
                        "D14A0ED7FD99AF3681429F3F309FDB53"
                        "166AA9A3CD9F1F1223D04B4A9015E94A");
   tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, (const char*)keccak_kat_msg1160, 145,
+                       DIGEST_SHA3_384);
+  test_memeq_hex(data, "FAEAB5687F39EC9894C5CCFFB57E82A8"
+                       "4BBB7D493CC6AFC03D07AC7B4F181E61"
+                       "639B9A4771C99985ED7FA1773E1CA3F4");
+  tt_int_op(i, OP_EQ, 0);
   i = crypto_digest256(data, (const char*)keccak_kat_msg1160, 145,
                        DIGEST_SHA3_256);
   test_memeq_hex(data, "3A654B88F88086C2751EDAE6D3924814"
                        "3CF6235C6B0B7969342C45A35194B67E");
   tt_int_op(i, OP_EQ, 0);
 
-  /* SHA3-[256,512] Empty case (wikipedia) */
+  /* SHA3-[256,384,512] Empty case (wikipedia) */
   i = crypto_digest256(data, "", 0, DIGEST_SHA3_256);
   test_memeq_hex(data, "a7ffc6f8bf1ed76651c14756a061d662"
                        "f580ff4de43b49fa82d80a4b80f8434a");
+  tt_int_op(i, OP_EQ, 0);
+  i = crypto_digest384(data, "", 0, DIGEST_SHA3_384);
+  test_memeq_hex(data, "0c63a75b845e4f7d01107d852e4c2485"
+                       "c51a50aaaa94fc61995e71bbee983a2a"
+                       "c3713831264adb47fb6bd1e058d5f004");
   tt_int_op(i, OP_EQ, 0);
   i = crypto_digest512(data, "", 0, DIGEST_SHA3_512);
   test_memeq_hex(data, "a69f73cca23a9ac5c8b567dc185a756e"
@@ -896,6 +975,27 @@ test_crypto_sha3(void *arg)
   crypto_digest_get_digest(d1, d_out1, DIGEST256_LEN);
   crypto_digest256(d_out2, "abcdef", 6, DIGEST_SHA3_256);
   tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST256_LEN);
+  crypto_digest_free(d1);
+  crypto_digest_free(d2);
+
+  /* Incremental digest code with SHA3-384 */
+  d1 = crypto_digest384_new(DIGEST_SHA3_384);
+  tt_assert(d1);
+  crypto_digest_add_bytes(d1, "abcdef", 6);
+  d2 = crypto_digest_dup(d1);
+  tt_assert(d2);
+  crypto_digest_add_bytes(d2, "ghijkl", 6);
+  crypto_digest_get_digest(d2, d_out1, DIGEST384_LEN);
+  crypto_digest384(d_out2, "abcdefghijkl", 12, DIGEST_SHA3_384);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST384_LEN);
+  crypto_digest_assign(d2, d1);
+  crypto_digest_add_bytes(d2, "mno", 3);
+  crypto_digest_get_digest(d2, d_out1, DIGEST384_LEN);
+  crypto_digest384(d_out2, "abcdefmno", 9, DIGEST_SHA3_384);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST384_LEN);
+  crypto_digest_get_digest(d1, d_out1, DIGEST384_LEN);
+  crypto_digest384(d_out2, "abcdef", 6, DIGEST_SHA3_384);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST384_LEN);
   crypto_digest_free(d1);
   crypto_digest_free(d2);
 
@@ -1487,8 +1587,10 @@ test_crypto_digest_names(void *arg)
   } names[] = {
     { DIGEST_SHA1, "sha1" },
     { DIGEST_SHA256, "sha256" },
+    { DIGEST_SHA384, "sha384" },
     { DIGEST_SHA512, "sha512" },
     { DIGEST_SHA3_256, "sha3-256" },
+    { DIGEST_SHA3_384, "sha3-384" },
     { DIGEST_SHA3_512, "sha3-512" },
     { -1, NULL }
   };

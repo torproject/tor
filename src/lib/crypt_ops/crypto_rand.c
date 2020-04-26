@@ -29,6 +29,7 @@
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"
 #include "lib/sandbox/sandbox.h"
+#include "lib/string/compat_ctype.h"
 #include "lib/string/compat_string.h"
 #include "lib/string/util_string.h"
 #include "lib/testsupport/testsupport.h"
@@ -629,4 +630,19 @@ crypto_force_rand_ssleay(void)
   }
 #endif /* defined(ENABLE_OPENSSL) */
   return 0;
+}
+
+/** Shuffle case for all alphabetic characters in the nul-terminated
+ * string <b>s</b>. */
+void
+str_shuffle_case(char *s)
+{
+  while (*s) {
+    if (crypto_rand_int(2) == 1) {
+      *s = TOR_TOUPPER(*s);
+    } else {
+      *s = TOR_TOLOWER(*s);
+    }
+    ++s;
+  }
 }

@@ -29,6 +29,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/command.h"
 #include "core/or/connection_or.h"
+#include "core/or/dns_resolver.h"
 #include "core/or/relay.h"
 #include "core/or/status.h"
 #include "feature/api/tor_api.h"
@@ -535,6 +536,8 @@ tor_init(int argc, char *argv[])
 
   /* Initialize the HS subsystem. */
   hs_init();
+  /* Initialize the DNS resolver. */
+  dns_resolver_init();
 
   {
     /* We check for the "quiet"/"hush" settings first, since they decide

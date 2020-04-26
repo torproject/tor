@@ -26,6 +26,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
+#include "core/or/dns_resolver.h"
 #include "feature/control/control_events.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
@@ -49,6 +50,7 @@ static void
 evdns_server_callback(struct evdns_server_request *req, void *data_)
 {
   const listener_connection_t *listener = data_;
+  const or_options_t *options = get_options();
   entry_connection_t *entry_conn;
   edge_connection_t *conn;
   int i = 0;
@@ -100,6 +102,11 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   if (req->nquestions > 1) {
     log_info(LD_APP, "Got a DNS request with more than one question; I only "
              "handle one question at a time for now.  Skipping the extras.");
+  }
+  if (options->DNSResolver) {
+    log_info(LD_APP, "Forwarded DNS request to DNS resolver.");
+    dns_resolver_initiate_server_request_forward(req);
+    return;
   }
   for (i = 0; i < req->nquestions; ++i) {
     if (req->questions[i]->dns_question_class != EVDNS_CLASS_INET)
@@ -210,6 +217,7 @@ int
 dnsserv_launch_request(const char *name, int reverse,
                        control_connection_t *control_conn)
 {
+  const or_options_t *options = get_options();
   entry_connection_t *entry_conn;
   edge_connection_t *conn;
   char *q_name;
@@ -265,8 +273,6 @@ dnsserv_launch_request(const char *name, int reverse,
     return -1;
   }
 
-  control_event_stream_status(entry_conn, STREAM_EVENT_NEW_RESOLVE, 0);
-
   /* Now, unless a controller asked us to leave streams unattached,
   * throw the connection over to get rewritten (which will
   * answer it immediately if it's in the cache, or completely bogus, or
@@ -274,11 +280,20 @@ dnsserv_launch_request(const char *name, int reverse,
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
            escaped_safe_str_client(name));
   q_name = tor_strdup(name); /* q could be freed in rewrite_and_attach */
-  connection_ap_rewrite_and_attach_if_allowed(entry_conn, NULL, NULL);
-  /* Now, the connection is marked if it was bad. */
+  if (options->DNSResolver) {
+    dns_resolver_initiate_socks_address_resolution(entry_conn);
 
-  log_info(LD_APP, "Passed request for %s to rewrite_and_attach_if_allowed.",
-           escaped_safe_str_client(q_name));
+    log_info(LD_APP, "Passed request for %s to "
+            "dns_resolver_initiate_socks_address_resolution.",
+            escaped_safe_str_client(q_name));
+  } else {
+    control_event_stream_status(entry_conn, STREAM_EVENT_NEW_RESOLVE, 0);
+    connection_ap_rewrite_and_attach_if_allowed(entry_conn, NULL, NULL);
+    /* Now, the connection is marked if it was bad. */
+
+    log_info(LD_APP, "Passed request for %s to rewrite_and_attach_if_allowed.",
+             escaped_safe_str_client(q_name));
+  }
   tor_free(q_name);
   return 0;
 }

@@ -325,6 +325,29 @@ struct or_options_t {
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */
   struct smartlist_t *LongLivedPorts;
+  int DNSResolver;  /**< Boolean: should DNS resolver be enabled? */
+  int DNSResolverIPv4;  /**< Boolean: should we resolve to IPv4? */
+  int DNSResolverIPv6;  /**< Boolean: should we resolve to IPv6? */
+  int DNSResolverRandomizeCase;  /**< Boolean: should we use the 0x20-hack? */
+  struct smartlist_t *DNSResolverNameservers;  /**< Which nameservers our
+                                                * DNSResolver is using. */
+  struct smartlist_t *DNSResolverNameservers_raw;
+  struct strmap_t *DNSResolverNameserverZoneMap;
+  struct smartlist_t *DNSResolverHiddenServiceZones;  /**< A list of hidden
+                                                       * service zones. */
+  char *DNSResolverDNSSECMode_string;  /**< The DNSSEC operation mode of our
+                                        * DNSResolver. */
+  enum {
+    DNSSEC_MODE_OFF,
+    DNSSEC_MODE_PROCESS,
+    DNSSEC_MODE_TRUST,
+    DNSSEC_MODE_VALIDATE
+  } DNSResolverDNSSECMode;
+  struct smartlist_t *DNSResolverTrustAnchors; /**< A list of trust anchors. */
+  struct smartlist_t *DNSResolverTrustAnchors_raw;
+  int DNSResolverMaxCacheEntries;  /**< Maximum number of cache entries. */
+  int DNSResolverMaxCacheTTL;  /**< Maximum number of seconds to keep a cached
+                                * entries. */
   /** Application ports that are likely to be unencrypted and
    * unauthenticated; we reject requests for them to prevent the
    * user from screwing up and leaking plaintext secrets to an
