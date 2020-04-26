@@ -564,10 +564,7 @@ channel_tls_get_transport_name_method(channel_t *chan, char **transport_out)
 static const char *
 channel_tls_get_remote_descr_method(channel_t *chan, int flags)
 {
-  /* IPv6 address, colon, port */
-#define MAX_DESCR_LEN (TOR_ADDR_BUF_LEN + 1 + 5)
-
-  static char buf[MAX_DESCR_LEN + 1];
+  static char buf[TOR_ADDRPORT_BUF_LEN];
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
   connection_t *conn;
   const char *answer = NULL;
@@ -580,15 +577,14 @@ channel_tls_get_remote_descr_method(channel_t *chan, int flags)
     switch (flags) {
       case 0:
         /* Canonical address with port*/
-        tor_snprintf(buf, MAX_DESCR_LEN + 1,
+        tor_snprintf(buf, TOR_ADDRPORT_BUF_LEN,
                      "%s:%u", conn->address, conn->port);
         answer = buf;
         break;
       case GRD_FLAG_ORIGINAL:
         /* Actual address with port */
         addr_str = tor_addr_to_str_dup(&(tlschan->conn->real_addr));
-        tor_snprintf(buf, MAX_DESCR_LEN + 1,
-                     "%s:%u", addr_str, conn->port);
+        tor_snprintf(buf, TOR_ADDRPORT_BUF_LEN, "%s:%u", addr_str, conn->port);
         tor_free(addr_str);
         answer = buf;
         break;
