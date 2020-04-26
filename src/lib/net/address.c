@@ -1173,8 +1173,7 @@ fmt_addr_impl(const tor_addr_t *addr, int decorate)
 const char *
 fmt_addrport(const tor_addr_t *addr, uint16_t port)
 {
-  /* Add space for a colon and up to 5 digits. */
-  static char buf[TOR_ADDR_BUF_LEN + 6];
+  static char buf[TOR_ADDRPORT_BUF_LEN];
   tor_snprintf(buf, sizeof(buf), "%s:%u", fmt_and_decorate_addr(addr), port);
   return buf;
 }
