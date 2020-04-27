@@ -1558,6 +1558,23 @@ rep_hist_bw_stats_write(time_t now)
   return start_of_bw_stats_interval;
 }
 
+/** If the BandwidthStatistics option is "auto", checks the BandwidthStatistics
+ * consensus parameter, and returns its value. If the consensus parameter is
+ * not set, return a default value. If the BandwidthStatistics option is not
+ * auto, return the value of the BandwidthStatistics option. */
+bool
+get_bandwidth_stats_param(const networkstatus_t *ns)
+{
+  int bandwidth_stats = get_options()->BandwidthStatistics;
+  /* If bandwidth_stats is auto check the consensus parameter. */
+  if (bandwidth_stats == -1)
+    bandwidth_stats = networkstatus_get_param(ns, "BandwidthStatistics",
+                              BANDWIDTHSTATS_ENABLED_DEFAULT, 0, 1);
+  /** If BANDWIDTHSTATS_ENABLED_DEFAULT is set to -1 in future,
+   *  this should return true. */
+  return !!bandwidth_stats;
+}
+
 /*** Exit port statistics ***/
 
 /* Some constants */

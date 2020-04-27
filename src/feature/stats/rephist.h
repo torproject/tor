@@ -12,6 +12,10 @@
 #ifndef TOR_REPHIST_H
 #define TOR_REPHIST_H
 
+/** The default BandwidthStatistics setting, if the option is "auto"
+  * and the consensus parameter is not set. */
+#define BANDWIDTHSTATS_ENABLED_DEFAULT 1
+
 void rep_hist_init(void);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(uint64_t num_bytes, time_t when);
@@ -32,6 +36,7 @@ void rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
                                     const uint16_t at_port, time_t when);
 void rep_hist_note_router_unreachable(const char *id, time_t when);
 int rep_hist_record_mtbf_data(time_t now, int missing_means_down);
+bool get_bandwidth_stats_param(const networkstatus_t *ns);
 time_t rep_hist_bw_stats_write(time_t now);
 int rep_hist_load_mtbf_data(time_t now);
 

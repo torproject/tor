@@ -33,6 +33,7 @@
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/stats/rephist.h"
 
 // an imaginary time, in timestamp units. Chosen so it will roll over.
 static const uint32_t START_TS = UINT32_MAX-10;
@@ -431,6 +432,46 @@ test_bwmgt_dir_conn_global_write_low(void *arg)
   UNMOCK(get_options);
 }
 
+#define get_str_test(str) !!strcmp(str, "") ?                   \
+    (char *)"BandwidthStatistics=" str : (char *) str
+
+#define TEST_BW_PARAM(ns, str, rv) STMT_BEGIN                   \
+    ns->net_params = smartlist_new();                           \
+    smartlist_add(ns->net_params, get_str_test(str));           \
+    tt_int_op(get_bandwidth_stats_param(ns), OP_EQ, rv);        \
+    smartlist_free(ns->net_params);                             \
+  STMT_END;
+
+static void
+test_bandwidth_stats_param(void *arg)
+{
+  (void) arg;
+  dummy_ns = tor_malloc_zero(sizeof(*dummy_ns));
+  MOCK(get_options, mock_get_options);
+
+  mock_options.BandwidthStatistics = -1;
+  TEST_BW_PARAM(dummy_ns, "0", 0);
+  TEST_BW_PARAM(dummy_ns, "1", 1);
+  TEST_BW_PARAM(dummy_ns, "", BANDWIDTHSTATS_ENABLED_DEFAULT);
+
+  mock_options.BandwidthStatistics = 0;
+  TEST_BW_PARAM(dummy_ns, "0", 0);
+  TEST_BW_PARAM(dummy_ns, "1", 0);
+  TEST_BW_PARAM(dummy_ns, "", 0);
+
+  mock_options.BandwidthStatistics = 1;
+  TEST_BW_PARAM(dummy_ns, "0", 1);
+  TEST_BW_PARAM(dummy_ns, "1", 1);
+  TEST_BW_PARAM(dummy_ns, "", 1);
+
+ done:
+  UNMOCK(get_options);
+  tor_free(dummy_ns);
+}
+
+#define BWTEST(name)                                         \
+  { #name, test_ ## name , TT_FORK, NULL, NULL }
+
 #define BWMGT(name)                                          \
   { #name, test_bwmgt_ ## name , TT_FORK, NULL, NULL }
 
@@ -442,5 +483,6 @@ struct testcase_t bwmgt_tests[] = {
   BWMGT(token_buf_helpers),
 
   BWMGT(dir_conn_global_write_low),
+  BWTEST(bandwidth_stats_param),
   END_OF_TESTCASES
 };
