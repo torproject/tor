@@ -1533,9 +1533,10 @@ rep_hist_load_state(or_state_t *state, char **err)
   return 0;
 }
 
-/** If BandwidthStatistics is auto, checks the consensus parameter,
- *  and returns its value. If the parameter is not known, a default value is
- *  returned. If BandwidthStatistics is set to 1, return 1 else, return 0. */
+/** If the BandwidthStatistics option is "auto", checks the BandwidthStatistics
+ * consensus parameter, and returns its value. If the consensus parameter is
+ * not set, return a default value. If the BandwidthStatistics option is not auto,
+ * return the value of the BandwidthStatistics option. */
 bool
 get_bandwidth_stats_param(const networkstatus_t *ns)
 {

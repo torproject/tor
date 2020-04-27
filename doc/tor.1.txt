@@ -2606,17 +2606,15 @@ extra-info document. The following options affect the different
 types of statistics that Tor relays collect and publish:
 
 [[BandwidthStatistics]] **BandwidthStatistics** **0**|**1**|**auto**::
-    Relays and bridges only. 
-	When this option is enabled or left unspecified, Tor collects
-    statistics about bandwidth used each 24 hours for the
-    last 5 days (if available) and writes them to disk every 24 hours.
-    Enables relay and bridge operators to monitor bandwidth used by Tor.
-    Tor includes the bandwidth statistcs in extrainfo document if and
-    only if BandwidthStatistics is enabled or left unspecified,
-    in which case the consensus parameter, BandwidthStatistics,
-    is checked further whether it is enabled or not.
-    If ExtraInfoStatistics is enabled, it will published as part of
-    extra-info document. (Default: auto)
+    Relays and bridges only.
+    When this option is enabled, Tor collects statistics about bandwidth (i.e.
+    read and written bytes, and read and written directory bytes) and writes
+    them to disk every 24 hours. Relay and bridge operators may use the
+    statistics for performance monitoring. If this option is set to "auto",
+    use the value from the BandwidthStatistics consensus parameter, and
+    default to 1 if the consensus parameter isn't set. If ExtraInfoStatistics
+    is enabled, it will be published as part of the extra-info document.
+    (Default: auto)
 
 [[CellStatistics]] **CellStatistics** **0**|**1**::
     Relays only.

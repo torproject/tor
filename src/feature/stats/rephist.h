@@ -12,7 +12,8 @@
 #ifndef TOR_REPHIST_H
 #define TOR_REPHIST_H
 
-/* Bandwidth Statistics Reporting enabled by default. */
+/** The default BandwidthStatistics setting, if the option is "auto"
+  * and the consensus parameter is not set. */
 #define BANDWIDTHSTATS_ENABLED_DEFAULT 1
 
 void rep_hist_init(void);
