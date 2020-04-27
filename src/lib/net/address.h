@@ -216,7 +216,7 @@ tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
  *   "[ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]:12345",
  * plus a terminating NUL.
  */
-#define TOR_ADDRPORT_BUF_LEN TOR_ADDR_BUF_LEN + 6
+#define TOR_ADDRPORT_BUF_LEN (TOR_ADDR_BUF_LEN + 6)
 
 char *tor_addr_to_str_dup(const tor_addr_t *addr) ATTR_MALLOC;
 
