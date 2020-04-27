@@ -634,6 +634,12 @@ struct or_options_t {
   /** If true, include statistics file contents in extra-info documents. */
   int ExtraInfoStatistics;
 
+  /** If true, write the bandwidth stats to disk and publish the stats
+   *  in extrainfo document. If set to auto, write the bandwidth stats
+   *  to disk and check the consesus parameter, BandwidthStatistics,
+   *  before publishing the stats in extrainfo document. */
+  int BandwidthStatistics;
+
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
    * Helps avoid some cross-site attacks. */
