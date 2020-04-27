@@ -1030,6 +1030,7 @@ sandbox_init_filter(void)
     OPEN_DATADIR2_SUFFIX("stats", "buffer-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "conn-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "hidserv-stats", ".tmp");
+    OPEN_DATADIR2_SUFFIX("stats", "bandwidth-stats", ".tmp");
 
     OPEN_DATADIR("approved-routers");
     OPEN_DATADIR_SUFFIX("fingerprint", ".tmp");
@@ -1046,6 +1047,7 @@ sandbox_init_filter(void)
     RENAME_KEYDIR_SUFFIX("secret_onion_key", ".tmp");
     RENAME_KEYDIR_SUFFIX("secret_onion_key.old", ".tmp");
 
+    RENAME_SUFFIX2("stats", "bandwidth-stats", ".tmp");
     RENAME_SUFFIX2("stats", "bridge-stats", ".tmp");
     RENAME_SUFFIX2("stats", "dirreq-stats", ".tmp");
     RENAME_SUFFIX2("stats", "entry-stats", ".tmp");

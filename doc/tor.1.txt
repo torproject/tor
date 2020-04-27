@@ -3780,6 +3780,10 @@ __DataDirectory__/**`stats/bridge-stats`**::
     Only used by servers. This file is used to collect incoming connection
     statistics by Tor bridges.
 
+__DataDirectory__/**`stats/bandwidth-stats`**::
+    Only used by relays and bridges. This file is used to collect information
+    about bandwidth used in OR and directory read and write operations.
+
 __DataDirectory__/**`stats/exit-stats`**::
     Only used by servers. This file is used to collect outgoing connection
     statistics by Tor exit routers.

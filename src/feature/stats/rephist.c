@@ -982,6 +982,8 @@ rep_hist_load_mtbf_data(time_t now)
 #define NUM_SECS_BW_SUM_IS_VALID (5*24*60*60)
 /** How many bandwidth usage intervals do we remember? (derived) */
 #define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
+/** Start time of bandwidth stats or 0 if we are not collecting the stats*/
+static time_t start_of_bw_stats_interval = 0;
 
 /** Structure to track bandwidth use, and remember the maxima for a given
  * time period.
@@ -1127,6 +1129,8 @@ static bw_array_t *dir_write_array = NULL;
 static void
 bw_arrays_init(void)
 {
+  start_of_bw_stats_interval = time(NULL);
+
   bw_array_free(read_array);
   bw_array_free(write_array);
   bw_array_free(dir_read_array);
@@ -1525,6 +1529,33 @@ rep_hist_load_state(or_state_t *state, char **err)
     return -1;
   }
   return 0;
+}
+
+/** If 24 hours have passed since the beginning of the current bandwidth
+ * stats period, write bandwidth stats to $DATADIR/stats/bandwidth-stats
+ * (possibly overwriting an existing file).  It doesn't reset the bandwidth
+ * stats as it has to remember stat for a period of NUM_SECS_BW_SUM_IS_VALID.
+ * Increases the start_of_bw_stats_interval by 24 hours for the next write.
+ * Returns next write period or 0 if we never want to write*/
+time_t
+rep_hist_bw_stats_write(time_t now)
+{
+  char *str = NULL;
+
+  if (!start_of_bw_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_bw_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write. */
+  str = rep_hist_get_bandwidth_lines();
+  log_info(LD_HIST, "Writing bandwidth statistics to disk.");
+  if (!check_or_create_data_subdir("stats")) {
+      write_to_data_subdir("stats", "bandwidth-stats", str,
+                            "bandwidth statistics");
+  }
+  start_of_bw_stats_interval += WRITE_STATS_INTERVAL;
+ done:
+  tor_free(str);
+  return start_of_bw_stats_interval;
 }
 
 /*** Exit port statistics ***/

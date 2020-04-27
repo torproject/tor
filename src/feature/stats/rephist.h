@@ -32,6 +32,7 @@ void rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
                                     const uint16_t at_port, time_t when);
 void rep_hist_note_router_unreachable(const char *id, time_t when);
 int rep_hist_record_mtbf_data(time_t now, int missing_means_down);
+time_t rep_hist_bw_stats_write(time_t now);
 int rep_hist_load_mtbf_data(time_t now);
 
 time_t rep_hist_downrate_old_runs(time_t now);
