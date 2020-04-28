@@ -739,10 +739,13 @@ channel_tls_matches_target_method(channel_t *chan,
    * base_.addr is updated by connection_or_init_conn_from_address()
    * to be the address in the descriptor. It may be tempting to
    * allow either address to be allowed, but if we did so, it would
-   * enable someone who steals a relay's keys to impersonate/MITM it
+   * enable someone who steals a relay's keys to covertly impersonate/MITM it
    * from anywhere on the Internet! (Because they could make long-lived
    * TLS connections from anywhere to all relays, and wait for them to
    * be used for extends).
+   *
+   * An adversary who has stolen a relay's keys could also post a fake relay
+   * descriptor, but that attack is easier to detect.
    */
   return tor_addr_eq(&(tlschan->conn->real_addr), target);
 }
