@@ -1669,7 +1669,7 @@ tor_addr_from_netinfo_addr(tor_addr_t *tor_addr,
   } else if (type == NETINFO_ADDR_TYPE_IPV6 && len == 16) {
     const uint8_t *ipv6_bytes = netinfo_addr_getconstarray_addr_ipv6(
                                   netinfo_addr);
-    tor_addr_from_ipv6_bytes(tor_addr, (const char *)ipv6_bytes);
+    tor_addr_from_ipv6_bytes(tor_addr, ipv6_bytes);
   } else {
     log_fn(LOG_PROTOCOL_WARN, LD_OR, "Cannot read address from NETINFO "
                                      "- wrong type/length.");

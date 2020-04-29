@@ -460,7 +460,7 @@ test_address_ifreq_to_smartlist(void *arg)
   ifc->ifc_len = sizeof(struct ifreq);
   ifc->ifc_ifcu.ifcu_req = ifr;
 
-  results = ifreq_to_smartlist(ifc->ifc_buf,ifc->ifc_len);
+  results = ifreq_to_smartlist((const uint8_t *)ifc->ifc_buf,ifc->ifc_len);
   tt_int_op(smartlist_len(results),OP_EQ,1);
 
   tor_addr = smartlist_get(results, 0);
@@ -483,7 +483,7 @@ test_address_ifreq_to_smartlist(void *arg)
   SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
   smartlist_free(results);
 
-  results = ifreq_to_smartlist(ifc->ifc_buf,ifc->ifc_len);
+  results = ifreq_to_smartlist((const uint8_t *)ifc->ifc_buf,ifc->ifc_len);
   tt_int_op(smartlist_len(results),OP_EQ,2);
 
   tor_addr = smartlist_get(results, 0);

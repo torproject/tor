@@ -353,7 +353,7 @@ extend_cell_from_extend2_cell_body(extend_cell_t *cell_out,
           continue;
         found_ipv6 = 1;
         tor_addr_from_ipv6_bytes(&cell_out->orport_ipv6.addr,
-                                 (const char *)ls->un_ipv6_addr);
+                                 ls->un_ipv6_addr);
         cell_out->orport_ipv6.port = ls->un_ipv6_port;
         break;
       case LS_LEGACY_ID:
@@ -674,8 +674,8 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
         extend2_cell_body_add_ls(cell, ls);
         ls->ls_type = LS_IPV6;
         ls->ls_len = 18;
-        tor_addr_copy_ipv6_bytes((char *)ls->un_ipv6_addr,
-                                &cell_in->orport_ipv6.addr);
+        tor_addr_copy_ipv6_bytes(ls->un_ipv6_addr,
+                                 &cell_in->orport_ipv6.addr);
         ls->un_ipv6_port = cell_in->orport_ipv6.port;
       }
       cell->n_spec = n_specifiers;
