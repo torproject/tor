@@ -251,7 +251,7 @@ STATIC const tor_addr_port_t *
 circuit_choose_ip_ap_for_extend(const tor_addr_port_t *ipv4_ap,
                                 const tor_addr_port_t *ipv6_ap)
 {
-  const bool ipv6_supported = router_has_advertised_ipv6_orport(get_options());
+  const bool ipv6_supported = router_can_extend_over_ipv6(get_options());
 
   /* If IPv6 is not supported, we can't use the IPv6 address. */
   if (!ipv6_supported) {

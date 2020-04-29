@@ -821,14 +821,14 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_free(p_chan);
 }
 
-static bool router_has_ipv6_orport_result = false;
-static int mock_router_ipv6_orport_calls = 0;
+static bool can_extend_over_ipv6_result = false;
+static int mock_router_can_extend_over_ipv6_calls = 0;
 static bool
-mock_router_has_advertised_ipv6_orport(const or_options_t *options)
+mock_router_can_extend_over_ipv6(const or_options_t *options)
 {
   (void)options;
-  mock_router_ipv6_orport_calls++;
-  return router_has_ipv6_orport_result;
+  mock_router_can_extend_over_ipv6_calls++;
+  return can_extend_over_ipv6_result;
 }
 
 /* Test the different cases in circuit_choose_ip_ap_for_extend(). */
@@ -849,65 +849,65 @@ test_circuit_choose_ip_ap_for_extend(void *arg)
   MOCK(get_options, mock_get_options);
   mocked_options = fake_options;
 
-  MOCK(router_has_advertised_ipv6_orport,
-       mock_router_has_advertised_ipv6_orport);
-  router_has_ipv6_orport_result = true;
-  mock_router_ipv6_orport_calls = 0;
+  MOCK(router_can_extend_over_ipv6,
+       mock_router_can_extend_over_ipv6);
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
 
   /* No valid addresses */
-  router_has_ipv6_orport_result = true;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
   tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, NULL), OP_EQ, NULL);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
-  router_has_ipv6_orport_result = false;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
   tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, NULL), OP_EQ, NULL);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
   /* One valid address: IPv4 */
-  router_has_ipv6_orport_result = true;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
   tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, NULL), OP_EQ, &ipv4_ap);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
-  router_has_ipv6_orport_result = false;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
   tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, NULL), OP_EQ, &ipv4_ap);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
   /* One valid address: IPv6 */
-  router_has_ipv6_orport_result = true;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
   tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, &ipv6_ap), OP_EQ, &ipv6_ap);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
-  router_has_ipv6_orport_result = false;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
   tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, &ipv6_ap), OP_EQ, NULL);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
   /* Two valid addresses */
   const tor_addr_port_t *chosen_addr = NULL;
 
-  router_has_ipv6_orport_result = true;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
   chosen_addr = circuit_choose_ip_ap_for_extend(&ipv4_ap, &ipv6_ap);
   tt_assert(chosen_addr == &ipv4_ap || chosen_addr == &ipv6_ap);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
-  router_has_ipv6_orport_result = false;
-  mock_router_ipv6_orport_calls = 0;
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
   tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, &ipv6_ap),
             OP_EQ, &ipv4_ap);
-  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
 
  done:
   UNMOCK(get_options);
   or_options_free(fake_options);
   mocked_options = NULL;
 
-  UNMOCK(router_has_advertised_ipv6_orport);
+  UNMOCK(router_can_extend_over_ipv6);
 
   tor_free(fake_options);
 }
@@ -968,9 +968,9 @@ test_circuit_open_connection_for_extend(void *arg)
   mock_channel_connect_calls = 0;
   mock_channel_connect_nchan = NULL;
 
-  MOCK(router_has_advertised_ipv6_orport,
-       mock_router_has_advertised_ipv6_orport);
-  router_has_ipv6_orport_result = true;
+  MOCK(router_can_extend_over_ipv6,
+       mock_router_can_extend_over_ipv6);
+  can_extend_over_ipv6_result = true;
 
   setup_full_capture_of_logs(LOG_INFO);
 
@@ -1110,7 +1110,7 @@ test_circuit_open_connection_for_extend(void *arg)
   or_options_free(fake_options);
   mocked_options = NULL;
 
-  UNMOCK(router_has_advertised_ipv6_orport);
+  UNMOCK(router_can_extend_over_ipv6);
 
   tor_free(ec);
   tor_free(circ->n_hop);
