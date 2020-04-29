@@ -30,6 +30,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/relay/circuitbuild_relay.h"
+#include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 
 #include "feature/nodelist/node_st.h"
@@ -848,11 +849,27 @@ mock_channel_connect_for_circuit(const tor_addr_t *addr,
   return mock_channel_connect_nchan;
 }
 
-/* Test the different cases in circuit_open_connection_for_extend(). */
+static bool
+mock_router_has_advertised_ipv6_orport(const or_options_t *options)
+{
+  (void)options;
+  return 1;
+}
+
+/* Test the different cases in circuit_open_connection_for_extend().
+ * Chooses different IP addresses depending on the first character in arg:
+ *  - 4: IPv4
+ *  - 6: IPv6
+ *  - d: IPv4 and IPv6 (dual-stack)
+ */
 static void
 test_circuit_open_connection_for_extend(void *arg)
 {
-  (void)arg;
+  const char ip_version = ((const char *)arg)[0];
+  const bool use_ipv4 = (ip_version == '4' || ip_version == 'd');
+  const bool use_ipv6 = (ip_version == '6' || ip_version == 'd');
+  tor_assert(use_ipv4 || use_ipv6);
+
   extend_cell_t *ec = tor_malloc_zero(sizeof(extend_cell_t));
   circuit_t *circ = tor_malloc_zero(sizeof(circuit_t));
   channel_t *fake_n_chan = tor_malloc_zero(sizeof(channel_t));
@@ -866,6 +883,9 @@ test_circuit_open_connection_for_extend(void *arg)
   MOCK(channel_connect_for_circuit, mock_channel_connect_for_circuit);
   mock_channel_connect_calls = 0;
   mock_channel_connect_nchan = NULL;
+
+  MOCK(router_has_advertised_ipv6_orport,
+       mock_router_has_advertised_ipv6_orport);
 
   setup_full_capture_of_logs(LOG_INFO);
 
@@ -929,10 +949,14 @@ test_circuit_open_connection_for_extend(void *arg)
 #endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Set up valid addresses */
-  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
-  ec->orport_ipv4.port = VALID_PORT;
-  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
-  ec->orport_ipv6.port = VALID_PORT;
+  if (use_ipv4) {
+    tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+    ec->orport_ipv4.port = VALID_PORT;
+  }
+  if (use_ipv6) {
+    tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+    ec->orport_ipv6.port = VALID_PORT;
+  }
 
   /* Succeed, but don't try to open a connection */
   mock_circuit_close_calls = 0;
@@ -1000,6 +1024,8 @@ test_circuit_open_connection_for_extend(void *arg)
   UNMOCK(get_options);
   or_options_free(fake_options);
   mocked_options = NULL;
+
+  UNMOCK(router_has_advertised_ipv6_orport);
 
   tor_free(ec);
   tor_free(circ->n_hop);
@@ -1414,6 +1440,12 @@ test_onionskin_answer(void *arg)
 #define TEST_CIRCUIT(name, flags) \
   { #name, test_circuit_ ## name, flags, NULL, NULL }
 
+#ifndef COCCI
+#define TEST_CIRCUIT_PASSTHROUGH(name, flags, arg) \
+  { #name "/" arg, test_circuit_ ## name, flags, \
+    &passthrough_setup, (void *)(arg) }
+#endif
+
 struct testcase_t circuitbuild_tests[] = {
   TEST_NEW_ROUTE_LEN(noexit, 0),
   TEST_NEW_ROUTE_LEN(safe_exit, 0),
@@ -1425,7 +1457,9 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_state_valid, TT_FORK),
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
-  TEST_CIRCUIT(open_connection_for_extend, TT_FORK),
+  TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "4"),
+  TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "6"),
+  TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "dual-stack"),
   TEST_CIRCUIT(extend, TT_FORK),
 
   TEST(onionskin_answer, TT_FORK, NULL, NULL),

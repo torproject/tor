@@ -1491,8 +1491,8 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
 }
 
 /** Returns true if this router has an advertised IPv6 ORPort. */
-bool
-router_has_advertised_ipv6_orport(const or_options_t *options)
+MOCK_IMPL(bool,
+router_has_advertised_ipv6_orport,(const or_options_t *options))
 {
   tor_addr_port_t ipv6_ap;
   router_get_advertised_ipv6_or_ap(options, &ipv6_ap);
