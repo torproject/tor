@@ -198,7 +198,7 @@ typedef struct subsys_fns_t {
  **/
 #define SUBSYS_DECLARE_LOCATION() \
   .location = __FILE__
-#endif
+#endif /* !defined(COCCI) */
 
 /**
  * Lowest allowed subsystem level.

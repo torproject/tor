@@ -139,7 +139,7 @@ consensus_cache_may_overallocate(consensus_cache_t *cache)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
-#endif
+#endif /* defined(_WIN32) */
 
 /**
  * Tell the sandbox (if any) configured by <b>cfg</b> to allow the

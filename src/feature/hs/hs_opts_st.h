@@ -27,4 +27,4 @@
  **/
 typedef struct hs_opts_t hs_opts_t;
 
-#endif
+#endif /* !defined(TOR_FEATURE_HS_HS_OPTS_ST_H) */

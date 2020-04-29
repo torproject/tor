@@ -133,7 +133,7 @@ test_new_route_len_unhandled_exit(void *arg)
 #if !defined(__COVERITY__) && !defined(__clang_analyzer__)
   tt_skip();
 #endif
-#endif
+#endif /* defined(ALL_BUGS_ARE_FATAL) */
 
   MOCK(count_acceptable_nodes, mock_count_acceptable_nodes);
 

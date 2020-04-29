@@ -3041,7 +3041,7 @@ test_dir_param_voting_lookup(void *arg)
   tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
             "!(!ok)");
   tor_end_capture_bugs_();
-#endif
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
  done:
   SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
@@ -4997,7 +4997,7 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
 #if !defined(__COVERITY__) && !defined(__clang_analyzer__)
   tt_skip();
 #endif
-#endif
+#endif /* defined(ALL_BUGS_ARE_FATAL) */
 
   tor_capture_bugs_(1);
   setup_full_capture_of_logs(LOG_WARN);
