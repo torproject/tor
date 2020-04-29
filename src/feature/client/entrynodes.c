@@ -1773,11 +1773,15 @@ first_reachable_filtered_entry_guard(guard_selection_t *gs,
            flags, smartlist_len(reachable_filtered_sample));
 
   if (smartlist_len(reachable_filtered_sample)) {
-    /** Get the first guard of the filtered set builds from
+    /**
+     * Get the first guard of the filtered set builds from
      * sampled_entry_guards. Proposal 310 suggests this design to overcome
      * performance and security issues linked to the previous selection
      * method. The guard selected here should be filtered out if this function
-     * is called again in the same context.
+     * is called again in the same context. I.e., if we filter guards to add
+     * them into some list X, then the guards from list X will be filtered out
+     * when this function is called again. Hence it requires setting exclude
+     * flags in a appropriate way (depending of the context of the caller).
      */
     result = smartlist_get(reachable_filtered_sample, 0);
     log_info(LD_GUARD, "  (Selected %s.)",
@@ -3003,7 +3007,7 @@ entry_guard_parse_from_state(const char *s)
   char *pb_collapsed_circuits = NULL;
   char *pb_unusable_circuits = NULL;
   char *pb_timeouts = NULL;
-  int unvalid_sampled_idx = get_max_sample_size_absolute();
+  int invalid_sampled_idx = get_max_sample_size_absolute();
 
   /* Split up the entries.  Put the ones we know about in strings and the
    * rest in "extra". */
@@ -3112,7 +3116,7 @@ entry_guard_parse_from_state(const char *s)
       log_warn(LD_GUARD, "Guard has invalid sampled_idx %s",
           escaped(sampled_idx));
       /* set it to a idx higher than the max sample size */
-      guard->sampled_idx = unvalid_sampled_idx++;
+      guard->sampled_idx = invalid_sampled_idx++;
     } else {
       guard->sampled_idx = (int)idx;
     }
@@ -3125,7 +3129,7 @@ entry_guard_parse_from_state(const char *s)
     log_warn(LD_GUARD, "The state file seems to be into a status that could"
         " yield to weird entry node selection: we're missing both a"
         " sampled_idx and a confirmed_idx.");
-    guard->sampled_idx = unvalid_sampled_idx++;
+    guard->sampled_idx = invalid_sampled_idx++;
   }
 
   /* Anything we didn't recognize gets crammed together */
@@ -3273,7 +3277,10 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
       tor_assert(gs);
       smartlist_add(gs->sampled_entry_guards, guard);
       guard->in_selection = gs;
-      /* Recompute the next_sampled_id from the state  */
+      /* Recompute the next_sampled_id from the state. We do not assume that
+       * sampled guards appear in the correct order within the file, and we
+       * need to know what would be the next sampled idx to give to any
+       * new sampled guard (i.e., max of guard->sampled_idx + 1)*/
       if (gs->next_sampled_idx <= guard->sampled_idx) {
         gs->next_sampled_idx = guard->sampled_idx + 1;
       }
