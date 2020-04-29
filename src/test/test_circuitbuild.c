@@ -857,6 +857,10 @@ test_circuit_open_connection_for_extend(void *arg)
   circuit_t *circ = tor_malloc_zero(sizeof(circuit_t));
   channel_t *fake_n_chan = tor_malloc_zero(sizeof(channel_t));
 
+  or_options_t *fake_options = options_new();
+  MOCK(get_options, mock_get_options);
+  mocked_options = fake_options;
+
   MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close_);
   mock_circuit_close_calls = 0;
   MOCK(channel_connect_for_circuit, mock_channel_connect_for_circuit);
@@ -906,7 +910,29 @@ test_circuit_open_connection_for_extend(void *arg)
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+
+  /* Fail, because neither address is valid */
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  tor_capture_bugs_(1);
+  circuit_open_connection_for_extend(ec, circ, 0);
+  /* Close the circuit, don't connect */
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 1);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 0);
+  /* Check state */
+  tt_ptr_op(circ->n_hop, OP_EQ, NULL);
+  tt_ptr_op(circ->n_chan_create_cell, OP_EQ, NULL);
+  tt_int_op(circ->state, OP_EQ, 0);
+  /* Cleanup */
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
 #endif /* !defined(ALL_BUGS_ARE_FATAL) */
+
+  /* Set up valid addresses */
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
 
   /* Succeed, but don't try to open a connection */
   mock_circuit_close_calls = 0;
@@ -948,7 +974,7 @@ test_circuit_open_connection_for_extend(void *arg)
   mock_circuit_close_calls = 0;
   mock_channel_connect_calls = 0;
   circuit_open_connection_for_extend(ec, circ, 1);
-  /* Try to connect, and succeed, leaving the circuit open */
+  /* Connection attempt succeeded, leaving the circuit open */
   tt_int_op(mock_circuit_close_calls, OP_EQ, 0);
   tt_int_op(mock_channel_connect_calls, OP_EQ, 1);
   /* Check state */
@@ -970,6 +996,10 @@ test_circuit_open_connection_for_extend(void *arg)
   mock_circuit_close_calls = 0;
   UNMOCK(channel_connect_for_circuit);
   mock_channel_connect_calls = 0;
+
+  UNMOCK(get_options);
+  or_options_free(fake_options);
+  mocked_options = NULL;
 
   tor_free(ec);
   tor_free(circ->n_hop);

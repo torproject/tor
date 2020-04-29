@@ -18,6 +18,8 @@
 #include "orconfig.h"
 #include "feature/relay/circuitbuild_relay.h"
 
+#include "lib/crypt_ops/crypto_rand.h"
+
 #include "core/or/or.h"
 #include "app/config/config.h"
 
@@ -36,6 +38,7 @@
 
 #include "feature/nodelist/nodelist.h"
 
+#include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 
@@ -237,9 +240,14 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
 }
 
 /* When there is no open channel for an extend cell <b>ec</b>, set up the
- * circuit <b>circ</b> to wait for a new connection. If <b>should_launch</b>
- * is true, open a new connection. (Otherwise, we are already waiting for a
- * new connection to the same relay.)
+ * circuit <b>circ</b> to wait for a new connection.
+ *
+ * If <b>should_launch</b> is true, open a new connection. (Otherwise, we are
+ * already waiting for a new connection to the same relay.)
+ *
+ * Check if IPv6 extends are supported by our current configuration. If they
+ * are, new connections may be made over IPv4 or IPv6. (IPv4 connections are
+ * always supported.)
  */
 STATIC void
 circuit_open_connection_for_extend(const struct extend_cell_t *ec,
@@ -258,13 +266,61 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
     return;
   }
 
+  /* Check the addresses, without logging */
+  const int ipv4_valid =
+    (circuit_extend_addr_port_helper(&ec->orport_ipv4, false, false, 0) == 0);
+  const int ipv6_valid =
+    (circuit_extend_addr_port_helper(&ec->orport_ipv6, false, false, 0) == 0);
+
+  IF_BUG_ONCE(!ipv4_valid && !ipv6_valid) {
+    /* circuit_extend_lspec_valid_helper() should have caught this */
+    circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
+    return;
+  }
+
+  /* If we could make an IPv4 or an IPv6 connection, make an IPv6 connection
+   * at random, with probability 1 in N.
+   *   1 means "always IPv6 (and no IPv4)"
+   *   2 means "equal probability of IPv4 or IPv6"
+   *   ... (and so on) ...
+   *   (UINT_MAX - 1) means "almost always IPv4 (and almost never IPv6)"
+   * To disable IPv6, set ipv6_supported to 0.
+   */
+#define IPV6_CONNECTION_ONE_IN_N 2
+
+  const bool ipv6_supported = router_has_advertised_ipv6_orport(get_options());
+  const tor_addr_port_t *chosen_ap = NULL;
+
+  /* IPv4 is always supported */
+  if (ipv4_valid && ipv6_valid && ipv6_supported) {
+    /* Choose between IPv4 and IPv6 at random */
+    bool choose_ipv6 = crypto_fast_rng_one_in_n(get_thread_fast_rng(),
+                                                IPV6_CONNECTION_ONE_IN_N);
+    if (choose_ipv6) {
+      chosen_ap = &ec->orport_ipv6;
+    } else {
+      chosen_ap = &ec->orport_ipv4;
+    }
+  } else if (ipv6_valid && ipv6_supported) {
+    /* There's only one valid address: try to use it */
+    chosen_ap = &ec->orport_ipv6;
+  } else if (ipv4_valid) {
+    chosen_ap = &ec->orport_ipv4;
+  } else {
+    /* An IPv6-only extend, but IPv6 is not supported */
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received IPv6-only extend, but we don't have an IPv6 ORPort.");
+    circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
+    return;
+  }
+
   circ->n_hop = extend_info_new(NULL /*nickname*/,
                                 (const char*)ec->node_id,
                                 &ec->ed_pubkey,
                                 NULL, /*onion_key*/
                                 NULL, /*curve25519_key*/
-                                &ec->orport_ipv4.addr,
-                                ec->orport_ipv4.port);
+                                &chosen_ap->addr,
+                                chosen_ap->port);
 
   circ->n_chan_create_cell = tor_memdup(&ec->create_cell,
                                         sizeof(ec->create_cell));

@@ -1469,7 +1469,7 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
                                                       AF_INET6);
 
   if (!addr || port == 0) {
-    log_info(LD_CONFIG, "There is no advertised IPv6 ORPort.");
+    log_debug(LD_CONFIG, "There is no advertised IPv6 ORPort.");
     return;
   }
 
@@ -1488,6 +1488,15 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
 
   tor_addr_copy(&ipv6_ap_out->addr, addr);
   ipv6_ap_out->port = port;
+}
+
+/** Returns true if this router has an advertised IPv6 ORPort. */
+bool
+router_has_advertised_ipv6_orport(const or_options_t *options)
+{
+  tor_addr_port_t ipv6_ap;
+  router_get_advertised_ipv6_or_ap(options, &ipv6_ap);
+  return tor_addr_port_is_valid_ap(&ipv6_ap, 0);
 }
 
 /** Return the port that we should advertise as our DirPort;
