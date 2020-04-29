@@ -907,7 +907,7 @@ tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6)
  * <b>src</b> must be an IPv6 address, if it is not, log a warning, and clear
  * <b>dest</b>. */
 void
-tor_addr_get_ipv6_bytes(char *dest, const tor_addr_t *src)
+tor_addr_copy_ipv6_bytes(char *dest, const tor_addr_t *src)
 {
   tor_assert(dest);
   tor_assert(src);

@@ -674,7 +674,7 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
         extend2_cell_body_add_ls(cell, ls);
         ls->ls_type = LS_IPV6;
         ls->ls_len = 18;
-        tor_addr_get_ipv6_bytes((char *)ls->un_ipv6_addr,
+        tor_addr_copy_ipv6_bytes((char *)ls->un_ipv6_addr,
                                 &cell_in->orport_ipv6.addr);
         ls->un_ipv6_port = cell_in->orport_ipv6.port;
       }
