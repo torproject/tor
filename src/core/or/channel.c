@@ -85,7 +85,7 @@
 
 /* Static function prototypes */
 
-static int channel_matches_target_addr_for_extend(
+static bool channel_matches_target_addr_for_extend(
                                           channel_t *chan,
                                           const tor_addr_t *target_ipv4_addr,
                                           const tor_addr_t *target_ipv6_addr);
@@ -2412,7 +2412,7 @@ channel_get_for_extend,(const char *rsa_id_digest,
       continue;
     }
 
-    const int matches_target =
+    const bool matches_target =
       channel_matches_target_addr_for_extend(chan,
                                              target_ipv4_addr,
                                              target_ipv6_addr);
@@ -3317,7 +3317,7 @@ channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info)
  * This function calls into the lower layer and asks if this channel thinks
  * it matches the target addresses for circuit extension purposes.
  */
-int
+static bool
 channel_matches_target_addr_for_extend(channel_t *chan,
                                        const tor_addr_t *target_ipv4_addr,
                                        const tor_addr_t *target_ipv6_addr)
@@ -3326,15 +3326,15 @@ channel_matches_target_addr_for_extend(channel_t *chan,
   tor_assert(chan->matches_target);
 
   IF_BUG_ONCE(!target_ipv4_addr && !target_ipv6_addr)
-    return 0;
+    return false;
 
   if (target_ipv4_addr && chan->matches_target(chan, target_ipv4_addr))
-    return 1;
+    return true;
 
   if (target_ipv6_addr && chan->matches_target(chan, target_ipv6_addr))
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 /**
