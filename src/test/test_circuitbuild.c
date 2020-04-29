@@ -821,6 +821,97 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_free(p_chan);
 }
 
+static bool router_has_ipv6_orport_result = false;
+static int mock_router_ipv6_orport_calls = 0;
+static bool
+mock_router_has_advertised_ipv6_orport(const or_options_t *options)
+{
+  (void)options;
+  mock_router_ipv6_orport_calls++;
+  return router_has_ipv6_orport_result;
+}
+
+/* Test the different cases in circuit_choose_ip_ap_for_extend(). */
+static void
+test_circuit_choose_ip_ap_for_extend(void *arg)
+{
+  (void)arg;
+  tor_addr_port_t ipv4_ap;
+  tor_addr_port_t ipv6_ap;
+
+  /* Set up valid addresses */
+  tor_addr_parse(&ipv4_ap.addr, PUBLIC_IPV4);
+  ipv4_ap.port = VALID_PORT;
+  tor_addr_parse(&ipv6_ap.addr, PUBLIC_IPV6);
+  ipv6_ap.port = VALID_PORT;
+
+  or_options_t *fake_options = options_new();
+  MOCK(get_options, mock_get_options);
+  mocked_options = fake_options;
+
+  MOCK(router_has_advertised_ipv6_orport,
+       mock_router_has_advertised_ipv6_orport);
+  router_has_ipv6_orport_result = true;
+  mock_router_ipv6_orport_calls = 0;
+
+  /* No valid addresses */
+  router_has_ipv6_orport_result = true;
+  mock_router_ipv6_orport_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, NULL), OP_EQ, NULL);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+  router_has_ipv6_orport_result = false;
+  mock_router_ipv6_orport_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, NULL), OP_EQ, NULL);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+  /* One valid address: IPv4 */
+  router_has_ipv6_orport_result = true;
+  mock_router_ipv6_orport_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, NULL), OP_EQ, &ipv4_ap);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+  router_has_ipv6_orport_result = false;
+  mock_router_ipv6_orport_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, NULL), OP_EQ, &ipv4_ap);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+  /* One valid address: IPv6 */
+  router_has_ipv6_orport_result = true;
+  mock_router_ipv6_orport_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, &ipv6_ap), OP_EQ, &ipv6_ap);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+  router_has_ipv6_orport_result = false;
+  mock_router_ipv6_orport_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, &ipv6_ap), OP_EQ, NULL);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+  /* Two valid addresses */
+  const tor_addr_port_t *chosen_addr = NULL;
+
+  router_has_ipv6_orport_result = true;
+  mock_router_ipv6_orport_calls = 0;
+  chosen_addr = circuit_choose_ip_ap_for_extend(&ipv4_ap, &ipv6_ap);
+  tt_assert(chosen_addr == &ipv4_ap || chosen_addr == &ipv6_ap);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+  router_has_ipv6_orport_result = false;
+  mock_router_ipv6_orport_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, &ipv6_ap),
+            OP_EQ, &ipv4_ap);
+  tt_int_op(mock_router_ipv6_orport_calls, OP_EQ, 1);
+
+ done:
+  UNMOCK(get_options);
+  or_options_free(fake_options);
+  mocked_options = NULL;
+
+  UNMOCK(router_has_advertised_ipv6_orport);
+
+  tor_free(fake_options);
+}
+
 static int mock_circuit_close_calls = 0;
 static void
 mock_circuit_mark_for_close_(circuit_t *circ, int reason,
@@ -847,13 +938,6 @@ mock_channel_connect_for_circuit(const tor_addr_t *addr,
   (void)ed_id;
   mock_channel_connect_calls++;
   return mock_channel_connect_nchan;
-}
-
-static bool
-mock_router_has_advertised_ipv6_orport(const or_options_t *options)
-{
-  (void)options;
-  return 1;
 }
 
 /* Test the different cases in circuit_open_connection_for_extend().
@@ -886,6 +970,7 @@ test_circuit_open_connection_for_extend(void *arg)
 
   MOCK(router_has_advertised_ipv6_orport,
        mock_router_has_advertised_ipv6_orport);
+  router_has_ipv6_orport_result = true;
 
   setup_full_capture_of_logs(LOG_INFO);
 
@@ -1457,6 +1542,7 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_state_valid, TT_FORK),
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
+  TEST_CIRCUIT(choose_ip_ap_for_extend, 0),
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "4"),
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "6"),
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "dual-stack"),
