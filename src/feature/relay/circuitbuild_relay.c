@@ -125,16 +125,17 @@ circuit_extend_add_ed25519_helper(struct extend_cell_t *ec)
 /* Check if the address and port in the tor_addr_port_t <b>ap</b> are valid,
  * and are allowed by the current ExtendAllowPrivateAddresses config.
  *
- * If they are valid, return 0.
- * Otherwise, if they are invalid, return -1.
+ * If they are valid, return true.
+ * Otherwise, if they are invalid, return false.
+ *
  * If <b>log_zero_addrs</b> is true, log warnings about zero addresses at
  * <b>log_level</b>. If <b>log_internal_addrs</b> is true, log warnings about
  * internal addresses at <b>log_level</b>.
  */
-static int
-circuit_extend_addr_port_helper(const struct tor_addr_port_t *ap,
-                                bool log_zero_addrs, bool log_internal_addrs,
-                                int log_level)
+static bool
+circuit_extend_addr_port_is_valid(const struct tor_addr_port_t *ap,
+                                  bool log_zero_addrs, bool log_internal_addrs,
+                                  int log_level)
 {
   /* It's safe to print the family. But we don't want to print the address,
    * unless specifically configured to do so. (Zero addresses aren't sensitive,
@@ -147,7 +148,7 @@ circuit_extend_addr_port_helper(const struct tor_addr_port_t *ap,
              "%s address '%s'.",
              fmt_addr_family(&ap->addr), safe_str(fmt_addrport_ap(ap)));
     }
-    return -1;
+    return false;
   }
 
   if (tor_addr_is_internal(&ap->addr, 0) &&
@@ -158,10 +159,10 @@ circuit_extend_addr_port_helper(const struct tor_addr_port_t *ap,
              fmt_addr_family(&ap->addr),
              safe_str(fmt_and_decorate_addr(&ap->addr)));
     }
-    return -1;
+    return false;
   }
 
-  return 0;
+  return true;
 }
 
 /* Before replying to an extend cell, check the link specifiers in the extend
@@ -185,27 +186,27 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
   }
 
   /* Check the addresses, without logging */
-  const int ipv4_valid =
-    (circuit_extend_addr_port_helper(&ec->orport_ipv4, false, false, 0) == 0);
-  const int ipv6_valid =
-    (circuit_extend_addr_port_helper(&ec->orport_ipv6, false, false, 0) == 0);
+  const int ipv4_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                                           false, false, 0);
+  const int ipv6_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                                           false, false, 0);
   /* We need at least one valid address */
   if (!ipv4_valid && !ipv6_valid) {
     /* Now, log the invalid addresses at protocol warning level */
-    circuit_extend_addr_port_helper(&ec->orport_ipv4, true, true,
-                                    LOG_PROTOCOL_WARN);
-    circuit_extend_addr_port_helper(&ec->orport_ipv6, true, true,
-                                    LOG_PROTOCOL_WARN);
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                      true, true, LOG_PROTOCOL_WARN);
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                      true, true, LOG_PROTOCOL_WARN);
     /* And fail */
     return -1;
   } else if (!ipv4_valid) {
     /* Always log unexpected internal addresses, but go on to use the other
      * valid address */
-    circuit_extend_addr_port_helper(&ec->orport_ipv4, false, true,
-                                    LOG_PROTOCOL_WARN);
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                      false, true, LOG_PROTOCOL_WARN);
   } else if (!ipv6_valid) {
-    circuit_extend_addr_port_helper(&ec->orport_ipv6, false, true,
-                                    LOG_PROTOCOL_WARN);
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                      false, true, LOG_PROTOCOL_WARN);
   }
 
   IF_BUG_ONCE(circ->magic != OR_CIRCUIT_MAGIC) {
@@ -316,10 +317,10 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
   }
 
   /* Check the addresses, without logging */
-  const int ipv4_valid =
-    (circuit_extend_addr_port_helper(&ec->orport_ipv4, false, false, 0) == 0);
-  const int ipv6_valid =
-    (circuit_extend_addr_port_helper(&ec->orport_ipv6, false, false, 0) == 0);
+  const int ipv4_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                                           false, false, 0);
+  const int ipv6_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                                           false, false, 0);
 
   IF_BUG_ONCE(!ipv4_valid && !ipv6_valid) {
     /* circuit_extend_lspec_valid_helper() should have caught this */
@@ -412,10 +413,10 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
     return -1;
 
   /* Check the addresses, without logging */
-  const int ipv4_valid =
-    (circuit_extend_addr_port_helper(&ec.orport_ipv4, false, false, 0) == 0);
-  const int ipv6_valid =
-    (circuit_extend_addr_port_helper(&ec.orport_ipv6, false, false, 0) == 0);
+  const int ipv4_valid = circuit_extend_addr_port_is_valid(&ec.orport_ipv4,
+                                                           false, false, 0);
+  const int ipv6_valid = circuit_extend_addr_port_is_valid(&ec.orport_ipv6,
+                                                           false, false, 0);
   IF_BUG_ONCE(!ipv4_valid && !ipv6_valid) {
     /* circuit_extend_lspec_valid_helper() should have caught this */
     return -1;
