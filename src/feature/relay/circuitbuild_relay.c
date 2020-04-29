@@ -239,6 +239,50 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
   return 0;
 }
 
+/* If possible, return a supported, non-NULL IP address.
+ *
+ * If both addresses are supported and non-NULL, choose one uniformly at
+ * random.
+ *
+ * If we have an IPv6-only extend, but IPv6 is not supported, returns NULL.
+ * If both addresses are NULL, also returns NULL. */
+STATIC const tor_addr_port_t *
+circuit_choose_ip_ap_for_extend(const tor_addr_port_t *ipv4_ap,
+                                const tor_addr_port_t *ipv6_ap)
+{
+  /* If we could make an IPv4 or an IPv6 connection, make an IPv6 connection
+   * at random, with probability 1 in N.
+   *   1 means "always IPv6 (and no IPv4)"
+   *   2 means "equal probability of IPv4 or IPv6"
+   *   ... (and so on) ...
+   *   (UINT_MAX - 1) means "almost always IPv4 (and almost never IPv6)"
+   * To disable IPv6, set ipv6_supported to 0.
+   */
+#define IPV6_CONNECTION_ONE_IN_N 2
+
+  /* IPv4 is always supported */
+  const bool ipv6_supported = router_has_advertised_ipv6_orport(get_options());
+
+  if (ipv4_ap && ipv6_ap && ipv6_supported) {
+    /* Choose between IPv4 and IPv6 at random */
+    bool choose_ipv6 = crypto_fast_rng_one_in_n(get_thread_fast_rng(),
+                                                IPV6_CONNECTION_ONE_IN_N);
+    if (choose_ipv6) {
+      return ipv6_ap;
+    } else {
+      return ipv4_ap;
+    }
+  } else if (ipv6_ap && ipv6_supported) {
+    /* There's only one valid address: try to use it */
+    return ipv6_ap;
+  } else if (ipv4_ap) {
+    return ipv4_ap;
+  } else {
+    /* IPv6-only extend, but IPv6 is not supported. */
+    return NULL;
+  }
+}
+
 /* When there is no open channel for an extend cell <b>ec</b>, set up the
  * circuit <b>circ</b> to wait for a new connection.
  *
@@ -278,35 +322,10 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
     return;
   }
 
-  /* If we could make an IPv4 or an IPv6 connection, make an IPv6 connection
-   * at random, with probability 1 in N.
-   *   1 means "always IPv6 (and no IPv4)"
-   *   2 means "equal probability of IPv4 or IPv6"
-   *   ... (and so on) ...
-   *   (UINT_MAX - 1) means "almost always IPv4 (and almost never IPv6)"
-   * To disable IPv6, set ipv6_supported to 0.
-   */
-#define IPV6_CONNECTION_ONE_IN_N 2
-
-  const bool ipv6_supported = router_has_advertised_ipv6_orport(get_options());
-  const tor_addr_port_t *chosen_ap = NULL;
-
-  /* IPv4 is always supported */
-  if (ipv4_valid && ipv6_valid && ipv6_supported) {
-    /* Choose between IPv4 and IPv6 at random */
-    bool choose_ipv6 = crypto_fast_rng_one_in_n(get_thread_fast_rng(),
-                                                IPV6_CONNECTION_ONE_IN_N);
-    if (choose_ipv6) {
-      chosen_ap = &ec->orport_ipv6;
-    } else {
-      chosen_ap = &ec->orport_ipv4;
-    }
-  } else if (ipv6_valid && ipv6_supported) {
-    /* There's only one valid address: try to use it */
-    chosen_ap = &ec->orport_ipv6;
-  } else if (ipv4_valid) {
-    chosen_ap = &ec->orport_ipv4;
-  } else {
+  const tor_addr_port_t *chosen_ap = circuit_choose_ip_ap_for_extend(
+                                        ipv4_valid ? &ec->orport_ipv4 : NULL,
+                                        ipv6_valid ? &ec->orport_ipv6 : NULL);
+  if (!chosen_ap) {
     /* An IPv6-only extend, but IPv6 is not supported */
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received IPv6-only extend, but we don't have an IPv6 ORPort.");

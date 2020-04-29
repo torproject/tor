@@ -75,6 +75,9 @@ STATIC int circuit_extend_state_valid_helper(const struct circuit_t *circ);
 STATIC int circuit_extend_add_ed25519_helper(struct extend_cell_t *ec);
 STATIC int circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
                                              const struct circuit_t *circ);
+STATIC const tor_addr_port_t * circuit_choose_ip_ap_for_extend(
+                                             const tor_addr_port_t *ipv4_ap,
+                                             const tor_addr_port_t *ipv6_ap);
 STATIC void circuit_open_connection_for_extend(const struct extend_cell_t *ec,
                                                struct circuit_t *circ,
                                                int should_launch);
