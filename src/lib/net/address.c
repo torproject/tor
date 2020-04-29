@@ -608,7 +608,8 @@ tor_addr_parse_mask_ports(const char *s,
         family = AF_INET;
         tor_addr_from_ipv4h(addr_out, 0);
       } else if (flags & TAPMP_STAR_IPV6_ONLY) {
-        static char nil_bytes[16] = { [0]=0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
+        static uint8_t nil_bytes[16] =
+          { [0]=0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
         family = AF_INET6;
         tor_addr_from_ipv6_bytes(addr_out, nil_bytes);
       } else {
@@ -629,7 +630,7 @@ tor_addr_parse_mask_ports(const char *s,
     tor_addr_from_ipv4h(addr_out, 0);
     any_flag = 1;
   } else if (!strcmp(address, "*6") && (flags & TAPMP_EXTENDED_STAR)) {
-    static char nil_bytes[16] = { [0]=0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
+    static uint8_t nil_bytes[16] = { [0]=0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
     family = AF_INET6;
     tor_addr_from_ipv6_bytes(addr_out, nil_bytes);
     any_flag = 1;
@@ -887,7 +888,7 @@ tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr)
 /** Set <b>dest</b> to equal the IPv6 address in the 16 bytes at
  * <b>ipv6_bytes</b>. */
 void
-tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *ipv6_bytes)
+tor_addr_from_ipv6_bytes(tor_addr_t *dest, const uint8_t *ipv6_bytes)
 {
   tor_assert(dest);
   tor_assert(ipv6_bytes);
@@ -900,7 +901,21 @@ tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *ipv6_bytes)
 void
 tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6)
 {
-  tor_addr_from_ipv6_bytes(dest, (const char*)in6->s6_addr);
+  tor_addr_from_ipv6_bytes(dest, in6->s6_addr);
+}
+
+/** Set the 16 bytes at <b>dest</b> to equal the IPv6 address <b>src</b>.
+ * <b>src</b> must be an IPv6 address, if it is not, log a warning, and clear
+ * <b>dest</b>. */
+void
+tor_addr_copy_ipv6_bytes(uint8_t *dest, const tor_addr_t *src)
+{
+  tor_assert(dest);
+  tor_assert(src);
+  memset(dest, 0, 16);
+  IF_BUG_ONCE(src->family != AF_INET6)
+    return;
+  memcpy(dest, src->addr.in6_addr.s6_addr, 16);
 }
 
 /** Copy a tor_addr_t from <b>src</b> to <b>dest</b>.
@@ -1192,6 +1207,39 @@ fmt_addr32(uint32_t addr)
   return buf;
 }
 
+/** Return a string representing the family of <b>addr</b>.
+ *
+ * This string is a string constant, and must not be freed.
+ * This function is thread-safe.
+ */
+const char *
+fmt_addr_family(const tor_addr_t *addr)
+{
+  static int default_bug_once = 0;
+
+  IF_BUG_ONCE(!addr)
+    return "NULL pointer";
+
+  switch (tor_addr_family(addr)) {
+    case AF_INET6:
+      return "IPv6";
+    case AF_INET:
+      return "IPv4";
+    case AF_UNIX:
+      return "UNIX socket";
+    case AF_UNSPEC:
+      return "unspecified";
+    default:
+      if (!default_bug_once) {
+        log_warn(LD_BUG, "Called with unknown address family %d",
+                 (int)tor_addr_family(addr));
+        default_bug_once = 1;
+      }
+      return "unknown";
+  }
+  //return "(unreachable code)";
+}
+
 /** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.  The string
  * may be an IPv4 address, or an IPv6 address surrounded by square brackets.
  *
@@ -1416,10 +1464,10 @@ ifconf_free_ifc_buf(struct ifconf *ifc)
  * into smartlist of <b>tor_addr_t</b> structures.
  */
 STATIC smartlist_t *
-ifreq_to_smartlist(char *buf, size_t buflen)
+ifreq_to_smartlist(const uint8_t *buf, size_t buflen)
 {
   smartlist_t *result = smartlist_new();
-  char *end = buf + buflen;
+  const uint8_t *end = buf + buflen;
 
   /* These acrobatics are due to alignment issues which trigger
    * undefined behaviour traps on OSX. */
@@ -1493,7 +1541,7 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
     /* Ensure we have least IFREQ_SIZE bytes unused at the end. Otherwise, we
      * don't know if we got everything during ioctl. */
   } while (mult * IFREQ_SIZE - ifc.ifc_len <= IFREQ_SIZE);
-  result = ifreq_to_smartlist(ifc.ifc_buf, ifc.ifc_len);
+  result = ifreq_to_smartlist((const uint8_t *)ifc.ifc_buf, ifc.ifc_len);
 
  done:
   if (fd >= 0)

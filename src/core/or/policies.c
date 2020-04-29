@@ -167,7 +167,7 @@ policy_expand_unspec(smartlist_t **policy)
       }
       tor_addr_from_ipv4h(&newpolicy_ipv4.addr, 0);
       tor_addr_from_ipv6_bytes(&newpolicy_ipv6.addr,
-                               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+          (const uint8_t *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
       smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy_ipv4));
       smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy_ipv6));
       addr_policy_free(p);
@@ -1005,7 +1005,7 @@ fascist_firewall_choose_address_ls(const smartlist_t *lspecs,
        * direct connection. */
       if (have_v6) continue;
       tor_addr_from_ipv6_bytes(&addr_v6,
-          (const char *) link_specifier_getconstarray_un_ipv6_addr(ls));
+          link_specifier_getconstarray_un_ipv6_addr(ls));
       port_v6 = link_specifier_get_un_ipv6_port(ls);
       have_v6 = 1;
       break;

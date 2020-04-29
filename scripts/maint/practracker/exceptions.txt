@@ -305,7 +305,7 @@ problem function-size /src/lib/encoding/confline.c:parse_config_line_from_str_ve
 problem function-size /src/lib/encoding/cstring.c:unescape_string() 108
 problem function-size /src/lib/fs/dir.c:check_private_dir() 230
 problem function-size /src/lib/math/prob_distr.c:sample_uniform_interval() 145
-problem function-size /src/lib/net/address.c:tor_addr_parse_mask_ports() 194
+problem function-size /src/lib/net/address.c:tor_addr_parse_mask_ports() 195
 problem function-size /src/lib/net/address.c:tor_addr_compare_masked() 110
 problem function-size /src/lib/net/inaddr.c:tor_inet_pton() 107
 problem function-size /src/lib/net/socketpair.c:tor_ersatz_socketpair() 102

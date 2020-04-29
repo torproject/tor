@@ -509,7 +509,7 @@ do_resolve(const char *hostname,
     } else if (atype == SOCKS5_ATYPE_IPV6) {
       /* IPv6 address */
       tor_addr_from_ipv6_bytes(result_addr,
-        (const char *)socks5_server_reply_getarray_bind_addr_ipv6(reply));
+        socks5_server_reply_getarray_bind_addr_ipv6(reply));
     } else if (atype == SOCKS5_ATYPE_HOSTNAME) {
       /* Domain name */
       domainname_t *dn =

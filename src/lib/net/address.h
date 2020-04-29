@@ -104,6 +104,10 @@ int tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
                            uint16_t *port_out);
 void tor_addr_make_unspec(tor_addr_t *a);
 void tor_addr_make_null(tor_addr_t *a, sa_family_t family);
+#define tor_addr_port_make_null(addr, port, family) \
+  (void)(tor_addr_make_null(addr, family), (port) = 0)
+#define tor_addr_port_make_null_ap(ap, family) \
+  tor_addr_port_make_null(&(ap)->addr, (ap)->port, family)
 char *tor_sockaddr_to_str(const struct sockaddr *sa);
 
 /** Return an in6_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
@@ -221,7 +225,9 @@ char *tor_addr_to_str_dup(const tor_addr_t *addr) ATTR_MALLOC;
 
 const char *fmt_addr_impl(const tor_addr_t *addr, int decorate);
 const char *fmt_addrport(const tor_addr_t *addr, uint16_t port);
-const char * fmt_addr32(uint32_t addr);
+#define fmt_addrport_ap(ap) fmt_addrport(&(ap)->addr, (ap)->port)
+const char *fmt_addr32(uint32_t addr);
+const char *fmt_addr_family(const tor_addr_t *addr);
 
 MOCK_DECL(int,get_interface_address6,(int severity, sa_family_t family,
 tor_addr_t *addr));
@@ -298,11 +304,12 @@ void tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr);
  * order. */
 #define tor_addr_from_ipv4h(dest, v4addr)       \
   tor_addr_from_ipv4n((dest), htonl(v4addr))
-void tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *bytes);
+void tor_addr_from_ipv6_bytes(tor_addr_t *dest, const uint8_t *bytes);
 /** Set <b>dest</b> to the IPv4 address incoded in <b>in</b>. */
 #define tor_addr_from_in(dest, in) \
   tor_addr_from_ipv4n((dest), (in)->s_addr);
 void tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6);
+void tor_addr_copy_ipv6_bytes(uint8_t *dest, const tor_addr_t *src);
 
 int tor_addr_is_null(const tor_addr_t *addr);
 int tor_addr_is_loopback(const tor_addr_t *addr);
@@ -393,8 +400,8 @@ STATIC struct smartlist_t *get_interface_addresses_win32(int severity,
 #endif /* defined(HAVE_IP_ADAPTER_TO_SMARTLIST) */
 
 #ifdef HAVE_IFCONF_TO_SMARTLIST
-STATIC struct smartlist_t *ifreq_to_smartlist(char *ifr,
-                                       size_t buflen);
+STATIC struct smartlist_t *ifreq_to_smartlist(const uint8_t *ifr,
+                                              size_t buflen);
 STATIC struct smartlist_t *get_interface_addresses_ioctl(int severity,
                                                   sa_family_t family);
 #endif /* defined(HAVE_IFCONF_TO_SMARTLIST) */

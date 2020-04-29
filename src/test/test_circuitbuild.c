@@ -30,6 +30,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/relay/circuitbuild_relay.h"
+#include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 
 #include "feature/nodelist/node_st.h"
@@ -219,6 +220,7 @@ test_circuit_extend_state_valid(void *arg)
   expect_log_msg("Got an extend cell, but running as a client. Closing.\n");
   mock_clean_saved_logs();
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   tor_capture_bugs_(1);
   server = 1;
@@ -228,6 +230,7 @@ test_circuit_extend_state_valid(void *arg)
             "!(ASSERT_PREDICT_UNLIKELY_(!circ))");
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* n_chan and n_hop are NULL, this should succeed */
   server = 1;
@@ -314,6 +317,7 @@ test_circuit_extend_add_ed25519(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* The extend cell must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend_add_ed25519_helper(NULL), OP_EQ, -1);
@@ -322,6 +326,7 @@ test_circuit_extend_add_ed25519(void *arg)
             "!(ASSERT_PREDICT_UNLIKELY_(!ec))");
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* The node id must be non-zero */
   memcpy(old_ec, ec, sizeof(extend_cell_t));
@@ -474,6 +479,9 @@ mock_get_options(void)
 #define PUBLIC_IPV4   "1.2.3.4"
 #define INTERNAL_IPV4 "0.0.0.1"
 
+#define PUBLIC_IPV6   "1234::cdef"
+#define INTERNAL_IPV6 "::1"
+
 #define VALID_PORT    0x1234
 
 /* Test the different cases in circuit_extend_lspec_valid_helper(). */
@@ -492,6 +500,7 @@ test_circuit_extend_lspec_valid(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Extend cell must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend_lspec_valid_helper(NULL, circ), OP_EQ, -1);
@@ -518,41 +527,114 @@ test_circuit_extend_lspec_valid(void *arg)
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
-  /* IPv4 addr or port are 0, these should fail */
+  /* IPv4 and IPv6 addr and port are all zero, this should fail */
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or unspecified address '[scrubbed]'.\n");
   mock_clean_saved_logs();
 
+  /* Now ask for the actual address in the logs */
+  fake_options->SafeLogging_ = SAFELOG_SCRUB_NONE;
+
+  /* IPv4 port is 0, IPv6 addr and port are both zero, this should fail */
   tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv4 address '1.2.3.4:0'.\n");
   mock_clean_saved_logs();
-  tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
 
+  /* IPv4 addr is 0, IPv6 addr and port are both zero, this should fail */
   ec->orport_ipv4.port = VALID_PORT;
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv4 address '0.0.0.0:4660'.\n");
   mock_clean_saved_logs();
   ec->orport_ipv4.port = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
 
   /* IPv4 addr is internal, and port is valid.
+   * (IPv6 addr and port are both zero.)
    * Result depends on ExtendAllowPrivateAddresses. */
   tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
   ec->orport_ipv4.port = VALID_PORT;
 
   fake_options->ExtendAllowPrivateAddresses = 0;
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
-  expect_log_msg("Client asked me to extend to a private address.\n");
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv4 address '0.0.0.1'.\n");
   mock_clean_saved_logs();
   fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
 
+  /* Now do the same tests, but for IPv6 */
+
+  /* IPv6 port is 0, IPv4 addr and port are both zero, this should fail */
+  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv6 address '[1234::cdef]:0'.\n");
+  mock_clean_saved_logs();
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* IPv6 addr is 0, IPv4 addr and port are both zero, this should fail */
+  ec->orport_ipv6.port = VALID_PORT;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or IPv6 address '[::]:4660'.\n");
+  mock_clean_saved_logs();
+  ec->orport_ipv4.port = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* IPv6 addr is internal, and port is valid.
+   * (IPv4 addr and port are both zero.)
+   * Result depends on ExtendAllowPrivateAddresses. */
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv6 address '[::1]'.\n");
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Both addresses are internal.
+   * Result depends on ExtendAllowPrivateAddresses. */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv4 address '0.0.0.1'.\n");
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv6 address '[::1]'.\n");
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+#ifndef ALL_BUGS_ARE_FATAL
   /* If we pass the private address check, but don't have the right
    * OR circuit magic number, we trigger another bug */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
   fake_options->ExtendAllowPrivateAddresses = 1;
+
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
@@ -561,10 +643,27 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
   fake_options->ExtendAllowPrivateAddresses = 0;
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Fail again, but this time only set an IPv4 address. */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  fake_options->ExtendAllowPrivateAddresses = 1;
+  tor_capture_bugs_(1);
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, -1);
+  /* Since we're using IF_BUG_ONCE(), expect 0-1 bug logs */
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_GE, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 1);
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  fake_options->ExtendAllowPrivateAddresses = 0;
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Now set the right magic */
   or_circ->base_.magic = OR_CIRCUIT_MAGIC;
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* If we pass the OR circuit magic check, but don't have p_chan,
    * we trigger another bug */
   fake_options->ExtendAllowPrivateAddresses = 1;
@@ -591,6 +690,7 @@ test_circuit_extend_lspec_valid(void *arg)
 
   tor_addr_make_null(&ec->orport_ipv4.addr, AF_INET);
   ec->orport_ipv4.port = 0x0000;
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Now let's fake a p_chan and the addresses */
   tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
@@ -621,6 +721,41 @@ test_circuit_extend_lspec_valid(void *arg)
   /* ed_pubkey is zero, and that's allowed, so we should succeed */
   tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
   mock_clean_saved_logs();
+
+  /* Now let's check that we warn, but succeed, when only one address is
+   * private */
+  tor_addr_parse(&ec->orport_ipv4.addr, INTERNAL_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv4 address '0.0.0.1'.\n");
+  mock_clean_saved_logs();
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Now with private IPv6 */
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, INTERNAL_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
+  fake_options->ExtendAllowPrivateAddresses = 0;
+
+  tt_int_op(circuit_extend_lspec_valid_helper(ec, circ), OP_EQ, 0);
+  expect_log_msg("Client asked me to extend "
+                 "to a private IPv6 address '[::1]'.\n");
+  mock_clean_saved_logs();
+  tor_addr_port_make_null_ap(&ec->orport_ipv4, AF_INET);
+  tor_addr_port_make_null_ap(&ec->orport_ipv6, AF_INET6);
+
+  /* Now reset to public IPv4 and IPv6 */
+  tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+  ec->orport_ipv4.port = VALID_PORT;
+  tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+  ec->orport_ipv6.port = VALID_PORT;
 
   /* Fail on matching non-zero identities */
   memset(&ec->ed_pubkey, 0xEE, sizeof(ec->ed_pubkey));
@@ -686,6 +821,97 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_free(p_chan);
 }
 
+static bool can_extend_over_ipv6_result = false;
+static int mock_router_can_extend_over_ipv6_calls = 0;
+static bool
+mock_router_can_extend_over_ipv6(const or_options_t *options)
+{
+  (void)options;
+  mock_router_can_extend_over_ipv6_calls++;
+  return can_extend_over_ipv6_result;
+}
+
+/* Test the different cases in circuit_choose_ip_ap_for_extend(). */
+static void
+test_circuit_choose_ip_ap_for_extend(void *arg)
+{
+  (void)arg;
+  tor_addr_port_t ipv4_ap;
+  tor_addr_port_t ipv6_ap;
+
+  /* Set up valid addresses */
+  tor_addr_parse(&ipv4_ap.addr, PUBLIC_IPV4);
+  ipv4_ap.port = VALID_PORT;
+  tor_addr_parse(&ipv6_ap.addr, PUBLIC_IPV6);
+  ipv6_ap.port = VALID_PORT;
+
+  or_options_t *fake_options = options_new();
+  MOCK(get_options, mock_get_options);
+  mocked_options = fake_options;
+
+  MOCK(router_can_extend_over_ipv6,
+       mock_router_can_extend_over_ipv6);
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
+
+  /* No valid addresses */
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, NULL), OP_EQ, NULL);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, NULL), OP_EQ, NULL);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+  /* One valid address: IPv4 */
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, NULL), OP_EQ, &ipv4_ap);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, NULL), OP_EQ, &ipv4_ap);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+  /* One valid address: IPv6 */
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, &ipv6_ap), OP_EQ, &ipv6_ap);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(NULL, &ipv6_ap), OP_EQ, NULL);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+  /* Two valid addresses */
+  const tor_addr_port_t *chosen_addr = NULL;
+
+  can_extend_over_ipv6_result = true;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  chosen_addr = circuit_choose_ip_ap_for_extend(&ipv4_ap, &ipv6_ap);
+  tt_assert(chosen_addr == &ipv4_ap || chosen_addr == &ipv6_ap);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+  can_extend_over_ipv6_result = false;
+  mock_router_can_extend_over_ipv6_calls = 0;
+  tt_ptr_op(circuit_choose_ip_ap_for_extend(&ipv4_ap, &ipv6_ap),
+            OP_EQ, &ipv4_ap);
+  tt_int_op(mock_router_can_extend_over_ipv6_calls, OP_EQ, 1);
+
+ done:
+  UNMOCK(get_options);
+  or_options_free(fake_options);
+  mocked_options = NULL;
+
+  UNMOCK(router_can_extend_over_ipv6);
+
+  tor_free(fake_options);
+}
+
 static int mock_circuit_close_calls = 0;
 static void
 mock_circuit_mark_for_close_(circuit_t *circ, int reason,
@@ -714,14 +940,27 @@ mock_channel_connect_for_circuit(const tor_addr_t *addr,
   return mock_channel_connect_nchan;
 }
 
-/* Test the different cases in circuit_open_connection_for_extend(). */
+/* Test the different cases in circuit_open_connection_for_extend().
+ * Chooses different IP addresses depending on the first character in arg:
+ *  - 4: IPv4
+ *  - 6: IPv6
+ *  - d: IPv4 and IPv6 (dual-stack)
+ */
 static void
 test_circuit_open_connection_for_extend(void *arg)
 {
-  (void)arg;
+  const char ip_version = ((const char *)arg)[0];
+  const bool use_ipv4 = (ip_version == '4' || ip_version == 'd');
+  const bool use_ipv6 = (ip_version == '6' || ip_version == 'd');
+  tor_assert(use_ipv4 || use_ipv6);
+
   extend_cell_t *ec = tor_malloc_zero(sizeof(extend_cell_t));
   circuit_t *circ = tor_malloc_zero(sizeof(circuit_t));
   channel_t *fake_n_chan = tor_malloc_zero(sizeof(channel_t));
+
+  or_options_t *fake_options = options_new();
+  MOCK(get_options, mock_get_options);
+  mocked_options = fake_options;
 
   MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close_);
   mock_circuit_close_calls = 0;
@@ -729,8 +968,13 @@ test_circuit_open_connection_for_extend(void *arg)
   mock_channel_connect_calls = 0;
   mock_channel_connect_nchan = NULL;
 
+  MOCK(router_can_extend_over_ipv6,
+       mock_router_can_extend_over_ipv6);
+  can_extend_over_ipv6_result = true;
+
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   mock_circuit_close_calls = 0;
   mock_channel_connect_calls = 0;
@@ -772,6 +1016,33 @@ test_circuit_open_connection_for_extend(void *arg)
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
 
+  /* Fail, because neither address is valid */
+  mock_circuit_close_calls = 0;
+  mock_channel_connect_calls = 0;
+  tor_capture_bugs_(1);
+  circuit_open_connection_for_extend(ec, circ, 0);
+  /* Close the circuit, don't connect */
+  tt_int_op(mock_circuit_close_calls, OP_EQ, 1);
+  tt_int_op(mock_channel_connect_calls, OP_EQ, 0);
+  /* Check state */
+  tt_ptr_op(circ->n_hop, OP_EQ, NULL);
+  tt_ptr_op(circ->n_chan_create_cell, OP_EQ, NULL);
+  tt_int_op(circ->state, OP_EQ, 0);
+  /* Cleanup */
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
+
+  /* Set up valid addresses */
+  if (use_ipv4) {
+    tor_addr_parse(&ec->orport_ipv4.addr, PUBLIC_IPV4);
+    ec->orport_ipv4.port = VALID_PORT;
+  }
+  if (use_ipv6) {
+    tor_addr_parse(&ec->orport_ipv6.addr, PUBLIC_IPV6);
+    ec->orport_ipv6.port = VALID_PORT;
+  }
+
   /* Succeed, but don't try to open a connection */
   mock_circuit_close_calls = 0;
   mock_channel_connect_calls = 0;
@@ -812,7 +1083,7 @@ test_circuit_open_connection_for_extend(void *arg)
   mock_circuit_close_calls = 0;
   mock_channel_connect_calls = 0;
   circuit_open_connection_for_extend(ec, circ, 1);
-  /* Try to connect, and succeed, leaving the circuit open */
+  /* Connection attempt succeeded, leaving the circuit open */
   tt_int_op(mock_circuit_close_calls, OP_EQ, 0);
   tt_int_op(mock_channel_connect_calls, OP_EQ, 1);
   /* Check state */
@@ -834,6 +1105,12 @@ test_circuit_open_connection_for_extend(void *arg)
   mock_circuit_close_calls = 0;
   UNMOCK(channel_connect_for_circuit);
   mock_channel_connect_calls = 0;
+
+  UNMOCK(get_options);
+  or_options_free(fake_options);
+  mocked_options = NULL;
+
+  UNMOCK(router_can_extend_over_ipv6);
 
   tor_free(ec);
   tor_free(circ->n_hop);
@@ -869,13 +1146,15 @@ static channel_t *mock_channel_get_for_extend_nchan = NULL;
 static channel_t *
 mock_channel_get_for_extend(const char *rsa_id_digest,
                             const ed25519_public_key_t *ed_id,
-                            const tor_addr_t *target_addr,
+                            const tor_addr_t *target_ipv4_addr,
+                            const tor_addr_t *target_ipv6_addr,
                             const char **msg_out,
                             int *launch_out)
 {
   (void)rsa_id_digest;
   (void)ed_id;
-  (void)target_addr;
+  (void)target_ipv4_addr;
+  (void)target_ipv6_addr;
 
   /* channel_get_for_extend() requires non-NULL arguments */
   tt_ptr_op(msg_out, OP_NE, NULL);
@@ -941,6 +1220,7 @@ test_circuit_extend(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend(cell, NULL), OP_EQ, -1);
@@ -967,6 +1247,7 @@ test_circuit_extend(void *arg)
   tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_LE, 2);
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Clients can't extend */
   server = 0;
@@ -1002,8 +1283,8 @@ test_circuit_extend(void *arg)
 
   tt_int_op(circuit_extend(cell, circ), OP_EQ, -1);
   tt_int_op(mock_extend_cell_parse_calls, OP_EQ, 1);
-  expect_log_msg("Client asked me to extend to "
-                 "zero destination port or addr.\n");
+  expect_log_msg("Client asked me to extend to a zero destination port "
+                 "or unspecified address '[scrubbed]'.\n");
   mock_clean_saved_logs();
   mock_extend_cell_parse_calls = 0;
 
@@ -1012,6 +1293,7 @@ test_circuit_extend(void *arg)
                  PUBLIC_IPV4);
   mock_extend_cell_parse_cell_out.orport_ipv4.port = VALID_PORT;
 
+#ifndef ALL_BUGS_ARE_FATAL
   tor_capture_bugs_(1);
   tt_int_op(circuit_extend(cell, circ), OP_EQ, -1);
   tt_int_op(mock_extend_cell_parse_calls, OP_EQ, 1);
@@ -1021,6 +1303,7 @@ test_circuit_extend(void *arg)
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
   mock_extend_cell_parse_calls = 0;
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Now add the right magic and a p_chan. */
   or_circ->base_.magic = OR_CIRCUIT_MAGIC;
@@ -1166,6 +1449,7 @@ test_onionskin_answer(void *arg)
 
   setup_full_capture_of_logs(LOG_INFO);
 
+#ifndef ALL_BUGS_ARE_FATAL
   /* Circuit must be non-NULL */
   tor_capture_bugs_(1);
   tt_int_op(onionskin_answer(NULL, created_cell,
@@ -1209,6 +1493,7 @@ test_onionskin_answer(void *arg)
             "!(ASSERT_PREDICT_UNLIKELY_(!rend_circ_nonce))");
   tor_end_capture_bugs_();
   mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Also, the keys length must be CPATH_KEY_MATERIAL_LEN, but we can't catch
    * asserts in unit tests. */
@@ -1240,6 +1525,12 @@ test_onionskin_answer(void *arg)
 #define TEST_CIRCUIT(name, flags) \
   { #name, test_circuit_ ## name, flags, NULL, NULL }
 
+#ifndef COCCI
+#define TEST_CIRCUIT_PASSTHROUGH(name, flags, arg) \
+  { #name "/" arg, test_circuit_ ## name, flags, \
+    &passthrough_setup, (void *)(arg) }
+#endif
+
 struct testcase_t circuitbuild_tests[] = {
   TEST_NEW_ROUTE_LEN(noexit, 0),
   TEST_NEW_ROUTE_LEN(safe_exit, 0),
@@ -1251,7 +1542,10 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_state_valid, TT_FORK),
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
-  TEST_CIRCUIT(open_connection_for_extend, TT_FORK),
+  TEST_CIRCUIT(choose_ip_ap_for_extend, 0),
+  TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "4"),
+  TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "6"),
+  TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "dual-stack"),
   TEST_CIRCUIT(extend, TT_FORK),
 
   TEST(onionskin_answer, TT_FORK, NULL, NULL),

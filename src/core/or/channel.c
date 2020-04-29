@@ -83,6 +83,13 @@
 
 #include "core/or/cell_queue_st.h"
 
+/* Static function prototypes */
+
+static bool channel_matches_target_addr_for_extend(
+                                          channel_t *chan,
+                                          const tor_addr_t *target_ipv4_addr,
+                                          const tor_addr_t *target_ipv6_addr);
+
 /* Global lists of channels */
 
 /* All channel_t instances */
@@ -2360,9 +2367,9 @@ channel_is_better(channel_t *a, channel_t *b)
  * Get a channel to extend a circuit.
  *
  * Given the desired relay identity, pick a suitable channel to extend a
- * circuit to the target address requsted by the client. Search for an
- * existing channel for the requested endpoint. Make sure the channel is
- * usable for new circuits, and matches the target address.
+ * circuit to the target IPv4 or IPv6 address requsted by the client. Search
+ * for an existing channel for the requested endpoint. Make sure the channel
+ * is usable for new circuits, and matches one of the target addresses.
  *
  * Try to return the best channel. But if there is no good channel, set
  * *msg_out to a message describing the channel's state and our next action,
@@ -2372,7 +2379,8 @@ channel_is_better(channel_t *a, channel_t *b)
 MOCK_IMPL(channel_t *,
 channel_get_for_extend,(const char *rsa_id_digest,
                         const ed25519_public_key_t *ed_id,
-                        const tor_addr_t *target_addr,
+                        const tor_addr_t *target_ipv4_addr,
+                        const tor_addr_t *target_ipv6_addr,
                         const char **msg_out,
                         int *launch_out))
 {
@@ -2404,11 +2412,15 @@ channel_get_for_extend,(const char *rsa_id_digest,
       continue;
     }
 
+    const bool matches_target =
+      channel_matches_target_addr_for_extend(chan,
+                                             target_ipv4_addr,
+                                             target_ipv6_addr);
     /* Never return a non-open connection. */
     if (!CHANNEL_IS_OPEN(chan)) {
       /* If the address matches, don't launch a new connection for this
        * circuit. */
-      if (channel_matches_target_addr_for_extend(chan, target_addr))
+      if (matches_target)
         ++n_inprogress_goodaddr;
       continue;
     }
@@ -2419,22 +2431,21 @@ channel_get_for_extend,(const char *rsa_id_digest,
       continue;
     }
 
-    /* Never return a non-canonical connection using a recent link protocol
-     * if the address is not what we wanted.
+    /* If the connection is using a recent link protocol, only return canonical
+     * connections, when the address is one of the addresses we wanted.
      *
      * The channel_is_canonical_is_reliable() function asks the lower layer
-     * if we should trust channel_is_canonical().  The below is from the
-     * comments of the old circuit_or_get_for_extend() and applies when
+     * if we should trust channel_is_canonical(). It only applies when
      * the lower-layer transport is channel_tls_t.
      *
-     * (For old link protocols, we can't rely on is_canonical getting
+     * For old link protocols, we can't rely on is_canonical getting
      * set properly if we're talking to the right address, since we might
      * have an out-of-date descriptor, and we will get no NETINFO cell to
-     * tell us about the right address.)
+     * tell us about the right address.
      */
     if (!channel_is_canonical(chan) &&
          channel_is_canonical_is_reliable(chan) &&
-        !channel_matches_target_addr_for_extend(chan, target_addr)) {
+        !matches_target) {
       ++n_noncanonical;
       continue;
     }
@@ -3297,20 +3308,33 @@ channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info)
 }
 
 /**
- * Check if a channel matches a given target address; return true iff we do.
+ * Check if a channel matches the given target IPv4 or IPv6 addresses.
+ * If either address matches, return true. If neither address matches,
+ * return false.
+ *
+ * Both addresses can't be NULL.
  *
  * This function calls into the lower layer and asks if this channel thinks
- * it matches a given target address for circuit extension purposes.
+ * it matches the target addresses for circuit extension purposes.
  */
-int
+static bool
 channel_matches_target_addr_for_extend(channel_t *chan,
-                                       const tor_addr_t *target)
+                                       const tor_addr_t *target_ipv4_addr,
+                                       const tor_addr_t *target_ipv6_addr)
 {
   tor_assert(chan);
   tor_assert(chan->matches_target);
-  tor_assert(target);
 
-  return chan->matches_target(chan, target);
+  IF_BUG_ONCE(!target_ipv4_addr && !target_ipv6_addr)
+    return false;
+
+  if (target_ipv4_addr && chan->matches_target(chan, target_ipv4_addr))
+    return true;
+
+  if (target_ipv6_addr && chan->matches_target(chan, target_ipv6_addr))
+    return true;
+
+  return false;
 }
 
 /**

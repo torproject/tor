@@ -587,9 +587,8 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
       strlcpy(req->address, hostname, sizeof(req->address));
     } break;
     case 4: {
-      const char *ipv6 =
-        (const char *)socks5_client_request_getarray_dest_addr_ipv6(
-          trunnel_req);
+      const uint8_t *ipv6 =
+          socks5_client_request_getarray_dest_addr_ipv6(trunnel_req);
       tor_addr_from_ipv6_bytes(&destaddr, ipv6);
 
       tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);

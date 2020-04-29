@@ -661,7 +661,8 @@ channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
 MOCK_DECL(channel_t *, channel_get_for_extend,(
                                    const char *rsa_id_digest,
                                    const struct ed25519_public_key_t *ed_id,
-                                   const tor_addr_t *target_addr,
+                                   const tor_addr_t *target_ipv4_addr,
+                                   const tor_addr_t *target_ipv6_addr,
                                    const char **msg_out,
                                    int *launch_out));
 
@@ -737,8 +738,6 @@ int channel_is_outgoing(channel_t *chan);
 void channel_mark_client(channel_t *chan);
 void channel_clear_client(channel_t *chan);
 int channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info);
-int channel_matches_target_addr_for_extend(channel_t *chan,
-                                           const tor_addr_t *target);
 unsigned int channel_num_circuits(channel_t *chan);
 MOCK_DECL(void,channel_set_circid_type,(channel_t *chan,
                                         crypto_pk_t *identity_rcvd,

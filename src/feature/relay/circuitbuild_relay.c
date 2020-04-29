@@ -18,6 +18,8 @@
 #include "orconfig.h"
 #include "feature/relay/circuitbuild_relay.h"
 
+#include "lib/crypt_ops/crypto_rand.h"
+
 #include "core/or/or.h"
 #include "app/config/config.h"
 
@@ -36,6 +38,7 @@
 
 #include "feature/nodelist/nodelist.h"
 
+#include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 
@@ -119,6 +122,49 @@ circuit_extend_add_ed25519_helper(struct extend_cell_t *ec)
   return 0;
 }
 
+/* Check if the address and port in the tor_addr_port_t <b>ap</b> are valid,
+ * and are allowed by the current ExtendAllowPrivateAddresses config.
+ *
+ * If they are valid, return true.
+ * Otherwise, if they are invalid, return false.
+ *
+ * If <b>log_zero_addrs</b> is true, log warnings about zero addresses at
+ * <b>log_level</b>. If <b>log_internal_addrs</b> is true, log warnings about
+ * internal addresses at <b>log_level</b>.
+ */
+static bool
+circuit_extend_addr_port_is_valid(const struct tor_addr_port_t *ap,
+                                  bool log_zero_addrs, bool log_internal_addrs,
+                                  int log_level)
+{
+  /* It's safe to print the family. But we don't want to print the address,
+   * unless specifically configured to do so. (Zero addresses aren't sensitive,
+   * But some internal addresses might be.)*/
+
+  if (!tor_addr_port_is_valid_ap(ap, 0)) {
+    if (log_zero_addrs) {
+      log_fn(log_level, LD_PROTOCOL,
+             "Client asked me to extend to a zero destination port or "
+             "%s address '%s'.",
+             fmt_addr_family(&ap->addr), safe_str(fmt_addrport_ap(ap)));
+    }
+    return false;
+  }
+
+  if (tor_addr_is_internal(&ap->addr, 0) &&
+      !get_options()->ExtendAllowPrivateAddresses) {
+    if (log_internal_addrs) {
+      log_fn(log_level, LD_PROTOCOL,
+             "Client asked me to extend to a private %s address '%s'.",
+             fmt_addr_family(&ap->addr),
+             safe_str(fmt_and_decorate_addr(&ap->addr)));
+    }
+    return false;
+  }
+
+  return true;
+}
+
 /* Before replying to an extend cell, check the link specifiers in the extend
  * cell <b>ec</b>, which was received on the circuit <b>circ</b>.
  *
@@ -139,17 +185,28 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
     return -1;
   }
 
-  if (!ec->orport_ipv4.port || tor_addr_is_null(&ec->orport_ipv4.addr)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to zero destination port or addr.");
+  /* Check the addresses, without logging */
+  const int ipv4_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                                           false, false, 0);
+  const int ipv6_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                                           false, false, 0);
+  /* We need at least one valid address */
+  if (!ipv4_valid && !ipv6_valid) {
+    /* Now, log the invalid addresses at protocol warning level */
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                      true, true, LOG_PROTOCOL_WARN);
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                      true, true, LOG_PROTOCOL_WARN);
+    /* And fail */
     return -1;
-  }
-
-  if (tor_addr_is_internal(&ec->orport_ipv4.addr, 0) &&
-      !get_options()->ExtendAllowPrivateAddresses) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Client asked me to extend to a private address.");
-    return -1;
+  } else if (!ipv4_valid) {
+    /* Always log unexpected internal addresses, but go on to use the other
+     * valid address */
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                      false, true, LOG_PROTOCOL_WARN);
+  } else if (!ipv6_valid) {
+    circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                      false, true, LOG_PROTOCOL_WARN);
   }
 
   IF_BUG_ONCE(circ->magic != OR_CIRCUIT_MAGIC) {
@@ -183,10 +240,64 @@ circuit_extend_lspec_valid_helper(const struct extend_cell_t *ec,
   return 0;
 }
 
+/* If possible, return a supported, non-NULL IP address.
+ *
+ * If both addresses are supported and non-NULL, choose one uniformly at
+ * random.
+ *
+ * If we have an IPv6-only extend, but IPv6 is not supported, returns NULL.
+ * If both addresses are NULL, also returns NULL. */
+STATIC const tor_addr_port_t *
+circuit_choose_ip_ap_for_extend(const tor_addr_port_t *ipv4_ap,
+                                const tor_addr_port_t *ipv6_ap)
+{
+  const bool ipv6_supported = router_can_extend_over_ipv6(get_options());
+
+  /* If IPv6 is not supported, we can't use the IPv6 address. */
+  if (!ipv6_supported) {
+    ipv6_ap = NULL;
+  }
+
+  /* If there is no IPv6 address, IPv4 is always supported.
+   * Until clients include IPv6 ORPorts, and most relays support IPv6,
+   * this is the most common case. */
+  if (!ipv6_ap) {
+    return ipv4_ap;
+  }
+
+  /* If there is no IPv4 address, return the (possibly NULL) IPv6 address. */
+  if (!ipv4_ap) {
+    return ipv6_ap;
+  }
+
+  /* Now we have an IPv4 and an IPv6 address, and IPv6 is supported.
+   * So make an IPv6 connection at random, with probability 1 in N.
+   *   1 means "always IPv6 (and no IPv4)"
+   *   2 means "equal probability of IPv4 or IPv6"
+   *   ... (and so on) ...
+   *   (UINT_MAX - 1) means "almost always IPv4 (and almost never IPv6)"
+   * To disable IPv6, set ipv6_supported to 0.
+   */
+#define IPV6_CONNECTION_ONE_IN_N 2
+
+  bool choose_ipv6 = crypto_fast_rng_one_in_n(get_thread_fast_rng(),
+                                              IPV6_CONNECTION_ONE_IN_N);
+  if (choose_ipv6) {
+    return ipv6_ap;
+  } else {
+    return ipv4_ap;
+  }
+}
+
 /* When there is no open channel for an extend cell <b>ec</b>, set up the
- * circuit <b>circ</b> to wait for a new connection. If <b>should_launch</b>
- * is true, open a new connection. (Otherwise, we are already waiting for a
- * new connection to the same relay.)
+ * circuit <b>circ</b> to wait for a new connection.
+ *
+ * If <b>should_launch</b> is true, open a new connection. (Otherwise, we are
+ * already waiting for a new connection to the same relay.)
+ *
+ * Check if IPv6 extends are supported by our current configuration. If they
+ * are, new connections may be made over IPv4 or IPv6. (IPv4 connections are
+ * always supported.)
  */
 STATIC void
 circuit_open_connection_for_extend(const struct extend_cell_t *ec,
@@ -205,13 +316,36 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
     return;
   }
 
+  /* Check the addresses, without logging */
+  const int ipv4_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv4,
+                                                           false, false, 0);
+  const int ipv6_valid = circuit_extend_addr_port_is_valid(&ec->orport_ipv6,
+                                                           false, false, 0);
+
+  IF_BUG_ONCE(!ipv4_valid && !ipv6_valid) {
+    /* circuit_extend_lspec_valid_helper() should have caught this */
+    circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
+    return;
+  }
+
+  const tor_addr_port_t *chosen_ap = circuit_choose_ip_ap_for_extend(
+                                        ipv4_valid ? &ec->orport_ipv4 : NULL,
+                                        ipv6_valid ? &ec->orport_ipv6 : NULL);
+  if (!chosen_ap) {
+    /* An IPv6-only extend, but IPv6 is not supported */
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received IPv6-only extend, but we don't have an IPv6 ORPort.");
+    circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
+    return;
+  }
+
   circ->n_hop = extend_info_new(NULL /*nickname*/,
                                 (const char*)ec->node_id,
                                 &ec->ed_pubkey,
                                 NULL, /*onion_key*/
                                 NULL, /*curve25519_key*/
-                                &ec->orport_ipv4.addr,
-                                ec->orport_ipv4.port);
+                                &chosen_ap->addr,
+                                chosen_ap->port);
 
   circ->n_chan_create_cell = tor_memdup(&ec->create_cell,
                                         sizeof(ec->create_cell));
@@ -220,10 +354,11 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
 
   if (should_launch) {
     /* we should try to open a connection */
-    channel_t *n_chan = channel_connect_for_circuit(&ec->orport_ipv4.addr,
-                                                    ec->orport_ipv4.port,
-                                                    (const char*)ec->node_id,
-                                                    &ec->ed_pubkey);
+    channel_t *n_chan = channel_connect_for_circuit(
+                                                &circ->n_hop->addr,
+                                                circ->n_hop->port,
+                                                circ->n_hop->identity_digest,
+                                                &circ->n_hop->ed_identity);
     if (!n_chan) {
       log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
       circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
@@ -277,16 +412,31 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
   if (circuit_extend_lspec_valid_helper(&ec, circ) < 0)
     return -1;
 
+  /* Check the addresses, without logging */
+  const int ipv4_valid = circuit_extend_addr_port_is_valid(&ec.orport_ipv4,
+                                                           false, false, 0);
+  const int ipv6_valid = circuit_extend_addr_port_is_valid(&ec.orport_ipv6,
+                                                           false, false, 0);
+  IF_BUG_ONCE(!ipv4_valid && !ipv6_valid) {
+    /* circuit_extend_lspec_valid_helper() should have caught this */
+    return -1;
+  }
+
   n_chan = channel_get_for_extend((const char*)ec.node_id,
                                   &ec.ed_pubkey,
-                                  &ec.orport_ipv4.addr,
+                                  ipv4_valid ? &ec.orport_ipv4.addr : NULL,
+                                  ipv6_valid ? &ec.orport_ipv6.addr : NULL,
                                   &msg,
                                   &should_launch);
 
   if (!n_chan) {
-    log_debug(LD_CIRC|LD_OR,"Next router (%s): %s.",
-              fmt_addrport(&ec.orport_ipv4.addr,ec.orport_ipv4.port),
-              msg?msg:"????");
+    /* We can't use fmt_addr*() twice in the same function call,
+     * because it uses a static buffer. */
+    log_debug(LD_CIRC|LD_OR, "Next router IPv4 (%s): %s.",
+              fmt_addrport_ap(&ec.orport_ipv4),
+              msg ? msg : "????");
+    log_debug(LD_CIRC|LD_OR, "Next router IPv6 (%s).",
+              fmt_addrport_ap(&ec.orport_ipv6));
 
     circuit_open_connection_for_extend(&ec, circ, should_launch);
 
