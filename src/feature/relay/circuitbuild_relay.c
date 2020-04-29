@@ -250,8 +250,27 @@ STATIC const tor_addr_port_t *
 circuit_choose_ip_ap_for_extend(const tor_addr_port_t *ipv4_ap,
                                 const tor_addr_port_t *ipv6_ap)
 {
-  /* If we could make an IPv4 or an IPv6 connection, make an IPv6 connection
-   * at random, with probability 1 in N.
+  const bool ipv6_supported = router_has_advertised_ipv6_orport(get_options());
+
+  /* If IPv6 is not supported, we can't use the IPv6 address. */
+  if (!ipv6_supported) {
+    ipv6_ap = NULL;
+  }
+
+  /* If there is no IPv6 address, IPv4 is always supported.
+   * Until clients include IPv6 ORPorts, and most relays support IPv6,
+   * this is the most common case. */
+  if (!ipv6_ap) {
+    return ipv4_ap;
+  }
+
+  /* If there is no IPv4 address, return the (possibly NULL) IPv6 address. */
+  if (!ipv4_ap) {
+    return ipv6_ap;
+  }
+
+  /* Now we have an IPv4 and an IPv6 address, and IPv6 is supported.
+   * So make an IPv6 connection at random, with probability 1 in N.
    *   1 means "always IPv6 (and no IPv4)"
    *   2 means "equal probability of IPv4 or IPv6"
    *   ... (and so on) ...
@@ -260,26 +279,12 @@ circuit_choose_ip_ap_for_extend(const tor_addr_port_t *ipv4_ap,
    */
 #define IPV6_CONNECTION_ONE_IN_N 2
 
-  /* IPv4 is always supported */
-  const bool ipv6_supported = router_has_advertised_ipv6_orport(get_options());
-
-  if (ipv4_ap && ipv6_ap && ipv6_supported) {
-    /* Choose between IPv4 and IPv6 at random */
-    bool choose_ipv6 = crypto_fast_rng_one_in_n(get_thread_fast_rng(),
-                                                IPV6_CONNECTION_ONE_IN_N);
-    if (choose_ipv6) {
-      return ipv6_ap;
-    } else {
-      return ipv4_ap;
-    }
-  } else if (ipv6_ap && ipv6_supported) {
-    /* There's only one valid address: try to use it */
+  bool choose_ipv6 = crypto_fast_rng_one_in_n(get_thread_fast_rng(),
+                                              IPV6_CONNECTION_ONE_IN_N);
+  if (choose_ipv6) {
     return ipv6_ap;
-  } else if (ipv4_ap) {
-    return ipv4_ap;
   } else {
-    /* IPv6-only extend, but IPv6 is not supported. */
-    return NULL;
+    return ipv4_ap;
   }
 }
 
