@@ -255,11 +255,11 @@ problem function-size /src/feature/nodelist/microdesc.c:microdesc_cache_rebuild(
 problem include-count /src/feature/nodelist/networkstatus.c 65
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_check_consensus_signature() 175
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_set_current_consensus() 289
-problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_server_impl() 122
+problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_server_impl() 124
 problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 204
-problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 112
+problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 114
 problem function-size /src/feature/nodelist/nodelist.c:compute_frac_paths_available() 190
-problem file-size /src/feature/nodelist/routerlist.c 3247
+problem file-size /src/feature/nodelist/routerlist.c 3300
 problem function-size /src/feature/nodelist/routerlist.c:router_rebuild_store() 148
 problem function-size /src/feature/nodelist/routerlist.c:router_add_to_routerlist() 168
 problem function-size /src/feature/nodelist/routerlist.c:routerlist_remove_old_routers() 121
