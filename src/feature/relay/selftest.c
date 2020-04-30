@@ -107,6 +107,7 @@ router_should_check_reachability(int test_or, int test_dir)
   if (!me)
     return 0;
 
+  /* Doesn't check our IPv6 address, see #34065. */
   if (routerset_contains_router(options->ExcludeNodes, me, -1) &&
       options->StrictNodes) {
     /* If we've excluded ourself, and StrictNodes is set, we can't test
@@ -136,7 +137,8 @@ extend_info_from_router(const routerinfo_t *r)
   tor_addr_port_t ap;
   tor_assert(r);
 
-  /* Make sure we don't need to check address reachability */
+  /* Relays always assume that the first hop is reachable. They ignore
+   * ReachableAddresses. */
   tor_assert_nonfatal(router_connect_assume_or_reachable(get_options(), 0));
 
   const ed25519_public_key_t *ed_id_key;
