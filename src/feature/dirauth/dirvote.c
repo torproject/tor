@@ -5,7 +5,6 @@
 
 #define DIRVOTE_PRIVATE
 
-#include <netinet/in.h>
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/or/policies.h"
@@ -4214,8 +4213,10 @@ compare_routerinfo_by_ipv4(const void **a, const void **b)
     return compare_routerinfo_usefulness(a,b);
   } else {
     // Otherwise, compare the addresses
-    if (first->addr < second->addr) return -1;
-    else return 1;
+    if (first->addr < second->addr)
+      return -1;
+    else
+      return 1;
   }
 }
 
@@ -4231,8 +4232,10 @@ compare_routerinfo_by_ipv6(const void **a, const void **b)
   tor_addr_t *second_ipv6 = &(second->ipv6_addr);
   int comparison = tor_addr_compare(first_ipv6, second_ipv6, CMP_EXACT);
   // If addresses are equal, use other comparison criterions
-  if (comparison == 0) return compare_routerinfo_usefulness(a, b);
-  else return comparison;
+  if (comparison == 0)
+    return compare_routerinfo_usefulness(a, b);
+  else
+    return comparison;
 }
 
 /**
@@ -4286,14 +4289,16 @@ compare_routerinfo_usefulness(const void **a, const void **b)
                      DIGEST_LEN);
 }
 
-/** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
- * whose keys are the identity digests of those routers that we're going to
- * exclude for Sybil-like appearance. */
+/** Given a list of routerinfo_t in <b>routers</b> that all use the same
+ * IP version, specified in <b>family</b>, return a new digestmap_t whose keys
+ * are the identity digests of those routers that we're going to exclude for
+ * Sybil-like appearance.
+ */
 static digestmap_t *
-get_possible_sybil_list(const smartlist_t *routers, sa_family_t family)
+get_sybil_list_by_ip_version(const smartlist_t *routers, sa_family_t family)
 {
   const dirauth_options_t *options = dirauth_get_options();
-  digestmap_t *omit_as_sybil;
+  digestmap_t *omit_as_sybil = digestmap_new();
   smartlist_t *routers_by_ip = smartlist_new();
   int addr_count = 0;
   uint32_t last_ipv4_addr = 0;
@@ -4309,7 +4314,6 @@ get_possible_sybil_list(const smartlist_t *routers, sa_family_t family)
     smartlist_sort(routers_by_ip, compare_routerinfo_by_ipv6);
   else
     smartlist_sort(routers_by_ip, compare_routerinfo_by_ipv4);
-  omit_as_sybil = digestmap_new();
 
   SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
     if (family == AF_INET6) {
@@ -4334,6 +4338,53 @@ get_possible_sybil_list(const smartlist_t *routers, sa_family_t family)
   return omit_as_sybil;
 }
 
+/** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
+ * whose keys are the identity digests of those routers that we're going to
+ * exclude for Sybil-like appearance. */
+static digestmap_t *
+get_all_possible_sybil(const smartlist_t *routers)
+{
+  smartlist_t  *routers_ipv6, *routers_ipv4;
+  routers_ipv6 = smartlist_new();
+  routers_ipv4 = smartlist_new();
+  digestmap_t *omit_as_sybil_ipv4 = digestmap_new();
+  digestmap_t *omit_as_sybil_ipv6 = digestmap_new();
+  digestmap_t *omit_as_sybil = digestmap_new();
+  // Sort the routers in two lists depending on their IP version
+  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
+      // If the router isn't IPv4
+      if (!ri->addr) {
+        // Double-check it's IPv6
+        if (tor_addr_family(&(ri->ipv6_addr)) == AF_INET6)
+          smartlist_add(routers_ipv6, ri);
+      }
+      // If the router is IPv4
+      if (ri -> addr) {
+        smartlist_add(routers_ipv4, ri);
+      }
+  });
+  routers_sort_by_identity(routers_ipv4);
+  routers_sort_by_identity(routers_ipv6);
+  omit_as_sybil_ipv4 = get_sybil_list_by_ip_version(routers_ipv6, AF_INET);
+  omit_as_sybil_ipv6 = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
+
+  // Add all possible sybils to the common digestmap
+    DIGESTMAP_FOREACH (omit_as_sybil_ipv4, sybil_id, routerinfo_t *, ri) {
+      digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+    }
+    DIGESTMAP_FOREACH_END
+    DIGESTMAP_FOREACH (omit_as_sybil_ipv6, sybil_id, routerinfo_t *, ri) {
+      digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+    }
+    DIGESTMAP_FOREACH_END
+  // Clean the temp variables
+  smartlist_free(routers_ipv4);
+  smartlist_free(routers_ipv6);
+  digestmap_free(omit_as_sybil_ipv4, NULL);
+  digestmap_free(omit_as_sybil_ipv6, NULL);
+  // Return the digestmap : it now contains all the possible sybils
+  return omit_as_sybil;
+}
 /** Given a platform string as in a routerinfo_t (possibly null), return a
  * newly allocated version string for a networkstatus document, or NULL if the
  * platform doesn't give a Tor version. */
@@ -4499,7 +4550,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   uint32_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
   const char *contact;
-  smartlist_t *routers, *routers_ipv4, *routers_ipv6, *routerstatuses;
+  smartlist_t *routers, *routerstatuses;
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
   const int listbadexits = d_options->AuthDirListBadExits;
@@ -4508,9 +4559,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   networkstatus_voter_info_t *voter = NULL;
   vote_timing_t timing;
-  digestmap_t *omit_as_sybil_ipv4 = NULL;
-  digestmap_t *omit_as_sybil_ipv6 = NULL;
-  digestmap_t *omit_as_sybil = NULL;
+  digestmap_t *omit_as_sybil = digestmap_new();
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
@@ -4571,48 +4620,21 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                     });
 
   routers = smartlist_new();
-  routers_ipv6 = smartlist_new();
-  routers_ipv4 = smartlist_new();
-  /* After this point, don't use rl->routers; use 'routers' instead. */
   smartlist_add_all(routers, rl->routers);
-  // Sort the routers in two lists depending on their IP version
-  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
-    // If the router isn't IPv4
-    if (! ri->addr) {
-      // Double-check it's IPv6
-      if (tor_addr_family(&(ri->ipv6_addr)) == AF_INET6)
-        smartlist_add(routers_ipv6, ri);
-    }
-    // If the router is IPv4
-    if (ri -> addr) {
-      smartlist_add(routers_ipv4, ri);
-    }
-  });
-  routers_make_ed_keys_unique(routers_ipv4);
-  routers_make_ed_keys_unique(routers_ipv6);
-  routers_sort_by_identity(routers_ipv4);
-  routers_sort_by_identity(routers_ipv6);
-  omit_as_sybil_ipv4 = get_possible_sybil_list(routers_ipv4, AF_INET);
-  omit_as_sybil_ipv6 = get_possible_sybil_list(routers_ipv6, AF_INET6);
-
-  // Add all possible sybils to the common digestmap
-  DIGESTMAP_FOREACH(omit_as_sybil_ipv4, sybil_id, routerinfo_t *, ri) {
-    digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
-  } DIGESTMAP_FOREACH_END
-  DIGESTMAP_FOREACH(omit_as_sybil_ipv6, sybil_id, routerinfo_t *, ri) {
-    digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
-  } DIGESTMAP_FOREACH_END
-  DIGESTMAP_FOREACH(omit_as_sybil, sybil_id, void *, ignore) {
-    (void) ignore;
+  routers_make_ed_keys_unique(routers);
+  /* After this point, don't use rl->routers; use 'routers' instead. */
+  routers_sort_by_identity(routers);
+  /* Get a digestmap of possible sybil routers, IPv4 or IPv6 */
+  omit_as_sybil = get_all_possible_sybil(routers);
+  DIGESTMAP_FOREACH (omit_as_sybil, sybil_id, void *, ignore) {
+    (void)ignore;
     rep_hist_make_router_pessimal(sybil_id, now);
-  } DIGESTMAP_FOREACH_END
-
+  }
+  DIGESTMAP_FOREACH_END
   /* Count how many have measured bandwidths so we know how to assign flags;
    * this must come before dirserv_compute_performance_thresholds() */
   dirserv_count_measured_bws(routers);
-
   dirserv_compute_performance_thresholds(omit_as_sybil);
-
   routerstatuses = smartlist_new();
   microdescriptors = smartlist_new();
 
@@ -4640,7 +4662,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                ri->cache_info.signing_key_cert->signing_key.pubkey,
                ED25519_PUBKEY_LEN);
       }
-
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(rs);
 
@@ -4670,10 +4691,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   }
 
   smartlist_free(routers);
-  smartlist_free(routers_ipv4);
-  smartlist_free(routers_ipv6);
-  digestmap_free(omit_as_sybil_ipv4, NULL);
-  digestmap_free(omit_as_sybil_ipv6, NULL);
+  digestmap_free(omit_as_sybil, NULL);
 
   /* Apply guardfraction information to routerstatuses. */
   if (options->GuardfractionFile) {
