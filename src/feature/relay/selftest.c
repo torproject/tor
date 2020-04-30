@@ -8,7 +8,7 @@
  * \file selftest.c
  * \brief Relay self-testing
  *
- * Relays need to make sure that their own ports are reasonable, and estimate
+ * Relays need to make sure that their own ports are reachable, and estimate
  * their own bandwidth, before publishing.
  */
 
