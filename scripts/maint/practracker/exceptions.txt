@@ -68,7 +68,7 @@ problem function-size /src/core/mainloop/connection.c:connection_handle_listener
 problem function-size /src/core/mainloop/connection.c:connection_read_proxy_handshake() 153
 problem function-size /src/core/mainloop/connection.c:retry_listener_ports() 112
 problem function-size /src/core/mainloop/connection.c:connection_handle_read_impl() 111
-problem function-size /src/core/mainloop/connection.c:connection_buf_read_from_socket() 180
+problem function-size /src/core/mainloop/connection.c:connection_buf_read_from_socket() 186
 problem function-size /src/core/mainloop/connection.c:connection_handle_write_impl() 241
 problem function-size /src/core/mainloop/connection.c:assert_connection_ok() 143
 problem dependency-violation /src/core/mainloop/connection.c 47
