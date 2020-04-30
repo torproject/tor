@@ -137,7 +137,7 @@ extend_info_from_router(const routerinfo_t *r)
   tor_assert(r);
 
   /* Make sure we don't need to check address reachability */
-  tor_assert_nonfatal(router_skip_or_reachability(get_options(), 0));
+  tor_assert_nonfatal(router_connect_assume_or_reachable(get_options(), 0));
 
   const ed25519_public_key_t *ed_id_key;
   if (r->cache_info.signing_key_cert)

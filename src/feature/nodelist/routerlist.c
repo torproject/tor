@@ -469,7 +469,7 @@ router_reload_router_list(void)
  * and reachability checks be skipped?
  */
 int
-router_skip_or_reachability(const or_options_t *options, int try_ip_pref)
+router_connect_assume_or_reachable(const or_options_t *options, int try_ip_pref)
 {
   /* Servers always have and prefer IPv4.
    * And if clients are checking against the firewall for reachability only,
@@ -481,7 +481,7 @@ router_skip_or_reachability(const or_options_t *options, int try_ip_pref)
  * and reachability checks be skipped?
  */
 int
-router_skip_dir_reachability(const or_options_t *options, int try_ip_pref)
+router_connect_assume_dir_reachable(const or_options_t *options, int try_ip_pref)
 {
   /* Servers always have and prefer IPv4.
    * And if clients are checking against the firewall for reachability only,
@@ -507,7 +507,7 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
                                       int need_desc, int pref_addr,
                                       int direct_conn)
 {
-  const int check_reach = !router_skip_or_reachability(get_options(),
+  const int check_reach = !router_connect_assume_or_reachable(get_options(),
                                                        pref_addr);
   /* XXXX MOVE */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
