@@ -127,15 +127,23 @@ router_should_check_reachability(int test_or, int test_dir)
 }
 
 /** Allocate and return a new extend_info_t that can be used to build
- * a circuit to or through the router <b>r</b>. Uses the primary
- * address of the router, so should only be called on a server. */
+ * a circuit to or through the router <b>r</b>, using an address from
+ * <b>family</b> (if available).
+ *
+ * Clients don't have routerinfos, so this function should only be called on a
+ * server.
+ *
+ * If the requested address is not available, returns NULL. */
 static extend_info_t *
-extend_info_from_router(const routerinfo_t *r)
+extend_info_from_router(const routerinfo_t *r, int family)
 {
   crypto_pk_t *rsa_pubkey;
   extend_info_t *info;
   tor_addr_port_t ap;
-  tor_assert(r);
+
+  if (BUG(!r)) {
+    return NULL;
+  }
 
   /* Relays always assume that the first hop is reachable. They ignore
    * ReachableAddresses. */
@@ -147,7 +155,11 @@ extend_info_from_router(const routerinfo_t *r)
   else
     ed_id_key = NULL;
 
-  router_get_prim_orport(r, &ap);
+  router_get_orport(r, &ap, family);
+  if (!tor_addr_port_is_valid_ap(&ap, 0)) {
+    /* We don't have an ORPort for the requested family. */
+    return NULL;
+  }
   rsa_pubkey = router_get_rsa_onion_pkey(r->onion_pkey, r->onion_pkey_len);
   info = extend_info_new(r->nickname, r->cache_info.identity_digest,
                          ed_id_key,
@@ -178,7 +190,7 @@ router_do_reachability_checks(int test_or, int test_dir)
 
   if (router_should_check_reachability(test_or, test_dir)) {
     if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-      extend_info_t *ei = extend_info_from_router(me);
+      extend_info_t *ei = extend_info_from_router(me, AF_INET);
       /* XXX IPv6 self testing */
       log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
                !orport_reachable ? "reachability" : "bandwidth",

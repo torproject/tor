@@ -12,8 +12,9 @@
 #ifndef TOR_ROUTERINFO_H
 #define TOR_ROUTERINFO_H
 
-void router_get_prim_orport(const routerinfo_t *router,
-                            tor_addr_port_t *addr_port_out);
+void router_get_orport(const routerinfo_t *router,
+                       tor_addr_port_t *addr_port_out,
+                       int family);
 int router_has_orport(const routerinfo_t *router,
                       const tor_addr_port_t *orport);
 
