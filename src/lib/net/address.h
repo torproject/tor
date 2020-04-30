@@ -227,6 +227,7 @@ const char *fmt_addr_impl(const tor_addr_t *addr, int decorate);
 const char *fmt_addrport(const tor_addr_t *addr, uint16_t port);
 #define fmt_addrport_ap(ap) fmt_addrport(&(ap)->addr, (ap)->port)
 const char *fmt_addr32(uint32_t addr);
+const char *fmt_af_family(sa_family_t family);
 const char *fmt_addr_family(const tor_addr_t *addr);
 
 MOCK_DECL(int,get_interface_address6,(int severity, sa_family_t family,

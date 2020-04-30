@@ -15,24 +15,31 @@
 #include "core/or/or.h"
 
 #include "app/config/config.h"
+
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
+
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/crypt_path_st.h"
+#include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "core/or/relay.h"
+
 #include "feature/control/control_events.h"
+
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
+
 #include "feature/nodelist/authority_cert_st.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h" // but...
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
+
 #include "feature/relay/relay_periodic.h"
 #include "feature/relay/router.h"
 #include "feature/relay/selftest.h"
@@ -169,8 +176,9 @@ extend_info_from_router(const routerinfo_t *r, int family)
   return info;
 }
 
-/** Launch a self-testing circuit to our ORPort. The circuit can be used to
- * test reachability or bandwidth. <b>me</b> is our own routerinfo.
+/** Launch a self-testing circuit to one of our ORPorts, using an address from
+ * <b>family</b> (if available). The circuit can be used to test reachability
+ * or bandwidth. <b>me</b> is our own routerinfo.
  *
  * Logs an info-level status message. If <b>orport_reachable</b> is false,
  * call it a reachability circuit. Otherwise, call it a bandwidth circuit.
@@ -178,16 +186,21 @@ extend_info_from_router(const routerinfo_t *r, int family)
  * See router_do_reachability_checks() for details. */
 static void
 router_do_orport_reachability_checks(const routerinfo_t *me,
+                                     int family,
                                      int orport_reachable)
 {
-  extend_info_t *ei = extend_info_from_router(me, AF_INET);
-  /* XXX IPv6 self testing */
-  log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
-           !orport_reachable ? "reachability" : "bandwidth",
-           fmt_addr32(me->addr), me->or_port);
-  circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
+  extend_info_t *ei = extend_info_from_router(me, family);
+
+  /* If we don't have an IPv6 ORPort, ei will be NULL. */
+  if (ei) {
+    const char *family_name = fmt_af_family(family);
+    log_info(LD_CIRC, "Testing %s of my %s ORPort: %s.",
+             !orport_reachable ? "reachability" : "bandwidth",
+             family_name, fmt_addrport(&ei->addr, ei->port));
+    circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
-  extend_info_free(ei);
+    extend_info_free(ei);
+  }
 }
 
 /** Launch a self-testing circuit, and ask an exit to connect to our DirPort.
@@ -242,7 +255,9 @@ router_do_reachability_checks(int test_or, int test_dir)
 
   if (router_should_check_reachability(test_or, test_dir)) {
     if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-      router_do_orport_reachability_checks(me, orport_reachable);
+      /* We'll separate IPv4 and IPv6 reachability detection in #34067. */
+      router_do_orport_reachability_checks(me, AF_INET, orport_reachable);
+      router_do_orport_reachability_checks(me, AF_INET6, orport_reachable);
     }
 
     if (test_dir && !router_skip_dirport_reachability_check(options)) {
