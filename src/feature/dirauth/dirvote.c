@@ -4297,8 +4297,7 @@ get_possible_sybil_list(const smartlist_t *routers, sa_family_t family)
   smartlist_t *routers_by_ip = smartlist_new();
   int addr_count = 0;
   uint32_t last_ipv4_addr = 0;
-  tor_addr_t * last_ipv6_addr = tor_malloc(sizeof(tor_addr_t));
-//  tor_addr_t * current_ipv6_addr;
+  tor_addr_t last_ipv6_addr;
   int ipv6_comparison = 0;
   /* Allow at most this number of Tor servers on a single IP address, ... */
   int max_with_same_addr = options->AuthDirMaxServersPerAddr;
@@ -4314,10 +4313,10 @@ get_possible_sybil_list(const smartlist_t *routers, sa_family_t family)
 
   SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
     if (family == AF_INET6) {
-      ipv6_comparison = tor_addr_compare(last_ipv6_addr, &(ri->ipv6_addr),
+      ipv6_comparison = tor_addr_compare(&last_ipv6_addr, &(ri->ipv6_addr),
               CMP_EXACT);
       if (ipv6_comparison != 0) {
-        memcpy(last_ipv6_addr, &(ri->ipv6_addr), sizeof(*last_ipv6_addr));
+        tor_addr_copy(&last_ipv6_addr, &(ri->ipv6_addr));
         addr_count = 1;
       } else if (++addr_count > max_with_same_addr) {
         digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
@@ -4332,7 +4331,6 @@ get_possible_sybil_list(const smartlist_t *routers, sa_family_t family)
     }
   } SMARTLIST_FOREACH_END(ri);
   smartlist_free(routers_by_ip);
-  tor_free(last_ipv6_addr);
   return omit_as_sybil;
 }
 
@@ -4512,6 +4510,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   vote_timing_t timing;
   digestmap_t *omit_as_sybil_ipv4 = NULL;
   digestmap_t *omit_as_sybil_ipv6 = NULL;
+  digestmap_t *omit_as_sybil = NULL;
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
@@ -4574,15 +4573,18 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   routers = smartlist_new();
   routers_ipv6 = smartlist_new();
   routers_ipv4 = smartlist_new();
+  /* After this point, don't use rl->routers; use 'routers' instead. */
   smartlist_add_all(routers, rl->routers);
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+  // Sort the routers in two lists depending on their IP version
+  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
     // If the router isn't IPv4
     if (! ri->addr) {
       // Double-check it's IPv6
       if (tor_addr_family(&(ri->ipv6_addr)) == AF_INET6)
         smartlist_add(routers_ipv6, ri);
-      else smartlist_add(routers_ipv4, ri);
-    } else {
+    }
+    // If the router is IPv4
+    if (ri -> addr) {
       smartlist_add(routers_ipv4, ri);
     }
   });
@@ -4593,22 +4595,23 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   omit_as_sybil_ipv4 = get_possible_sybil_list(routers_ipv4, AF_INET);
   omit_as_sybil_ipv6 = get_possible_sybil_list(routers_ipv6, AF_INET6);
 
-  DIGESTMAP_FOREACH(omit_as_sybil_ipv4, sybil_id, void *, ignore) {
+  // Add all possible sybils to the common digestmap
+  DIGESTMAP_FOREACH(omit_as_sybil_ipv4, sybil_id, routerinfo_t *, ri) {
+    digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+  } DIGESTMAP_FOREACH_END
+  DIGESTMAP_FOREACH(omit_as_sybil_ipv6, sybil_id, routerinfo_t *, ri) {
+    digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+  } DIGESTMAP_FOREACH_END
+  DIGESTMAP_FOREACH(omit_as_sybil, sybil_id, void *, ignore) {
     (void) ignore;
     rep_hist_make_router_pessimal(sybil_id, now);
-  } DIGESTMAP_FOREACH_END;
-
-  DIGESTMAP_FOREACH(omit_as_sybil_ipv6, sybil_id, void *, ignore) {
-    (void) ignore;
-    rep_hist_make_router_pessimal(sybil_id, now);
-  } DIGESTMAP_FOREACH_END;
+  } DIGESTMAP_FOREACH_END
 
   /* Count how many have measured bandwidths so we know how to assign flags;
    * this must come before dirserv_compute_performance_thresholds() */
   dirserv_count_measured_bws(routers);
 
-  dirserv_compute_performance_thresholds(omit_as_sybil_ipv4);
-  dirserv_compute_performance_thresholds(omit_as_sybil_ipv6);
+  dirserv_compute_performance_thresholds(omit_as_sybil);
 
   routerstatuses = smartlist_new();
   microdescriptors = smartlist_new();
@@ -4638,9 +4641,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                ED25519_PUBKEY_LEN);
       }
 
-      if (digestmap_get(omit_as_sybil_ipv4, ri->cache_info.identity_digest))
-        clear_status_flags_on_sybil(rs);
-      if (digestmap_get(omit_as_sybil_ipv6, ri->cache_info.identity_digest))
+      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(rs);
 
       if (!vote_on_reachability)
