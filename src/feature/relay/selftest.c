@@ -169,6 +169,57 @@ extend_info_from_router(const routerinfo_t *r, int family)
   return info;
 }
 
+/** Launch a self-testing circuit to our ORPort. The circuit can be used to
+ * test reachability or bandwidth. <b>me</b> is our own routerinfo.
+ *
+ * Logs an info-level status message. If <b>orport_reachable</b> is false,
+ * call it a reachability circuit. Otherwise, call it a bandwidth circuit.
+ *
+ * See router_do_reachability_checks() for details. */
+static void
+router_do_orport_reachability_checks(const routerinfo_t *me,
+                                     int orport_reachable)
+{
+  extend_info_t *ei = extend_info_from_router(me, AF_INET);
+  /* XXX IPv6 self testing */
+  log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
+           !orport_reachable ? "reachability" : "bandwidth",
+           fmt_addr32(me->addr), me->or_port);
+  circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
+                            CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+  extend_info_free(ei);
+}
+
+/** Launch a self-testing circuit, and ask an exit to connect to our DirPort.
+ * <b>me</b> is our own routerinfo.
+ *
+ * See router_do_reachability_checks() for details. */
+static void
+router_do_dirport_reachability_checks(const routerinfo_t *me)
+{
+  tor_addr_t addr;
+  tor_addr_from_ipv4h(&addr, me->addr);
+  if (!connection_get_by_type_addr_port_purpose(
+                  CONN_TYPE_DIR, &addr, me->dir_port,
+                  DIR_PURPOSE_FETCH_SERVERDESC)) {
+    /* XXX IPv6 self testing */
+    tor_addr_port_t my_dirport;
+    memcpy(&my_dirport.addr, &addr, sizeof(addr));
+    my_dirport.port = me->dir_port;
+    /* ask myself, via tor, for my server descriptor. */
+    directory_request_t *req =
+      directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
+    directory_request_set_dir_addr_port(req, &my_dirport);
+    directory_request_set_directory_id_digest(req,
+                                              me->cache_info.identity_digest);
+    // ask via an anon circuit, connecting to our dirport.
+    directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
+    directory_request_set_resource(req, "authority.z");
+    directory_initiate_request(req);
+    directory_request_free(req);
+  }
+}
+
 /** Some time has passed, or we just got new directory information.
  * See if we currently believe our ORPort or DirPort to be
  * unreachable. If so, launch a new test for it.
@@ -186,40 +237,14 @@ router_do_reachability_checks(int test_or, int test_dir)
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
   int orport_reachable = router_skip_orport_reachability_check(options);
-  tor_addr_t addr;
 
   if (router_should_check_reachability(test_or, test_dir)) {
     if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-      extend_info_t *ei = extend_info_from_router(me, AF_INET);
-      /* XXX IPv6 self testing */
-      log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
-               !orport_reachable ? "reachability" : "bandwidth",
-               fmt_addr32(me->addr), me->or_port);
-      circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
-                              CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
-      extend_info_free(ei);
+      router_do_orport_reachability_checks(me, orport_reachable);
     }
 
-    /* XXX IPv6 self testing */
-    tor_addr_from_ipv4h(&addr, me->addr);
-    if (test_dir && !router_skip_dirport_reachability_check(options) &&
-        !connection_get_by_type_addr_port_purpose(
-                  CONN_TYPE_DIR, &addr, me->dir_port,
-                  DIR_PURPOSE_FETCH_SERVERDESC)) {
-      tor_addr_port_t my_dirport;
-      memcpy(&my_dirport.addr, &addr, sizeof(addr));
-      my_dirport.port = me->dir_port;
-      /* ask myself, via tor, for my server descriptor. */
-      directory_request_t *req =
-        directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
-      directory_request_set_dir_addr_port(req, &my_dirport);
-      directory_request_set_directory_id_digest(req,
-                                              me->cache_info.identity_digest);
-      // ask via an anon circuit, connecting to our dirport.
-      directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
-      directory_request_set_resource(req, "authority.z");
-      directory_initiate_request(req);
-      directory_request_free(req);
+    if (test_dir && !router_skip_dirport_reachability_check(options)) {
+      router_do_dirport_reachability_checks(me);
     }
   }
 }
