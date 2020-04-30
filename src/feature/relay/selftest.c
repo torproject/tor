@@ -193,26 +193,28 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
 /** Launch a self-testing circuit, and ask an exit to connect to our DirPort.
  * <b>me</b> is our own routerinfo.
  *
+ * Relays don't advertise IPv6 DirPorts, so this function only supports IPv4.
+ *
  * See router_do_reachability_checks() for details. */
 static void
 router_do_dirport_reachability_checks(const routerinfo_t *me)
 {
-  tor_addr_t addr;
-  tor_addr_from_ipv4h(&addr, me->addr);
+  tor_addr_port_t my_dirport;
+  tor_addr_from_ipv4h(&my_dirport.addr, me->addr);
+  my_dirport.port = me->dir_port;
+
+  /* If there is already a pending connection, don't open another one. */
   if (!connection_get_by_type_addr_port_purpose(
-                  CONN_TYPE_DIR, &addr, me->dir_port,
+                  CONN_TYPE_DIR,
+                  &my_dirport.addr, my_dirport.port,
                   DIR_PURPOSE_FETCH_SERVERDESC)) {
-    /* XXX IPv6 self testing */
-    tor_addr_port_t my_dirport;
-    memcpy(&my_dirport.addr, &addr, sizeof(addr));
-    my_dirport.port = me->dir_port;
     /* ask myself, via tor, for my server descriptor. */
     directory_request_t *req =
       directory_request_new(DIR_PURPOSE_FETCH_SERVERDESC);
     directory_request_set_dir_addr_port(req, &my_dirport);
     directory_request_set_directory_id_digest(req,
                                               me->cache_info.identity_digest);
-    // ask via an anon circuit, connecting to our dirport.
+    /* ask via an anon circuit, connecting to our dirport. */
     directory_request_set_indirection(req, DIRIND_ANON_DIRPORT);
     directory_request_set_resource(req, "authority.z");
     directory_initiate_request(req);
