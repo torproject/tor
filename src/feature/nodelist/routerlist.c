@@ -465,11 +465,19 @@ router_reload_router_list(void)
   return 0;
 }
 
-/* When iterating through the routerlist, can OR address/port preference
- * and reachability checks be skipped?
+/* When selecting a router for a direct connection, can OR address/port
+ * preference and reachability checks be skipped?
+ *
+ * Servers never check ReachableAddresses or ClientPreferIPv6. Returns
+ * true for servers.
+ *
+ * Otherwise, if <b>try_ip_pref</b> is true, returns false. Used to make
+ * clients check ClientPreferIPv6, even if ReachableAddresses is not set.
+ * Finally, return true if ReachableAddresses is set.
  */
 int
-router_connect_assume_or_reachable(const or_options_t *options, int try_ip_pref)
+router_connect_assume_or_reachable(const or_options_t *options,
+                                   int try_ip_pref)
 {
   /* Servers always have and prefer IPv4.
    * And if clients are checking against the firewall for reachability only,
@@ -477,11 +485,14 @@ router_connect_assume_or_reachable(const or_options_t *options, int try_ip_pref)
   return server_mode(options) || (!try_ip_pref && !firewall_is_fascist_or());
 }
 
-/* When iterating through the routerlist, can Dir address/port preference
+/* When selecting a router for a direct connection, can Dir address/port
  * and reachability checks be skipped?
+ *
+ * This function is obsolete, because clients only use ORPorts.
  */
 int
-router_connect_assume_dir_reachable(const or_options_t *options, int try_ip_pref)
+router_connect_assume_dir_reachable(const or_options_t *options,
+                                    int try_ip_pref)
 {
   /* Servers always have and prefer IPv4.
    * And if clients are checking against the firewall for reachability only,
