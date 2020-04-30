@@ -70,7 +70,7 @@ router_reachability_checks_disabled(const or_options_t *options)
  *   - the network is disabled.
  */
 int
-check_whether_orport_reachable(const or_options_t *options)
+router_skip_orport_reachability_check(const or_options_t *options)
 {
   int reach_checks_disabled = router_reachability_checks_disabled(options);
   return reach_checks_disabled ||
@@ -87,7 +87,7 @@ check_whether_orport_reachable(const or_options_t *options)
  *   - the network is disabled.
  */
 int
-check_whether_dirport_reachable(const or_options_t *options)
+router_skip_dirport_reachability_check(const or_options_t *options)
 {
   int reach_checks_disabled = router_reachability_checks_disabled(options) ||
                               !options->DirPort_set;
@@ -171,7 +171,7 @@ router_do_reachability_checks(int test_or, int test_dir)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
-  int orport_reachable = check_whether_orport_reachable(options);
+  int orport_reachable = router_skip_orport_reachability_check(options);
   tor_addr_t addr;
 
   if (router_should_check_reachability(test_or, test_dir)) {
@@ -188,7 +188,7 @@ router_do_reachability_checks(int test_or, int test_dir)
 
     /* XXX IPv6 self testing */
     tor_addr_from_ipv4h(&addr, me->addr);
-    if (test_dir && !check_whether_dirport_reachable(options) &&
+    if (test_dir && !router_skip_dirport_reachability_check(options) &&
         !connection_get_by_type_addr_port_purpose(
                   CONN_TYPE_DIR, &addr, me->dir_port,
                   DIR_PURPOSE_FETCH_SERVERDESC)) {
@@ -258,7 +258,7 @@ router_orport_found_reachable(void)
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                options->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_dirport_reachable(options) ?
+               && router_skip_dirport_reachability_check(options) ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
@@ -285,7 +285,7 @@ router_dirport_found_reachable(void)
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.%s",
                options->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_orport_reachable(options) ?
+               && router_skip_orport_reachability_check(options) ?
                " Publishing server descriptor." : "");
     can_reach_dir_port = 1;
     if (router_should_advertise_dirport(options, me->dir_port)) {

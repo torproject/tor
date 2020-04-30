@@ -1276,15 +1276,15 @@ getinfo_helper_events(control_connection_t *control_conn,
       *answer = tor_strdup(directories_have_accepted_server_descriptor()
                            ? "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded/or")) {
-      *answer = tor_strdup(check_whether_orport_reachable(options) ?
+      *answer = tor_strdup(router_skip_orport_reachability_check(options) ?
                             "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded/dir")) {
-      *answer = tor_strdup(check_whether_dirport_reachable(options) ?
+      *answer = tor_strdup(router_skip_dirport_reachability_check(options) ?
                             "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded")) {
       tor_asprintf(answer, "OR=%d DIR=%d",
-                   check_whether_orport_reachable(options) ? 1 : 0,
-                   check_whether_dirport_reachable(options) ? 1 : 0);
+                   router_skip_orport_reachability_check(options) ? 1 : 0,
+                   router_skip_dirport_reachability_check(options) ? 1 : 0);
     } else if (!strcmp(question, "status/bootstrap-phase")) {
       *answer = control_event_boot_last_msg();
     } else if (!strcmpstart(question, "status/version/")) {

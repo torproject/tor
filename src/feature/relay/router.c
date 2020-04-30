@@ -1361,14 +1361,14 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  if (!check_whether_orport_reachable(options))
+  if (!router_skip_orport_reachability_check(options))
     return 0;
   if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL) {
     /* All set: there are no exits in the consensus (maybe this is a tiny
      * test network), so we can't check our DirPort reachability. */
     return 1;
   } else {
-    return check_whether_dirport_reachable(options);
+    return router_skip_dirport_reachability_check(options);
   }
 }
 
