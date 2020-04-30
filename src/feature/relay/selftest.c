@@ -272,7 +272,7 @@ router_do_reachability_checks(int test_or, int test_dir)
 int
 inform_testing_reachability(void)
 {
-  char dirbuf[128];
+  char extra_addrbuf[128];
   char *address;
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!me)
@@ -281,20 +281,28 @@ inform_testing_reachability(void)
   control_event_server_status(LOG_NOTICE,
                               "CHECKING_REACHABILITY ORADDRESS=%s:%d",
                               address, me->or_port);
+  const bool has_ipv6 = tor_addr_port_is_valid(&me->ipv6_addr,
+                                               me->ipv6_orport, 0);
+  if (has_ipv6) {
+    tor_snprintf(extra_addrbuf, sizeof(extra_addrbuf), " and %s",
+                 fmt_addrport(&me->ipv6_addr, me->ipv6_orport));
+    /* We'll add an IPv6 control event in #34068. */
+  }
   if (me->dir_port) {
-    tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
+    tor_snprintf(extra_addrbuf, sizeof(extra_addrbuf), " and DirPort %s:%d",
                  address, me->dir_port);
     control_event_server_status(LOG_NOTICE,
                                 "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
                                 address, me->dir_port);
   }
-  log_notice(LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... "
+  log_notice(LD_OR, "Now checking whether ORPort%s %s:%d%s %s reachable... "
                          "(this may take up to %d minutes -- look for log "
                          "messages indicating success)",
-      address, me->or_port,
-      me->dir_port ? dirbuf : "",
-      me->dir_port ? "are" : "is",
-      TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
+             has_ipv6 ? "s" : "",
+             address, me->or_port,
+             has_ipv6 || me->dir_port ? extra_addrbuf : "",
+             has_ipv6 || me->dir_port ? "are" : "is",
+             TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
 
   tor_free(address);
   return 1;
