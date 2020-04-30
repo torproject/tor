@@ -328,6 +328,7 @@ router_orport_found_reachable(void)
     if (options->TestingTorNetwork == 1) {
       reschedule_descriptor_update_check();
     }
+    /* We'll add an IPv6 event in #34068. */
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
                                 address, me->or_port);
@@ -365,7 +366,9 @@ router_dirport_found_reachable(void)
 }
 
 /** We have enough testing circuits open. Send a bunch of "drop"
- * cells down each of them, to exercise our bandwidth. */
+ * cells down each of them, to exercise our bandwidth.
+ *
+ * May use IPv4 and IPv6 testing circuits (if available). */
 void
 router_perform_bandwidth_test(int num_circs, time_t now)
 {
