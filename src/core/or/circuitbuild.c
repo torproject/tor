@@ -1075,14 +1075,25 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                      crypt_path_t *hop)
 {
   int len;
+  int family = tor_addr_family(&hop->extend_info->addr);
   extend_cell_t ec;
   memset(&ec, 0, sizeof(ec));
 
   log_debug(LD_CIRC,"starting to send subsequent skin.");
 
-  if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
-    log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
-    return - END_CIRC_REASON_INTERNAL;
+  /* Relays and bridges can send IPv6 extends. But for clients, it's an
+   * obvious version distinguisher. */
+  if (server_mode(get_options())) {
+    if (family != AF_INET && family != AF_INET6) {
+      log_warn(LD_BUG, "Server trying to extend to an invalid address "
+               "family.");
+      return - END_CIRC_REASON_INTERNAL;
+    }
+  } else {
+    if (family != AF_INET) {
+      log_warn(LD_BUG, "Client trying to extend to a non-IPv4 address.");
+      return - END_CIRC_REASON_INTERNAL;
+    }
   }
 
   circuit_pick_extend_handshake(&ec.cell_type,
@@ -1090,9 +1101,17 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                 &ec.create_cell.handshake_type,
                                 hop->extend_info);
 
-  tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
-  ec.orport_ipv4.port = hop->extend_info->port;
-  tor_addr_make_unspec(&ec.orport_ipv6.addr);
+  /* At the moment, extend_info only has one ORPort address. We'll add a
+   * second address in #34069, to support dual-stack extend cells. */
+  if (family == AF_INET) {
+    tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
+    ec.orport_ipv4.port = hop->extend_info->port;
+    tor_addr_make_unspec(&ec.orport_ipv6.addr);
+  } else {
+    tor_addr_copy(&ec.orport_ipv6.addr, &hop->extend_info->addr);
+    ec.orport_ipv6.port = hop->extend_info->port;
+    tor_addr_make_unspec(&ec.orport_ipv4.addr);
+  }
   memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
   /* Set the ED25519 identity too -- it will only get included
    * in the extend2 cell if we're configured to use it, though. */
