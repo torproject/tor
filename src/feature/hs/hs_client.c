@@ -1350,7 +1350,7 @@ client_desc_missing_bad_client_auth(const smartlist_t *entry_conns,
       /* We should not be called with another type of status. Recover by
        * sending a generic error. */
       tor_assert_nonfatal_unreached();
-      code = HS_DESC_DECODE_GENERIC_ERROR;
+      code = SOCKS5_GENERAL_ERROR;
     }
     entry_conn->socks_request->socks_extended_error_code = code;
     connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_MISC);
@@ -2493,4 +2493,3 @@ set_hs_client_auths_map(digest256map_t *map)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-
