@@ -659,9 +659,10 @@ cache_store_as_client(hs_cache_client_descriptor_t *client_desc)
    * client authorization. */
   cache_entry = lookup_v3_desc_as_client(client_desc->key.pubkey);
   if (cache_entry != NULL) {
-    /* Signalling an undecrypted descriptor. We'll always replace the one we
-     * have with the new one just fetched. */
-    if (cache_entry->desc == NULL) {
+    /* Either the cache entry or the new entry is without a decrypted
+     * descriptor, we replace it regardless. We can't inspect the plaintext
+     * data for the revision counter. */
+    if (cache_entry->desc == NULL || client_desc->desc == NULL) {
       remove_v3_desc_as_client(cache_entry);
       cache_client_desc_free(cache_entry);
       goto store;
@@ -743,8 +744,11 @@ cache_clean_v3_as_client(time_t now)
     /* We just removed an old descriptor. We need to close all intro circuits
      * so we don't have leftovers that can be selected while lacking a
      * descriptor. We leave the rendezvous circuits opened because they could
-     * be in use. */
-    hs_client_close_intro_circuits_from_desc(entry->desc);
+     * be in use. It might be an encrypted descriptor and thus the decrypted
+     * version doesn't exists. */
+    if (entry->desc) {
+      hs_client_close_intro_circuits_from_desc(entry->desc);
+    }
     /* Entry is not in the cache anymore, destroy it. */
     cache_client_desc_free(entry);
     /* Update our OOM. We didn't use the remove() function because we are in

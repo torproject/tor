@@ -1,0 +1,6 @@
+  o Minor bugfixes (onion service client):
+    - Don't attempt to close introduction circuits if we have an encrypted
+      descriptor waiting for a valid client authorization token. It lead to a
+      non fatal assert due to the missing descriptor. Fixes bug 33458; bugfix on
+      0.4.2.1-alpha.
+
