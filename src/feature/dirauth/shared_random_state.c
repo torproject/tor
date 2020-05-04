@@ -1041,8 +1041,9 @@ sr_state_set_valid_after(time_t valid_after)
 sr_phase_t
 sr_state_get_phase(void)
 {
-  void *ptr;
+  void *ptr=NULL;
   state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_PHASE, NULL, &ptr);
+  tor_assert(ptr);
   return *(sr_phase_t *) ptr;
 }
 
