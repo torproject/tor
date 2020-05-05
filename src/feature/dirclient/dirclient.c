@@ -44,6 +44,7 @@
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
+#include "feature/relay/relay_resolve_addr.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/rend/rendcache.h"
