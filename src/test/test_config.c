@@ -43,7 +43,7 @@
 #include "core/or/policies.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
-#include "feature/relay/relay_resolve_addr.h"
+#include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/nodelist/dirlist.h"

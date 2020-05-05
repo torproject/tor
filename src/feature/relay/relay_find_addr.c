@@ -2,8 +2,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file relay_resolve_addr.c
- * \brief Implement relay resolving address mechanism.
+ * \file relay_find_addr.c
+ * \brief Implement mechanism for a relay to find its address.
  **/
 
 #include "core/or/or.h"
@@ -15,7 +15,7 @@
 
 #include "feature/control/control_events.h"
 #include "feature/dircommon/dir_connection_st.h"
-#include "feature/relay/relay_resolve_addr.h"
+#include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 
