@@ -45,6 +45,7 @@
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/command.h"
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "feature/relay/relay_handshake.h"

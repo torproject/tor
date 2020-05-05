@@ -8,6 +8,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "app/config/statefile.h"
 #include "app/main/main.h"
 #include "core/mainloop/connection.h"

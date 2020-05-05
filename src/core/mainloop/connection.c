@@ -67,6 +67,7 @@
  */
 #define CHANNEL_OBJECT_PRIVATE
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
