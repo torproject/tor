@@ -151,6 +151,8 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
       if (allow_include && !strcmp(k, "%include") && handle_include) {
         tor_free(k);
         include_used = 1;
+        log_notice(LD_CONFIG, "Processing configuration path \"%s\" at "
+                   "recursion level %d.", v, recursion_level);
 
         config_line_t *include_list;
         if (handle_include(v, recursion_level, extended, &include_list,
@@ -161,9 +163,6 @@ config_get_lines_aux(const char *string, config_line_t **result, int extended,
           tor_free(v);
           return -1;
         }
-        log_notice(LD_CONFIG, "Included configuration file or "
-                   "directory at recursion level %d: \"%s\".",
-                   recursion_level, v);
         *next = include_list;
         if (list_last)
           next = &list_last->next;
