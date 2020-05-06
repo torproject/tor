@@ -87,7 +87,7 @@ library_supports_digest(digest_algorithm_t alg)
   switch (alg) {
     case DIGEST_SHA1: /* Fall through */
     case DIGEST_SHA256: /* Fall through */
-    case DIGEST_SHA512: /* Fall through */
+    case DIGEST_SHA512:
       return true;
     case DIGEST_SHA3_256: /* Fall through */
     case DIGEST_SHA3_512: /* Fall through */
@@ -557,4 +557,3 @@ crypto_hmac_sha256(char *hmac_out,
 
   tor_assert(ok);
 }
-
