@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Fix a logic error in a log message about whether an address was
+      invalid. Previously, the code would never report that onion addresses
+      were onion addresses. Fixes bug 34131; bugfix on 0.4.3.1-alpha.
