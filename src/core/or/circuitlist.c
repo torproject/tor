@@ -787,7 +787,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
              "Unrecognized circuit purpose: %d",
              (int)purpose);
       tor_fragile_assert();
-      /* fall through */
+      FALLTHROUGH;
 
     case CIRCUIT_PURPOSE_OR:
     case CIRCUIT_PURPOSE_C_GENERAL:
@@ -2738,7 +2738,7 @@ assert_cpath_layer_ok(const crypt_path_t *cp)
     {
     case CPATH_STATE_OPEN:
       relay_crypto_assert_ok(&cp->crypto);
-      /* fall through */
+      FALLTHROUGH;
     case CPATH_STATE_CLOSED:
       /*XXXX Assert that there's no handshake_state either. */
       tor_assert(!cp->rend_dh_handshake_state);

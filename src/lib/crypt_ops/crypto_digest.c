@@ -50,8 +50,8 @@ digest_alg_to_nss_oid(digest_algorithm_t alg)
     case DIGEST_SHA1: return SEC_OID_SHA1;
     case DIGEST_SHA256: return SEC_OID_SHA256;
     case DIGEST_SHA512: return SEC_OID_SHA512;
-    case DIGEST_SHA3_256: /* Fall through */
-    case DIGEST_SHA3_512: /* Fall through */
+    case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_512: FALLTHROUGH;
     default:
       return SEC_OID_UNKNOWN;
   }
@@ -98,12 +98,12 @@ static bool
 library_supports_digest(digest_algorithm_t alg)
 {
   switch (alg) {
-    case DIGEST_SHA1: /* Fall through */
-    case DIGEST_SHA256: /* Fall through */
+    case DIGEST_SHA1: FALLTHROUGH;
+    case DIGEST_SHA256: FALLTHROUGH;
     case DIGEST_SHA512:
       return true;
-    case DIGEST_SHA3_256: /* Fall through */
-    case DIGEST_SHA3_512: /* Fall through */
+    case DIGEST_SHA3_256: FALLTHROUGH;
+    case DIGEST_SHA3_512: FALLTHROUGH;
     default:
       return false;
   }
@@ -313,8 +313,8 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
                          STRUCT_FIELD_SIZE(crypto_digest_t, f))
   switch (alg) {
 #ifdef ENABLE_NSS
-    case DIGEST_SHA1: /* Fall through */
-    case DIGEST_SHA256: /* Fall through */
+    case DIGEST_SHA1: FALLTHROUGH;
+    case DIGEST_SHA256: FALLTHROUGH;
     case DIGEST_SHA512:
       return END_OF_FIELD(d.ctx);
 #else
@@ -349,8 +349,8 @@ crypto_digest_new_internal(digest_algorithm_t algorithm)
   switch (algorithm)
     {
 #ifdef ENABLE_NSS
-    case DIGEST_SHA1: /* fall through */
-    case DIGEST_SHA256: /* fall through */
+    case DIGEST_SHA1: FALLTHROUGH;
+    case DIGEST_SHA256: FALLTHROUGH;
     case DIGEST_SHA512:
       r->d.ctx = PK11_CreateDigestContext(digest_alg_to_nss_oid(algorithm));
       if (BUG(!r->d.ctx)) {
@@ -451,8 +451,8 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
    */
   switch (digest->algorithm) {
 #ifdef ENABLE_NSS
-    case DIGEST_SHA1: /* fall through */
-    case DIGEST_SHA256: /* fall through */
+    case DIGEST_SHA1: FALLTHROUGH;
+    case DIGEST_SHA256: FALLTHROUGH;
     case DIGEST_SHA512:
       tor_assert(len <= UINT_MAX);
       SECStatus s = PK11_DigestOp(digest->d.ctx,
@@ -471,7 +471,7 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       SHA512_Update(&digest->d.sha512, (void*)data, len);
       break;
 #endif
-    case DIGEST_SHA3_256: /* FALLSTHROUGH */
+    case DIGEST_SHA3_256: FALLTHROUGH;
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
@@ -540,7 +540,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
       SHA512_Final(r, &tmpenv.d.sha512);
       break;
 //LCOV_EXCL_START
-    case DIGEST_SHA3_256: /* FALLSTHROUGH */
+    case DIGEST_SHA3_256: FALLTHROUGH;
     case DIGEST_SHA3_512:
     default:
       log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
