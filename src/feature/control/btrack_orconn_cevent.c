@@ -146,6 +146,7 @@ bto_cevent_apconn(const bt_orconn_t *bto)
     break;
   case OR_CONN_STATE_OPEN:
     control_event_bootstrap(BOOTSTRAP_STATUS_AP_HANDSHAKE_DONE, 0);
+    break;
   default:
     break;
   }
