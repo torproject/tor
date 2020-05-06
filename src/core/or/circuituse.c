@@ -784,7 +784,7 @@ circuit_expire_building(void)
             TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
             NULL)
           break;
-        /* fallthrough! */
+        FALLTHROUGH;
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
