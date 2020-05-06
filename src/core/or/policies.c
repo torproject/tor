@@ -2788,7 +2788,7 @@ parse_short_policy(const char *summary)
     switch (*next) {
       case ',':
         ++next;
-        /* fall through */
+        FALLTHROUGH;
       case '\0':
         high = low;
         break;
