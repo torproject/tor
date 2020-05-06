@@ -1071,7 +1071,10 @@ parse_socks_client(const uint8_t *data, size_t datalen,
           log_info(LD_NET, "SOCKS 5 client: need authentication.");
           *drain_out = -1;
           return 2;
-        /* fall through */
+        default:
+          /* This wasn't supposed to be exhaustive; there are other
+           * authentication methods too. */
+          ;
       }
 
       *reason = tor_strdup("server doesn't support any of our available "

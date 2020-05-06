@@ -949,6 +949,7 @@ tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src)
       break;
     case AF_INET6:
       memcpy(dest->addr.in6_addr.s6_addr, src->addr.in6_addr.s6_addr, 16);
+      break;
     case AF_UNSPEC:
       break;
       // LCOV_EXCL_START
