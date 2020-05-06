@@ -191,7 +191,7 @@ get_scheduler_type_string(scheduler_types_t type)
   case SCHEDULER_KIST_LITE:
     return "KISTLite";
   case SCHEDULER_NONE:
-    /* fallthrough */
+    FALLTHROUGH;
   default:
     tor_assert_unreached();
     return "(N/A)";
@@ -287,7 +287,7 @@ select_scheduler(void)
       scheduler_kist_set_lite_mode();
       goto end;
     case SCHEDULER_NONE:
-      /* fallthrough */
+      FALLTHROUGH;
     default:
       /* Our option validation should have caught this. */
       tor_assert_unreached();

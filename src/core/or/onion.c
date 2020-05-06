@@ -509,7 +509,7 @@ create_cell_format_impl(cell_t *cell_out, const create_cell_t *cell_in,
       p += 16;
       space -= 16;
     }
-    /* Fall through */
+    FALLTHROUGH;
   case CELL_CREATE_FAST:
     tor_assert(cell_in->handshake_len <= space);
     memcpy(p, cell_in->onionskin, cell_in->handshake_len);

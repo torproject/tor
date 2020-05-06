@@ -861,7 +861,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       case SOCKS_RESULT_TRUNCATED:
         if (datalen == n_pullup)
           return 0;
-        /* FALLTHRU */
+        FALLTHROUGH;
       case SOCKS_RESULT_MORE_EXPECTED:
         res = 0;
         break;
@@ -967,7 +967,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       strlcpy((char*)req->reply, SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG,
               MAX_SOCKS_REPLY_LEN);
       req->replylen = strlen((char*)req->reply)+1;
-      /* fall through */
+      FALLTHROUGH;
     default: /* version is not socks4 or socks5 */
       log_warn(LD_APP,
                "Socks version %d not recognized. (This port is not an "
