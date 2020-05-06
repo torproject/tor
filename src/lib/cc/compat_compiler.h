@@ -50,6 +50,12 @@
 #define CHECK_SCANF(formatIdx, firstArg)
 #endif /* defined(__GNUC__) */
 
+#if defined(HAVE_ATTR_FALLTHROUGH)
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH
+#endif
+
 /* What GCC do we have? */
 #ifdef __GNUC__
 #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
