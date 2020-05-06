@@ -4934,7 +4934,7 @@ handle_control_add_onion(control_connection_t *conn,
   case RSAE_BADAUTH:
     connection_printf_to_buf(conn, "512 Invalid client authorization\r\n");
     break;
-  case RSAE_INTERNAL: /* FALLSTHROUGH */
+  case RSAE_INTERNAL: FALLTHROUGH;
   default:
     connection_printf_to_buf(conn, "551 Failed to add Onion Service\r\n");
   }
