@@ -778,7 +778,7 @@ test_socks_truncated(void *ptr)
   for (i = 0; i < ARRAY_LENGTH(commands); ++i) {
     for (j = 0; j < commands[i].len; ++j) {
       switch (commands[i].setup) {
-        default: /* Falls through */
+        default: FALLTHROUGH;
         case NONE:
           /* This test calls for no setup on the socks state. */
           break;

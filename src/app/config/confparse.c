@@ -179,7 +179,7 @@ config_assign_value(const config_format_t *fmt, void *options,
       *(int *)lvalue = CFG_AUTO_PORT;
       break;
     }
-    /* fall through */
+    FALLTHROUGH;
   case CONFIG_TYPE_INT:
   case CONFIG_TYPE_UINT:
     i = (int)tor_parse_long(c->value, 10,
@@ -577,7 +577,7 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
         escape_val = 0;
         break;
       }
-      /* fall through */
+      FALLTHROUGH;
     case CONFIG_TYPE_CSV_INTERVAL:
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
@@ -588,7 +588,7 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
       tor_asprintf(&result->value, "%d", *(int*)value);
       escape_val = 0; /* Can't need escape. */
       break;
-    case CONFIG_TYPE_UINT64: /* Fall through */
+    case CONFIG_TYPE_UINT64: FALLTHROUGH;
     case CONFIG_TYPE_MEMUNIT:
       tor_asprintf(&result->value, "%"PRIu64,
                    (*(uint64_t*)value));
@@ -605,7 +605,7 @@ config_get_assigned_option(const config_format_t *fmt, const void *options,
         escape_val = 0;
         break;
       }
-      /* fall through */
+      FALLTHROUGH;
     case CONFIG_TYPE_BOOL:
       result->value = tor_strdup(*(int*)value ? "1" : "0");
       escape_val = 0; /* Can't need escape. */
