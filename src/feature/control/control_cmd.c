@@ -1900,7 +1900,7 @@ handle_control_add_onion(control_connection_t *conn,
   case RSAE_BADAUTH:
     control_write_endreply(conn, 512, "Invalid client authorization");
     break;
-  case RSAE_INTERNAL: /* FALLSTHROUGH */
+  case RSAE_INTERNAL: FALLTHROUGH;
   default:
     control_write_endreply(conn, 551, "Failed to add Onion Service");
   }

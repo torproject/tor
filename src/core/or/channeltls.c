@@ -1236,7 +1236,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
       /* But that should be happening any longer've disabled bufferevents. */
       tor_assert_nonfatal_unreached_once();
 
-      /* fall through */
+      FALLTHROUGH;
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
       if (!(command_allowed_before_handshake(var_cell->command))) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,

@@ -1369,7 +1369,7 @@ directory_initiate_request,(directory_request_t *request))
       case 1:
         /* start flushing conn */
         conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
-        /* fall through */
+        FALLTHROUGH;
       case 0:
         /* queue the command on the outbuf */
         directory_send_command(conn, 1, request);
