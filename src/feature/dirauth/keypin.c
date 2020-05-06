@@ -265,7 +265,7 @@ keypin_add_or_replace_entry_in_map(keypin_ent_t *ent)
     }
     tor_free(ent2);
     r = -1;
-    /* Fall through */
+    /* Note lack of return here: we fall through to the next line. */
   }
 
   keypin_add_entry_to_map(ent);
