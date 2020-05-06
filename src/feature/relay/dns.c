@@ -546,7 +546,7 @@ send_resolved_cell,(edge_connection_t *conn, uint8_t answer_type,
         break;
       } else {
         answer_type = RESOLVED_TYPE_ERROR;
-        /* fall through. */
+        /* We let this fall through and treat it as an error. */
       }
       /* Falls through. */
     case RESOLVED_TYPE_ERROR_TRANSIENT:
