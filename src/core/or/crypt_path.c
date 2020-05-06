@@ -113,7 +113,7 @@ cpath_assert_layer_ok(const crypt_path_t *cp)
     {
     case CPATH_STATE_OPEN:
       relay_crypto_assert_ok(&cp->pvt_crypto);
-      /* fall through */
+      FALLTHROUGH;
     case CPATH_STATE_CLOSED:
       /*XXXX Assert that there's no handshake_state either. */
       tor_assert(!cp->rend_dh_handshake_state);

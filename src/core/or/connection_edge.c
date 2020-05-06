@@ -307,7 +307,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
         note_user_activity(approx_time());
       }
 
-      /* falls through. */
+      FALLTHROUGH;
     case EXIT_CONN_STATE_OPEN:
       if (connection_edge_package_raw_inbuf(conn, package_partial, NULL) < 0) {
         /* (We already sent an end cell if possible) */
@@ -332,7 +332,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       }
       /* Fall through if the connection is on a circuit without optimistic
        * data support. */
-      /* Falls through. */
+      FALLTHROUGH;
     case EXIT_CONN_STATE_CONNECTING:
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
@@ -781,7 +781,7 @@ connection_edge_flushed_some(edge_connection_t *conn)
         note_user_activity(approx_time());
       }
 
-      /* falls through. */
+      FALLTHROUGH;
     case EXIT_CONN_STATE_OPEN:
       sendme_connection_edge_consider_sending(conn);
       break;

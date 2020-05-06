@@ -781,7 +781,7 @@ circuit_expire_building(void)
         if (!hs_circ_is_rend_sent_in_intro1(CONST_TO_ORIGIN_CIRCUIT(victim))) {
           break;
         }
-        /* fallthrough! */
+        FALLTHROUGH;
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
