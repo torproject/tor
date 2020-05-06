@@ -356,6 +356,22 @@ if test "$tor_cv_c_c99_designated_init" != "yes"; then
   AC_MSG_ERROR([Your compiler doesn't support c99 designated initializers. This is required as of Tor 0.2.6.x])
 fi
 
+saved_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror"
+AC_CACHE_CHECK([for __attribute__((fallthrough))],
+      tor_cv_c_attr_fallthrough,
+      [AC_COMPILE_IFELSE(
+         [AC_LANG_PROGRAM([extern int x; void fn(void) ;],
+	       [[ switch (x) { case 1: fn(); __attribute__((fallthrough));
+                               case 2: fn(); break; } ]])],
+	 [tor_cv_c_attr_fallthrough=yes],
+	 [tor_cv_c_attr_fallthrough=no] )])
+CFLAGS="$saved_CFLAGS"
+
+if test "$tor_cv_c_attr_fallthrough" == "yes"; then
+  AC_DEFINE(HAVE_ATTR_FALLTHROUGH, [1], [defined if we have the fallthrough attribute.])
+fi
+
 TORUSER=_tor
 AC_ARG_WITH(tor-user,
         AS_HELP_STRING(--with-tor-user=NAME, [specify username for tor daemon]),
