@@ -160,11 +160,11 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
     case DIGEST_SHA512:
       return END_OF_FIELD(d.sha512);
 #ifdef OPENSSL_HAS_SHA3
-    case DIGEST_SHA3_256: /* Fall through */
+    case DIGEST_SHA3_256: FALLTHROUGH;
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.md);
 #else
-    case DIGEST_SHA3_256: /* Fall through */
+    case DIGEST_SHA3_256: FALLTHROUGH;
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.sha3);
 #endif /* defined(OPENSSL_HAS_SHA3) */
@@ -304,14 +304,14 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       SHA512_Update(&digest->d.sha512, (void*)data, len);
       break;
 #ifdef OPENSSL_HAS_SHA3
-    case DIGEST_SHA3_256: /* FALLSTHROUGH */
+    case DIGEST_SHA3_256: FALLTHROUGH;
     case DIGEST_SHA3_512: {
       int r = EVP_DigestUpdate(digest->d.md, data, len);
       tor_assert(r);
   }
       break;
 #else /* !defined(OPENSSL_HAS_SHA3) */
-    case DIGEST_SHA3_256: /* FALLSTHROUGH */
+    case DIGEST_SHA3_256: FALLTHROUGH;
     case DIGEST_SHA3_512:
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
@@ -377,7 +377,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
       SHA512_Final(r, &tmpenv.d.sha512);
       break;
 //LCOV_EXCL_START
-    case DIGEST_SHA3_256: /* FALLSTHROUGH */
+    case DIGEST_SHA3_256: FALLTHROUGH;
     case DIGEST_SHA3_512:
     default:
       log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);

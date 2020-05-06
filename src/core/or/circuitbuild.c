@@ -1859,7 +1859,7 @@ choose_good_exit_server(origin_circuit_t *circ,
       /* For these three, we want to pick the exit like a middle hop,
        * since it should be random. */
       tor_assert_nonfatal(is_internal);
-      /* Falls through */
+      FALLTHROUGH;
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
