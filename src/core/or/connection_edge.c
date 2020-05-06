@@ -1658,9 +1658,11 @@ parse_extended_hostname(char *address, hostname_type_t *type_out)
  failed:
   /* otherwise, return to previous state and return 0 */
   *s = '.';
+  const bool is_onion = (*type_out == ONION_V2_HOSTNAME) ||
+    (*type_out == ONION_V3_HOSTNAME);
   log_warn(LD_APP, "Invalid %shostname %s; rejecting",
-      (*type_out == (ONION_V2_HOSTNAME || ONION_V3_HOSTNAME) ? "onion " : ""),
-      safe_str_client(address));
+           is_onion ? "onion " : "",
+           safe_str_client(address));
   return false;
 }
 
