@@ -1659,7 +1659,8 @@ static void
 circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 {
   const or_options_t *options = get_options();
-  if (server_mode(options) && router_should_skip_orport_reachability_check(options))
+  if (server_mode(options) &&
+      router_should_skip_orport_reachability_check(options))
     return;
 
   log_info(LD_GENERAL,

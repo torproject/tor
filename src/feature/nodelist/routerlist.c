@@ -476,7 +476,8 @@ router_reload_router_list(void)
  * Finally, return true if ReachableAddresses is set.
  */
 int
-client_or_conn_should_skip_reachable_address_check(const or_options_t *options,
+client_or_conn_should_skip_reachable_address_check(
+                                   const or_options_t *options,
                                    int try_ip_pref)
 {
   /* Servers always have and prefer IPv4.
@@ -491,7 +492,8 @@ client_or_conn_should_skip_reachable_address_check(const or_options_t *options,
  * This function is obsolete, because clients only use ORPorts.
  */
 int
-client_dir_conn_should_skip_reachable_address_check(const or_options_t *options,
+client_dir_conn_should_skip_reachable_address_check(
+                                    const or_options_t *options,
                                     int try_ip_pref)
 {
   /* Servers always have and prefer IPv4.
@@ -518,7 +520,8 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
                                       int need_desc, int pref_addr,
                                       int direct_conn)
 {
-  const int check_reach = !client_or_conn_should_skip_reachable_address_check(get_options(),
+  const int check_reach = !client_or_conn_should_skip_reachable_address_check(
+                                                       get_options(),
                                                        pref_addr);
   /* XXXX MOVE */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {

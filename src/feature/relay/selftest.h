@@ -15,8 +15,10 @@
 #ifdef HAVE_MODULE_RELAY
 
 struct or_options_t;
-int router_should_skip_orport_reachability_check(const struct or_options_t *options);
-int router_should_skip_dirport_reachability_check(const struct or_options_t *options);
+int router_should_skip_orport_reachability_check(
+                                         const struct or_options_t *options);
+int router_should_skip_dirport_reachability_check(
+                                         const struct or_options_t *options);
 
 void router_do_reachability_checks(int test_or, int test_dir);
 void router_perform_bandwidth_test(int num_circs, time_t now);
