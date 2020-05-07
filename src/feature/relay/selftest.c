@@ -269,9 +269,12 @@ router_do_reachability_checks(int test_or, int test_dir)
   }
 }
 
-/** We've decided to start our reachability testing. If all
- * is set, log this to the user. Return 1 if we did, or 0 if
- * we chose not to log anything. */
+/** If reachability testing is in progress, let the user know that it's
+ * happening.
+ *
+ * If all is set, log a notice-level message. Return 1 if we did, or 0 if
+ * we chose not to log anything, because we were unable to test reachability.
+ */
 int
 inform_testing_reachability(void)
 {
@@ -279,6 +282,20 @@ inform_testing_reachability(void)
   char ipv6_or_buf[TOR_ADDRPORT_BUF_LEN];
   char ipv4_dir_buf[TOR_ADDRPORT_BUF_LEN];
 
+  /* There's a race condition here, between:
+   *  - tor launching reachability tests,
+   *  - any circuits actually completing,
+   *  - routerinfo updates, and
+   *  - these log messages.
+   * In rare cases, we might log the wrong ports, log when we didn't actually
+   * start reachability tests, or fail to log after we actually started
+   * reachability tests.
+   *
+   * After we separate the IPv4 and IPv6 reachability flags in #34067, tor
+   * will test any IPv6 address that it discovers after launching reachability
+   * checks. We'll deal with late disabled IPv6 ORPorts and IPv4 DirPorts, and
+   * extra or skipped log messages in #34137.
+   */
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!me)
     return 0;
