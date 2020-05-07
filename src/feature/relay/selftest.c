@@ -255,7 +255,10 @@ router_do_reachability_checks(int test_or, int test_dir)
 
   if (router_should_check_reachability(test_or, test_dir)) {
     if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-      /* We'll separate IPv4 and IPv6 reachability detection in #34067. */
+      /* At the moment, tor relays believe that they are reachable when they
+       * receive any create cell on an inbound connection. We'll do separate
+       * IPv4 and IPv6 reachability checks in #34067, and make them more
+       * precise. */
       router_do_orport_reachability_checks(me, AF_INET, orport_reachable);
       router_do_orport_reachability_checks(me, AF_INET6, orport_reachable);
     }
