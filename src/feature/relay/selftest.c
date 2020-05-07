@@ -154,7 +154,7 @@ extend_info_from_router(const routerinfo_t *r, int family)
 
   /* Relays always assume that the first hop is reachable. They ignore
    * ReachableAddresses. */
-  tor_assert_nonfatal(client_or_conn_should_skip_reachable_address_check(
+  tor_assert_nonfatal(router_or_conn_should_skip_reachable_address_check(
                                                            get_options(), 0));
 
   const ed25519_public_key_t *ed_id_key;
