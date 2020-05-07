@@ -163,8 +163,7 @@ extend_info_from_router(const routerinfo_t *r, int family)
   else
     ed_id_key = NULL;
 
-  router_get_orport(r, &ap, family);
-  if (!tor_addr_port_is_valid_ap(&ap, 0)) {
+  if (router_get_orport(r, &ap, family) < 0) {
     /* We don't have an ORPort for the requested family. */
     return NULL;
   }
