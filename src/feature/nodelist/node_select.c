@@ -321,9 +321,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   overloaded_direct = smartlist_new();
   overloaded_tunnel = smartlist_new();
 
-  const int skip_or_fw = router_connect_assume_or_reachable(options,
+  const int skip_or_fw = client_or_conn_should_skip_reachable_address_check(options,
                                                             try_ip_pref);
-  const int skip_dir_fw = router_connect_assume_dir_reachable(options,
+  const int skip_dir_fw = client_dir_conn_should_skip_reachable_address_check(options,
                                                               try_ip_pref);
   const int must_have_or = dirclient_must_use_begindir(options);
 
@@ -1122,9 +1122,9 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   overloaded_direct = smartlist_new();
   overloaded_tunnel = smartlist_new();
 
-  const int skip_or_fw = router_connect_assume_or_reachable(options,
+  const int skip_or_fw = client_or_conn_should_skip_reachable_address_check(options,
                                                             try_ip_pref);
-  const int skip_dir_fw = router_connect_assume_dir_reachable(options,
+  const int skip_dir_fw = client_dir_conn_should_skip_reachable_address_check(options,
                                                               try_ip_pref);
   const int must_have_or = dirclient_must_use_begindir(options);
 

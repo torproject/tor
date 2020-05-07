@@ -50,9 +50,9 @@ typedef enum was_router_added_t {
 
 int router_reload_router_list(void);
 
-int router_connect_assume_or_reachable(const or_options_t *options,
+int client_or_conn_should_skip_reachable_address_check(const or_options_t *options,
                                        int try_ip_pref);
-int router_connect_assume_dir_reachable(const or_options_t *options,
+int client_dir_conn_should_skip_reachable_address_check(const or_options_t *options,
                                         int try_ip_pref);
 void router_reset_status_download_failures(void);
 int routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2);

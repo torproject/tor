@@ -77,7 +77,7 @@ router_reachability_checks_disabled(const or_options_t *options)
  *   - the network is disabled.
  */
 int
-router_skip_orport_reachability_check(const or_options_t *options)
+router_should_skip_orport_reachability_check(const or_options_t *options)
 {
   int reach_checks_disabled = router_reachability_checks_disabled(options);
   return reach_checks_disabled ||
@@ -94,7 +94,7 @@ router_skip_orport_reachability_check(const or_options_t *options)
  *   - the network is disabled.
  */
 int
-router_skip_dirport_reachability_check(const or_options_t *options)
+router_should_skip_dirport_reachability_check(const or_options_t *options)
 {
   int reach_checks_disabled = router_reachability_checks_disabled(options) ||
                               !options->DirPort_set;
@@ -154,7 +154,7 @@ extend_info_from_router(const routerinfo_t *r, int family)
 
   /* Relays always assume that the first hop is reachable. They ignore
    * ReachableAddresses. */
-  tor_assert_nonfatal(router_connect_assume_or_reachable(get_options(), 0));
+  tor_assert_nonfatal(client_or_conn_should_skip_reachable_address_check(get_options(), 0));
 
   const ed25519_public_key_t *ed_id_key;
   if (r->cache_info.signing_key_cert)
@@ -251,7 +251,7 @@ router_do_reachability_checks(int test_or, int test_dir)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
-  int orport_reachable = router_skip_orport_reachability_check(options);
+  int orport_reachable = router_should_skip_orport_reachability_check(options);
 
   if (router_should_check_reachability(test_or, test_dir)) {
     if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
@@ -260,7 +260,7 @@ router_do_reachability_checks(int test_or, int test_dir)
       router_do_orport_reachability_checks(me, AF_INET6, orport_reachable);
     }
 
-    if (test_dir && !router_skip_dirport_reachability_check(options)) {
+    if (test_dir && !router_should_skip_dirport_reachability_check(options)) {
       router_do_dirport_reachability_checks(me);
     }
   }
@@ -319,7 +319,7 @@ router_orport_found_reachable(void)
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                options->PublishServerDescriptor_ != NO_DIRINFO
-               && router_skip_dirport_reachability_check(options) ?
+               && router_should_skip_dirport_reachability_check(options) ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
@@ -347,7 +347,7 @@ router_dirport_found_reachable(void)
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.%s",
                options->PublishServerDescriptor_ != NO_DIRINFO
-               && router_skip_orport_reachability_check(options) ?
+               && router_should_skip_orport_reachability_check(options) ?
                " Publishing server descriptor." : "");
     can_reach_dir_port = 1;
     if (router_should_advertise_dirport(options, me->dir_port)) {
