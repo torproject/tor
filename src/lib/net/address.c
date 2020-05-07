@@ -1206,6 +1206,17 @@ fmt_addr32(uint32_t addr)
   return buf;
 }
 
+/** Like fmt_addrport(), but takes <b>addr</b> as a host-order IPv4
+ * addresses. Also not thread-safe, also clobbers its return buffer on
+ * repeated calls. */
+const char *
+fmt_addr32_port(uint32_t addr, uint16_t port)
+{
+  static char buf[INET_NTOA_BUF_LEN + 6];
+  snprintf(buf, sizeof(buf), "%s:%u", fmt_addr32(addr), port);
+  return buf;
+}
+
 /** Return a string representing <b>family</b>.
  *
  * This string is a string constant, and must not be freed.

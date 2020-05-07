@@ -275,39 +275,47 @@ router_do_reachability_checks(int test_or, int test_dir)
 int
 inform_testing_reachability(void)
 {
-  char extra_addrbuf[128];
-  char *address;
+  char ipv4_or_buf[TOR_ADDRPORT_BUF_LEN];
+  char ipv6_or_buf[TOR_ADDRPORT_BUF_LEN];
+  char ipv4_dir_buf[TOR_ADDRPORT_BUF_LEN];
+
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!me)
     return 0;
-  address = tor_dup_ip(me->addr);
+  /* IPv4 ORPort */
+  strlcpy(ipv4_or_buf, fmt_addr32_port(me->addr, me->or_port),
+          sizeof(ipv4_or_buf));
   control_event_server_status(LOG_NOTICE,
-                              "CHECKING_REACHABILITY ORADDRESS=%s:%d",
-                              address, me->or_port);
+                              "CHECKING_REACHABILITY ORADDRESS=%s",
+                              ipv4_or_buf);
+  /* IPv6 ORPort */
   const bool has_ipv6 = tor_addr_port_is_valid(&me->ipv6_addr,
                                                me->ipv6_orport, 0);
   if (has_ipv6) {
-    tor_snprintf(extra_addrbuf, sizeof(extra_addrbuf), " and %s",
-                 fmt_addrport(&me->ipv6_addr, me->ipv6_orport));
+    strlcpy(ipv6_or_buf, fmt_addrport(&me->ipv6_addr, me->ipv6_orport),
+            sizeof(ipv6_or_buf));
     /* We'll add an IPv6 control event in #34068. */
   }
+  /* IPv4 DirPort (there are no advertised IPv6 DirPorts) */
   if (me->dir_port) {
-    tor_snprintf(extra_addrbuf, sizeof(extra_addrbuf), " and DirPort %s:%d",
-                 address, me->dir_port);
+    strlcpy(ipv4_dir_buf, fmt_addr32_port(me->addr, me->dir_port),
+            sizeof(ipv4_dir_buf));
     control_event_server_status(LOG_NOTICE,
-                                "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
-                                address, me->dir_port);
+                                "CHECKING_REACHABILITY DIRADDRESS=%s",
+                                ipv4_dir_buf);
   }
-  log_notice(LD_OR, "Now checking whether ORPort%s %s:%d%s %s reachable... "
-                         "(this may take up to %d minutes -- look for log "
-                         "messages indicating success)",
+  log_notice(LD_OR, "Now checking whether ORPort%s %s%s%s%s%s %s reachable... "
+             "(this may take up to %d minutes -- look for log "
+             "messages indicating success)",
              has_ipv6 ? "s" : "",
-             address, me->or_port,
-             has_ipv6 || me->dir_port ? extra_addrbuf : "",
+             ipv4_or_buf,
+             has_ipv6 ? " and " : "",
+             has_ipv6 ? ipv6_or_buf : "",
+             me->dir_port ? " and DirPort " : "",
+             me->dir_port ? ipv4_dir_buf : "",
              has_ipv6 || me->dir_port ? "are" : "is",
              TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
 
-  tor_free(address);
   return 1;
 }
 
