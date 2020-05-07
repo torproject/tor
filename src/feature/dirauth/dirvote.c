@@ -6,6 +6,7 @@
 #define DIRVOTE_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/or/policies.h"
 #include "core/or/protover.h"
 #include "core/or/tor_version_st.h"

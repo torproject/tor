@@ -13,6 +13,7 @@
 #include "core/or/or.h"
 
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/mainloop/connection.h"
 #include "core/or/relay.h"
 #include "feature/dirauth/dirvote.h"

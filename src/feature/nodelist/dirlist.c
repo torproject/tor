@@ -27,6 +27,7 @@
 #include "core/or/or.h"
 
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/or/policies.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"

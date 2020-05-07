@@ -20,6 +20,7 @@
 /* Required for dirinfo_type_t in or_options_t */
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 
 #include "feature/dirauth/voting_schedule.h"
 #include "feature/stats/rephist.h"

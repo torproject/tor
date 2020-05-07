@@ -14,6 +14,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 /* For init/free stuff */
 #include "core/or/scheduler.h"
 #include "lib/tls/tortls.h"

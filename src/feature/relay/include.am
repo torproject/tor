@@ -2,6 +2,7 @@
 # Legacy shared relay code: migrate to the relay module over time
 LIBTOR_APP_A_SOURCES += 			\
 	src/feature/relay/onion_queue.c		\
+	src/feature/relay/relay_find_addr.c	\
 	src/feature/relay/router.c
 
 # The Relay module.
@@ -31,6 +32,7 @@ noinst_HEADERS +=					\
 	src/feature/relay/relay_handshake.h		\
 	src/feature/relay/relay_periodic.h		\
 	src/feature/relay/relay_sys.h			\
+	src/feature/relay/relay_find_addr.h		\
 	src/feature/relay/router.h			\
 	src/feature/relay/routerkeys.h			\
 	src/feature/relay/routermode.h			\
