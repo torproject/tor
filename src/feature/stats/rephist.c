@@ -1011,6 +1011,28 @@ bw_array_free_(bw_array_t *b)
   tor_free(b);
 }
 
+/** Add <b>n</b> bytes to the number of bytes in <b>b</b> for second
+ * <b>when</b>. */
+STATIC void
+add_obs(bw_array_t *b, time_t when, uint64_t n)
+{
+  if (when < b->cur_obs_time)
+    return; /* Don't record data in the past. */
+
+  /* If we're currently adding observations for an earlier second than
+   * 'when', advance b->cur_obs_time and b->cur_obs_idx by an
+   * appropriate number of seconds, and do all the other housekeeping. */
+  while (when > b->cur_obs_time) {
+    /* Doing this one second at a time is potentially inefficient, if we start
+       with a state file that is very old.  Fortunately, it doesn't seem to
+       show up in profiles, so we can just ignore it for now. */
+    advance_obs(b);
+  }
+
+  b->obs[b->cur_obs_idx] += n;
+  b->total_in_period += n;
+}
+
 /** Shift the current period of b forward by one. */
 STATIC void
 commit_max(bw_array_t *b)
