@@ -700,7 +700,7 @@ struct testgroup_t testgroups[] = {
   { "dir/", dir_tests },
   { "dir/auth/process_descs/", process_descs_tests },
   { "dir/md/", microdesc_tests },
-//  { "dirauth/dirvote", dirvote_tests},
+  { "dirauth/dirvote", dirvote_tests},
   { "dir/voting/flags/", voting_flags_tests },
   { "dir/voting/schedule/", voting_schedule_tests },
   { "dir_handle_get/", dir_handle_get_tests },
