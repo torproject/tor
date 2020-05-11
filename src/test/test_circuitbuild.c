@@ -281,10 +281,10 @@ mock_node_get_by_id(const char *identity_digest)
   return mocked_node;
 }
 
-static int mocked_supports_ed25519_link_authentication = 0;
-static int
+static bool mocked_supports_ed25519_link_authentication = 0;
+static bool
 mock_node_supports_ed25519_link_authentication(const node_t *node,
-                                                int compatible_with_us)
+                                               bool compatible_with_us)
 {
   (void)node;
   (void)compatible_with_us;

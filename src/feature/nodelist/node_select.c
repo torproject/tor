@@ -980,10 +980,10 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
 {
   /* A limited set of flags, used for fallback node selection.
    */
-  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
-  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
-  const int need_guard = (flags & CRN_NEED_GUARD) != 0;
-  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
+  const bool need_uptime = (flags & CRN_NEED_UPTIME) != 0;
+  const bool need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
+  const bool need_guard = (flags & CRN_NEED_GUARD) != 0;
+  const bool pref_addr = (flags & CRN_PREF_ADDR) != 0;
 
   smartlist_t *excludednodes=smartlist_new();
   const node_t *choice = NULL;

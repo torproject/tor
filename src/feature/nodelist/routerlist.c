@@ -542,18 +542,18 @@ void
 router_add_running_nodes_to_smartlist(smartlist_t *sl, int flags)
 {
   /* The full set of flags used for node selection. */
-  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
-  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
-  const int need_guard = (flags & CRN_NEED_GUARD) != 0;
-  const int need_desc = (flags & CRN_NEED_DESC) != 0;
-  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
-  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
-  const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
+  const bool need_uptime = (flags & CRN_NEED_UPTIME) != 0;
+  const bool need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
+  const bool need_guard = (flags & CRN_NEED_GUARD) != 0;
+  const bool need_desc = (flags & CRN_NEED_DESC) != 0;
+  const bool pref_addr = (flags & CRN_PREF_ADDR) != 0;
+  const bool direct_conn = (flags & CRN_DIRECT_CONN) != 0;
+  const bool rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
   const bool initiate_ipv6_extend = (flags & CRN_INITIATE_IPV6_EXTEND) != 0;
 
-  const int check_reach = !router_or_conn_should_skip_reachable_address_check(
-                                                       get_options(),
-                                                       pref_addr);
+  const bool check_reach =
+    !router_or_conn_should_skip_reachable_address_check(get_options(),
+                                                        pref_addr);
 
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
     if (!node->is_running || !node->is_valid)

@@ -1158,9 +1158,9 @@ node_get_protover_summary_flags(const node_t *node)
  * by ed25519 ID during the link handshake.  If <b>compatible_with_us</b>,
  * it needs to be using a link authentication method that we understand.
  * If not, any plausible link authentication method will do. */
-MOCK_IMPL(int,
+MOCK_IMPL(bool,
 node_supports_ed25519_link_authentication,(const node_t *node,
-                                           int compatible_with_us))
+                                           bool compatible_with_us))
 {
   if (! node_get_ed25519_id(node))
     return 0;
@@ -1175,7 +1175,7 @@ node_supports_ed25519_link_authentication,(const node_t *node,
 
 /** Return true iff <b>node</b> supports the hidden service directory version
  * 3 protocol (proposal 224). */
-int
+bool
 node_supports_v3_hsdir(const node_t *node)
 {
   tor_assert(node);
@@ -1185,7 +1185,7 @@ node_supports_v3_hsdir(const node_t *node)
 
 /** Return true iff <b>node</b> supports ed25519 authentication as an hidden
  * service introduction point.*/
-int
+bool
 node_supports_ed25519_hs_intro(const node_t *node)
 {
   tor_assert(node);
@@ -1195,7 +1195,7 @@ node_supports_ed25519_hs_intro(const node_t *node)
 
 /** Return true iff <b>node</b> can be a rendezvous point for hidden
  * service version 3 (HSRend=2). */
-int
+bool
 node_supports_v3_rendezvous_point(const node_t *node)
 {
   tor_assert(node);
@@ -1210,7 +1210,7 @@ node_supports_v3_rendezvous_point(const node_t *node)
 
 /** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
  * extenstion. */
-int
+bool
 node_supports_establish_intro_dos_extension(const node_t *node)
 {
   tor_assert(node);

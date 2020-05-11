@@ -74,17 +74,16 @@ MOCK_DECL(const struct ed25519_public_key_t *,node_get_ed25519_id,
           (const node_t *node));
 int node_ed25519_id_matches(const node_t *node,
                             const struct ed25519_public_key_t *id);
-MOCK_DECL(int,node_supports_ed25519_link_authentication,
+MOCK_DECL(bool,node_supports_ed25519_link_authentication,
           (const node_t *node,
-           int compatible_with_us));
-int node_supports_v3_hsdir(const node_t *node);
-int node_supports_ed25519_hs_intro(const node_t *node);
-int node_supports_v3_rendezvous_point(const node_t *node);
-int node_supports_establish_intro_dos_extension(const node_t *node);
+           bool compatible_with_us));
+bool node_supports_v3_hsdir(const node_t *node);
+bool node_supports_ed25519_hs_intro(const node_t *node);
+bool node_supports_v3_rendezvous_point(const node_t *node);
+bool node_supports_establish_intro_dos_extension(const node_t *node);
 bool node_supports_initiating_ipv6_extends(const node_t *node);
-bool node_supports_accepting_ipv6_extends(
-                                             const node_t *node,
-                                             bool need_canonical_ipv6_conn);
+bool node_supports_accepting_ipv6_extends(const node_t *node,
+                                          bool need_canonical_ipv6_conn);
 
 const uint8_t *node_get_rsa_id_digest(const node_t *node);
 MOCK_DECL(smartlist_t *,node_get_link_specifier_smartlist,(const node_t *node,
