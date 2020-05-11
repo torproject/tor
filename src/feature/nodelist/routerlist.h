@@ -62,6 +62,7 @@ void router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
                                            int need_capacity, int need_guard,
                                            int need_desc, int pref_addr,
                                            int direct_conn,
+                                           bool rendezvous_v3,
                                            bool initiate_ipv6_extend);
 
 const routerinfo_t *routerlist_find_my_routerinfo(void);

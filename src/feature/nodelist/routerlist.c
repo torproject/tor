@@ -520,6 +520,7 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
                                       int need_capacity, int need_guard,
                                       int need_desc, int pref_addr,
                                       int direct_conn,
+                                      bool rendezvous_v3,
                                       bool initiate_ipv6_extend)
 {
   const int check_reach = !router_or_conn_should_skip_reachable_address_check(
@@ -545,6 +546,11 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
      * obsolete option since 0.2.9.2-alpha and done by default in
      * 0.3.1.0-alpha. */
     if (node_allows_single_hop_exits(node))
+      continue;
+    /* Exclude relays that can not become a rendezvous for a hidden service
+     * version 3. */
+    if (rendezvous_v3 &&
+        !node_supports_v3_rendezvous_point(node))
       continue;
     /* Choose a node with an OR address that matches the firewall rules */
     if (direct_conn && check_reach &&

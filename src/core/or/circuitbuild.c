@@ -1802,6 +1802,7 @@ pick_restricted_middle_node(router_crn_flags_t flags,
                                     (flags & CRN_NEED_DESC) != 0,
                                     (flags & CRN_PREF_ADDR) != 0,
                                     (flags & CRN_DIRECT_CONN) != 0,
+                                    (flags & CRN_RENDEZVOUS_V3) != 0,
                                     (flags & CRN_INITIATE_IPV6_EXTEND) != 0);
 
   /* Filter all_live_nodes to only add live *and* whitelisted middles

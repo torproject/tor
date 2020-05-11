@@ -973,7 +973,6 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
   const bool initiate_ipv6_extend = (flags & CRN_INITIATE_IPV6_EXTEND) != 0;
 
-  const smartlist_t *node_list = nodelist_get_list();
   smartlist_t *sl=smartlist_new(),
     *excludednodes=smartlist_new();
   const node_t *choice = NULL;
@@ -984,15 +983,6 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   rule = weight_for_exit ? WEIGHT_FOR_EXIT :
     (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
-  SMARTLIST_FOREACH_BEGIN(node_list, const node_t *, node) {
-    if (rendezvous_v3 &&
-               !node_supports_v3_rendezvous_point(node)) {
-      /* Exclude relays that can not become a rendezvous for a hidden service
-       * version 3. */
-      smartlist_add(excludednodes, (node_t*)node);
-    }
-  } SMARTLIST_FOREACH_END(node);
-
   /* If the node_t is not found we won't be to exclude ourself but we
    * won't be able to pick ourself in router_choose_random_node() so
    * this is fine to at least try with our routerinfo_t object. */
@@ -1001,7 +991,8 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
 
   router_add_running_nodes_to_smartlist(sl, need_uptime, need_capacity,
                                         need_guard, need_desc, pref_addr,
-                                        direct_conn, initiate_ipv6_extend);
+                                        direct_conn, rendezvous_v3,
+                                        initiate_ipv6_extend);
   log_debug(LD_CIRC,
            "We found %d running nodes.",
             smartlist_len(sl));
