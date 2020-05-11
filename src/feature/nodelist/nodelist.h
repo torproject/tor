@@ -81,6 +81,11 @@ int node_supports_v3_hsdir(const node_t *node);
 int node_supports_ed25519_hs_intro(const node_t *node);
 int node_supports_v3_rendezvous_point(const node_t *node);
 int node_supports_establish_intro_dos_extension(const node_t *node);
+bool node_supports_initiating_ipv6_extends(const node_t *node);
+bool node_supports_accepting_ipv6_extends(
+                                             const node_t *node,
+                                             bool need_canonical_ipv6_conn);
+
 const uint8_t *node_get_rsa_id_digest(const node_t *node);
 MOCK_DECL(smartlist_t *,node_get_link_specifier_smartlist,(const node_t *node,
                                                            bool direct_conn));

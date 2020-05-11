@@ -437,6 +437,13 @@ memoize_protover_summary(protover_summary_flags_t *out,
 
   out->supports_extend2_cells =
     protocol_list_supports_protocol(protocols, PRT_RELAY, 2);
+  out->supports_accepting_ipv6_extends = (
+    protocol_list_supports_protocol(protocols, PRT_RELAY, 2) ||
+    protocol_list_supports_protocol(protocols, PRT_RELAY, 3));
+  out->supports_initiating_ipv6_extends =
+    protocol_list_supports_protocol(protocols, PRT_RELAY, 3);
+  out->supports_canonical_ipv6_conns =
+    protocol_list_supports_protocol(protocols, PRT_RELAY, 3);
 
   out->supports_ed25519_link_handshake_compat =
     protocol_list_supports_protocol(protocols, PRT_LINKAUTH, 3);

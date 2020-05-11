@@ -815,6 +815,18 @@ typedef struct protover_summary_flags_t {
    * accept EXTEND2 cells. This requires Relay=2. */
   unsigned int supports_extend2_cells:1;
 
+  /** True iff this router has a version or protocol list that allows it to
+   * accept IPv6 connections. This requires Relay=2 or Relay=3. */
+  unsigned int supports_accepting_ipv6_extends:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * initiate IPv6 connections. This requires Relay=3. */
+  unsigned int supports_initiating_ipv6_extends:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * consider IPv6 connections canonical. This requires Relay=3. */
+  unsigned int supports_canonical_ipv6_conns:1;
+
   /** True iff this router has a protocol list that allows it to negotiate
    * ed25519 identity keys on a link handshake with us. This
    * requires LinkAuth=3. */

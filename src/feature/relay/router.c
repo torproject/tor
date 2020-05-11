@@ -1499,7 +1499,22 @@ router_has_advertised_ipv6_orport(const or_options_t *options)
   return tor_addr_port_is_valid_ap(&ipv6_ap, 0);
 }
 
-/** Returns true if this router has an advertised IPv6 ORPort. */
+/** Returns true if this router can extend over IPv6.
+ *
+ * This check should only be performed by relay extend code.
+ *
+ * Clients should check if relays can initiate and accept IPv6 extends using
+ * node_supports_initiating_ipv6_extends() and
+ * node_supports_accepting_ipv6_extends().
+ *
+ * As with other extends, relays should assume the client has already
+ * performed the relevant checks for the next hop. (Otherwise, relays that
+ * have just added IPv6 ORPorts won't be able to self-test those ORPorts.)
+ *
+ * Accepting relays don't need to perform any IPv6-specific checks before
+ * accepting a connection, because having an IPv6 ORPort implies support for
+ * the relevant protocol version.
+ */
 MOCK_IMPL(bool,
 router_can_extend_over_ipv6,(const or_options_t *options))
 {
