@@ -146,7 +146,7 @@ problem function-size /src/core/or/connection_or.c:connection_or_client_learned_
 problem dependency-violation /src/core/or/connection_or.c 21
 problem dependency-violation /src/core/or/dos.c 6
 problem dependency-violation /src/core/or/onion.c 2
-problem file-size /src/core/or/or.h 1105
+problem file-size /src/core/or/or.h 1150
 problem include-count /src/core/or/or.h 48
 problem dependency-violation /src/core/or/or.h 1
 problem dependency-violation /src/core/or/or_periodic.c 1
