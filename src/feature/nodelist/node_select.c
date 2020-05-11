@@ -992,7 +992,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
       smartlist_add(excludednodes, (node_t*)node);
     } else if (rendezvous_v3 &&
                !node_supports_v3_rendezvous_point(node)) {
-      /* Exclude relays that do not support to rendezvous for a hidden service
+      /* Exclude relays that can not become a rendezvous for a hidden service
        * version 3. */
       smartlist_add(excludednodes, (node_t*)node);
     }
@@ -1030,11 +1030,12 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   if (!choice && (need_uptime || need_capacity || need_guard || pref_addr)) {
     /* try once more -- recurse but with fewer restrictions. */
     log_info(LD_CIRC,
-             "We couldn't find any live%s%s%s routers; falling back "
+             "We couldn't find any live%s%s%s%s routers; falling back "
              "to list of all routers.",
              need_capacity?", fast":"",
              need_uptime?", stable":"",
-             need_guard?", guard":"");
+             need_guard?", guard":"",
+             pref_addr?", preferred address":"");
     flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD|
                 CRN_PREF_ADDR);
     choice = router_choose_random_node(
