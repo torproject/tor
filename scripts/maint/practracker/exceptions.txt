@@ -96,7 +96,7 @@ problem function-size /src/core/or/channeltls.c:channel_tls_process_authenticate
 problem dependency-violation /src/core/or/channeltls.c 11
 problem include-count /src/core/or/circuitbuild.c 53
 problem function-size /src/core/or/circuitbuild.c:get_unique_circ_id_by_chan() 128
-problem function-size /src/core/or/circuitbuild.c:choose_good_exit_server_general() 206
+problem function-size /src/core/or/circuitbuild.c:choose_good_exit_server_general() 196
 problem dependency-violation /src/core/or/circuitbuild.c 25
 problem include-count /src/core/or/circuitlist.c 55
 problem function-size /src/core/or/circuitlist.c:HT_PROTOTYPE() 109
@@ -259,7 +259,7 @@ problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_
 problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 204
 problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 116
 problem function-size /src/feature/nodelist/nodelist.c:compute_frac_paths_available() 190
-problem file-size /src/feature/nodelist/routerlist.c 3300
+problem file-size /src/feature/nodelist/routerlist.c 3350
 problem function-size /src/feature/nodelist/routerlist.c:router_rebuild_store() 148
 problem function-size /src/feature/nodelist/routerlist.c:router_add_to_routerlist() 168
 problem function-size /src/feature/nodelist/routerlist.c:routerlist_remove_old_routers() 121
