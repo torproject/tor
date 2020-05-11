@@ -403,7 +403,7 @@ protover_get_supported_protocols(void)
 #endif
     "Microdesc=1-2 "
     "Padding=2 "
-    "Relay=1-2";
+    "Relay=1-3";
 }
 
 /** The protocols from protover_get_supported_protocols(), as parsed into a

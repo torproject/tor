@@ -169,7 +169,7 @@ pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
              LinkAuth=3 \
              Microdesc=1-2 \
              Padding=2 \
-             Relay=1-2"
+             Relay=1-3"
         )
     } else {
         cstr!(
@@ -184,7 +184,7 @@ pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
              LinkAuth=1,3 \
              Microdesc=1-2 \
              Padding=2 \
-             Relay=1-2"
+             Relay=1-3"
         )
     }
 }
