@@ -947,7 +947,6 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
   const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
   const int need_guard = (flags & CRN_NEED_GUARD) != 0;
-  const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
   const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
 
   smartlist_t *sl=smartlist_new(),
@@ -956,9 +955,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const routerinfo_t *r;
   bandwidth_weight_rule_t rule;
 
-  tor_assert(!(weight_for_exit && need_guard));
-  rule = weight_for_exit ? WEIGHT_FOR_EXIT :
-    (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
+  rule = (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
   /* If the node_t is not found we won't be to exclude ourself but we
    * won't be able to pick ourself in router_choose_random_node() so
