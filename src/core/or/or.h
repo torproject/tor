@@ -830,6 +830,10 @@ typedef struct protover_summary_flags_t {
    * the v3 protocol detailed in proposal 224. This requires HSIntro=4. */
   unsigned int supports_ed25519_hs_intro : 1;
 
+  /** True iff this router has a protocol list that allows it to support the
+   * ESTABLISH_INTRO DoS cell extension. Requires HSIntro=5. */
+  unsigned int supports_establish_intro_dos_extension : 1;
+
   /** True iff this router has a protocol list that allows it to be an hidden
    * service directory supporting version 3 as seen in proposal 224. This
    * requires HSDir=2. */
@@ -841,12 +845,9 @@ typedef struct protover_summary_flags_t {
   unsigned int supports_v3_rendezvous_point: 1;
 
   /** True iff this router has a protocol list that allows clients to
-   * negotiate hs circuit setup padding. Requires Padding>=2. */
+   * negotiate hs circuit setup padding. Requires Padding=2. */
   unsigned int supports_hs_setup_padding : 1;
 
-  /** True iff this router has a protocol list that allows it to support the
-   * ESTABLISH_INTRO DoS cell extension. Requires HSIntro>=5. */
-  unsigned int supports_establish_intro_dos_extension : 1;
 } protover_summary_flags_t;
 
 typedef struct routerinfo_t routerinfo_t;

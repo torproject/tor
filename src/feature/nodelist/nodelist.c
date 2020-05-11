@@ -1193,18 +1193,7 @@ node_supports_ed25519_hs_intro(const node_t *node)
   return node_get_protover_summary_flags(node)->supports_ed25519_hs_intro;
 }
 
-/** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
- * extenstion. */
-int
-node_supports_establish_intro_dos_extension(const node_t *node)
-{
-  tor_assert(node);
-
-  return node_get_protover_summary_flags(node)->
-                           supports_establish_intro_dos_extension;
-}
-
-/** Return true iff <b>node</b> supports to be a rendezvous point for hidden
+/** Return true iff <b>node</b> can be a rendezvous point for hidden
  * service version 3 (HSRend=2). */
 int
 node_supports_v3_rendezvous_point(const node_t *node)
@@ -1217,6 +1206,17 @@ node_supports_v3_rendezvous_point(const node_t *node)
   }
 
   return node_get_protover_summary_flags(node)->supports_v3_rendezvous_point;
+}
+
+/** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
+ * extenstion. */
+int
+node_supports_establish_intro_dos_extension(const node_t *node)
+{
+  tor_assert(node);
+
+  return node_get_protover_summary_flags(node)->
+                           supports_establish_intro_dos_extension;
 }
 
 /** Return the RSA ID key's SHA1 digest for the provided node. */
