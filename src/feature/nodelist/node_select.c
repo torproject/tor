@@ -930,47 +930,25 @@ nodelist_subtract(smartlist_t *sl, const smartlist_t *excluded)
   bitarray_free(excluded_idx);
 }
 
-/** Return a random running node from the nodelist. Never pick a node that is
- * in <b>excludedsmartlist</b>, or which matches <b>excludedset</b>, even if
- * they are the only nodes available.
+/* Node selection helper for router_choose_random_node().
  *
- * <b>flags</b> is a set of CRN_* flags, see
- * router_add_running_nodes_to_smartlist() for details.
- */
-const node_t *
-router_choose_random_node(smartlist_t *excludedsmartlist,
-                          routerset_t *excludedset,
-                          router_crn_flags_t flags)
+ * Populates a node list based on <b>flags</b>, ignoring nodes in
+ * <b>excludednodes</b> and <b>excludedset</b>. Chooses the node based on
+ * <b>rule</b>. */
+static const node_t *
+router_choose_random_node_helper(smartlist_t *excludednodes,
+                                 routerset_t *excludedset,
+                                 router_crn_flags_t flags,
+                                 bandwidth_weight_rule_t rule)
 {
-  /* A limited set of flags, used for weighting and fallback node selection.
-   */
-  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
-  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
-  const int need_guard = (flags & CRN_NEED_GUARD) != 0;
-  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
-
-  smartlist_t *sl=smartlist_new(),
-    *excludednodes=smartlist_new();
+  smartlist_t *sl=smartlist_new();
   const node_t *choice = NULL;
-  const routerinfo_t *r;
-  bandwidth_weight_rule_t rule;
-
-  rule = (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
-
-  /* If the node_t is not found we won't be to exclude ourself but we
-   * won't be able to pick ourself in router_choose_random_node() so
-   * this is fine to at least try with our routerinfo_t object. */
-  if ((r = router_get_my_routerinfo()))
-    routerlist_add_node_and_family(excludednodes, r);
 
   router_add_running_nodes_to_smartlist(sl, flags);
   log_debug(LD_CIRC,
            "We found %d running nodes.",
             smartlist_len(sl));
 
-  if (excludedsmartlist) {
-    smartlist_add_all(excludednodes, excludedsmartlist);
-  }
   nodelist_subtract(sl, excludednodes);
 
   if (excludedset) {
@@ -984,8 +962,53 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   choice = node_sl_choose_by_bandwidth(sl, rule);
 
   smartlist_free(sl);
+
+  return choice;
+}
+
+/** Return a random running node from the nodelist. Never pick a node that is
+ * in <b>excludedsmartlist</b>, or which matches <b>excludedset</b>, even if
+ * they are the only nodes available.
+ *
+ * <b>flags</b> is a set of CRN_* flags, see
+ * router_add_running_nodes_to_smartlist() for details.
+ */
+const node_t *
+router_choose_random_node(smartlist_t *excludedsmartlist,
+                          routerset_t *excludedset,
+                          router_crn_flags_t flags)
+{
+  /* A limited set of flags, used for fallback node selection.
+   */
+  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
+  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
+  const int need_guard = (flags & CRN_NEED_GUARD) != 0;
+  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
+
+  smartlist_t *excludednodes=smartlist_new();
+  const node_t *choice = NULL;
+  const routerinfo_t *r;
+  bandwidth_weight_rule_t rule;
+
+  rule = (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
+
+  /* If the node_t is not found we won't be to exclude ourself but we
+   * won't be able to pick ourself in router_choose_random_node() so
+   * this is fine to at least try with our routerinfo_t object. */
+  if ((r = router_get_my_routerinfo()))
+    routerlist_add_node_and_family(excludednodes, r);
+
+  if (excludedsmartlist) {
+    smartlist_add_all(excludednodes, excludedsmartlist);
+  }
+
+  choice = router_choose_random_node_helper(excludednodes,
+                                            excludedset,
+                                            flags,
+                                            rule);
+
   if (!choice && (need_uptime || need_capacity || need_guard || pref_addr)) {
-    /* try once more -- recurse but with fewer restrictions. */
+    /* try once more, with fewer restrictions. */
     log_info(LD_CIRC,
              "We couldn't find any live%s%s%s%s routers; falling back "
              "to list of all routers.",
@@ -995,8 +1018,10 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
              pref_addr?", preferred address":"");
     flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD|
                 CRN_PREF_ADDR);
-    choice = router_choose_random_node(
-                     excludedsmartlist, excludedset, flags);
+    choice = router_choose_random_node_helper(excludednodes,
+                                              excludedset,
+                                              flags,
+                                              rule);
   }
   smartlist_free(excludednodes);
   if (!choice) {
