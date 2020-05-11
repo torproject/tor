@@ -541,6 +541,11 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
     /* Don't choose nodes if we are certain they can't do ntor. */
     if ((node->ri || node->md) && !node_has_curve25519_onion_key(node))
       continue;
+    /* Exclude relays that allow single hop exit circuits. This is an
+     * obsolete option since 0.2.9.2-alpha and done by default in
+     * 0.3.1.0-alpha. */
+    if (node_allows_single_hop_exits(node))
+      continue;
     /* Choose a node with an OR address that matches the firewall rules */
     if (direct_conn && check_reach &&
         !fascist_firewall_allows_node(node,

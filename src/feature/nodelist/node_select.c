@@ -985,12 +985,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
     (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
   SMARTLIST_FOREACH_BEGIN(node_list, const node_t *, node) {
-    if (node_allows_single_hop_exits(node)) {
-      /* Exclude relays that allow single hop exit circuits. This is an
-       * obsolete option since 0.2.9.2-alpha and done by default in
-       * 0.3.1.0-alpha. */
-      smartlist_add(excludednodes, (node_t*)node);
-    } else if (rendezvous_v3 &&
+    if (rendezvous_v3 &&
                !node_supports_v3_rendezvous_point(node)) {
       /* Exclude relays that can not become a rendezvous for a hidden service
        * version 3. */
