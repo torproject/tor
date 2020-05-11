@@ -512,13 +512,15 @@ routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2)
 }
 
 /** Add every suitable node from our nodelist to <b>sl</b>, so that
- * we can pick a node for a circuit.
+ * we can pick a node for a circuit. See router_choose_random_node()
+ * for details.
  */
 void
 router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
                                       int need_capacity, int need_guard,
                                       int need_desc, int pref_addr,
-                                      int direct_conn)
+                                      int direct_conn,
+                                      bool initiate_ipv6_extend)
 {
   const int check_reach = !router_or_conn_should_skip_reachable_address_check(
                                                        get_options(),
@@ -545,7 +547,8 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
                                       FIREWALL_OR_CONNECTION,
                                       pref_addr))
       continue;
-
+    if (initiate_ipv6_extend && !node_supports_initiating_ipv6_extends(node))
+      continue;
     smartlist_add(sl, (void *)node);
   } SMARTLIST_FOREACH_END(node);
 }

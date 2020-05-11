@@ -930,25 +930,33 @@ nodelist_subtract(smartlist_t *sl, const smartlist_t *excluded)
   bitarray_free(excluded_idx);
 }
 
-/** Return a random running node from the nodelist. Never
- * pick a node that is in
- * <b>excludedsmartlist</b>, or which matches <b>excludedset</b>,
- * even if they are the only nodes available.
- * If <b>CRN_NEED_UPTIME</b> is set in flags and any router has more than
- * a minimum uptime, return one of those.
- * If <b>CRN_NEED_CAPACITY</b> is set in flags, weight your choice by the
- * advertised capacity of each router.
- * If <b>CRN_NEED_GUARD</b> is set in flags, consider only Guard routers.
- * If <b>CRN_WEIGHT_AS_EXIT</b> is set in flags, we weight bandwidths as if
- * picking an exit node, otherwise we weight bandwidths for picking a relay
- * node (that is, possibly discounting exit nodes).
- * If <b>CRN_NEED_DESC</b> is set in flags, we only consider nodes that
- * have a routerinfo or microdescriptor -- that is, enough info to be
- * used to build a circuit.
- * If <b>CRN_PREF_ADDR</b> is set in flags, we only consider nodes that
- * have an address that is preferred by the ClientPreferIPv6ORPort setting
- * (regardless of this flag, we exclude nodes that aren't allowed by the
- * firewall, including ClientUseIPv4 0 and fascist_firewall_use_ipv6() == 0).
+/** Return a random running node from the nodelist. Never pick a node that is
+ * in <b>excludedsmartlist</b>, or which matches <b>excludedset</b>, even if
+ * they are the only nodes available.
+ *
+ * If the following <b>flags</b> are set:
+ *  - <b>CRN_NEED_UPTIME</b>: if any router has more than a minimum uptime,
+ *                            return one of those;
+ *  - <b>CRN_NEED_CAPACITY</b>: weight your choice by the advertised capacity
+ *                              of each router;
+ *  - <b>CRN_NEED_GUARD</b>: only consider Guard routers;
+ *  - <b>CRN_WEIGHT_AS_EXIT</b>: we weight bandwidths as if picking an exit
+ *                               node, otherwise we weight bandwidths for
+ *                               picking a relay node (that is, possibly
+ *                               discounting exit nodes);
+ *  - <b>CRN_NEED_DESC</b>: only consider nodes that have a routerinfo or
+ *                          microdescriptor -- that is, enough info to be
+ *                          used to build a circuit;
+ *  - <b>CRN_DIRECT_CONN</b>: only consider nodes that are suitable for direct
+ *                            connections. Check ReachableAddresses,
+ *                            ClientUseIPv4 0, and
+ *                            fascist_firewall_use_ipv6() == 0);
+ *  - <b>CRN_PREF_ADDR</b>: only consider nodes that have an address that is
+ *                          preferred by the ClientPreferIPv6ORPort setting.
+ *  - <b>CRN_RENDEZVOUS_V3</b>: only consider nodes that can become v3 onion
+ *                              service rendezvous points.
+ *  - <b>CRN_INITIATE_IPV6_EXTEND</b>: only consider routers than can initiate
+ *                                     IPv6 extends.
  */
 const node_t *
 router_choose_random_node(smartlist_t *excludedsmartlist,
@@ -963,6 +971,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
   const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
   const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
+  const bool initiate_ipv6_extend = (flags & CRN_INITIATE_IPV6_EXTEND) != 0;
 
   const smartlist_t *node_list = nodelist_get_list();
   smartlist_t *sl=smartlist_new(),
@@ -997,7 +1006,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
 
   router_add_running_nodes_to_smartlist(sl, need_uptime, need_capacity,
                                         need_guard, need_desc, pref_addr,
-                                        direct_conn);
+                                        direct_conn, initiate_ipv6_extend);
   log_debug(LD_CIRC,
            "We found %d running nodes.",
             smartlist_len(sl));

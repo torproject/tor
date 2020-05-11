@@ -1796,12 +1796,13 @@ pick_restricted_middle_node(router_crn_flags_t flags,
 
   /* Add all running nodes to all_live_nodes */
   router_add_running_nodes_to_smartlist(all_live_nodes,
-                                        (flags & CRN_NEED_UPTIME) != 0,
-                                        (flags & CRN_NEED_CAPACITY) != 0,
-                                        (flags & CRN_NEED_GUARD) != 0,
-                                        (flags & CRN_NEED_DESC) != 0,
-                                        (flags & CRN_PREF_ADDR) != 0,
-                                        (flags & CRN_DIRECT_CONN) != 0);
+                                    (flags & CRN_NEED_UPTIME) != 0,
+                                    (flags & CRN_NEED_CAPACITY) != 0,
+                                    (flags & CRN_NEED_GUARD) != 0,
+                                    (flags & CRN_NEED_DESC) != 0,
+                                    (flags & CRN_PREF_ADDR) != 0,
+                                    (flags & CRN_DIRECT_CONN) != 0,
+                                    (flags & CRN_INITIATE_IPV6_EXTEND) != 0);
 
   /* Filter all_live_nodes to only add live *and* whitelisted middles
    * to the list whitelisted_live_middles. */
@@ -2306,6 +2307,10 @@ choose_good_middle_server(uint8_t purpose,
     flags |= CRN_NEED_UPTIME;
   if (state->need_capacity)
     flags |= CRN_NEED_CAPACITY;
+  /* Picking the second-last node. (The last node is the relay doing the
+   * self-test.) */
+  if (state->is_ipv6_selftest && cur_len == state->desired_path_len - 2)
+    flags |= CRN_INITIATE_IPV6_EXTEND;
 
   /** If a hidden service circuit wants a specific middle node, pin it. */
   if (middle_node_must_be_vanguard(options, purpose, cur_len)) {

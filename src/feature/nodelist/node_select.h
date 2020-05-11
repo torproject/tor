@@ -28,6 +28,8 @@ typedef enum router_crn_flags_t {
   /* On clients, only provide nodes with HSRend >= 2 protocol version which
    * is required for hidden service version >= 3. */
   CRN_RENDEZVOUS_V3 = 1<<9,
+  /* On clients, only provide nodes that can initiate IPv6 extends. */
+  CRN_INITIATE_IPV6_EXTEND = 1<<10,
 } router_crn_flags_t;
 
 /** Possible ways to weight routers when choosing one randomly.  See
