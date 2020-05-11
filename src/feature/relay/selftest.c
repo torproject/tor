@@ -190,15 +190,19 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
                                      int orport_reachable)
 {
   extend_info_t *ei = extend_info_from_router(me, family);
+  int ipv6_flags = (family == AF_INET6 ? CIRCLAUNCH_IS_IPV6_SELFTEST : 0);
 
-  /* If we don't have an IPv6 ORPort, ei will be NULL. */
+  /* If we're trying to test IPv6, but we don't have an IPv6 ORPort, ei will
+   * be NULL. */
   if (ei) {
     const char *family_name = fmt_af_family(family);
     log_info(LD_CIRC, "Testing %s of my %s ORPort: %s.",
              !orport_reachable ? "reachability" : "bandwidth",
              family_name, fmt_addrport(&ei->addr, ei->port));
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
-                            CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+                                  CIRCLAUNCH_NEED_CAPACITY|
+                                  CIRCLAUNCH_IS_INTERNAL|
+                                  ipv6_flags);
     extend_info_free(ei);
   }
 }

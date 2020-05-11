@@ -439,7 +439,8 @@ onion_populate_cpath(origin_circuit_t *circ)
 
 /** Create and return a new origin circuit. Initialize its purpose and
  * build-state based on our arguments.  The <b>flags</b> argument is a
- * bitfield of CIRCLAUNCH_* flags. */
+ * bitfield of CIRCLAUNCH_* flags, see circuit_launch_by_extend_info() for
+ * more details. */
 origin_circuit_t *
 origin_circuit_init(uint8_t purpose, int flags)
 {
@@ -455,13 +456,16 @@ origin_circuit_init(uint8_t purpose, int flags)
     ((flags & CIRCLAUNCH_NEED_CAPACITY) ? 1 : 0);
   circ->build_state->is_internal =
     ((flags & CIRCLAUNCH_IS_INTERNAL) ? 1 : 0);
+  circ->build_state->is_ipv6_selftest =
+    ((flags & CIRCLAUNCH_IS_IPV6_SELFTEST) ? 1 : 0);
   circ->base_.purpose = purpose;
   return circ;
 }
 
-/** Build a new circuit for <b>purpose</b>. If <b>exit</b>
- * is defined, then use that as your exit router, else choose a suitable
- * exit node.
+/** Build a new circuit for <b>purpose</b>. If <b>exit</b> is defined, then use
+ * that as your exit router, else choose a suitable exit node. The <b>flags</b>
+ * argument is a bitfield of CIRCLAUNCH_* flags, see
+ * circuit_launch_by_extend_info() for more details.
  *
  * Also launch a connection to the first OR in the chosen path, if
  * it's not open already.
