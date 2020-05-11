@@ -1795,15 +1795,7 @@ pick_restricted_middle_node(router_crn_flags_t flags,
   tor_assert(pick_from);
 
   /* Add all running nodes to all_live_nodes */
-  router_add_running_nodes_to_smartlist(all_live_nodes,
-                                    (flags & CRN_NEED_UPTIME) != 0,
-                                    (flags & CRN_NEED_CAPACITY) != 0,
-                                    (flags & CRN_NEED_GUARD) != 0,
-                                    (flags & CRN_NEED_DESC) != 0,
-                                    (flags & CRN_PREF_ADDR) != 0,
-                                    (flags & CRN_DIRECT_CONN) != 0,
-                                    (flags & CRN_RENDEZVOUS_V3) != 0,
-                                    (flags & CRN_INITIATE_IPV6_EXTEND) != 0);
+  router_add_running_nodes_to_smartlist(all_live_nodes, flags);
 
   /* Filter all_live_nodes to only add live *and* whitelisted middles
    * to the list whitelisted_live_middles. */

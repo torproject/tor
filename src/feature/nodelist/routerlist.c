@@ -512,21 +512,49 @@ routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2)
 }
 
 /** Add every suitable node from our nodelist to <b>sl</b>, so that
- * we can pick a node for a circuit. See router_choose_random_node()
- * for details.
+ * we can pick a node for a circuit.
+ *
+ * If the following <b>flags</b> are set:
+ *  - <b>CRN_NEED_UPTIME</b>: if any router has more than a minimum uptime,
+ *                            return one of those;
+ *  - <b>CRN_NEED_CAPACITY</b>: weight your choice by the advertised capacity
+ *                              of each router;
+ *  - <b>CRN_NEED_GUARD</b>: only consider Guard routers;
+ *  - <b>CRN_WEIGHT_AS_EXIT</b>: we weight bandwidths as if picking an exit
+ *                               node, otherwise we weight bandwidths for
+ *                               picking a relay node (that is, possibly
+ *                               discounting exit nodes);
+ *  - <b>CRN_NEED_DESC</b>: only consider nodes that have a routerinfo or
+ *                          microdescriptor -- that is, enough info to be
+ *                          used to build a circuit;
+ *  - <b>CRN_DIRECT_CONN</b>: only consider nodes that are suitable for direct
+ *                            connections. Check ReachableAddresses,
+ *                            ClientUseIPv4 0, and
+ *                            fascist_firewall_use_ipv6() == 0);
+ *  - <b>CRN_PREF_ADDR</b>: only consider nodes that have an address that is
+ *                          preferred by the ClientPreferIPv6ORPort setting.
+ *  - <b>CRN_RENDEZVOUS_V3</b>: only consider nodes that can become v3 onion
+ *                              service rendezvous points.
+ *  - <b>CRN_INITIATE_IPV6_EXTEND</b>: only consider routers than can initiate
+ *                                     IPv6 extends.
  */
 void
-router_add_running_nodes_to_smartlist(smartlist_t *sl, int need_uptime,
-                                      int need_capacity, int need_guard,
-                                      int need_desc, int pref_addr,
-                                      int direct_conn,
-                                      bool rendezvous_v3,
-                                      bool initiate_ipv6_extend)
+router_add_running_nodes_to_smartlist(smartlist_t *sl, int flags)
 {
+  /* The full set of flags used for node selection. */
+  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
+  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
+  const int need_guard = (flags & CRN_NEED_GUARD) != 0;
+  const int need_desc = (flags & CRN_NEED_DESC) != 0;
+  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
+  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
+  const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
+  const bool initiate_ipv6_extend = (flags & CRN_INITIATE_IPV6_EXTEND) != 0;
+
   const int check_reach = !router_or_conn_should_skip_reachable_address_check(
                                                        get_options(),
                                                        pref_addr);
-  /* XXXX MOVE */
+
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
     if (!node->is_running || !node->is_valid)
       continue;

@@ -934,44 +934,21 @@ nodelist_subtract(smartlist_t *sl, const smartlist_t *excluded)
  * in <b>excludedsmartlist</b>, or which matches <b>excludedset</b>, even if
  * they are the only nodes available.
  *
- * If the following <b>flags</b> are set:
- *  - <b>CRN_NEED_UPTIME</b>: if any router has more than a minimum uptime,
- *                            return one of those;
- *  - <b>CRN_NEED_CAPACITY</b>: weight your choice by the advertised capacity
- *                              of each router;
- *  - <b>CRN_NEED_GUARD</b>: only consider Guard routers;
- *  - <b>CRN_WEIGHT_AS_EXIT</b>: we weight bandwidths as if picking an exit
- *                               node, otherwise we weight bandwidths for
- *                               picking a relay node (that is, possibly
- *                               discounting exit nodes);
- *  - <b>CRN_NEED_DESC</b>: only consider nodes that have a routerinfo or
- *                          microdescriptor -- that is, enough info to be
- *                          used to build a circuit;
- *  - <b>CRN_DIRECT_CONN</b>: only consider nodes that are suitable for direct
- *                            connections. Check ReachableAddresses,
- *                            ClientUseIPv4 0, and
- *                            fascist_firewall_use_ipv6() == 0);
- *  - <b>CRN_PREF_ADDR</b>: only consider nodes that have an address that is
- *                          preferred by the ClientPreferIPv6ORPort setting.
- *  - <b>CRN_RENDEZVOUS_V3</b>: only consider nodes that can become v3 onion
- *                              service rendezvous points.
- *  - <b>CRN_INITIATE_IPV6_EXTEND</b>: only consider routers than can initiate
- *                                     IPv6 extends.
+ * <b>flags</b> is a set of CRN_* flags, see
+ * router_add_running_nodes_to_smartlist() for details.
  */
 const node_t *
 router_choose_random_node(smartlist_t *excludedsmartlist,
                           routerset_t *excludedset,
                           router_crn_flags_t flags)
-{ /* XXXX MOVE */
+{
+  /* A limited set of flags, used for weighting and fallback node selection.
+   */
   const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
   const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
   const int need_guard = (flags & CRN_NEED_GUARD) != 0;
   const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
-  const int need_desc = (flags & CRN_NEED_DESC) != 0;
   const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
-  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
-  const int rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
-  const bool initiate_ipv6_extend = (flags & CRN_INITIATE_IPV6_EXTEND) != 0;
 
   smartlist_t *sl=smartlist_new(),
     *excludednodes=smartlist_new();
@@ -989,10 +966,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   if ((r = router_get_my_routerinfo()))
     routerlist_add_node_and_family(excludednodes, r);
 
-  router_add_running_nodes_to_smartlist(sl, need_uptime, need_capacity,
-                                        need_guard, need_desc, pref_addr,
-                                        direct_conn, rendezvous_v3,
-                                        initiate_ipv6_extend);
+  router_add_running_nodes_to_smartlist(sl, flags);
   log_debug(LD_CIRC,
            "We found %d running nodes.",
             smartlist_len(sl));
