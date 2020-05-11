@@ -2032,12 +2032,12 @@ different from other Tor clients:
     A list of identity fingerprints and country codes of nodes
     to use for "middle" hops in your normal circuits.
     Normal circuits include all circuits except for direct connections
-    to directory servers. Middle hops are all hops other than exit and entry. +
+    to directory servers. Middle hops are all hops other than exit and entry.
 +
     This is an **experimental** feature that is meant to be used by researchers
     and developers to test new features in the Tor network safely. Using it
-    without care will strongly influence your anonymity. This feature might get
-    removed in the future.
+    without care will strongly influence your anonymity. Other tor features may
+    not work with MiddleNodes. This feature might get removed in the future.
 +
     The HSLayer2Node and HSLayer3Node options override this option for onion
     service circuits, if they are set. The vanguards addon will read this
