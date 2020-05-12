@@ -211,6 +211,8 @@ file will be parsed as if they were written where the %include option is. If
 the path is a folder, all files on that folder will be parsed following lexical
 order. Files starting with a dot are ignored. Files on subfolders are ignored.
 The %include option can be used recursively.
+New configuration files or directories cannot be added to already running Tor
+instance if **Sandbox** is enabled.
 
 By default, an option on the command line overrides an option found in the
 configuration file, and an option in a configuration file overrides one in
@@ -854,6 +856,10 @@ forward slash (/) in the configuration file and on the command line.
     Tor must remain in client or server mode (some changes to **ClientOnly**
     and **ORPort** are not allowed). Currently, if **Sandbox** is 1,
     **ControlPort** command "GETINFO address" will not work. +
+     +
+    When using %include in the tor configuration files, reloading the tor
+    configuration is not supported after adding new configuration files or
+    directories. +
      +
     (Default: 0)
 
