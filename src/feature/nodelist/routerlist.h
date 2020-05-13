@@ -58,6 +58,7 @@ int router_dir_conn_should_skip_reachable_address_check(
                                        int try_ip_pref);
 void router_reset_status_download_failures(void);
 int routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2);
+bool router_can_choose_node(const node_t *node, int flags);
 void router_add_running_nodes_to_smartlist(smartlist_t *sl, int flags);
 
 const routerinfo_t *routerlist_find_my_routerinfo(void);

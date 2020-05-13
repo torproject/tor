@@ -511,35 +511,34 @@ routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2)
     r1->ipv6_orport == r2->ipv6_orport;
 }
 
-/** Add every suitable node from our nodelist to <b>sl</b>, so that
- * we can pick a node for a circuit.
+/* Returns true if <b>node</b> can be chosen based on <b>flags</b>.
  *
- * If the following <b>flags</b> are set:
- *  - <b>CRN_NEED_UPTIME</b>: if any router has more than a minimum uptime,
- *                            return one of those;
- *  - <b>CRN_NEED_CAPACITY</b>: weight your choice by the advertised capacity
- *                              of each router;
- *  - <b>CRN_NEED_GUARD</b>: only consider Guard routers;
- *  - <b>CRN_WEIGHT_AS_EXIT</b>: we weight bandwidths as if picking an exit
- *                               node, otherwise we weight bandwidths for
- *                               picking a relay node (that is, possibly
- *                               discounting exit nodes);
- *  - <b>CRN_NEED_DESC</b>: only consider nodes that have a routerinfo or
- *                          microdescriptor -- that is, enough info to be
- *                          used to build a circuit;
- *  - <b>CRN_DIRECT_CONN</b>: only consider nodes that are suitable for direct
- *                            connections. Check ReachableAddresses,
- *                            ClientUseIPv4 0, and
+ * The following conditions are applied to all nodes:
+ *  - is running;
+ *  - is valid;
+ *  - has a general-purpose routerinfo;
+ *  - supports EXTEND2 cells;
+ *  - has an ntor circuit crypto key; and
+ *  - does not allow single-hop exits.
+ *
+ * The <b>flags</b> chech that <b>node</b>:
+ *  - <b>CRN_NEED_UPTIME</b>: has more than a minimum uptime;
+ *  - <b>CRN_NEED_CAPACITY</b>: has more than a minimum capacity;
+ *  - <b>CRN_NEED_GUARD</b>: is a Guard;
+ *  - <b>CRN_NEED_DESC</b>: has a routerinfo or microdescriptor -- that is,
+ *                          enough info to be used to build a circuit;
+ *  - <b>CRN_DIRECT_CONN</b>: is suitable for direct connections. Checks
+ *                            for the relevant descriptors. Checks the address
+ *                            against ReachableAddresses, ClientUseIPv4 0, and
  *                            fascist_firewall_use_ipv6() == 0);
- *  - <b>CRN_PREF_ADDR</b>: only consider nodes that have an address that is
- *                          preferred by the ClientPreferIPv6ORPort setting.
- *  - <b>CRN_RENDEZVOUS_V3</b>: only consider nodes that can become v3 onion
- *                              service rendezvous points.
- *  - <b>CRN_INITIATE_IPV6_EXTEND</b>: only consider routers than can initiate
- *                                     IPv6 extends.
+ *  - <b>CRN_PREF_ADDR</b>: if we are connecting directly to the node, it has
+ *                          an address that is preferred by the
+ *                          ClientPreferIPv6ORPort setting;
+ *  - <b>CRN_RENDEZVOUS_V3</b>: can become a v3 onion service rendezvous point;
+ *  - <b>CRN_INITIATE_IPV6_EXTEND</b>: can initiate IPv6 extends.
  */
-void
-router_add_running_nodes_to_smartlist(smartlist_t *sl, int flags)
+bool
+router_can_choose_node(const node_t *node, int flags)
 {
   /* The full set of flags used for node selection. */
   const bool need_uptime = (flags & CRN_NEED_UPTIME) != 0;
@@ -555,38 +554,52 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int flags)
     !router_or_conn_should_skip_reachable_address_check(get_options(),
                                                         pref_addr);
 
+  if (!node->is_running || !node->is_valid)
+    return false;
+  if (need_desc && !node_has_preferred_descriptor(node, direct_conn))
+    return false;
+  if (node->ri && node->ri->purpose != ROUTER_PURPOSE_GENERAL)
+    return false;
+  if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
+    return false;
+  /* Don't choose nodes if we are certain they can't do EXTEND2 cells */
+  if (node->rs && !routerstatus_version_supports_extend2_cells(node->rs, 1))
+    return false;
+  /* Don't choose nodes if we are certain they can't do ntor. */
+  if ((node->ri || node->md) && !node_has_curve25519_onion_key(node))
+    return false;
+  /* Exclude relays that allow single hop exit circuits. This is an
+   * obsolete option since 0.2.9.2-alpha and done by default in
+   * 0.3.1.0-alpha. */
+  if (node_allows_single_hop_exits(node))
+    return false;
+  /* Exclude relays that can not become a rendezvous for a hidden service
+   * version 3. */
+  if (rendezvous_v3 &&
+      !node_supports_v3_rendezvous_point(node))
+    return false;
+  /* Choose a node with an OR address that matches the firewall rules */
+  if (direct_conn && check_reach &&
+      !fascist_firewall_allows_node(node,
+                                    FIREWALL_OR_CONNECTION,
+                                    pref_addr))
+    return false;
+  if (initiate_ipv6_extend && !node_supports_initiating_ipv6_extends(node))
+    return false;
+
+  return true;
+}
+
+/** Add every suitable node from our nodelist to <b>sl</b>, so that
+ * we can pick a node for a circuit based on <b>flags</b>.
+ *
+ * See router_can_choose_node() for details of <b>flags</b>.
+ */
+void
+router_add_running_nodes_to_smartlist(smartlist_t *sl, int flags)
+{
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
-    if (!node->is_running || !node->is_valid)
-      continue;
-    if (need_desc && !node_has_preferred_descriptor(node, direct_conn))
-      continue;
-    if (node->ri && node->ri->purpose != ROUTER_PURPOSE_GENERAL)
-      continue;
-    if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
-      continue;
-    /* Don't choose nodes if we are certain they can't do EXTEND2 cells */
-    if (node->rs && !routerstatus_version_supports_extend2_cells(node->rs, 1))
-      continue;
-    /* Don't choose nodes if we are certain they can't do ntor. */
-    if ((node->ri || node->md) && !node_has_curve25519_onion_key(node))
-      continue;
-    /* Exclude relays that allow single hop exit circuits. This is an
-     * obsolete option since 0.2.9.2-alpha and done by default in
-     * 0.3.1.0-alpha. */
-    if (node_allows_single_hop_exits(node))
-      continue;
-    /* Exclude relays that can not become a rendezvous for a hidden service
-     * version 3. */
-    if (rendezvous_v3 &&
-        !node_supports_v3_rendezvous_point(node))
-      continue;
-    /* Choose a node with an OR address that matches the firewall rules */
-    if (direct_conn && check_reach &&
-        !fascist_firewall_allows_node(node,
-                                      FIREWALL_OR_CONNECTION,
-                                      pref_addr))
-      continue;
-    if (initiate_ipv6_extend && !node_supports_initiating_ipv6_extends(node))
+    if (!router_can_choose_node(node, flags))
       continue;
     smartlist_add(sl, (void *)node);
   } SMARTLIST_FOREACH_END(node);
