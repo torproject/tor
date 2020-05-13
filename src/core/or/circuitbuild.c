@@ -2103,32 +2103,27 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
   return 0;
 }
 
-/** Return the number of routers in <b>routers</b> that are currently up
- * and available for building circuits through.
+/** Return the number of routers in <b>nodes</b> that are currently up and
+ * available for building circuits through.
  *
- * (Note that this function may overcount or undercount, if we have
- * descriptors that are not the type we would prefer to use for some
- * particular router. See bug #25885.)
+ * If <b>direct</b> is true, only count nodes that are suitable for direct
+ * connections. Counts nodes regardless of whether their addresses are
+ * preferred.
  */
 MOCK_IMPL(STATIC int,
 count_acceptable_nodes, (const smartlist_t *nodes, int direct))
 {
   int num=0;
+  int flags = CRN_NEED_DESC;
+
+  if (direct)
+    flags |= CRN_DIRECT_CONN;
 
   SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
     //    log_debug(LD_CIRC,
-//              "Contemplating whether router %d (%s) is a new option.",
-//              i, r->nickname);
-    if (! node->is_running)
-//      log_debug(LD_CIRC,"Nope, the directory says %d is not running.",i);
-      continue;
-    if (! node->is_valid)
-//      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
-      continue;
-    if (! node_has_preferred_descriptor(node, direct))
-      continue;
-    /* The node has a descriptor, so we can just check the ntor key directly */
-    if (!node_has_curve25519_onion_key(node))
+    //              "Contemplating whether router %d (%s) is a new option.",
+    //              i, r->nickname);
+    if (!router_can_choose_node(node, flags))
       continue;
     ++num;
   } SMARTLIST_FOREACH_END(node);
