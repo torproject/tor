@@ -516,10 +516,18 @@ routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2)
  * The following conditions are applied to all nodes:
  *  - is running;
  *  - is valid;
- *  - has a general-purpose routerinfo;
  *  - supports EXTEND2 cells;
  *  - has an ntor circuit crypto key; and
  *  - does not allow single-hop exits.
+ *
+ * If the node has a routerinfo, we're checking for a direct connection, and
+ * we're using bridges, the following condition is applied:
+ *  - has a bridge-purpose routerinfo;
+ * and for all other nodes:
+ *  - has a general-purpose routerinfo (or no routerinfo).
+ *
+ * Nodes that don't have a routerinfo must be general-purpose nodes, because
+ * routerstatuses and microdescriptors only come via consensuses.
  *
  * The <b>flags</b> chech that <b>node</b>:
  *  - <b>CRN_NEED_UPTIME</b>: has more than a minimum uptime;
@@ -550,16 +558,21 @@ router_can_choose_node(const node_t *node, int flags)
   const bool rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
   const bool initiate_ipv6_extend = (flags & CRN_INITIATE_IPV6_EXTEND) != 0;
 
+  const or_options_t *options = get_options();
   const bool check_reach =
-    !router_or_conn_should_skip_reachable_address_check(get_options(),
-                                                        pref_addr);
+    !router_or_conn_should_skip_reachable_address_check(options, pref_addr);
+  const bool direct_bridge = direct_conn && options->UseBridges;
 
   if (!node->is_running || !node->is_valid)
     return false;
   if (need_desc && !node_has_preferred_descriptor(node, direct_conn))
     return false;
-  if (node->ri && node->ri->purpose != ROUTER_PURPOSE_GENERAL)
-    return false;
+  if (node->ri) {
+    if (direct_bridge && node->ri->purpose != ROUTER_PURPOSE_BRIDGE)
+      return false;
+    else if (node->ri->purpose != ROUTER_PURPOSE_GENERAL)
+      return false;
+  }
   if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
     return false;
   /* Don't choose nodes if we are certain they can't do EXTEND2 cells */
