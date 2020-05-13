@@ -19,6 +19,7 @@
 #include "core/or/channel.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
+#include "core/or/circuituse.h"
 #include "core/or/onion.h"
 
 #include "core/or/cell_st.h"
@@ -1516,6 +1517,75 @@ test_onionskin_answer(void *arg)
   tor_free(or_circ);
 }
 
+/* Test the different cases in origin_circuit_init(). */
+static void
+test_origin_circuit_init(void *arg)
+{
+  (void)arg;
+  origin_circuit_t *origin_circ = NULL;
+
+  /* Init with 0 purpose and 0 flags */
+  origin_circ = origin_circuit_init(0, 0);
+  tt_int_op(origin_circ->base_.purpose, OP_EQ, 0);
+  tt_int_op(origin_circ->base_.state, OP_EQ, CIRCUIT_STATE_CHAN_WAIT);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+  /* The circuits are automatically freed by the circuitlist. */
+
+  /* Init with a purpose */
+  origin_circ = origin_circuit_init(CIRCUIT_PURPOSE_C_GENERAL, 0);
+  tt_int_op(origin_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
+
+  /* Init with each flag */
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_IS_INTERNAL);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_IS_IPV6_SELFTEST);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_NEED_CAPACITY);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_NEED_UPTIME);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_ONEHOP_TUNNEL);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 1);
+
+ done:
+  /* The circuits are automatically freed by the circuitlist. */
+  ;
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -1549,6 +1619,8 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend, TT_FORK),
 
   TEST(onionskin_answer, TT_FORK, NULL, NULL),
+
+  TEST(origin_circuit_init, TT_FORK, NULL, NULL),
 
   END_OF_TESTCASES
 };
