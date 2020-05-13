@@ -117,7 +117,7 @@ problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_cli
 problem dependency-violation /src/core/or/circuitpadding_machines.c 1
 problem function-size /src/core/or/circuitstats.c:circuit_build_times_parse_state() 123
 problem dependency-violation /src/core/or/circuitstats.c 11
-problem file-size /src/core/or/circuituse.c 3200
+problem file-size /src/core/or/circuituse.c 3250
 problem function-size /src/core/or/circuituse.c:circuit_is_acceptable() 128
 problem function-size /src/core/or/circuituse.c:circuit_expire_building() 389
 problem function-size /src/core/or/circuituse.c:circuit_log_ancient_one_hop_circuits() 126
