@@ -26,13 +26,11 @@ Changes in version 0.4.3.5 - 2020-05-15
       future. Previously, only RSA keys could be banned in approved-
       routers. Resolves ticket 22029. Patch by Neel Chauhan.
 
-  o Major features (onion service, controller):
+  o Major features (onion services):
     - New control port commands to manage client-side onion service
       authorization credentials. The ONION_CLIENT_AUTH_ADD command adds
       a credential, ONION_CLIENT_AUTH_REMOVE deletes a credential, and
       ONION_CLIENT_AUTH_VIEW lists the credentials. Closes ticket 30381.
-
-  o Major features (onion service, SOCKS5):
     - Introduce a new SocksPort flag, ExtendedErrors, to support more
       detailed error codes in information for applications that support
       them. Closes ticket 30382; implements proposal 304.
@@ -99,10 +97,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       now clients notice failing introduction circuits properly. Fixes
       bug 32020; bugfix on 0.3.2.1-alpha.
 
-  o Minor feature (configure, build system):
-    - Output a list of enabled/disabled features at the end of the
-      configure process in a pleasing way. Closes ticket 31373.
-
   o Minor feature (heartbeat, onion service):
     - Add the DoS INTRODUCE2 defenses counter to the heartbeat DoS
       message. Closes ticket 31371.
@@ -133,6 +127,10 @@ Changes in version 0.4.3.5 - 2020-05-15
       special type, which prevented us from generating good warnings.
       Implements ticket 32404.
 
+  o Minor features (configure, build system):
+    - Output a list of enabled/disabled features at the end of the
+      configure process in a pleasing way. Closes ticket 31373.
+
   o Minor features (continuous integration):
     - Run Doxygen Makefile target on Travis, so we can learn about
       regressions in our internal documentation. Closes ticket 32455.
@@ -155,12 +153,10 @@ Changes in version 0.4.3.5 - 2020-05-15
       function returns an error. Patch by Tobias Stoeckmann. Fixes
       ticket 31147.
 
-  o Minor features (developer tooling):
+  o Minor features (developer tools):
     - Remove the 0.2.9.x series branches from git scripts (git-merge-
       forward.sh, git-pull-all.sh, git-push-all.sh, git-setup-dirs.sh).
       Closes ticket 32772.
-
-  o Minor features (developer tools):
     - Add a check_cocci_parse.sh script that checks that new code is
       parseable by Coccinelle. Add an exceptions file for unparseable
       files, and run the script from travis CI. Closes ticket 31919.
@@ -236,8 +232,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       ORPort, DirPort, DirCache, BridgeRelay, ExtORPort, or
       ServerTransport* options, rather than ignoring the values of these
       options. Closes part of ticket 32213.
-
-  o Minor features (relay):
     - When the relay module is disabled, change the default config so
       that DirCache is 0, and ClientOnly is 1. Closes ticket 32410.
 
@@ -258,8 +252,6 @@ Changes in version 0.4.3.5 - 2020-05-15
     - The test_parseconf.sh script now supports result variants for any
       combination of the optional libraries lzma, nss, and zstd. Closes
       ticket 32397.
-
-  o Minor features (tests, Android):
     - When running the unit tests on Android, create temporary files in
       a subdirectory of /data/local/tmp. Closes ticket 32172. Based on a
       patch from Hans-Christoph Steiner.
@@ -295,8 +287,6 @@ Changes in version 0.4.3.5 - 2020-05-15
     - Make control_event_conf_changed() take in a config_line_t instead
       of a smartlist of alternating key/value entries. Fixes bug 31531;
       bugfix on 0.2.3.3-alpha. Patch by Neel Chauhan.
-
-  o Minor bugfixes (configuration):
     - Check for multiplication overflow when parsing memory units inside
       configuration. Fixes bug 30920; bugfix on 0.0.9rc1.
     - When dumping the configuration, stop adding a trailing space after
@@ -356,12 +346,6 @@ Changes in version 0.4.3.5 - 2020-05-15
     - Forward all unrecognised arguments in git-push-all.sh to git push.
       Closes ticket 32216.
 
-  o Minor bugfixes (hidden service v3):
-    - Do not rely on a "circuit established" flag for intro circuits but
-      instead always query the HS circuit map. This is to avoid sync
-      issue with that flag and the map. Fixes bug 32094; bugfix
-      on 0.3.2.1-alpha.
-
   o Minor bugfixes (key portability):
     - When reading PEM-encoded key data, tolerate CRLF line-endings even
       if we are not running on Windows. Previously, non-Windows hosts
@@ -393,7 +377,7 @@ Changes in version 0.4.3.5 - 2020-05-15
       failure about mismatched magic numbers in configuration objects.
       Fixes bug 32771; bugfix on 0.4.2.1-alpha.
 
-  o Minor bugfixes (onion service v2):
+  o Minor bugfixes (onion services v2):
     - Move a series of v2 onion service warnings to protocol-warning
       level because they can all be triggered remotely by a malformed
       request. Fixes bug 32706; bugfix on 0.1.1.14-alpha.
@@ -403,13 +387,11 @@ Changes in version 0.4.3.5 - 2020-05-15
       timeout values. Fixes bug 25568; bugfix on 0.2.7.3-rc. Patch by
       Neel Chauhan.
 
-  o Minor bugfixes (onion service v3, client):
+  o Minor bugfixes (onion services v3):
     - Remove a BUG() warning that would cause a stack trace if an onion
       service descriptor was freed while we were waiting for a
       rendezvous circuit to complete. Fixes bug 28992; bugfix
       on 0.3.2.1-alpha.
-
-  o Minor bugfixes (onion services v3):
     - Relax severity of a log message that can appear naturally when
       decoding onion service descriptors as a relay. Also add some
       diagnostics to debug any future bugs in that area. Fixes bug
@@ -418,8 +400,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
       bugfix on 0.3.3.1-alpha. This issue is also tracked
       as TROVE-2020-003.
-
-  o Minor bugfixes (onion services v3, client):
     - Properly handle the client rendezvous circuit timeout. Previously
       Tor would sometimes timeout a rendezvous circuit awaiting the
       introduction ACK, and find itself unable to re-establish all
@@ -427,6 +407,12 @@ Changes in version 0.4.3.5 - 2020-05-15
       bug 32021; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (onion services):
+    - Do not rely on a "circuit established" flag for intro circuits but
+      instead always query the HS circuit map. This is to avoid sync
+      issue with that flag and the map. Fixes bug 32094; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services, all):
     - In cancel_descriptor_fetches(), use
       connection_list_by_type_purpose() instead of
       connection_list_by_type_state(). Fixes bug 32639; bugfix on
@@ -446,13 +432,11 @@ Changes in version 0.4.3.5 - 2020-05-15
     - Fix update_versions.py for out-of-tree builds. Fixes bug 32371;
       bugfix on 0.4.0.1-alpha.
 
-  o Minor bugfixes (test):
+  o Minor bugfixes (testing):
     - Use the same code to find the tor binary in all of our test
       scripts. This change makes sure we are always using the coverage
       binary when coverage is enabled. Fixes bug 32368; bugfix
       on 0.2.7.3-rc.
-
-  o Minor bugfixes (testing):
     - Stop ignoring "tor --dump-config" errors in test_parseconf.sh.
       Fixes bug 32468; bugfix on 0.4.2.1-alpha.
     - When TOR_DISABLE_PRACTRACKER is set, do not apply it to the
@@ -461,8 +445,6 @@ Changes in version 0.4.3.5 - 2020-05-15
     - When TOR_DISABLE_PRACTRACKER is set, log a notice to stderr when
       skipping practracker checks. Fixes bug 32705; bugfix
       on 0.4.2.1-alpha.
-
-  o Minor bugfixes (tests):
     - Our option-validation tests no longer depend on specially
       configured non-default, non-passing sets of options. Previously,
       the tests had been written to assume that options would _not_ be
@@ -632,7 +614,7 @@ Changes in version 0.4.3.5 - 2020-05-15
       SEE ALSO, and BUGS sections. Closes ticket 32176. Based on work by
       Swati Thacker as part of Google Season of Docs.
 
-  o Testing (CI):
+  o Testing (Appveyor CI):
     - In our Appveyor Windows CI, copy required DLLs to test and app
       directories, before running tor's tests. This ensures that tor.exe
       and test*.exe use the correct version of each DLL. This fix is not
@@ -646,10 +628,8 @@ Changes in version 0.4.3.5 - 2020-05-15
     - Add unit tests for circuitmux and EWMA subsystems. Closes
       ticket 32196.
 
-  o Testing (continuous integration):
-    - Use zstd in our Travis Linux builds. Closes ticket 32242.
-
   o Testing (Travis CI):
+    - Use zstd in our Travis Linux builds. Closes ticket 32242.
     - Remove a redundant distcheck job. Closes ticket 33194.
     - Sort the Travis jobs in order of speed: putting the slowest jobs
       first takes full advantage of Travis job concurrency. Closes
