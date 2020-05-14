@@ -1177,6 +1177,8 @@ mock_channel_get_canonical_remote_descr(channel_t *chan)
   return "mock_channel_get_canonical_remote_descr()";
 }
 
+/* Should mock_circuit_deliver_create_cell() expect a direct connection? */
+static bool mock_circuit_deliver_create_cell_expect_direct = false;
 static int mock_circuit_deliver_create_cell_calls = 0;
 static int mock_circuit_deliver_create_cell_result = 0;
 static int
@@ -1189,10 +1191,13 @@ mock_circuit_deliver_create_cell(circuit_t *circ,
   /* circuit_deliver_create_cell() requires non-NULL arguments,
    * but we only check circ and circ->n_chan here. */
   tt_ptr_op(circ, OP_NE, NULL);
-  tt_ptr_op(circ->n_chan, OP_NE, NULL);
+  /* We expect n_chan for relayed cells. But should we also expect it for
+   * direct connections? */
+  if (!mock_circuit_deliver_create_cell_expect_direct)
+    tt_ptr_op(circ->n_chan, OP_NE, NULL);
 
   /* We should only ever get relayed cells from extends */
-  tt_int_op(relayed, OP_EQ, 1);
+  tt_int_op(relayed, OP_EQ, !mock_circuit_deliver_create_cell_expect_direct);
 
   mock_circuit_deliver_create_cell_calls++;
   return mock_circuit_deliver_create_cell_result;
@@ -1353,6 +1358,7 @@ test_circuit_extend(void *arg)
 
   /* Mock circuit_deliver_create_cell(), so it doesn't crash */
   mock_circuit_deliver_create_cell_calls = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
   MOCK(circuit_deliver_create_cell, mock_circuit_deliver_create_cell);
 
   /* Test circuit established, re-using channel, successful delivery */
@@ -1586,6 +1592,180 @@ test_origin_circuit_init(void *arg)
   ;
 }
 
+/* Test the different cases in circuit_send_next_onion_skin(). */
+static void
+test_circuit_send_next_onion_skin(void *arg)
+{
+  (void)arg;
+  origin_circuit_t *origin_circ = NULL;
+  struct timeval circ_start_time;
+  memset(&circ_start_time, 0, sizeof(circ_start_time));
+
+  extend_info_t fakehop;
+  memset(&fakehop, 0, sizeof(fakehop));
+  extend_info_t *single_fakehop = &fakehop;
+  extend_info_t *multi_fakehop[DEFAULT_ROUTE_LEN] = {&fakehop,
+                                                     &fakehop,
+                                                     &fakehop};
+
+  extend_info_t ipv6_hop;
+  memset(&ipv6_hop, 0, sizeof(ipv6_hop));
+  tor_addr_make_null(&ipv6_hop.addr, AF_INET6);
+  extend_info_t *multi_ipv6_hop[DEFAULT_ROUTE_LEN] = {&ipv6_hop,
+                                                      &ipv6_hop,
+                                                      &ipv6_hop};
+
+  extend_info_t ipv4_hop;
+  memset(&ipv4_hop, 0, sizeof(ipv4_hop));
+  tor_addr_make_null(&ipv4_hop.addr, AF_INET);
+  extend_info_t *multi_ipv4_hop[DEFAULT_ROUTE_LEN] = {&ipv4_hop,
+                                                      &ipv4_hop,
+                                                      &ipv4_hop};
+
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  MOCK(circuit_deliver_create_cell, mock_circuit_deliver_create_cell);
+  server = 0;
+  MOCK(server_mode, mock_server_mode);
+
+  /* Try a direct connection, and succeed on a client */
+  server = 0;
+  origin_circ = new_test_origin_circuit(false,
+                                        circ_start_time,
+                                        1,
+                                        &single_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  /* Skip some of the multi-hop checks */
+  origin_circ->build_state->onehop_tunnel = 1;
+  /* This is a direct connection */
+  mock_circuit_deliver_create_cell_expect_direct = true;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ, 0);
+  /* The circuits are automatically freed by the circuitlist. */
+
+  /* Try a direct connection, and succeed on a server */
+  server = 1;
+  origin_circ = new_test_origin_circuit(false,
+                                        circ_start_time,
+                                        1,
+                                        &single_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->build_state->onehop_tunnel = 1;
+  mock_circuit_deliver_create_cell_expect_direct = true;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ, 0);
+
+  /* Start capturing bugs */
+  setup_full_capture_of_logs(LOG_WARN);
+  tor_capture_bugs_(1);
+
+  /* Try an extend, but fail the client valid address family check */
+  server = 0;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_fakehop),
+                                        multi_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  /* Fix the state */
+  origin_circ->base_.state = 0;
+  /* This is an indirect connection */
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  /* Fail because the address family is invalid */
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("Client trying to extend to a non-IPv4 address.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, but fail the server valid address check */
+  server = 1;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_fakehop),
+                                        multi_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("Server trying to extend to an invalid address family.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, but fail in the client code, with an IPv6 address */
+  server = 0;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv6_hop),
+                                        multi_ipv6_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("Client trying to extend to a non-IPv4 address.\n");
+  mock_clean_saved_logs();
+
+  /* Stop capturing bugs, but keep capturing logs */
+  tor_end_capture_bugs_();
+
+  /* Try an extend, pass the client IPv4 check, but fail later */
+  server = 0;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv4_hop),
+                                        multi_ipv4_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  /* Fail because the circuit data is invalid */
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("onion_skin_create failed.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, pass the server IPv4 check, but fail later */
+  server = 1;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv4_hop),
+                                        multi_ipv4_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("onion_skin_create failed.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, pass the server IPv6 check, but fail later */
+  server = 1;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv6_hop),
+                                        multi_ipv6_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("onion_skin_create failed.\n");
+  mock_clean_saved_logs();
+
+  /* Things we're not testing right now:
+   * - the addresses in the extend cell inside
+   *   circuit_send_intermediate_onion_skin() matches the address in the
+   *   supplied extend_info.
+   * - valid circuit data.
+   * - actually extending the circuit to each hop. */
+
+ done:
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  teardown_capture_of_logs();
+
+  UNMOCK(circuit_deliver_create_cell);
+  UNMOCK(server_mode);
+  server = 0;
+
+  /* The circuits are automatically freed by the circuitlist. */
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -1621,6 +1801,8 @@ struct testcase_t circuitbuild_tests[] = {
   TEST(onionskin_answer, TT_FORK, NULL, NULL),
 
   TEST(origin_circuit_init, TT_FORK, NULL, NULL),
+
+  TEST_CIRCUIT(send_next_onion_skin, TT_FORK),
 
   END_OF_TESTCASES
 };

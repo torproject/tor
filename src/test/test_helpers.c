@@ -40,6 +40,7 @@
 #include "core/or/cell_st.h"
 #include "core/or/connection_st.h"
 #include "core/or/cpath_build_state_st.h"
+#include "core/or/crypt_path_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "core/or/or_connection_st.h"
 
@@ -471,9 +472,11 @@ new_test_origin_circuit(bool has_opened,
   if (has_opened) {
     origin_circ->has_opened = 1;
     TO_CIRCUIT(origin_circ)->state = CIRCUIT_STATE_OPEN;
+    origin_circ->cpath->state = CPATH_STATE_OPEN;
   } else {
     TO_CIRCUIT(origin_circ)->timestamp_began = circ_start_time;
     TO_CIRCUIT(origin_circ)->timestamp_created = circ_start_time;
+    origin_circ->cpath->state = CPATH_STATE_CLOSED;
   }
 
   return origin_circ;
