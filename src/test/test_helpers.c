@@ -16,28 +16,34 @@
 #include "core/or/or.h"
 
 #include "lib/buf/buffers.h"
-#include "app/config/config.h"
 #include "lib/confmgt/confmgt.h"
-#include "app/main/subsysmgr.h"
-#include "core/mainloop/connection.h"
-#include "core/or/connection_or.h"
 #include "lib/crypt_ops/crypto_rand.h"
-#include "core/mainloop/mainloop.h"
-#include "feature/nodelist/nodelist.h"
-#include "core/or/relay.h"
-#include "feature/nodelist/routerlist.h"
 #include "lib/dispatch/dispatch.h"
 #include "lib/dispatch/dispatch_naming.h"
-#include "lib/pubsub/pubsub_build.h"
-#include "lib/pubsub/pubsub_connect.h"
 #include "lib/encoding/confline.h"
 #include "lib/net/resolve.h"
+#include "lib/pubsub/pubsub_build.h"
+#include "lib/pubsub/pubsub_connect.h"
+
+#include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
+#include "core/or/connection_or.h"
+#include "core/or/crypt_path.h"
+#include "core/or/relay.h"
+
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerlist.h"
+
+#include "app/config/config.h"
+#include "app/main/subsysmgr.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/connection_st.h"
-#include "core/or/or_connection_st.h"
-#include "feature/nodelist/node_st.h"
+#include "core/or/cpath_build_state_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/or_connection_st.h"
+
+#include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerlist_st.h"
 
 #include "test/test.h"
@@ -441,3 +447,34 @@ helper_cleanup_pubsub(const struct testcase_t *testcase, void *dispatcher_)
 const struct testcase_setup_t helper_pubsub_setup = {
   helper_setup_pubsub, helper_cleanup_pubsub
 };
+
+origin_circuit_t *
+new_test_origin_circuit(bool has_opened,
+                        struct timeval circ_start_time,
+                        int path_len,
+                        extend_info_t **ei_list)
+{
+  origin_circuit_t *origin_circ = origin_circuit_new();
+
+  TO_CIRCUIT(origin_circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+
+  origin_circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+  origin_circ->build_state->desired_path_len = path_len;
+
+  if (ei_list) {
+    for (int i = 0; i < path_len; i++) {
+      extend_info_t *ei = ei_list[i];
+      cpath_append_hop(&origin_circ->cpath, ei);
+    }
+  }
+
+  if (has_opened) {
+    origin_circ->has_opened = 1;
+    TO_CIRCUIT(origin_circ)->state = CIRCUIT_STATE_OPEN;
+  } else {
+    TO_CIRCUIT(origin_circ)->timestamp_began = circ_start_time;
+    TO_CIRCUIT(origin_circ)->timestamp_created = circ_start_time;
+  }
+
+  return origin_circ;
+}

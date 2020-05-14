@@ -16,18 +16,10 @@
 #include "core/or/circuitstats.h"
 #include "core/or/circuituse.h"
 #include "core/or/channel.h"
-#include "core/or/crypt_path.h"
 
-#include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
-
-static origin_circuit_t *new_test_origin_circuit(
-                                             bool has_opened,
-                                             struct timeval circ_start_time,
-                                             int path_len,
-                                             extend_info_t **ei_list);
 
 static origin_circuit_t *add_opened_threehop(void);
 static origin_circuit_t *build_unopened_fourhop(struct timeval);
@@ -46,37 +38,6 @@ mock_circuit_mark_for_close(circuit_t *circ, int reason, int line,
   (void) file;
   marked_for_close = 1;
   return;
-}
-
-static origin_circuit_t *
-new_test_origin_circuit(bool has_opened,
-                        struct timeval circ_start_time,
-                        int path_len,
-                        extend_info_t **ei_list)
-{
-  origin_circuit_t *origin_circ = origin_circuit_new();
-
-  TO_CIRCUIT(origin_circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
-
-  origin_circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
-  origin_circ->build_state->desired_path_len = path_len;
-
-  if (ei_list) {
-    for (int i = 0; i < path_len; i++) {
-      extend_info_t *ei = ei_list[i];
-      cpath_append_hop(&origin_circ->cpath, ei);
-    }
-  }
-
-  if (has_opened) {
-    origin_circ->has_opened = 1;
-    TO_CIRCUIT(origin_circ)->state = CIRCUIT_STATE_OPEN;
-  } else {
-    TO_CIRCUIT(origin_circ)->timestamp_began = circ_start_time;
-    TO_CIRCUIT(origin_circ)->timestamp_created = circ_start_time;
-  }
-
-  return origin_circ;
 }
 
 static origin_circuit_t *
