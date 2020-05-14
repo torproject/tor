@@ -1999,6 +1999,26 @@ cpath_build_state_to_crn_flags(const cpath_build_state_t *state)
   return flags;
 }
 
+/* Return the CRN_INITIATE_IPV6_EXTEND flag, based on <b>state</b> and
+ * <b>cur_len</b>.
+ *
+ * Only called for middle nodes (for now). Must not be called on single-hop
+ * circuits. */
+STATIC int
+cpath_build_state_to_crn_ipv6_extend_flag(const cpath_build_state_t *state,
+                                          int cur_len)
+{
+  IF_BUG_ONCE(state->desired_path_len < 2)
+    return 0;
+
+  /* The last node is the relay doing the self-test. So we want to extend over
+   * IPv6 from the second-last node. */
+  if (state->is_ipv6_selftest && cur_len == state->desired_path_len - 2)
+    return CRN_INITIATE_IPV6_EXTEND;
+  else
+    return 0;
+}
+
 /** Decide a suitable length for circ's cpath, and pick an exit
  * router (or use <b>exit</b> if provided). Store these in the
  * cpath.
@@ -2320,10 +2340,7 @@ choose_good_middle_server(uint8_t purpose,
   excluded = build_middle_exclude_list(purpose, state, head, cur_len);
 
   flags |= cpath_build_state_to_crn_flags(state);
-  /* Picking the second-last node. (The last node is the relay doing the
-   * self-test.) */
-  if (state->is_ipv6_selftest && cur_len == state->desired_path_len - 2)
-    flags |= CRN_INITIATE_IPV6_EXTEND;
+  flags |= cpath_build_state_to_crn_ipv6_extend_flag(state, cur_len);
 
   /** If a hidden service circuit wants a specific middle node, pin it. */
   if (middle_node_must_be_vanguard(options, purpose, cur_len)) {
