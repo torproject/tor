@@ -1982,6 +1982,23 @@ warn_if_last_router_excluded(origin_circuit_t *circ,
   return;
 }
 
+/* Return a set of generic CRN_* flags based on <b>state</b>.
+ *
+ * Called for every position in the circuit. */
+STATIC int
+cpath_build_state_to_crn_flags(const cpath_build_state_t *state)
+{
+  router_crn_flags_t flags = 0;
+  /* These flags apply to entry, middle, and exit nodes.
+   * If a flag only applies to a specific position, it should be checked in
+   * that function. */
+  if (state->need_uptime)
+    flags |= CRN_NEED_UPTIME;
+  if (state->need_capacity)
+    flags |= CRN_NEED_CAPACITY;
+  return flags;
+}
+
 /** Decide a suitable length for circ's cpath, and pick an exit
  * router (or use <b>exit</b> if provided). Store these in the
  * cpath.
@@ -2015,14 +2032,13 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
     exit_ei = extend_info_dup(exit_ei);
   } else { /* we have to decide one */
     router_crn_flags_t flags = CRN_NEED_DESC;
-    if (state->need_uptime)
-      flags |= CRN_NEED_UPTIME;
-    if (state->need_capacity)
-      flags |= CRN_NEED_CAPACITY;
-    if (is_hs_v3_rp_circuit)
-      flags |= CRN_RENDEZVOUS_V3;
+    flags |= cpath_build_state_to_crn_flags(state);
+    /* Some internal exits are one hop, for example directory connections.
+     * (Guards are always direct, middles are never direct.) */
     if (state->onehop_tunnel)
       flags |= CRN_DIRECT_CONN;
+    if (is_hs_v3_rp_circuit)
+      flags |= CRN_RENDEZVOUS_V3;
     const node_t *node =
       choose_good_exit_server(circ, flags, state->is_internal);
     if (!node) {
@@ -2303,10 +2319,7 @@ choose_good_middle_server(uint8_t purpose,
 
   excluded = build_middle_exclude_list(purpose, state, head, cur_len);
 
-  if (state->need_uptime)
-    flags |= CRN_NEED_UPTIME;
-  if (state->need_capacity)
-    flags |= CRN_NEED_CAPACITY;
+  flags |= cpath_build_state_to_crn_flags(state);
   /* Picking the second-last node. (The last node is the relay doing the
    * self-test.) */
   if (state->is_ipv6_selftest && cur_len == state->desired_path_len - 2)
@@ -2386,10 +2399,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
   }
 
   if (state) {
-    if (state->need_uptime)
-      flags |= CRN_NEED_UPTIME;
-    if (state->need_capacity)
-      flags |= CRN_NEED_CAPACITY;
+    flags |= cpath_build_state_to_crn_flags(state);
   }
 
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
