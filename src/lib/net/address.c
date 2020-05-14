@@ -40,6 +40,7 @@
 
 #include "lib/net/address.h"
 #include "lib/net/socket.h"
+#include "lib/cc/ctassert.h"
 #include "lib/container/smartlist.h"
 #include "lib/ctime/di_ops.h"
 #include "lib/log/log.h"
@@ -52,7 +53,7 @@
 #include "lib/string/printf.h"
 #include "lib/string/util_string.h"
 
-#include "siphash.h"
+#include "ext/siphash.h"
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -98,6 +99,7 @@
 #if AF_UNSPEC != 0
 #error We rely on AF_UNSPEC being 0. Let us know about your platform, please!
 #endif
+CTASSERT(AF_UNSPEC == 0);
 
 /** Convert the tor_addr_t in <b>a</b>, with port in <b>port</b>, into a
  * sockaddr object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
@@ -337,7 +339,7 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
       break;
     case AF_INET6:
       /* Shortest addr [ :: ] + \0 */
-      if (len < (3 + (decorate ? 2 : 0)))
+      if (len < (3u + (decorate ? 2 : 0)))
         return NULL;
 
       if (decorate)
@@ -1199,14 +1201,22 @@ tor_addr_parse(tor_addr_t *addr, const char *src)
   int result;
   struct in_addr in_tmp;
   struct in6_addr in6_tmp;
+  int brackets_detected = 0;
+
   tor_assert(addr && src);
-  if (src[0] == '[' && src[1])
+
+  size_t len = strlen(src);
+
+  if (len && src[0] == '[' && src[len - 1] == ']') {
+    brackets_detected = 1;
     src = tmp = tor_strndup(src+1, strlen(src)-2);
+  }
 
   if (tor_inet_pton(AF_INET6, src, &in6_tmp) > 0) {
     result = AF_INET6;
     tor_addr_from_in6(addr, &in6_tmp);
-  } else if (tor_inet_pton(AF_INET, src, &in_tmp) > 0) {
+  } else if (!brackets_detected &&
+             tor_inet_pton(AF_INET, src, &in_tmp) > 0) {
     result = AF_INET;
     tor_addr_from_in(addr, &in_tmp);
   } else {
@@ -2018,8 +2028,12 @@ string_is_valid_nonrfc_hostname(const char *string)
 
   smartlist_split_string(components,string,".",0,0);
 
-  if (BUG(smartlist_len(components) == 0))
-    return 0; // LCOV_EXCL_LINE should be impossible given the earlier checks.
+  if (BUG(smartlist_len(components) == 0)) {
+    // LCOV_EXCL_START should be impossible given the earlier checks.
+    smartlist_free(components);
+    return 0;
+    // LCOV_EXCL_STOP
+  }
 
   /* Allow a single terminating '.' used rarely to indicate domains
    * are FQDNs rather than relative. */

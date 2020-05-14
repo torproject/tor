@@ -1,3 +1,0 @@
-  o Minor bugfixes (memory management, testing):
-    - Stop leaking parts of the shared random state in the shared-random unit
-      tests. Fixes bug 29599; bugfix on 0.2.9.1-alpha.

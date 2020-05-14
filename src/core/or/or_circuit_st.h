@@ -33,11 +33,6 @@ struct or_circuit_t {
   cell_queue_t p_chan_cells;
   /** The channel that is previous in this circuit. */
   channel_t *p_chan;
-  /**
-   * Circuit mux associated with p_chan to which this circuit is attached;
-   * NULL if we have no p_chan.
-   */
-  circuitmux_t *p_mux;
   /** Linked list of Exit streams associated with this circuit. */
   edge_connection_t *n_streams;
   /** Linked list of Exit streams associated with this circuit that are
@@ -76,5 +71,5 @@ struct or_circuit_t {
   uint64_t total_cell_waiting_time;
 };
 
-#endif
+#endif /* !defined(OR_CIRCUIT_ST_H) */
 

@@ -1,4 +1,0 @@
-  o Minor bugfixes (configuration, proxies):
-    - Fix a bug that prevented us from supporting SOCKS5 proxies that want
-      authentication along with configued (but unused!)
-      ClientTransportPlugins. Fixes bug 29670; bugfix on 0.2.6.1-alpha.

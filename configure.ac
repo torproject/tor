@@ -4,9 +4,18 @@ dnl Copyright (c) 2007-2019, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.3.5.10-dev])
+AC_INIT([tor],[0.4.1.9-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
+
+# DO NOT EDIT THIS DEFINITION BY HAND UNLESS YOU KNOW WHAT YOU'RE DOING.
+#
+# The update_versions.py script updates this definition when the
+# version number changes.  Tor uses it to make sure that it
+# only shuts down for missing "required protocols" when those protocols
+# are listed as required by a consensus after this date.
+AC_DEFINE(APPROX_RELEASE_DATE, ["2020-03-18"], # for 0.4.1.9-dev
+          [Approximate date when this software was released. (Updated when the version changes.)])
 
 # "foreign" means we don't follow GNU package layout standards
 # "1.11" means we require automake version 1.11 or newer
@@ -519,15 +528,6 @@ if test "x$enable_rust" = "xyes"; then
     fi
   fi
 
-  dnl This is a workaround for #46797
-  dnl (a.k.a https://github.com/rust-lang/rust/issues/46797 ).  Once the
-  dnl upstream bug is fixed, we can remove this workaround.
-  case "$host_os" in
-      darwin*)
-        TOR_RUST_EXTRA_LIBS="-lresolv"
-	;;
-  esac
-
   dnl For now both MSVC and MinGW rust libraries will output static libs with
   dnl the MSVC naming convention.
   if test "$bwin32" = "true"; then
@@ -571,8 +571,6 @@ if test "x$enable_rust" = "xyes"; then
   fi
   AC_MSG_RESULT([$RUSTC_VERSION])
 fi
-
-AC_SUBST(TOR_RUST_EXTRA_LIBS)
 
 AC_SEARCH_LIBS(socket, [socket network])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
@@ -623,8 +621,10 @@ AC_CHECK_FUNCS(
 	llround \
 	localtime_r \
 	lround \
+	madvise \
 	memmem \
 	memset_s \
+	minherit \
 	mmap \
 	pipe \
 	pipe2 \
@@ -828,6 +828,8 @@ fi
 dnl Now check for particular libevent functions.
 AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file \
                 evutil_secure_rng_add_bytes \
+                evdns_base_get_nameserver_addr \
+
 ])
 
 LIBS="$save_LIBS"
@@ -963,20 +965,23 @@ AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
 ])
 
+dnl OpenSSL functions which we might not have.  In theory, we could just
+dnl check the openssl version number, but in practice that gets pretty
+dnl confusing with LibreSSL, OpenSSL, and various distributions' patches
+dnl to them.
 AC_CHECK_FUNCS([ \
 		ERR_load_KDF_strings \
-		SSL_SESSION_get_master_key \
-		SSL_get_server_random \
-                SSL_get_client_ciphers \
-                SSL_get_client_random \
-                SSL_CTX_set1_groups_list \
+		EVP_PBE_scrypt \
+		EVP_sha3_256 \
 		SSL_CIPHER_find \
-                SSL_CTX_set_security_level \
-		TLS_method
+		SSL_CTX_set1_groups_list \
+		SSL_CTX_set_security_level \
+		SSL_SESSION_get_master_key \
+		SSL_get_client_ciphers \
+		SSL_get_client_random \
+		SSL_get_server_random \
+		TLS_method \
 	       ])
-
-dnl Check if OpenSSL has scrypt implementation.
-AC_CHECK_FUNCS([ EVP_PBE_scrypt ])
 
 dnl Check if OpenSSL structures are opaque
 AC_CHECK_MEMBERS([SSL.state], , ,
@@ -988,6 +993,15 @@ AC_CHECK_SIZEOF(SHA_CTX, , [AC_INCLUDES_DEFAULT()
 ])
 
 fi # enable_nss
+
+dnl We will someday make KECCAK_TINY optional, but for now we still need
+dnl it for SHAKE, since OpenSSL's SHAKE can't be squeezed more than
+dnl once.  See comment in the definition of crypto_xof_t.
+
+dnl AM_CONDITIONAL(BUILD_KECCAK_TINY,
+dnl   test "x$ac_cv_func_EVP_sha3_256" != "xyes")
+
+AM_CONDITIONAL(BUILD_KECCAK_TINY, true)
 
 dnl ======================================================================
 dnl Can we use KIST?
@@ -1210,6 +1224,11 @@ if test "$fragile_hardening" = "yes"; then
    TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], also_link, CFLAGS_UBSAN="-fsanitize=undefined", true)
     if test "$tor_cv_cflags__fsanitize_address" = "yes" && test "$tor_can_link__fsanitize_address" != "yes"; then
       AC_MSG_ERROR([The compiler supports -fsanitize=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libasan.*, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fno-sanitize=float-divide-by-zero], also_link, CFLAGS_UBSAN="-fno-sanitize=float-divide-by-zero", true)
+    if test "$tor_cv_cflags__fno_sanitize_float_divide_by_zero" = "yes" && test "$tor_can_link__fno_sanitize_float_divide_by_zero" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fno-sanitize=float-divide-by-zero, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libasan.*, and with Clang you need libclang_rt.ubsan*])
     fi
 
 TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
@@ -1466,6 +1485,7 @@ AC_CHECK_HEADERS([errno.h \
 		  inttypes.h \
 		  limits.h \
 		  linux/types.h \
+		  mach/vm_inherit.h \
 		  machine/limits.h \
 		  malloc.h \
 		  malloc/malloc.h \
@@ -1601,6 +1621,7 @@ AC_CHECK_MEMBERS([struct timeval.tv_sec], , ,
 AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
@@ -2452,16 +2473,13 @@ AC_CONFIG_FILES([
 	Doxyfile
 	Makefile
 	config.rust
-	contrib/dist/suse/tor.sh
 	contrib/operator-tools/tor.logrotate
-	contrib/dist/tor.sh
 	contrib/dist/torctl
 	contrib/dist/tor.service
 	src/config/torrc.sample
 	src/config/torrc.minimal
 	src/rust/.cargo/config
 	scripts/maint/checkOptionDocs.pl
-	scripts/maint/updateVersions.pl
         warning_flags
 ])
 

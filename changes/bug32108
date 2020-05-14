@@ -1,0 +1,8 @@
+  o Major bugfixes (relay):
+    - Relays now respect their AccountingMax bandwidth again. When relays
+      entered "soft" hibernation (which typically starts when we've hit
+      90% of our AccountingMax), we had stopped checking whether we should
+      enter hard hibernation. Soft hibernation refuses new connections and
+      new circuits, but the existing circuits can continue, meaning that
+      relays could have exceeded their configured AccountingMax. Fixes
+      bug 32108; bugfix on 0.4.0.1-alpha.

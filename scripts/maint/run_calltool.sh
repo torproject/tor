@@ -15,10 +15,10 @@ SUBITEMS="fn_graph fn_invgraph fn_scc fn_scc_weaklinks module_graph module_invgr
 
 for calculation in $SUBITEMS; do
   echo "======== $calculation"
-  python -m calltool $calculation > callgraph/$calculation
+  python -m calltool "$calculation" > callgraph/"$calculation"
 done
 
-echo <<EOF > callgraph/README
+cat <<EOF > callgraph/README
 This directory holds output from calltool, as run on Tor.  For more
 information about each of these files, see the NOTES and README files in
 the calltool distribution.

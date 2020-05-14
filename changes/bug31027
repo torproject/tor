@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Remove some dead code from circpad_machine_remove_token() to fix some
+      Coverity warnings (CID 1447298). Fixes bug 31027; bugfix on 0.4.1.1-alpha.

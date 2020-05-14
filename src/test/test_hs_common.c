@@ -275,7 +275,7 @@ test_start_time_of_next_time_period(void *arg)
 static void
 cleanup_nodelist(void)
 {
-  smartlist_t *nodelist = nodelist_get_list();
+  const smartlist_t *nodelist = nodelist_get_list();
   SMARTLIST_FOREACH_BEGIN(nodelist, node_t *, node) {
     tor_free(node->md);
     node->md = NULL;
@@ -603,6 +603,10 @@ test_desc_reupload_logic(void *arg)
   SMARTLIST_FOREACH(ns->routerstatus_list,
                     routerstatus_t *, rs, routerstatus_free(rs));
   smartlist_clear(ns->routerstatus_list);
+  if (service) {
+    remove_service(get_hs_service_map(), service);
+    hs_service_free(service);
+  }
   networkstatus_vote_free(ns);
   cleanup_nodelist();
   hs_free_all();
@@ -630,7 +634,7 @@ test_disaster_srv(void *arg)
   get_disaster_srv(1, srv_one);
   get_disaster_srv(2, srv_two);
 
-  /* Check that the cached ones where updated */
+  /* Check that the cached ones were updated */
   tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_one, DIGEST256_LEN);
   tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_two, DIGEST256_LEN);
 

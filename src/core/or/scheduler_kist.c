@@ -4,7 +4,7 @@
 #define SCHEDULER_KIST_PRIVATE
 
 #include "core/or/or.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "feature/nodelist/networkstatus.h"
@@ -724,7 +724,7 @@ kist_scheduler_run(void)
     SMARTLIST_FOREACH_BEGIN(to_readd, channel_t *, readd_chan) {
       scheduler_set_channel_state(readd_chan, SCHED_CHAN_PENDING);
       if (!smartlist_contains(cp, readd_chan)) {
-        if (!SCHED_BUG(chan->sched_heap_idx != -1, chan)) {
+        if (!SCHED_BUG(readd_chan->sched_heap_idx != -1, readd_chan)) {
           /* XXXX Note that the check above is in theory redundant with
            * the smartlist_contains check.  But let's make sure we're
            * not messing anything up, and leave them both for now. */

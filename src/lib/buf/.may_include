@@ -1,0 +1,10 @@
+orconfig.h
+
+lib/buf/*.h
+lib/cc/*.h
+lib/ctime/*.h
+lib/malloc/*.h
+lib/testsupport/*.h
+lib/log/*.h
+lib/string/*.h
+lib/time/*.h

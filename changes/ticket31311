@@ -1,0 +1,3 @@
+  o Minor bugfixes (distribution):
+    - Do not ship any temporary files found in the scripts/maint/practracker
+      directory. Fixes bug 31311; bugfix on 0.4.1.1-alpha.

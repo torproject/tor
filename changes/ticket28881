@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    -  When parsing a port configuration, make it more
-       obvious to static analyzer tools that we will always initialize the
-       address. Closes ticket 28881.

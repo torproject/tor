@@ -16,7 +16,8 @@
 
 #include "lib/arch/bytes.h"
 #include "lib/cc/torint.h"
-#include "lib/container/smartlist.h"
+#include "lib/smartlist_core/smartlist_core.h"
+#include "lib/smartlist_core/smartlist_foreach.h"
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"
 #include "lib/malloc/malloc.h"

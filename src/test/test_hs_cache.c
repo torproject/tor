@@ -238,14 +238,13 @@ helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
   {
     char hsdir_cache_key[ED25519_BASE64_LEN+1];
 
-    retval = ed25519_public_to_base64(hsdir_cache_key,
-                                      blinded_key);
-    tt_int_op(retval, OP_EQ, 0);
+    ed25519_public_to_base64(hsdir_cache_key, blinded_key);
     tor_asprintf(&hsdir_query_str, GET("/tor/hs/3/%s"), hsdir_cache_key);
   }
 
   /* Simulate an HTTP GET request to the HSDir */
   conn = dir_connection_new(AF_INET);
+  tt_assert(conn);
   tor_addr_from_ipv4h(&conn->base_.addr, 0x7f000001);
   TO_CONN(conn)->linked = 1;/* Pretend the conn is encrypted :) */
   retval = directory_handle_command_get(conn, hsdir_query_str,
@@ -487,7 +486,7 @@ test_client_cache(void *arg)
                                        NULL, &published_desc_str);
     tt_int_op(retval, OP_EQ, 0);
     memcpy(wanted_subcredential, published_desc->subcredential, DIGEST256_LEN);
-    tt_assert(!tor_mem_is_zero((char*)wanted_subcredential, DIGEST256_LEN));
+    tt_assert(!fast_mem_is_zero((char*)wanted_subcredential, DIGEST256_LEN));
   }
 
   /* Test handle_response_fetch_hsdesc_v3() */

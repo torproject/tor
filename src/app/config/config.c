@@ -64,6 +64,7 @@
 #include "app/config/confparse.h"
 #include "app/config/statefile.h"
 #include "app/main/main.h"
+#include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
@@ -85,6 +86,8 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control.h"
+#include "feature/control/control_auth.h"
+#include "feature/control/control_events.h"
 #include "feature/dirauth/bwauth.h"
 #include "feature/dirauth/guardfraction.h"
 #include "feature/dircache/consdiffmgr.h"
@@ -112,9 +115,9 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/encoding/confline.h"
-#include "lib/log/git_revision.h"
 #include "lib/net/resolve.h"
 #include "lib/sandbox/sandbox.h"
+#include "lib/version/torversion.h"
 
 #ifdef ENABLE_NSS
 #include "lib/crypt_ops/crypto_nss_mgt.h"
@@ -144,7 +147,7 @@
 #include "lib/process/pidfile.h"
 #include "lib/process/restrict.h"
 #include "lib/process/setuid.h"
-#include "lib/process/subprocess.h"
+#include "lib/process/process.h"
 #include "lib/net/gethostname.h"
 #include "lib/thread/numcpus.h"
 
@@ -153,6 +156,7 @@
 #include "lib/evloop/procmon.h"
 
 #include "feature/dirauth/dirvote.h"
+#include "feature/dirauth/dirauth_periodic.h"
 #include "feature/dirauth/recommend_pkg.h"
 #include "feature/dirauth/authmode.h"
 
@@ -342,6 +346,7 @@ static config_var_t option_vars_[] = {
   V(ClientOnly,                  BOOL,     "0"),
   V(ClientPreferIPv6ORPort,      AUTOBOOL, "auto"),
   V(ClientPreferIPv6DirPort,     AUTOBOOL, "auto"),
+  V(ClientAutoIPv6ORPort,        BOOL,     "0"),
   V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "0"),
@@ -391,6 +396,10 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort),
   OBSOLETE("DNSListenAddress"),
+  V(DormantClientTimeout,         INTERVAL, "24 hours"),
+  V(DormantTimeoutDisabledByIdleStreams, BOOL,     "1"),
+  V(DormantOnFirstStartup,       BOOL,      "0"),
+  V(DormantCanceledByStartup,    BOOL,      "0"),
   /* DoS circuit creation options. */
   V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
   V(DoSCircuitCreationMinConnections,      UINT, "0"),
@@ -416,6 +425,10 @@ static config_var_t option_vars_[] = {
   V(ExcludeExitNodes,            ROUTERSET, NULL),
   OBSOLETE("ExcludeSingleHopRelays"),
   V(ExitNodes,                   ROUTERSET, NULL),
+  /* Researchers need a way to tell their clients to use specific
+   * middles that they also control, to allow safe live-network
+   * experimentation with new padding machines. */
+  V(MiddleNodes,                 ROUTERSET, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPolicyRejectLocalInterfaces, BOOL, "0"),
@@ -584,6 +597,8 @@ static config_var_t option_vars_[] = {
   V(ReducedConnectionPadding,    BOOL,     "0"),
   V(ConnectionPadding,           AUTOBOOL, "auto"),
   V(RefuseUnknownExits,          AUTOBOOL, "auto"),
+  V(CircuitPadding,              BOOL,     "1"),
+  V(ReducedCircuitPadding,       BOOL,     "0"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
@@ -975,42 +990,6 @@ set_options(or_options_t *new_val, char **msg)
   return 0;
 }
 
-/** The version of this Tor process, as parsed. */
-static char *the_tor_version = NULL;
-/** A shorter version of this Tor process's version, for export in our router
- *  descriptor.  (Does not include the git version, if any.) */
-static char *the_short_tor_version = NULL;
-
-/** Return the current Tor version. */
-const char *
-get_version(void)
-{
-  if (the_tor_version == NULL) {
-    if (strlen(tor_git_revision)) {
-      tor_asprintf(&the_tor_version, "%s (git-%s)", get_short_version(),
-                   tor_git_revision);
-    } else {
-      the_tor_version = tor_strdup(get_short_version());
-    }
-  }
-  return the_tor_version;
-}
-
-/** Return the current Tor version, without any git tag. */
-const char *
-get_short_version(void)
-{
-
-  if (the_short_tor_version == NULL) {
-#ifdef TOR_BUILD_TAG
-    tor_asprintf(&the_short_tor_version, "%s (%s)", VERSION, TOR_BUILD_TAG);
-#else
-    the_short_tor_version = tor_strdup(VERSION);
-#endif
-  }
-  return the_short_tor_version;
-}
-
 /** Release additional memory allocated in options
  */
 STATIC void
@@ -1069,9 +1048,6 @@ config_free_all(void)
   tor_free(torrc_fname);
   tor_free(torrc_defaults_fname);
   tor_free(global_dirfrontpagecontents);
-
-  tor_free(the_short_tor_version);
-  tor_free(the_tor_version);
 
   cleanup_protocol_warning_severity_level();
 
@@ -1187,7 +1163,11 @@ init_protocol_warning_severity_level(void)
 static void
 cleanup_protocol_warning_severity_level(void)
 {
-   atomic_counter_destroy(&protocol_warning_severity_level);
+  /* Destroying a locked mutex is undefined behaviour. This mutex may be
+   * locked, because multiple threads can access it. But we need to destroy
+   * it, otherwise re-initialisation will trigger undefined behaviour.
+   * See #31735 for details. */
+  atomic_counter_destroy(&protocol_warning_severity_level);
 }
 
 /** List of default directory authorities */
@@ -1443,10 +1423,10 @@ options_act_reversible(const or_options_t *old_options, char **msg)
    * processes. */
   if (running_tor && options->RunAsDaemon) {
     if (! start_daemon_has_been_called())
-      crypto_prefork();
+      subsystems_prefork();
     /* No need to roll back, since you can't change the value. */
     if (start_daemon())
-      crypto_postfork();
+      subsystems_postfork();
   }
 
 #ifdef HAVE_SYSTEMD
@@ -1735,6 +1715,7 @@ options_need_geoip_info(const or_options_t *options, const char **reason_out)
   int routerset_usage =
     routerset_needs_geoip(options->EntryNodes) ||
     routerset_needs_geoip(options->ExitNodes) ||
+    routerset_needs_geoip(options->MiddleNodes) ||
     routerset_needs_geoip(options->ExcludeExitNodes) ||
     routerset_needs_geoip(options->ExcludeNodes) ||
     routerset_needs_geoip(options->HSLayer2Nodes) ||
@@ -2042,9 +2023,6 @@ options_act(const or_options_t *old_options)
     finish_daemon(options->DataDirectory);
   }
 
-  /* See whether we need to enable/disable our once-a-second timer. */
-  reschedule_per_second_timer();
-
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
   if (transition_affects_workers ||
@@ -2177,6 +2155,7 @@ options_act(const or_options_t *old_options)
                          options->HSLayer2Nodes) ||
         !routerset_equal(old_options->HSLayer3Nodes,
                          options->HSLayer3Nodes) ||
+        !routerset_equal(old_options->MiddleNodes, options->MiddleNodes) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
                "Changed to using entry guards or bridges, or changed "
@@ -3441,6 +3420,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (ContactInfo && !string_is_utf8(ContactInfo, strlen(ContactInfo)))
     REJECT("ContactInfo config option must be UTF-8.");
 
+  check_network_configuration(server_mode(options));
+
   /* Special case on first boot if no Log options are given. */
   if (!options->Logs && !options->RunAsDaemon && !from_setconf) {
     if (quiet_level == 0)
@@ -3574,7 +3555,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     tor_free(t);
     t = format_recommended_version_list(options->RecommendedServerVersions, 1);
     tor_free(t);
-#endif
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
 
     if (options->UseEntryGuards) {
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
@@ -3590,14 +3571,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
              "(Bridge/V3)AuthoritativeDir is set.");
+#ifdef HAVE_MODULE_DIRAUTH
     /* If we have a v3bandwidthsfile and it's broken, complain on startup */
     if (options->V3BandwidthsFile && !old_options) {
-      dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL);
+      dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
+                                       NULL);
     }
     /* same for guardfraction file */
     if (options->GuardfractionFile && !old_options) {
       dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
     }
+#endif /* defined(HAVE_MODULE_DIRAUTH) */
   }
 
   if (options->AuthoritativeDir && !options->DirPort_set)
@@ -3775,6 +3759,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Relays cannot set ReducedConnectionPadding. ");
   }
 
+  if (server_mode(options) && options->CircuitPadding == 0) {
+    REJECT("Relays cannot set CircuitPadding to 0. ");
+  }
+
+  if (server_mode(options) && options->ReducedCircuitPadding == 1) {
+    REJECT("Relays cannot set ReducedCircuitPadding. ");
+  }
+
   if (options->BridgeDistribution) {
     if (!options->BridgeRelay) {
       REJECT("You set BridgeDistribution, but you didn't set BridgeRelay!");
@@ -3897,6 +3889,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "default.");
   }
 
+  if (options->DormantClientTimeout < 10*60 && !options->TestingTorNetwork) {
+    REJECT("DormantClientTimeout is too low. It must be at least 10 minutes.");
+  }
+
   if (options->PathBiasNoticeRate > 1.0) {
     tor_asprintf(msg,
               "PathBiasNoticeRate is too high. "
@@ -3948,7 +3944,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HeartbeatPeriod &&
-      options->HeartbeatPeriod < MIN_HEARTBEAT_PERIOD) {
+      options->HeartbeatPeriod < MIN_HEARTBEAT_PERIOD &&
+      !options->TestingTorNetwork) {
     log_warn(LD_CONFIG, "HeartbeatPeriod option is too short; "
              "raising to %d seconds.", MIN_HEARTBEAT_PERIOD);
     options->HeartbeatPeriod = MIN_HEARTBEAT_PERIOD;
@@ -4219,6 +4216,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "supported: it can reveal bridge fingerprints to censors. "
              "You should also make sure you aren't listing this bridge's "
              "fingerprint in any other MyFamily.");
+  }
+  if (options->MyFamily_lines && !options->ContactInfo) {
+    log_warn(LD_CONFIG, "MyFamily is set but ContactInfo is not configured. "
+             "ContactInfo should always be set when MyFamily option is too.");
   }
   if (normalize_nickname_list(&options->MyFamily,
                               options->MyFamily_lines, "MyFamily", msg))
@@ -4608,7 +4609,7 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
 #else
 /* On a 32-bit platform, we can't have 8GB of ram. */
 #define RAM_IS_VERY_LARGE(x) (0)
-#endif
+#endif /* SIZEOF_SIZE_T > 4 */
 
       if (RAM_IS_VERY_LARGE(ram)) {
         /* If we have 8 GB, or more, RAM available, we set the MaxMemInQueues
@@ -5780,7 +5781,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
 #else
         log_warn(LD_CONFIG, "Android logging is not supported"
                             " on this system. Sorry.");
-#endif // HAVE_ANDROID_LOG_H.
+#endif /* defined(HAVE_ANDROID_LOG_H) */
         goto cleanup;
       }
     }

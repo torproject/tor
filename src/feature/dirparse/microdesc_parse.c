@@ -18,6 +18,7 @@
 #include "feature/dirparse/routerparse.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/nickname.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/relay/router.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
@@ -32,7 +33,7 @@ static token_rule_t microdesc_token_table[] = {
   T01("ntor-onion-key",        K_ONION_KEY_NTOR,   GE(1),       NO_OBJ ),
   T0N("id",                    K_ID,               GE(2),       NO_OBJ ),
   T0N("a",                     K_A,                GE(1),       NO_OBJ ),
-  T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
+  T01("family",                K_FAMILY,           CONCAT_ARGS, NO_OBJ ),
   T01("p",                     K_P,                CONCAT_ARGS, NO_OBJ ),
   T01("p6",                    K_P6,               CONCAT_ARGS, NO_OBJ ),
   A01("@last-listed",          A_LAST_LISTED,      CONCAT_ARGS, NO_OBJ ),
@@ -159,7 +160,22 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
     if (tokenize_string(area, s, start_of_next_microdesc, tokens,
                         microdesc_token_table, flags)) {
-      log_warn(LD_DIR, "Unparseable microdescriptor");
+      const char *location;
+      switch (where) {
+        case SAVED_NOWHERE:
+          location = "download or generated string";
+          break;
+        case SAVED_IN_CACHE:
+          location = "cache";
+          break;
+        case SAVED_IN_JOURNAL:
+          location = "journal";
+          break;
+        default:
+          location = "unknown location";
+          break;
+      }
+      log_warn(LD_DIR, "Unparseable microdescriptor found in %s", location);
       goto next;
     }
 
@@ -176,8 +192,8 @@ microdescs_parse_from_string(const char *s, const char *eos,
                "Relay's onion key had invalid exponent.");
       goto next;
     }
-    router_set_rsa_onion_pkey(tok->key, &md->onion_pkey,
-                              &md->onion_pkey_len);
+    md->onion_pkey = tor_memdup(tok->object_body, tok->object_size);
+    md->onion_pkey_len = tok->object_size;
     crypto_pk_free(tok->key);
 
     if ((tok = find_opt_by_keyword(tokens, K_ONION_KEY_NTOR))) {
@@ -222,16 +238,9 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
 
     if ((tok = find_opt_by_keyword(tokens, K_FAMILY))) {
-      int i;
-      md->family = smartlist_new();
-      for (i=0;i<tok->n_args;++i) {
-        if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
-          log_warn(LD_DIR, "Illegal nickname %s in family line",
-                   escaped(tok->args[i]));
-          goto next;
-        }
-        smartlist_add_strdup(md->family, tok->args[i]);
-      }
+      md->family = nodefamily_parse(tok->args[0],
+                                    NULL,
+                                    NF_WARN_MALFORMED);
     }
 
     if ((tok = find_opt_by_keyword(tokens, K_P))) {

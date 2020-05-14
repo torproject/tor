@@ -1,3 +1,0 @@
-  o Minor bugfixes (rust):
-    - Fix a potential null dereference in protover_all_supported().
-      Add a test for it. Fixes bug 27804; bugfix on 0.3.3.1-alpha.

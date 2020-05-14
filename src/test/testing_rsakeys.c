@@ -448,7 +448,8 @@ static int next_key_idx_2048;
 static crypto_pk_t *
 pk_generate_internal(int bits)
 {
-  tor_assert(bits == 2048 || bits == 1024);
+  tor_assertf(bits == 2048 || bits == 1024,
+             "Wrong key size: %d", bits);
 
 #ifdef USE_PREGENERATED_RSA_KEYS
   int *idxp;

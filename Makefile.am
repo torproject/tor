@@ -31,9 +31,7 @@ TESTING_TOR_BINARY=$(top_builddir)/src/app/tor$(EXEEXT)
 endif
 
 if USE_RUST
-## this MUST be $(), otherwise am__DEPENDENCIES will not track it
-rust_ldadd=$(top_builddir)/$(TOR_RUST_LIB_PATH) \
-	$(TOR_RUST_EXTRA_LIBS)
+rust_ldadd=$(top_builddir)/$(TOR_RUST_LIB_PATH)
 else
 rust_ldadd=
 endif
@@ -42,6 +40,9 @@ endif
 TOR_UTIL_LIBS = \
         src/lib/libtor-geoip.a \
 	src/lib/libtor-process.a \
+        src/lib/libtor-buf.a \
+	src/lib/libtor-pubsub.a \
+	src/lib/libtor-dispatch.a \
 	src/lib/libtor-time.a \
 	src/lib/libtor-fs.a \
 	src/lib/libtor-encoding.a \
@@ -62,6 +63,7 @@ TOR_UTIL_LIBS = \
 	src/lib/libtor-malloc.a \
 	src/lib/libtor-wallclock.a \
 	src/lib/libtor-err.a \
+	src/lib/libtor-version.a \
 	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime.a
 
@@ -71,6 +73,9 @@ if UNITTESTS_ENABLED
 TOR_UTIL_TESTING_LIBS = \
         src/lib/libtor-geoip-testing.a \
 	src/lib/libtor-process-testing.a \
+        src/lib/libtor-buf-testing.a \
+	src/lib/libtor-pubsub-testing.a \
+	src/lib/libtor-dispatch-testing.a \
 	src/lib/libtor-time-testing.a \
 	src/lib/libtor-fs-testing.a \
 	src/lib/libtor-encoding-testing.a \
@@ -91,6 +96,7 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-malloc-testing.a \
 	src/lib/libtor-wallclock-testing.a \
 	src/lib/libtor-err-testing.a \
+	src/lib/libtor-version-testing.a \
 	src/lib/libtor-intmath.a \
 	src/lib/libtor-ctime-testing.a
 endif
@@ -159,7 +165,12 @@ EXTRA_DIST+= \
 	README						\
 	ReleaseNotes					\
 	scripts/maint/checkIncludes.py                  \
-	scripts/maint/checkSpace.pl
+	scripts/maint/checkSpace.pl 			\
+	scripts/maint/practracker/exceptions.txt	\
+	scripts/maint/practracker/metrics.py		\
+	scripts/maint/practracker/practracker.py	\
+	scripts/maint/practracker/problem.py		\
+	scripts/maint/practracker/util.py
 
 ## This tells etags how to find mockable function definitions.
 AM_ETAGSFLAGS=--regex='{c}/MOCK_IMPL([^,]+,\W*\([a-zA-Z0-9_]+\)\W*,/\1/s'
@@ -213,7 +224,16 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
-check-local: check-spaces check-changes check-includes
+shellcheck:
+        # Only use shellcheck if it is present
+	if command -v shellcheck; then \
+	        find $(top_srcdir)/scripts/ -name "*.sh" -exec shellcheck {} +; \
+	        if [ -d "$(top_srcdir)/scripts/test" ]; then \
+                        shellcheck $(top_srcdir)/scripts/test/cov-diff $(top_srcdir)/scripts/test/coverage; \
+                fi; \
+	fi
+
+check-local: check-spaces check-changes check-includes shellcheck
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -317,11 +337,8 @@ coverage-html-full: all
 	lcov --remove "$(HTML_COVER_DIR)/lcov.tmp" --rc lcov_branch_coverage=1 'test/*' 'ext/tinytest*' '/usr/*' --output-file "$(HTML_COVER_DIR)/lcov.info"
 	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
-# Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
-# tinytest*.[ch]
-check-spaces:
-if USE_PERL
-	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
+# For scripts: avoid src/ext and src/trunnel.
+OWNED_TOR_C_FILES=\
 		$(top_srcdir)/src/lib/*/*.[ch] \
 		$(top_srcdir)/src/core/*/*.[ch] \
 		$(top_srcdir)/src/feature/*/*.[ch] \
@@ -329,12 +346,25 @@ if USE_PERL
 		$(top_srcdir)/src/test/*.[ch] \
 		$(top_srcdir)/src/test/*/*.[ch] \
 		$(top_srcdir)/src/tools/*.[ch]
+
+check-spaces:
+if USE_PERL
+	$(PERL) $(top_srcdir)/scripts/maint/checkSpace.pl -C \
+		$(OWNED_TOR_C_FILES)
 endif
 
 check-includes:
 if USEPYTHON
 	$(PYTHON) $(top_srcdir)/scripts/maint/checkIncludes.py
 endif
+
+check-best-practices:
+if USEPYTHON
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py $(top_srcdir)
+endif
+
+practracker-regen:
+	$(PYTHON) $(top_srcdir)/scripts/maint/practracker/practracker.py --regen $(top_srcdir)
 
 check-docs: all
 	$(PERL) $(top_builddir)/scripts/maint/checkOptionDocs.pl
@@ -412,13 +442,13 @@ endif
 check-changes:
 if USEPYTHON
 	@if test -d "$(top_srcdir)/changes"; then \
-		$(PYTHON) $(top_srcdir)/scripts/maint/lintChanges.py $(top_srcdir)/changes; \
+		PACKAGE_VERSION=$(PACKAGE_VERSION) $(PYTHON) $(top_srcdir)/scripts/maint/lintChanges.py $(top_srcdir)/changes; \
 		fi
 endif
 
 .PHONY: update-versions
 update-versions:
-	$(PERL) $(top_builddir)/scripts/maint/updateVersions.pl
+	abs_top_srcdir="$(abs_top_srcdir)" $(PYTHON) $(top_srcdir)/scripts/maint/update_versions.py
 
 .PHONY: callgraph
 callgraph:
@@ -430,6 +460,25 @@ version:
 	   echo -n "git: " ;\
 	   (cd "$(top_srcdir)" && git rev-parse --short=16 HEAD); \
 	fi
+
+.PHONY: autostyle-ifdefs
+autostyle-ifdefs:
+	$(PYTHON) scripts/maint/annotate_ifdef_directives $(OWNED_TOR_C_FILES)
+
+.PHONY: autostyle-ifdefs
+autostyle-operators:
+	$(PERL) scripts/coccinelle/test-operator-cleanup $(OWNED_TOR_C_FILES)
+
+.PHONY: rectify-includes
+rectify-includes:
+	$(PYTHON) scripts/maint/rectify_include_paths.py
+
+.PHONY: update-copyright
+update-copyright:
+	$(PERL) scripts/maint/updateCopyright.pl $(OWNED_TOR_C_FILES)
+
+.PHONY: autostyle
+autostyle: update-versions rustfmt autostyle-ifdefs rectify-includes
 
 mostlyclean-local:
 	rm -f $(top_builddir)/src/*/*.gc{da,no} $(top_builddir)/src/*/*/*.gc{da,no}

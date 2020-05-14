@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Stop running stem's unit tests as part of "make test-stem". But continue
-      to run stem's unit and online tests during "make test-stem-full".
-      Fixes bug 28568; bugfix on 0.2.6.3-alpha.

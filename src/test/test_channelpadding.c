@@ -21,7 +21,7 @@
 #include "test/log_test_helpers.h"
 #include "lib/tls/tortls.h"
 #include "lib/evloop/timers.h"
-#include "lib/container/buffers.h"
+#include "lib/buf/buffers.h"
 
 #include "core/or/cell_st.h"
 #include "feature/nodelist/networkstatus_st.h"

@@ -1,3 +1,0 @@
-  o Minor bugfixes (C correctness):
-    - Fix an unlikely memory leak in consensus_diff_apply(). Fixes bug 29824;
-      bugfix on 0.3.1.1-alpha. This is Coverity warning CID 1444119.

@@ -1,17 +1,20 @@
 orconfig.h
 
+lib/buf/*.h
 lib/cc/*.h
 lib/container/*.h
 lib/ctime/*.h
 lib/err/*.h
-lib/intmath/*.h
+lib/evloop/*.h
 lib/fs/*.h
+lib/intmath/*.h
 lib/log/*.h
 lib/malloc/*.h
 lib/net/*.h
 lib/process/*.h
 lib/string/*.h
+lib/subsys/*.h
 lib/testsupport/*.h
 lib/thread/*.h
 
-ht.h
+ext/ht.h

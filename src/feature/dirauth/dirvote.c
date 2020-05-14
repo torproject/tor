@@ -28,6 +28,7 @@
 #include "feature/nodelist/fmt_routerstatus.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/nodefamily.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/router.h"
@@ -59,6 +60,9 @@
 #include "lib/container/order.h"
 #include "lib/encoding/confline.h"
 #include "lib/crypt_ops/crypto_format.h"
+
+/* Algorithm to use for the bandwidth file digest. */
+#define DIGEST_ALG_BW_FILE DIGEST_SHA256
 
 /**
  * \file dirvote.c
@@ -268,6 +272,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     char *flag_thresholds = dirserv_get_flag_thresholds_line();
     char *params;
     char *bw_headers_line = NULL;
+    char *bw_file_digest = NULL;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
@@ -307,6 +312,27 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       tor_free(bw_file_headers);
     }
 
+    /* Create bandwidth-file-digest if applicable.
+     * v3_ns->b64_digest_bw_file will contain the digest when V3BandwidthsFile
+     * is configured and the bandwidth file could be read, even if it was not
+     * parseable.
+     */
+    if (!tor_digest256_is_zero((const char *)v3_ns->bw_file_digest256)) {
+      /* Encode the digest. */
+      char b64_digest_bw_file[BASE64_DIGEST256_LEN+1] = {0};
+      digest256_to_base64(b64_digest_bw_file,
+                          (const char *)v3_ns->bw_file_digest256);
+      /* "bandwidth-file-digest" 1*(SP algorithm "=" digest) NL */
+      char *digest_algo_b64_digest_bw_file = NULL;
+      tor_asprintf(&digest_algo_b64_digest_bw_file, "%s=%s",
+                   crypto_digest_algorithm_get_name(DIGEST_ALG_BW_FILE),
+                   b64_digest_bw_file);
+      /* No need for tor_strdup(""), format_line_if_present does it. */
+      bw_file_digest = format_line_if_present(
+          "bandwidth-file-digest", digest_algo_b64_digest_bw_file);
+      tor_free(digest_algo_b64_digest_bw_file);
+    }
+
     smartlist_add_asprintf(chunks,
                  "network-status-version 3\n"
                  "vote-status %s\n"
@@ -323,6 +349,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "flag-thresholds %s\n"
                  "params %s\n"
                  "%s" /* bandwidth file headers */
+                 "%s" /* bandwidth file digest */
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n"
                  "%s" /* shared randomness information */
@@ -339,6 +366,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  flag_thresholds,
                  params,
                  bw_headers_line ? bw_headers_line : "",
+                 bw_file_digest ? bw_file_digest: "",
                  voter->nickname, fingerprint, voter->address,
                  fmt_addr32(addr), voter->dir_port, voter->or_port,
                  voter->contact,
@@ -351,6 +379,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     tor_free(methods);
     tor_free(shared_random_vote_str);
     tor_free(bw_headers_line);
+    tor_free(bw_file_digest);
 
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
@@ -412,7 +441,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
   {
     networkstatus_t *v;
-    if (!(v = networkstatus_parse_vote_from_string(status, NULL,
+    if (!(v = networkstatus_parse_vote_from_string(status, strlen(status),
+                                                   NULL,
                                                    v3_ns->type))) {
       log_err(LD_BUG,"Generated a networkstatus %s we couldn't parse: "
               "<<%s>>",
@@ -2409,7 +2439,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   {
     networkstatus_t *c;
-    if (!(c = networkstatus_parse_vote_from_string(result, NULL,
+    if (!(c = networkstatus_parse_vote_from_string(result, strlen(result),
+                                                   NULL,
                                                    NS_TYPE_CONSENSUS))) {
       log_err(LD_BUG, "Generated a networkstatus consensus we couldn't "
               "parse.");
@@ -2567,7 +2598,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       return -1;
     }
     for (alg = DIGEST_SHA1; alg < N_COMMON_DIGEST_ALGORITHMS; ++alg) {
-      if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+      if (!fast_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
         if (fast_memeq(target->digests.d[alg], digests->d[alg],
                        DIGEST256_LEN)) {
           ++n_matches;
@@ -2763,7 +2794,7 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
       char d[HEX_DIGEST256_LEN+1];
       const char *alg_name =
         crypto_digest_algorithm_get_name(alg);
-      if (tor_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
+      if (fast_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
         continue;
       base16_encode(d, sizeof(d), ns->digests.d[alg], DIGEST256_LEN);
       smartlist_add_asprintf(elements, "additional-digest %s %s %s\n",
@@ -3132,7 +3163,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   *msg_out = NULL;
 
  again:
-  vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote,
+  vote = networkstatus_parse_vote_from_string(vote_body, strlen(vote_body),
+                                              &end_of_vote,
                                               NS_TYPE_VOTE);
   if (!end_of_vote)
     end_of_vote = vote_body + strlen(vote_body);
@@ -3390,7 +3422,9 @@ dirvote_compute_consensuses(void)
                  flavor_name);
         continue;
       }
-      consensus = networkstatus_parse_vote_from_string(consensus_body, NULL,
+      consensus = networkstatus_parse_vote_from_string(consensus_body,
+                                                       strlen(consensus_body),
+                                                       NULL,
                                                        NS_TYPE_CONSENSUS);
       if (!consensus) {
         log_warn(LD_DIR, "Couldn't parse %s consensus we generated!",
@@ -3529,7 +3563,7 @@ dirvote_add_signatures_to_pending_consensus(
      * just in case we break detached signature processing at some point. */
     {
       networkstatus_t *v = networkstatus_parse_vote_from_string(
-                                             pc->body, NULL,
+                                             pc->body, strlen(pc->body), NULL,
                                              NS_TYPE_CONSENSUS);
       tor_assert(v);
       networkstatus_vote_free(v);
@@ -3654,7 +3688,9 @@ dirvote_publish_consensus(void)
       continue;
     }
 
-    if (networkstatus_set_current_consensus(pending->body, name, 0, NULL))
+    if (networkstatus_set_current_consensus(pending->body,
+                                            strlen(pending->body),
+                                            name, 0, NULL))
       log_warn(LD_DIR, "Error publishing %s consensus", name);
     else
       log_notice(LD_DIR, "Published %s consensus", name);
@@ -3791,8 +3827,16 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     smartlist_add_asprintf(chunks, "a %s\n",
                            fmt_addrport(&ri->ipv6_addr, ri->ipv6_orport));
 
-  if (family)
-    smartlist_add_asprintf(chunks, "family %s\n", family);
+  if (family) {
+    if (consensus_method < MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS) {
+      smartlist_add_asprintf(chunks, "family %s\n", family);
+    } else {
+      const uint8_t *id = (const uint8_t *)ri->cache_info.identity_digest;
+      char *canonical_family = nodefamily_canonicalize(family, id, 0);
+      smartlist_add_asprintf(chunks, "family %s\n", canonical_family);
+      tor_free(canonical_family);
+    }
+  }
 
   if (summary && strcmp(summary, "reject 1-65535"))
     smartlist_add_asprintf(chunks, "p %s\n", summary);
@@ -3869,8 +3913,7 @@ dirvote_format_microdesc_vote_line(char *out_buf, size_t out_buf_len,
                                ",");
   tor_assert(microdesc_consensus_methods);
 
-  if (digest256_to_base64(d64, md->digest)<0)
-    goto out;
+  digest256_to_base64(d64, md->digest);
 
   if (tor_snprintf(out_buf, out_buf_len, "m %s sha256=%s\n",
                    microdesc_consensus_methods, d64)<0)
@@ -3890,7 +3933,10 @@ static const struct consensus_method_range_t {
   int high;
 } microdesc_consensus_methods[] = {
   {MIN_SUPPORTED_CONSENSUS_METHOD, MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC - 1},
-  {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {MIN_METHOD_FOR_NO_A_LINES_IN_MICRODESC,
+   MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS - 1},
+  {MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS,
+   MAX_SUPPORTED_CONSENSUS_METHOD},
   {-1, -1}
 };
 
@@ -4364,6 +4410,23 @@ clear_status_flags_on_sybil(routerstatus_t *rs)
    * forget to add it to this clause. */
 }
 
+/** Space-separated list of all the flags that we will always vote on. */
+const char DIRVOTE_UNIVERSAL_FLAGS[] =
+  "Authority "
+  "Exit "
+  "Fast "
+  "Guard "
+  "HSDir "
+  "Stable "
+  "StaleDesc "
+  "V2Dir "
+  "Valid";
+/** Space-separated list of all flags that we may or may not vote on,
+ * depending on our configuration. */
+const char DIRVOTE_OPTIONAL_FLAGS[] =
+  "BadExit "
+  "Running";
+
 /** Return a new networkstatus_t* containing our current opinion. (For v3
  * authorities) */
 networkstatus_t *
@@ -4388,6 +4451,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
+  uint8_t bw_file_digest256[DIGEST256_LEN] = {0};
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -4425,7 +4489,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
    * set_routerstatus_from_routerinfo() see up-to-date bandwidth info.
    */
   if (options->V3BandwidthsFile) {
-    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL);
+    dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL, NULL,
+                                     NULL);
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
@@ -4479,8 +4544,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
-      set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       listbadexits);
+      dirauth_set_routerstatus_from_routerinfo(rs, node, ri, now,
+                                               listbadexits);
 
       if (ri->cache_info.signing_key_cert) {
         memcpy(vrs->ed25519_id,
@@ -4530,7 +4595,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     /* Only set bw_file_headers when V3BandwidthsFile is configured */
     bw_file_headers = smartlist_new();
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
-                                     routerstatuses, bw_file_headers);
+                                     routerstatuses, bw_file_headers,
+                                     bw_file_digest256);
+
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
@@ -4612,7 +4679,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,
-                         "Authority Exit Fast Guard Stable V2Dir Valid HSDir",
+                         DIRVOTE_UNIVERSAL_FLAGS,
                          0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
     smartlist_add_strdup(v3_out->known_flags, "Running");
@@ -4627,6 +4694,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     smartlist_sort_strings(v3_out->net_params);
   }
   v3_out->bw_file_headers = bw_file_headers;
+  memcpy(v3_out->bw_file_digest256, bw_file_digest256, DIGEST256_LEN);
 
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);

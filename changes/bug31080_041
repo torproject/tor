@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Fix a conflict between the flag used for messaging-domain
+      log messages, and the LD_NO_MOCK testing flag. Fixes bug 31080;
+      bugfix on 0.4.1.1-alpha.

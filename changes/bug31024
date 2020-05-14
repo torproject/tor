@@ -1,0 +1,4 @@
+  o Minor bugfixes (circuitpadding):
+    - Add two NULL checks in unreachable places to silence Coverity (CID 144729
+      and 1447291) and better future proof ourselves. Fixes bug 31024; bugfix
+      on 0.4.1.1-alpha.

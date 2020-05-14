@@ -1,0 +1,5 @@
+  o Minor bugfixes (compilation):
+    - Add more stub functions to fix compilation on Android with LTO, when
+      --disable-module-dirauth is used. Previously, these compilation
+      settings would make the compiler look for functions that didn't exist.
+      Fixes bug 31552; bugfix on 0.4.1.1-alpha.

@@ -1,0 +1,3 @@
+  o Minor bugfixes (pluggable transports):
+    - Remove overly strict assertions that triggers when a pluggable transport
+      is spawned in an unsuccessful manner. Fixes bug 31091; bugfix on 0.4.0.1-alpha.

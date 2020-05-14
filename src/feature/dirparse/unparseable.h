@@ -51,6 +51,6 @@ EXTERN(struct smartlist_t *, descs_dumped)
 MOCK_DECL(STATIC dumped_desc_t *, dump_desc_populate_one_file,
     (const char *dirname, const char *f));
 STATIC void dump_desc_populate_fifo_from_directory(const char *dirname);
-#endif
+#endif /* defined(UNPARSEABLE_PRIVATE) */
 
 #endif /* !defined(TOR_UNPARSEABLE_H) */
