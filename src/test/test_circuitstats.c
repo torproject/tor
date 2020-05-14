@@ -23,6 +23,12 @@
 #include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
 
+static origin_circuit_t *new_test_origin_circuit(
+                                             bool has_opened,
+                                             struct timeval circ_start_time,
+                                             int path_len,
+                                             extend_info_t **ei_list);
+
 static origin_circuit_t *add_opened_threehop(void);
 static origin_circuit_t *build_unopened_fourhop(struct timeval);
 static origin_circuit_t *subtest_fourhop_circuit(struct timeval, int);
@@ -43,50 +49,67 @@ mock_circuit_mark_for_close(circuit_t *circ, int reason, int line,
 }
 
 static origin_circuit_t *
-add_opened_threehop(void)
+new_test_origin_circuit(bool has_opened,
+                        struct timeval circ_start_time,
+                        int path_len,
+                        extend_info_t **ei_list)
 {
   origin_circuit_t *origin_circ = origin_circuit_new();
-  extend_info_t fakehop;
-  memset(&fakehop, 0, sizeof(fakehop));
 
   TO_CIRCUIT(origin_circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
   origin_circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
-  origin_circ->build_state->desired_path_len = DEFAULT_ROUTE_LEN;
+  origin_circ->build_state->desired_path_len = path_len;
 
-  cpath_append_hop(&origin_circ->cpath, &fakehop);
-  cpath_append_hop(&origin_circ->cpath, &fakehop);
-  cpath_append_hop(&origin_circ->cpath, &fakehop);
+  if (ei_list) {
+    for (int i = 0; i < path_len; i++) {
+      extend_info_t *ei = ei_list[i];
+      cpath_append_hop(&origin_circ->cpath, ei);
+    }
+  }
 
-  origin_circ->has_opened = 1;
-  TO_CIRCUIT(origin_circ)->state = CIRCUIT_STATE_OPEN;
-  TO_CIRCUIT(origin_circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  if (has_opened) {
+    origin_circ->has_opened = 1;
+    TO_CIRCUIT(origin_circ)->state = CIRCUIT_STATE_OPEN;
+  } else {
+    TO_CIRCUIT(origin_circ)->timestamp_began = circ_start_time;
+    TO_CIRCUIT(origin_circ)->timestamp_created = circ_start_time;
+  }
 
   return origin_circ;
 }
 
 static origin_circuit_t *
+add_opened_threehop(void)
+{
+  struct timeval circ_start_time;
+  memset(&circ_start_time, 0, sizeof(circ_start_time));
+  extend_info_t fakehop;
+  memset(&fakehop, 0, sizeof(fakehop));
+  extend_info_t *fakehop_list[DEFAULT_ROUTE_LEN] = {&fakehop,
+                                                    &fakehop,
+                                                    &fakehop};
+
+  return new_test_origin_circuit(true,
+                                 circ_start_time,
+                                 DEFAULT_ROUTE_LEN,
+                                 fakehop_list);
+}
+
+static origin_circuit_t *
 build_unopened_fourhop(struct timeval circ_start_time)
 {
-  origin_circuit_t *origin_circ = origin_circuit_new();
-  extend_info_t *fakehop = tor_malloc_zero(sizeof(extend_info_t));
-  memset(fakehop, 0, sizeof(extend_info_t));
+  extend_info_t fakehop;
+  memset(&fakehop, 0, sizeof(fakehop));
+  extend_info_t *fakehop_list[4] = {&fakehop,
+                                    &fakehop,
+                                    &fakehop,
+                                    &fakehop};
 
-  TO_CIRCUIT(origin_circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
-  TO_CIRCUIT(origin_circ)->timestamp_began = circ_start_time;
-  TO_CIRCUIT(origin_circ)->timestamp_created = circ_start_time;
-
-  origin_circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
-  origin_circ->build_state->desired_path_len = 4;
-
-  cpath_append_hop(&origin_circ->cpath, fakehop);
-  cpath_append_hop(&origin_circ->cpath, fakehop);
-  cpath_append_hop(&origin_circ->cpath, fakehop);
-  cpath_append_hop(&origin_circ->cpath, fakehop);
-
-  tor_free(fakehop);
-
-  return origin_circ;
+  return new_test_origin_circuit(false,
+                                 circ_start_time,
+                                 4,
+                                 fakehop_list);
 }
 
 static origin_circuit_t *
