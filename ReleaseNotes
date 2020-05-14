@@ -92,11 +92,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       and accept strings as well as binary addresses. Fixes bug 32315;
       bugfix on 0.3.5.1-alpha.
 
-  o Major bugfixes (onion service client, authorization):
-    - On a NEWNYM signal, purge entries from the ephemeral client
-      authorization cache. The permanent ones are kept. Fixes bug 33139;
-      bugfix on 0.4.3.1-alpha.
-
   o Major bugfixes (onion service):
     - Report HS circuit failure back into the HS subsystem so we take
       appropriate action with regards to the client introduction point
@@ -280,46 +275,13 @@ Changes in version 0.4.3.5 - 2020-05-15
       relay to get rejected in the future. Fixes bug 33361; bugfix
       on 0.1.1.10-alpha.
 
-  o Minor bugfixes (--disable-module-relay):
-    - Fix an assertion failure when Tor is built without the relay
-      module, and then invoked with the "User" option. Fixes bug 33668;
-      bugfix on 0.4.3.1-alpha.
-
-  o Minor bugfixes (--disable-module-relay,--disable-module-dirauth):
-    - Set some output arguments in the relay and dirauth module stubs,
-      to guard against future stub argument handling bugs like 33668.
-      Fixes bug 33674; bugfix on 0.4.3.1-alpha.
-
   o Minor bugfixes (bridges):
     - Lowercase the configured value of BridgeDistribution before adding
       it to the descriptor. Fixes bug 32753; bugfix on 0.3.2.3-alpha.
 
   o Minor bugfixes (build system):
-    - Correctly output the enabled module in the configure summary.
-      Before that, the list shown was just plain wrong. Fixes bug 33646;
-      bugfix on 0.4.3.2-alpha.
-    - Revise configure options that were either missing or incorrect in
-      the configure summary. Fixes bug 32230; bugfix on 0.4.3.1-alpha.
     - Fix "make autostyle" for out-of-tree builds. Fixes bug 32370;
       bugfix on 0.4.1.2-alpha.
-
-  o Minor bugfixes (client, IPv6):
-    - Stop forcing all non-SocksPorts to prefer IPv6 exit connections.
-      Instead, prefer IPv6 connections by default, but allow users to
-      change their configs using the "NoPreferIPv6" port flag. Fixes bug
-      33608; bugfix on 0.4.3.1-alpha.
-    - Revert PreferIPv6 set by default on the SocksPort because it broke
-      the torsocks use case. Tor doesn't have a way for an application
-      to request the hostname to be resolved for a specific IP version,
-      but torsocks requires that. Up until now, IPv4 was used by default
-      so torsocks is expecting that, and can't handle a possible IPv6
-      being returned. Fixes bug 33804; bugfix on 0.4.3.1-alpha.
-
-  o Minor bugfixes (coding best practices checks):
-    - Allow the "practracker" script to read unicode files when using
-      Python 2. We made the script use unicode literals in 0.4.3.1-alpha,
-      but didn't change the codec for opening files. Fixes bug 33374;
-      bugfix on 0.4.3.1-alpha.
 
   o Minor bugfixes (compiler compatibility):
     - Avoid compiler warnings from Clang 10 related to the use of GCC-
@@ -355,10 +317,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       on 0.3.2.2-alpha.
 
   o Minor bugfixes (controller protocol):
-    - Fix a memory leak introduced by refactoring of control reply
-      formatting code. Fixes bug 33039; bugfix on 0.4.3.1-alpha.
-    - Fix a memory leak in GETINFO responses. Fixes bug 33103; bugfix
-      on 0.4.3.1-alpha.
     - When receiving "ACTIVE" or "DORMANT" signals on the control port,
       report them as SIGNAL events. Previously we would log a bug
       warning. Fixes bug 33104; bugfix on 0.4.0.1-alpha.
@@ -414,10 +372,6 @@ Changes in version 0.4.3.5 - 2020-05-15
   o Minor bugfixes (logging):
     - Stop truncating IPv6 addresses and ports in channel and connection
       logs. Fixes bug 33918; bugfix on 0.2.4.4-alpha.
-    - Fix a logic error in a log message about whether an address was
-      invalid. Previously, the code would never report that onion
-      addresses were onion addresses. Fixes bug 34131; bugfix
-      on 0.4.3.1-alpha.
     - Flush stderr, stdout, and file logs during shutdown, if supported
       by the OS. This change helps make sure that any final logs are
       recorded. Fixes bug 33087; bugfix on 0.4.1.6.
@@ -449,12 +403,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       timeout values. Fixes bug 25568; bugfix on 0.2.7.3-rc. Patch by
       Neel Chauhan.
 
-  o Minor bugfixes (onion service v3, client authorization):
-    - When removing client authorization credentials using the control
-      port, also remove the associated descriptor, so the onion service
-      can no longer be contacted. Fixes bug 33148; bugfix
-      on 0.4.3.1-alpha.
-
   o Minor bugfixes (onion service v3, client):
     - Remove a BUG() warning that would cause a stack trace if an onion
       service descriptor was freed while we were waiting for a
@@ -466,9 +414,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       decoding onion service descriptors as a relay. Also add some
       diagnostics to debug any future bugs in that area. Fixes bug
       31669; bugfix on 0.3.0.1-alpha.
-    - Block a client-side assertion by disallowing the registration of
-      an x25519 client auth key that's all zeroes. Fixes bug 33545;
-      bugfix on 0.4.3.1-alpha. Based on patch from "cypherpunks".
     - Fix an assertion failure that could result from a corrupted
       ADD_ONION control port command. Found by Saibato. Fixes bug 33137;
       bugfix on 0.3.3.1-alpha. This issue is also tracked
@@ -533,10 +478,6 @@ Changes in version 0.4.3.5 - 2020-05-15
   o Minor bugfixes (windows service):
     - Initialize the publish/subscribe system when running as a windows
       service. Fixes bug 32778; bugfix on 0.4.1.1-alpha.
-
-  o Code simplification and refactoring:
-    - Disable our coding standards best practices tracker in our git
-      hooks. (0.4.3 branches only.) Closes ticket 33678.
 
   o Deprecated features:
     - Deprecate the ClientAutoIPv6ORPort option. This option was not
