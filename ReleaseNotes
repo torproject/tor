@@ -21,7 +21,7 @@ Changes in version 0.4.3.5 - 2020-05-15
   continue supporting 0.3.5.x, our long-term stable series, until
   Feb 2022.
 
-  Below are the changes since 0.4.2.5. For a list of only the changes
+  Below are the changes since 0.4.2.6. For a list of only the changes
   since 0.4.3.4-rc, see the ChangeLog file.
 
   o New system requirements:
@@ -87,19 +87,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       given the transport name of the client connection, thus failed to
       find the GeoIP cache entry for that client address. Fixes bug
       33491; bugfix on 0.3.3.2-alpha.
-
-  o Major bugfixes (linux seccomp sandbox):
-    - Correct how we use libseccomp. Particularly, stop assuming that
-      rules are applied in a particular order or that more rules are
-      processed after the first match. Neither is the case! In
-      libseccomp <2.4.0 this led to some rules having no effect.
-      libseccomp 2.4.0 changed how rules are generated, leading to a
-      different ordering, which in turn led to a fatal crash during
-      startup. Fixes bug 29819; bugfix on 0.2.5.1-alpha. Patch by
-      Peter Gerber.
-    - Fix crash when reloading logging configuration while the
-      experimental sandbox is enabled. Fixes bug 32841; bugfix on
-      0.4.1.7. Patch by Peter Gerber.
 
   o Major bugfixes (networking):
     - Correctly handle IPv6 addresses in SOCKS5 RESOLVE_PTR requests,
@@ -332,11 +319,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       output over the control port. Fixes bug 20218; bugfix
       on 0.1.1.11-alpha
 
-  o Minor bugfixes (correctness checks):
-    - Use GCC/Clang's printf-checking feature to make sure that
-      tor_assertf() arguments are correctly typed. Fixes bug 32765;
-      bugfix on 0.4.1.1-alpha.
-
   o Minor bugfixes (developer tools):
     - Allow paths starting with ./ in scripts/add_c_file.py. Fixes bug
       31336; bugfix on 0.4.1.2-alpha.
@@ -387,11 +369,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       will be silenced" unless we are actually going to silence them.
       Previously we would say this whenever a BUG() check failed in the
       code. Fixes bug 33095; bugfix on 0.4.1.1-alpha.
-
-  o Minor bugfixes (logging, crash):
-    - Avoid a possible crash when trying to log a (fatal) assertion
-      failure about mismatched magic numbers in configuration objects.
-      Fixes bug 32771; bugfix on 0.4.2.1-alpha.
 
   o Minor bugfixes (onion services v2):
     - Move a series of v2 onion service warnings to protocol-warning
@@ -455,12 +432,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       on 0.2.7.3-rc.
     - Stop ignoring "tor --dump-config" errors in test_parseconf.sh.
       Fixes bug 32468; bugfix on 0.4.2.1-alpha.
-    - When TOR_DISABLE_PRACTRACKER is set, do not apply it to the
-      test_practracker.sh script. Doing so caused a test failure. Fixes
-      bug 32705; bugfix on 0.4.2.1-alpha.
-    - When TOR_DISABLE_PRACTRACKER is set, log a notice to stderr when
-      skipping practracker checks. Fixes bug 32705; bugfix
-      on 0.4.2.1-alpha.
     - Our option-validation tests no longer depend on specially
       configured non-default, non-passing sets of options. Previously,
       the tests had been written to assume that options would _not_ be
@@ -472,10 +443,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       error code rather than "WANTWRITE". This change might help avoid
       some CPU-wasting loops if the bug is ever triggered. Bug reported
       by opara. Fixes bug 32673; bugfix on 0.3.0.4-alpha.
-
-  o Minor bugfixes (windows service):
-    - Initialize the publish/subscribe system when running as a windows
-      service. Fixes bug 32778; bugfix on 0.4.1.1-alpha.
 
   o Deprecated features:
     - Deprecate the ClientAutoIPv6ORPort option. This option was not
@@ -524,15 +491,8 @@ Changes in version 0.4.3.5 - 2020-05-15
       on option validation and normalization. Closes ticket 32213.
     - Improve the consistency of test_parseconf.sh output, and run all
       the tests, even if one fails. Closes ticket 32213.
-    - Re-enable the Travis CI macOS Chutney build, but don't let it
-      prevent the Travis job from finishing. (The Travis macOS jobs are
-      slow, so we don't want to have it delay the whole CI process.)
-      Closes ticket 32629.
     - Run the practracker unit tests in the pre-commit git hook. Closes
       ticket 32609.
-    - Turn off Tor's Sandbox in Chutney jobs, and run those jobs on
-      Ubuntu Bionic. Turning off the Sandbox is a work-around, until we
-      fix the sandbox errors in 32722. Closes ticket 32240.
 
   o Code simplification and refactoring (channel):
     - Channel layer had a variable length cell handler that was not used
@@ -645,7 +605,6 @@ Changes in version 0.4.3.5 - 2020-05-15
       ticket 32196.
 
   o Testing (Travis CI):
-    - Use zstd in our Travis Linux builds. Closes ticket 32242.
     - Remove a redundant distcheck job. Closes ticket 33194.
     - Sort the Travis jobs in order of speed: putting the slowest jobs
       first takes full advantage of Travis job concurrency. Closes

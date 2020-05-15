@@ -1,4 +1,4 @@
-Changes in vesion 0.4.3.5 - 2020-05-15
+Changes in version 0.4.3.5 - 2020-05-15
   Tor 0.4.3.5 is the first stable release in the 0.4.3.x series. This
   series adds support for building without relay code enabled, and
   implements functionality needed for OnionBalance with v3 onion
@@ -18,7 +18,7 @@ Changes in vesion 0.4.3.5 - 2020-05-15
   Feb 2022.
 
   Below are the changes since 0.4.3.4-rc. For a complete list of changes
-  since 0.4.2.5, see the ReleaseNotes file.
+  since 0.4.2.6, see the ReleaseNotes file.
 
   o Minor bugfixes (compiler compatibility):
     - Avoid compiler warnings from Clang 10 related to the use of GCC-
