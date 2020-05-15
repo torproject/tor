@@ -15,6 +15,8 @@
 
 #include "feature/dirauth/dirvote.h"
 
+#include "feature/relay/relay_handshake.h"
+
 static void
 test_protover_parse(void *arg)
 {
@@ -409,23 +411,21 @@ test_protover_supports_version(void *arg)
  * Hard-coded here, because they are not in the code, or not exposed in the
  * headers. */
 #define PROTOVER_LINKAUTH_V1 1
-#define PROTOVER_LINKAUTH_V3 3
-
+#define PROTOVER_LINKAUTH_V2 2
 #define PROTOVER_RELAY_V1 1
-#define PROTOVER_RELAY_V2 2
 
+/* Deprecated HSIntro versions */
+#define PROTOVER_HS_INTRO_DEPRECATED_1 1
+#define PROTOVER_HS_INTRO_DEPRECATED_2 2
 /* Highest supported HSv2 introduce protocol version.
- * Hard-coded here, because it does not appear anywhere in the code.
  * It's not clear if we actually support version 2, see #25068. */
-#define PROTOVER_HSINTRO_V2 3
+#define PROTOVER_HS_INTRO_V2 3
 
-/* HSv2 Rend and HSDir protocol versions.
- * Hard-coded here, because they do not appear anywhere in the code. */
+/* HSv2 Rend and HSDir protocol versions. */
 #define PROTOVER_HS_RENDEZVOUS_POINT_V2 1
 #define PROTOVER_HSDIR_V2 1
 
-/* DirCache, Desc, Microdesc, and Cons protocol versions.
- * Hard-coded here, because they do not appear anywhere in the code. */
+/* DirCache, Desc, Microdesc, and Cons protocol versions. */
 #define PROTOVER_DIRCACHE_V1 1
 #define PROTOVER_DIRCACHE_V2 2
 
@@ -437,6 +437,10 @@ test_protover_supports_version(void *arg)
 
 #define PROTOVER_CONS_V1 1
 #define PROTOVER_CONS_V2 2
+
+#define PROTOVER_PADDING_V1 1
+
+#define PROTOVER_FLOWCTRL_V1 1
 
 /* Make sure we haven't forgotten any supported protocols */
 static void
@@ -452,24 +456,27 @@ test_protover_supported_protocols(void *arg)
                                             PRT_LINK,
                                             MAX_LINK_PROTO));
   for (uint16_t i = 0; i < MAX_PROTOCOLS_TO_TEST; i++) {
-    if (is_or_protocol_version_known(i)) {
-      tt_assert(protocol_list_supports_protocol(supported_protocols,
+      tt_int_op(protocol_list_supports_protocol(supported_protocols,
                                                 PRT_LINK,
-                                                i));
-    }
+                                                i),
+                OP_EQ,
+                is_or_protocol_version_known(i));
   }
 
-#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
-  /* Legacy LinkAuth does not appear anywhere in the code. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
+  /* Legacy LinkAuth is only supported on OpenSSL and similar. */
+  tt_int_op(protocol_list_supports_protocol(supported_protocols,
                                             PRT_LINKAUTH,
-                                            PROTOVER_LINKAUTH_V1));
-#endif /* defined(HAVE_WORKING_TOR_TLS_GET_TLSSECRETS) */
-  /* Latest LinkAuth is not exposed in the headers. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_LINKAUTH,
-                                            PROTOVER_LINKAUTH_V3));
-  /* Is there any way to test for new LinkAuth? */
+                                            PROTOVER_LINKAUTH_V1),
+            OP_EQ,
+            authchallenge_type_is_supported(AUTHTYPE_RSA_SHA256_TLSSECRET));
+  /* LinkAuth=2 is unused */
+  tt_assert(!protocol_list_supports_protocol(supported_protocols,
+                                             PRT_LINKAUTH,
+                                             PROTOVER_LINKAUTH_V2));
+  tt_assert(
+      protocol_list_supports_protocol(supported_protocols,
+                                     PRT_LINKAUTH,
+                                     PROTOVER_LINKAUTH_ED25519_HANDSHAKE));
 
   /* Relay protovers do not appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
@@ -477,20 +484,38 @@ test_protover_supported_protocols(void *arg)
                                             PROTOVER_RELAY_V1));
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_RELAY,
-                                            PROTOVER_RELAY_V2));
-  /* Is there any way to test for new Relay? */
+                                            PROTOVER_RELAY_EXTEND2));
+  tt_assert(protocol_list_supports_protocol(supported_protocols,
+                                            PRT_RELAY,
+                                            PROTOVER_RELAY_ACCEPT_IPV6));
+  tt_assert(protocol_list_supports_protocol(supported_protocols,
+                                            PRT_RELAY,
+                                            PROTOVER_RELAY_EXTEND_IPV6));
+  tt_assert(protocol_list_supports_protocol(supported_protocols,
+                                            PRT_RELAY,
+                                            PROTOVER_RELAY_CANONICAL_IPV6));
 
+  /* These HSIntro versions are deprecated */
+  tt_assert(!protocol_list_supports_protocol(supported_protocols,
+                                            PRT_HSINTRO,
+                                            PROTOVER_HS_INTRO_DEPRECATED_1));
+  tt_assert(!protocol_list_supports_protocol(supported_protocols,
+                                            PRT_HSINTRO,
+                                            PROTOVER_HS_INTRO_DEPRECATED_2));
   /* We could test legacy HSIntro by calling rend_service_update_descriptor(),
    * and checking the protocols field. But that's unlikely to change, so
    * we just use a hard-coded value. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_HSINTRO,
-                                            PROTOVER_HSINTRO_V2));
+                                            PROTOVER_HS_INTRO_V2));
   /* Test for HSv3 HSIntro */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_HSINTRO,
                                             PROTOVER_HS_INTRO_V3));
-  /* Is there any way to test for new HSIntro? */
+  /* Test for HSIntro DoS */
+  tt_assert(protocol_list_supports_protocol(supported_protocols,
+                                            PRT_HSINTRO,
+                                            PROTOVER_HS_INTRO_DOS));
 
   /* Legacy HSRend does not appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
@@ -500,7 +525,6 @@ test_protover_supported_protocols(void *arg)
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_HSREND,
                                             PROTOVER_HS_RENDEZVOUS_POINT_V3));
-  /* Is there any way to test for new HSRend? */
 
   /* Legacy HSDir does not appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
@@ -510,7 +534,6 @@ test_protover_supported_protocols(void *arg)
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_HSDIR,
                                             PROTOVER_HSDIR_V3));
-  /* Is there any way to test for new HSDir? */
 
   /* No DirCache versions appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
@@ -519,7 +542,6 @@ test_protover_supported_protocols(void *arg)
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_DIRCACHE,
                                             PROTOVER_DIRCACHE_V2));
-  /* Is there any way to test for new DirCache? */
 
   /* No Desc versions appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
@@ -537,7 +559,6 @@ test_protover_supported_protocols(void *arg)
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_MICRODESC,
                                             PROTOVER_MICRODESC_V2));
-  /* Is there any way to test for new Microdesc? */
 
   /* No Cons versions appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
@@ -546,7 +567,19 @@ test_protover_supported_protocols(void *arg)
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_CONS,
                                             PROTOVER_CONS_V2));
-  /* Is there any way to test for new Cons? */
+
+  /* Padding=1 is deprecated. */
+  tt_assert(!protocol_list_supports_protocol(supported_protocols,
+                                             PRT_PADDING,
+                                             PROTOVER_PADDING_V1));
+  tt_assert(protocol_list_supports_protocol(supported_protocols,
+                                            PRT_PADDING,
+                                            PROTOVER_HS_SETUP_PADDING));
+
+  /* FlowCtrl */
+  tt_assert(protocol_list_supports_protocol(supported_protocols,
+                                            PRT_FLOWCTRL,
+                                            PROTOVER_FLOWCTRL_V1));
 
  done:
  ;

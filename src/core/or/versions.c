@@ -435,33 +435,44 @@ memoize_protover_summary(protover_summary_flags_t *out,
   memset(out, 0, sizeof(*out));
   out->protocols_known = 1;
 
-  out->supports_extend2_cells =
-    protocol_list_supports_protocol(protocols, PRT_RELAY, 2);
-  out->supports_accepting_ipv6_extends = (
-    protocol_list_supports_protocol(protocols, PRT_RELAY, 2) ||
-    protocol_list_supports_protocol(protocols, PRT_RELAY, 3));
-  out->supports_initiating_ipv6_extends =
-    protocol_list_supports_protocol(protocols, PRT_RELAY, 3);
-  out->supports_canonical_ipv6_conns =
-    protocol_list_supports_protocol(protocols, PRT_RELAY, 3);
-
   out->supports_ed25519_link_handshake_compat =
-    protocol_list_supports_protocol(protocols, PRT_LINKAUTH, 3);
+    protocol_list_supports_protocol(protocols, PRT_LINKAUTH,
+                                    PROTOVER_LINKAUTH_ED25519_HANDSHAKE);
   out->supports_ed25519_link_handshake_any =
-    protocol_list_supports_protocol_or_later(protocols, PRT_LINKAUTH, 3);
+    protocol_list_supports_protocol_or_later(
+                                     protocols,
+                                     PRT_LINKAUTH,
+                                     PROTOVER_LINKAUTH_ED25519_HANDSHAKE);
+
+  out->supports_extend2_cells =
+    protocol_list_supports_protocol(protocols, PRT_RELAY,
+                                    PROTOVER_RELAY_EXTEND2);
+  out->supports_accepting_ipv6_extends = (
+    protocol_list_supports_protocol(protocols, PRT_RELAY,
+                                    PROTOVER_RELAY_ACCEPT_IPV6) ||
+    protocol_list_supports_protocol(protocols, PRT_RELAY,
+                                    PROTOVER_RELAY_EXTEND_IPV6));
+  out->supports_initiating_ipv6_extends =
+    protocol_list_supports_protocol(protocols, PRT_RELAY,
+                                    PROTOVER_RELAY_EXTEND_IPV6);
+  out->supports_canonical_ipv6_conns =
+    protocol_list_supports_protocol(protocols, PRT_RELAY,
+                                    PROTOVER_RELAY_CANONICAL_IPV6);
 
   out->supports_ed25519_hs_intro =
-    protocol_list_supports_protocol(protocols, PRT_HSINTRO, 4);
+    protocol_list_supports_protocol(protocols, PRT_HSINTRO,
+                                    PROTOVER_HS_INTRO_V3);
   out->supports_establish_intro_dos_extension =
-    protocol_list_supports_protocol(protocols, PRT_HSINTRO, 5);
-
-  out->supports_v3_hsdir =
-    protocol_list_supports_protocol(protocols, PRT_HSDIR,
-                                    PROTOVER_HSDIR_V3);
+    protocol_list_supports_protocol(protocols, PRT_HSINTRO,
+                                    PROTOVER_HS_INTRO_DOS);
 
   out->supports_v3_rendezvous_point =
     protocol_list_supports_protocol(protocols, PRT_HSREND,
                                     PROTOVER_HS_RENDEZVOUS_POINT_V3);
+
+  out->supports_v3_hsdir =
+    protocol_list_supports_protocol(protocols, PRT_HSDIR,
+                                    PROTOVER_HSDIR_V3);
 
   out->supports_hs_setup_padding =
     protocol_list_supports_protocol(protocols, PRT_PADDING,
