@@ -30,6 +30,7 @@
 
 #include "feature/client/entrynodes.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/relay/circuitbuild_relay.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
@@ -1766,6 +1767,112 @@ test_circuit_send_next_onion_skin(void *arg)
   /* The circuits are automatically freed by the circuitlist. */
 }
 
+/* Test the different cases in cpath_build_state_to_crn_flags(). */
+static void
+test_cpath_build_state_to_crn_flags(void *arg)
+{
+  (void)arg;
+
+  cpath_build_state_t state;
+  memset(&state, 0, sizeof(state));
+
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            0);
+
+  memset(&state, 0, sizeof(state));
+  state.need_uptime = 1;
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_UPTIME);
+
+  memset(&state, 0, sizeof(state));
+  state.need_capacity = 1;
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_CAPACITY);
+
+  memset(&state, 0, sizeof(state));
+  state.need_capacity = 1;
+  state.need_uptime = 1;
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_CAPACITY | CRN_NEED_UPTIME);
+
+  /* Check that no other flags are handled */
+  memset(&state, 0xff, sizeof(state));
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_CAPACITY | CRN_NEED_UPTIME);
+
+ done:
+  ;
+}
+
+/* Test the different cases in cpath_build_state_to_crn_ipv6_extend_flag(). */
+static void
+test_cpath_build_state_to_crn_ipv6_extend_flag(void *arg)
+{
+  (void)arg;
+
+  cpath_build_state_t state;
+
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  tt_int_op(cpath_build_state_to_crn_ipv6_extend_flag(&state, 0), OP_EQ,
+            0);
+
+  /* Pass the state flag check, but not the length check */
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  state.is_ipv6_selftest = 1;
+  tt_int_op(cpath_build_state_to_crn_ipv6_extend_flag(&state, 0), OP_EQ,
+            0);
+
+  /* Pass the length check, but not the state flag check */
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  tt_int_op(
+      cpath_build_state_to_crn_ipv6_extend_flag(&state,
+                                                DEFAULT_ROUTE_LEN - 2),
+      OP_EQ, 0);
+
+  /* Pass both checks */
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  state.is_ipv6_selftest = 1;
+  tt_int_op(
+      cpath_build_state_to_crn_ipv6_extend_flag(&state,
+                                                DEFAULT_ROUTE_LEN - 2),
+      OP_EQ, CRN_INITIATE_IPV6_EXTEND);
+
+  /* Check that no other flags are handled */
+  memset(&state, 0xff, sizeof(state));
+  state.desired_path_len = INT_MAX;
+  tt_int_op(cpath_build_state_to_crn_ipv6_extend_flag(&state, INT_MAX), OP_EQ,
+            0);
+
+#ifndef ALL_BUGS_ARE_FATAL
+  /* Start capturing bugs */
+  setup_full_capture_of_logs(LOG_INFO);
+  tor_capture_bugs_(1);
+
+  /* Now test the single hop circuit case */
+#define SINGLE_HOP_ROUTE_LEN 1
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = SINGLE_HOP_ROUTE_LEN;
+  state.is_ipv6_selftest = 1;
+  tt_int_op(
+      cpath_build_state_to_crn_ipv6_extend_flag(&state,
+                                                SINGLE_HOP_ROUTE_LEN - 2),
+      OP_EQ, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(state->desired_path_len < 2))");
+  mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
+
+ done:
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  teardown_capture_of_logs();
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -1774,6 +1881,9 @@ test_circuit_send_next_onion_skin(void *arg)
 
 #define TEST_CIRCUIT(name, flags) \
   { #name, test_circuit_ ## name, flags, NULL, NULL }
+
+#define TEST_CPATH(name, flags) \
+  { #name, test_cpath_ ## name, flags, NULL, NULL }
 
 #ifndef COCCI
 #define TEST_CIRCUIT_PASSTHROUGH(name, flags, arg) \
@@ -1793,16 +1903,19 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
   TEST_CIRCUIT(choose_ip_ap_for_extend, 0),
+
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "4"),
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "6"),
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "dual-stack"),
+
   TEST_CIRCUIT(extend, TT_FORK),
 
   TEST(onionskin_answer, TT_FORK, NULL, NULL),
 
   TEST(origin_circuit_init, TT_FORK, NULL, NULL),
-
   TEST_CIRCUIT(send_next_onion_skin, TT_FORK),
+  TEST_CPATH(build_state_to_crn_flags, 0),
+  TEST_CPATH(build_state_to_crn_ipv6_extend_flag, TT_FORK),
 
   END_OF_TESTCASES
 };
