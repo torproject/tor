@@ -408,6 +408,10 @@ static strmap_t *protover_summary_map = NULL;
 /**
  * Helper.  Given a non-NULL protover string <b>protocols</b>, set <b>out</b>
  * to its summary, and memoize the result in <b>protover_summary_map</b>.
+ *
+ * If the protover string does not contain any recognised protocols, sets
+ * protocols_known, but does not set any other flags. (Empty strings are also
+ * treated this way.)
  */
 static void
 memoize_protover_summary(protover_summary_flags_t *out,
@@ -485,6 +489,13 @@ memoize_protover_summary(protover_summary_flags_t *out,
 
 /** Summarize the protocols listed in <b>protocols</b> into <b>out</b>,
  * falling back or correcting them based on <b>version</b> as appropriate.
+ *
+ * If protocols and version are both NULL, returns a summary with no flags
+ * set.
+ *
+ * If the protover string does not contain any recognised protocols, and the
+ * version is not recognised, sets protocols_known, but does not set any other
+ * flags. (Empty strings are also treated this way.)
  */
 void
 summarize_protover_flags(protover_summary_flags_t *out,
