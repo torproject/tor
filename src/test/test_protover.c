@@ -7,11 +7,13 @@
 #include "orconfig.h"
 #include "test/test.h"
 
-#include "core/or/protover.h"
+#include "lib/tls/tortls.h"
 
 #include "core/or/or.h"
+
 #include "core/or/connection_or.h"
-#include "lib/tls/tortls.h"
+#include "core/or/protover.h"
+#include "core/or/versions.h"
 
 #include "feature/dirauth/dirvote.h"
 
@@ -709,6 +711,189 @@ test_protover_vote_roundtrip_ours(void *args)
   tor_free(result);
 }
 
+/* Stringifies its argument.
+ * 4 -> "4" */
+#define STR(x) #x
+
+#ifdef COCCI
+#define PROTOVER(proto_string, version_macro)
+#else
+/* Generate a protocol version string using proto_string and version_macro.
+ * PROTOVER("HSIntro", PROTOVER_HS_INTRO_DOS) -> "HSIntro" "=" "5"
+ * Uses two levels of macros to turn PROTOVER_HS_INTRO_DOS into "5".
+ */
+#define PROTOVER(proto_string, version_macro) \
+  (proto_string "=" STR(version_macro))
+#endif
+
+/* Test that the proto_string version version_macro sets summary_flag. */
+#define TEST_PROTOVER(proto_string, version_macro, summary_flag) \
+  STMT_BEGIN \
+  memset(&flags, 0, sizeof(flags)); \
+  summarize_protover_flags(&flags, \
+                           PROTOVER(proto_string, version_macro), \
+                           NULL); \
+  tt_int_op(flags.protocols_known, OP_EQ, 1); \
+  tt_int_op(flags.summary_flag, OP_EQ, 1); \
+  flags.protocols_known = 0; \
+  flags.summary_flag = 0; \
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags)); \
+  STMT_END
+
+static void
+test_protover_summarize_flags(void *args)
+{
+  (void) args;
+  char pv[30];
+  memset(&pv, 0, sizeof(pv));
+
+  protover_summary_flags_t zero_flags;
+  memset(&zero_flags, 0, sizeof(zero_flags));
+  protover_summary_flags_t flags;
+
+  memset(&flags, 0, sizeof(flags));
+  summarize_protover_flags(&flags, NULL, NULL);
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  /* "" sets the protocols_known flag */
+  memset(&flags, 0, sizeof(flags));
+  summarize_protover_flags(&flags, "", "");
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  /* Now clear that flag, and check the rest are zero */
+  flags.protocols_known = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  /* Now check version exceptions */
+
+  /* EXTEND2 cell support */
+  memset(&flags, 0, sizeof(flags));
+  summarize_protover_flags(&flags, NULL, "Tor 0.2.4.8-alpha");
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_extend2_cells, OP_EQ, 1);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_extend2_cells = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  /* disabling HSDir v3 support for buggy versions */
+  memset(&flags, 0, sizeof(flags));
+  summarize_protover_flags(&flags,
+                           PROTOVER("HSDir", PROTOVER_HSDIR_V3),
+                           NULL);
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_v3_hsdir, OP_EQ, 1);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_v3_hsdir = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  memset(&flags, 0, sizeof(flags));
+  summarize_protover_flags(&flags,
+                           PROTOVER("HSDir", PROTOVER_HSDIR_V3),
+                           "Tor 0.3.0.7");
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  /* Now clear that flag, and check the rest are zero */
+  flags.protocols_known = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  /* Now check standard summaries */
+
+  /* LinkAuth */
+  memset(&flags, 0, sizeof(flags));
+  summarize_protover_flags(&flags,
+                           PROTOVER("LinkAuth",
+                                    PROTOVER_LINKAUTH_ED25519_HANDSHAKE),
+                           NULL);
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_ed25519_link_handshake_compat, OP_EQ, 1);
+  tt_int_op(flags.supports_ed25519_link_handshake_any, OP_EQ, 1);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_ed25519_link_handshake_compat = 0;
+  flags.supports_ed25519_link_handshake_any = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  /* Test one greater */
+  memset(&flags, 0, sizeof(flags));
+  snprintf(pv, sizeof(pv),
+           "%s=%d", "LinkAuth", PROTOVER_LINKAUTH_ED25519_HANDSHAKE + 1);
+  summarize_protover_flags(&flags, pv, NULL);
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_ed25519_link_handshake_compat, OP_EQ, 0);
+  tt_int_op(flags.supports_ed25519_link_handshake_any, OP_EQ, 1);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_ed25519_link_handshake_compat = 0;
+  flags.supports_ed25519_link_handshake_any = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  /* Test one less */
+  memset(&flags, 0, sizeof(flags));
+  snprintf(pv, sizeof(pv),
+           "%s=%d", "LinkAuth", PROTOVER_LINKAUTH_ED25519_HANDSHAKE - 1);
+  summarize_protover_flags(&flags, pv, NULL);
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_ed25519_link_handshake_compat, OP_EQ, 0);
+  tt_int_op(flags.supports_ed25519_link_handshake_any, OP_EQ, 0);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_ed25519_link_handshake_compat = 0;
+  flags.supports_ed25519_link_handshake_any = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  /* We don't test "one more" and "one less" for each protocol version.
+   * But that could be a useful thing to add. */
+
+  /* Relay */
+  memset(&flags, 0, sizeof(flags));
+  /* This test relies on these versions being equal */
+  tt_int_op(PROTOVER_RELAY_EXTEND2, OP_EQ, PROTOVER_RELAY_ACCEPT_IPV6);
+  summarize_protover_flags(&flags,
+                           PROTOVER("Relay", PROTOVER_RELAY_EXTEND2), NULL);
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_extend2_cells, OP_EQ, 1);
+  tt_int_op(flags.supports_accepting_ipv6_extends, OP_EQ, 1);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_extend2_cells = 0;
+  flags.supports_accepting_ipv6_extends = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  memset(&flags, 0, sizeof(flags));
+  /* This test relies on these versions being equal */
+  tt_int_op(PROTOVER_RELAY_EXTEND_IPV6, OP_EQ, PROTOVER_RELAY_CANONICAL_IPV6);
+  summarize_protover_flags(&flags,
+                           PROTOVER("Relay", PROTOVER_RELAY_EXTEND_IPV6),
+                           NULL);
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_accepting_ipv6_extends, OP_EQ, 1);
+  tt_int_op(flags.supports_initiating_ipv6_extends, OP_EQ, 1);
+  tt_int_op(flags.supports_canonical_ipv6_conns, OP_EQ, 1);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_accepting_ipv6_extends = 0;
+  flags.supports_initiating_ipv6_extends = 0;
+  flags.supports_canonical_ipv6_conns = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
+
+  TEST_PROTOVER("HSIntro", PROTOVER_HS_INTRO_V3,
+                supports_ed25519_hs_intro);
+  TEST_PROTOVER("HSIntro", PROTOVER_HS_INTRO_DOS,
+                supports_establish_intro_dos_extension);
+
+  TEST_PROTOVER("HSRend", PROTOVER_HS_RENDEZVOUS_POINT_V3,
+                supports_v3_rendezvous_point);
+
+  TEST_PROTOVER("HSDir", PROTOVER_HSDIR_V3,
+                supports_v3_hsdir);
+
+  TEST_PROTOVER("Padding", PROTOVER_HS_SETUP_PADDING,
+                supports_hs_setup_padding);
+
+ done:
+  ;
+}
+
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
 
@@ -723,5 +908,7 @@ struct testcase_t protover_tests[] = {
   PV_TEST(supported_protocols, 0),
   PV_TEST(vote_roundtrip, 0),
   PV_TEST(vote_roundtrip_ours, 0),
+  /* fork, because we memoize flags internally */
+  PV_TEST(summarize_flags, TT_FORK),
   END_OF_TESTCASES
 };
