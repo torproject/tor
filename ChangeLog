@@ -1,6 +1,10 @@
 Changes in vesion 0.4.3.5 - 2020-05-15
-  Tor 0.4.3.5 is the first stable release in the 0.4.3.x series. BLURB
-  BLURB BLURB BLURB BLURB BLURB BLURB BLURB BLURB
+  Tor 0.4.3.5 is the first stable release in the 0.4.3.x series. This
+  series adds support for building without relay code enabled, and
+  implements functionality needed for OnionBalance with v3 onion
+  services. It includes significant refactoring of our configuration and
+  controller functionality, and fixes numerous smaller bugs and
+  performance issues.
 
   Per our support policy, we support each stable release series for nine
   months after its first stable release, or three months after the first
