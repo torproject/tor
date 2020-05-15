@@ -532,7 +532,7 @@ test_dns_wireformat_consume_name_without_data(void *arg)
 
   uint8_t *ptr = (uint8_t *) &data[1];
   tt_int_op(dns_consume_name(name, &ptr, (const uint8_t *) &data, size),
-            OP_EQ, -1);
+            OP_EQ, -2);
 
  done:
   dns_name_free(name);
@@ -552,7 +552,27 @@ test_dns_wireformat_consume_name_with_missing_end(void *arg)
 
   uint8_t *ptr = (uint8_t *) data;
   tt_int_op(dns_consume_name(name, &ptr, (const uint8_t *) &data, size),
-            OP_EQ, -2);
+            OP_EQ, -3);
+
+ done:
+  dns_name_free(name);
+}
+
+static void
+test_dns_wireformat_consume_name_with_missing_compression_pointer(void *arg)
+{
+  (void) arg;
+
+  size_t size = 9;
+  char data[9] = {
+    0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 0xc0,
+  };
+
+  dns_name_t *name = dns_name_new();
+
+  uint8_t *ptr = (uint8_t *) data;
+  tt_int_op(dns_consume_name(name, &ptr, (const uint8_t *) &data, size),
+            OP_EQ, -4);
 
  done:
   dns_name_free(name);
@@ -572,7 +592,7 @@ test_dns_wireformat_consume_name_with_invalid_compression_pointer(void *arg)
 
   uint8_t *ptr = (uint8_t *) data;
   tt_int_op(dns_consume_name(name, &ptr, (const uint8_t *) &data, size),
-            OP_EQ, -3);
+            OP_EQ, -5);
 
  done:
   dns_name_free(name);
@@ -592,7 +612,27 @@ test_dns_wireformat_consume_name_with_invalid_compression_label(void *arg)
 
   uint8_t *ptr = (uint8_t *) &data[1];
   tt_int_op(dns_consume_name(name, &ptr, (const uint8_t *) &data, size),
-            OP_EQ, -4);
+            OP_EQ, -6);
+
+ done:
+  dns_name_free(name);
+}
+
+static void
+test_dns_wireformat_consume_name_with_compression_pointer_loop(void *arg)
+{
+  (void) arg;
+
+  size_t size = 14;
+  char data[14] = {
+    0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 0x03, 'c', 'o', 'm', 0xc0, 0x0c
+  };
+
+  dns_name_t *name = dns_name_new();
+
+  uint8_t *ptr = (uint8_t *) data;
+  tt_int_op(dns_consume_name(name, &ptr, (const uint8_t *) &data, size),
+            OP_EQ, -6);
 
  done:
   dns_name_free(name);
@@ -612,7 +652,7 @@ test_dns_wireformat_consume_name_with_invalid_label_length(void *arg)
 
   uint8_t *ptr = (uint8_t *) data;
   tt_int_op(dns_consume_name(name, &ptr, (const uint8_t *) &data, size),
-            OP_EQ, -5);
+            OP_EQ, -7);
 
  done:
   dns_name_free(name);
@@ -3038,8 +3078,10 @@ struct testcase_t dns_wireformat_tests[] = {
   DNS_WIREFORMAT_TEST(consume_name_starting_with_null_byte, 0),
   DNS_WIREFORMAT_TEST(consume_name_without_data, 0),
   DNS_WIREFORMAT_TEST(consume_name_with_missing_end, 0),
+  DNS_WIREFORMAT_TEST(consume_name_with_missing_compression_pointer, 0),
   DNS_WIREFORMAT_TEST(consume_name_with_invalid_compression_pointer, 0),
   DNS_WIREFORMAT_TEST(consume_name_with_invalid_compression_label, 0),
+  DNS_WIREFORMAT_TEST(consume_name_with_compression_pointer_loop, 0),
   DNS_WIREFORMAT_TEST(consume_name_with_invalid_label_length, 0),
 
   DNS_WIREFORMAT_TEST(pack_type_bitmaps_without_data, 0),

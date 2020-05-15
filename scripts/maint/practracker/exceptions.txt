@@ -327,3 +327,4 @@ problem function-size /src/tools/tor-resolve.c:main() 112
 problem dependency-violation /src/core/or/dns_resolver.c 6
 problem function-size /src/lib/encoding/dns_string.c:dns_type_str() 148
 problem function-size /src/lib/encoding/dns_string.c:dns_type_value_of() 215
+problem function-size /src/lib/encoding/dns_wireformat.c:dns_consume_name_impl() 111

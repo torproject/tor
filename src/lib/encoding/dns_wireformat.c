@@ -1867,7 +1867,7 @@ dns_encode_message_udp(buf_t *buf, const dns_message_t *dm)
 
   SMARTLIST_FOREACH_BEGIN(dm->name_server_list, dns_rr_t *, dns) {
     if (dns_pack_rr(stash, dns) < 0) {
-      log_debug(LD_GENERAL, "failed name server");
+      log_debug(LD_GENERAL, "failed packing name server");
       res_len = -4;
       goto cleanup;
     }
@@ -2332,6 +2332,13 @@ int
 dns_consume_name(dns_name_t *name, uint8_t **ptr, const uint8_t *data,
                  const size_t size)
 {
+  return dns_consume_name_impl(name, ptr, 0, data, size);
+}
+
+int
+dns_consume_name_impl(dns_name_t *name, uint8_t **ptr, uint8_t recursions,
+                      const uint8_t *data, const size_t size)
+{
   // LCOV_EXCL_START
   tor_assert(name);
   tor_assert(*ptr);
@@ -2345,9 +2352,15 @@ dns_consume_name(dns_name_t *name, uint8_t **ptr, const uint8_t *data,
   size_t label_len;
   dns_name_t *compr_name = dns_name_new();
 
+  if (recursions > 10) {
+    log_debug(LD_GENERAL, "too many pointers, maybe there's a loop");
+    consumed = -1;
+    goto cleanup;
+  }
+
   if (pos > size) {
     log_debug(LD_GENERAL, "no data left");
-    consumed = -1;
+    consumed = -2;
     goto cleanup;
   }
   log_debug(LD_GENERAL, "consume: %s",
@@ -2359,7 +2372,7 @@ dns_consume_name(dns_name_t *name, uint8_t **ptr, const uint8_t *data,
     if (1 > size - pos) {
       log_debug(LD_GENERAL, "invalid length: wanted %d, got %d", 1,
                 (int) (size - pos));
-      consumed = -2;
+      consumed = -3;
       goto cleanup;
     }
 
@@ -2371,6 +2384,15 @@ dns_consume_name(dns_name_t *name, uint8_t **ptr, const uint8_t *data,
       buf_add_string(stash, ".");
       done = true;
     } else if ((label_len & 0xc0) == 0xc0) {
+
+      pos = (*ptr - data);
+      if (1 > size - pos) {
+        log_debug(LD_GENERAL, "invalid length: wanted %d, got %d", 1,
+                  (int) (size - pos));
+        consumed = -4;
+        goto cleanup;
+      }
+
       uint16_t name_pos = ((label_len & DNS_MAX_LABEL_LEN) << 8) + **ptr;
       consumed += 1;
       *ptr += 1;
@@ -2378,14 +2400,15 @@ dns_consume_name(dns_name_t *name, uint8_t **ptr, const uint8_t *data,
       if (name_pos > size) {
         log_debug(LD_GENERAL, "invalid name position: pos %d, max %d",
                   (int) name_pos, (int) size);
-        consumed = -3;
+        consumed = -5;
         goto cleanup;
       }
 
       uint8_t *compr_ptr = (uint8_t *) &data[name_pos];
-      if (dns_consume_name(compr_name, &compr_ptr, data, size) < 0) {
+      if (dns_consume_name_impl(compr_name, &compr_ptr, recursions + 1, data,
+                                size) < 0) {
         log_debug(LD_GENERAL, "invalid name compression");
-        consumed = -4;
+        consumed = -6;
         goto cleanup;
       }
 
@@ -2400,7 +2423,7 @@ dns_consume_name(dns_name_t *name, uint8_t **ptr, const uint8_t *data,
       if (label_len > size - pos) {
         log_debug(LD_GENERAL, "invalid length: wanted %d, got %d",
                   (int) label_len, (int) (size - pos));
-        consumed = -5;
+        consumed = -7;
         goto cleanup;
       }
 

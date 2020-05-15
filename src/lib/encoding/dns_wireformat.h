@@ -74,6 +74,8 @@ uint16_t dns_encode_key_tag(const dns_rr_t *drr);
 int dns_pack_name(buf_t *buf, const dns_name_t *name);
 int dns_consume_name(dns_name_t *name, uint8_t **ptr, const uint8_t *data,
                      const size_t size);
+int dns_consume_name_impl(dns_name_t *name, uint8_t **ptr, uint8_t recursions,
+                          const uint8_t *data, const size_t size);
 
 #define DNS_MAX_TYPE_BITMAP_LEN 32
 
