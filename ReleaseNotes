@@ -317,7 +317,7 @@ Changes in version 0.4.3.5 - 2020-05-15
   o Minor bugfixes (controller):
     - In routerstatus_has_changed(), check all the fields that are
       output over the control port. Fixes bug 20218; bugfix
-      on 0.1.1.11-alpha
+      on 0.1.1.11-alpha.
 
   o Minor bugfixes (developer tools):
     - Allow paths starting with ./ in scripts/add_c_file.py. Fixes bug

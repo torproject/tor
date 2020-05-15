@@ -655,7 +655,7 @@ Changes in version 0.4.3.1-alpha - 2020-01-22
   o Minor bugfixes (controller):
     - In routerstatus_has_changed(), check all the fields that are
       output over the control port. Fixes bug 20218; bugfix
-      on 0.1.1.11-alpha
+      on 0.1.1.11-alpha.
 
   o Minor bugfixes (correctness checks):
     - Use GCC/Clang's printf-checking feature to make sure that
