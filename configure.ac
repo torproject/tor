@@ -397,7 +397,7 @@ AC_CACHE_CHECK([for __attribute__((fallthrough))],
 	 [tor_cv_c_attr_fallthrough=no] )])
 CFLAGS="$saved_CFLAGS"
 
-if test "$tor_cv_c_attr_fallthrough" == "yes"; then
+if test "$tor_cv_c_attr_fallthrough" = "yes"; then
   AC_DEFINE(HAVE_ATTR_FALLTHROUGH, [1], [defined if we have the fallthrough attribute.])
 fi
 
