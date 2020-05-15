@@ -1,4 +1,0 @@
-  o Minor bugfixes (--disable-module-relay):
-    - Fix an assertion failure when Tor is build without the relay module,
-      and then invoked with the "User" option. Fixes bug 33668; bugfix on
-      0.4.3.1-alpha.

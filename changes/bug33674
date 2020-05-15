@@ -1,4 +1,0 @@
-  o Minor bugfixes (--disable-module-relay,--disable-module-dirauth):
-    - Set some output arguments in the relay and dirauth module stubs, to
-      guard against future stub argument handling bugs like 33668.
-      Fixes bug 33674; bugfix on 0.4.3.1-alpha.

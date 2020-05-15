@@ -1,3 +1,0 @@
-  o Minor bugfixes (IPv6, logging):
-    - Stop truncating IPv6 addresses and ports in channel and connection logs.
-      Fixes bug 33918; bugfix on 0.2.4.4-alpha.
