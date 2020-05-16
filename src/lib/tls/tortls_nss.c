@@ -739,8 +739,8 @@ tor_tls_cert_matches_key,(const tor_tls_t *tls,
    * in seckey.c in the NSS source tree. This function also does the conversion
    * between bits and bytes.
    */
-  unsigned int peer_info_orig_len = peer_info->subjectPublicKey.len;
-  unsigned int cert_info_orig_len = cert_info->subjectPublicKey.len;
+  const unsigned int peer_info_orig_len = peer_info->subjectPublicKey.len;
+  const unsigned int cert_info_orig_len = cert_info->subjectPublicKey.len;
 
   peer_info->subjectPublicKey.len = (peer_info_orig_len >> 3);
   cert_info->subjectPublicKey.len = (cert_info_orig_len >> 3);
