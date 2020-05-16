@@ -742,14 +742,23 @@ tor_tls_cert_matches_key,(const tor_tls_t *tls,
   const unsigned int peer_info_orig_len = peer_info->subjectPublicKey.len;
   const unsigned int cert_info_orig_len = cert_info->subjectPublicKey.len;
 
-  peer_info->subjectPublicKey.len = (peer_info_orig_len >> 3);
-  cert_info->subjectPublicKey.len = (cert_info_orig_len >> 3);
+  /* We convert the length from bits to bytes, but instead of using NSS's
+   * `DER_ConvertBitString()` macro on both of peer_info->subjectPublicKey and
+   * cert_info->subjectPublicKey, we have to do the conversion explicitly since
+   * both of the two subjectPublicKey fields are allowed to point to the same
+   * memory address. Otherwise, the bits to bytes conversion would potentially
+   * be applied twice, which would lead to us comparing too few of the bytes
+   * when we call SECITEM_ItemsAreEqual(), which would be catastrophic.
+   */
+  peer_info->subjectPublicKey.len = ((peer_info_orig_len + 7) >> 3);
+  cert_info->subjectPublicKey.len = ((cert_info_orig_len + 7) >> 3);
 
   rv = SECOID_CompareAlgorithmID(&peer_info->algorithm,
                                  &cert_info->algorithm) == 0 &&
        SECITEM_ItemsAreEqual(&peer_info->subjectPublicKey,
                              &cert_info->subjectPublicKey);
 
+  /* Convert from bytes back to bits. */
   peer_info->subjectPublicKey.len = peer_info_orig_len;
   cert_info->subjectPublicKey.len = cert_info_orig_len;
 
