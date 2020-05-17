@@ -414,6 +414,7 @@ dumpstats(int severity)
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
+  hs_service_dump_stats(severity);
 }
 
 #ifdef _WIN32

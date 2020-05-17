@@ -373,6 +373,8 @@ void hs_service_upload_desc_to_dir(const char *encoded_desc,
 hs_circuit_id_protocol_t
 hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
+void hs_service_dump_stats(int severity);
+
 #ifdef HS_SERVICE_PRIVATE
 
 #ifdef TOR_UNIT_TESTS
