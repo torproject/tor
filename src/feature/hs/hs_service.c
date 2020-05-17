@@ -4103,6 +4103,41 @@ hs_service_load_all_keys(void)
   return -1;
 }
 
+/** Log the status of introduction points for all version 3 onion services
+ * at log severity <b>severity</b>.
+ */
+void
+hs_service_dump_stats(int severity)
+{
+  origin_circuit_t *circ;
+
+  for (hs_service_t **iter = HT_START(hs_service_ht, hs_service_map);
+       iter != NULL; iter = HT_NEXT(hs_service_ht, hs_service_map, iter)) {
+    hs_service_t *hs = *iter;
+
+    tor_log(severity, LD_GENERAL, "Service configured in %s:",
+            service_escaped_dir(hs));
+    FOR_EACH_DESCRIPTOR_BEGIN(hs, desc) {
+
+      DIGEST256MAP_FOREACH(desc->intro_points.map, key,
+                           hs_service_intro_point_t *, ip) {
+        const node_t *intro_node = get_node_from_intro_point(ip);
+        const char *nickname = node_get_nickname(intro_node);
+
+        circ = hs_circ_service_get_intro_circ(ip);
+        if (!circ) {
+          tor_log(severity, LD_GENERAL, "  Intro point at %s: no circuit",
+                  nickname);
+          continue;
+        }
+        tor_log(severity, LD_GENERAL, "  Intro point %s: circuit is %s",
+                nickname, circuit_state_to_string(circ->base_.state));
+      } DIGEST256MAP_FOREACH_END;
+
+    } FOR_EACH_DESCRIPTOR_END;
+  }
+}
+
 /** Put all service object in the given service list. After this, the caller
  * looses ownership of every elements in the list and responsible to free the
  * list pointer. */
