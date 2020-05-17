@@ -296,7 +296,7 @@ tor_version_parse(const char *s, tor_version_t *out)
       return -1;
     hexlen = (int)(close_paren-cp);
     memwipe(digest, 0, sizeof(digest));
-    if ( hexlen == 0 || (hexlen % 2) == 1)
+    if (hexlen == 0 || (hexlen % 2) == 1)
       return -1;
     if (base16_decode(digest, hexlen/2, cp, hexlen) != hexlen/2)
       return -1;
