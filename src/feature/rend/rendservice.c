@@ -4351,17 +4351,16 @@ rend_consider_descriptor_republication(void)
 void
 rend_service_dump_stats(int severity)
 {
-  int i,j;
   rend_service_t *service;
   rend_intro_point_t *intro;
   const char *safe_name;
   origin_circuit_t *circ;
 
-  for (i=0; i < smartlist_len(rend_service_list); ++i) {
+  for (int i = 0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
     tor_log(severity, LD_GENERAL, "Service configured in %s:",
             rend_service_escaped_dir(service));
-    for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
+    for (int j = 0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
       safe_name = safe_str_client(intro->extend_info->nickname);
 
