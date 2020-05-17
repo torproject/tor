@@ -2780,7 +2780,8 @@ parse_short_policy(const char *summary)
         high = low;
         break;
       case '-':
-        high = (unsigned) tor_parse_ulong(next+1, 10, low, 65535, &ok, &next);
+        high = (unsigned)
+          tor_parse_ulong(next + 1, 10, low, 65535, &ok, &next);
         if (!ok)
           goto bad_ent;
 
@@ -2817,12 +2818,13 @@ parse_short_policy(const char *summary)
       sizeof(short_policy_entry_t)*(n_entries);
     result = tor_malloc_zero(size);
 
-    tor_assert( (char*)&result->entries[n_entries-1] < ((char*)result)+size);
+    tor_assert((char *) &result->entries[n_entries - 1] <
+               ((char *) result) + size);
   }
 
   result->is_accept = is_accept;
   result->n_entries = n_entries;
-  memcpy(result->entries, entries, sizeof(short_policy_entry_t)*n_entries);
+  memcpy(result->entries, entries, sizeof(short_policy_entry_t) * n_entries);
   return result;
 
  bad_ent:
