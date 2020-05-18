@@ -726,6 +726,36 @@ test_protover_vote_roundtrip_ours(void *args)
   (proto_string "=" STR(version_macro))
 #endif
 
+#define DEBUG_PROTOVER(flags) \
+  STMT_BEGIN \
+  log_debug(LD_GENERAL, \
+            "protovers:\n" \
+            "protocols_known: %d,\n" \
+            "supports_extend2_cells: %d,\n" \
+            "supports_accepting_ipv6_extends: %d,\n" \
+            "supports_initiating_ipv6_extends: %d,\n" \
+            "supports_canonical_ipv6_conns: %d,\n" \
+            "supports_ed25519_link_handshake_compat: %d,\n" \
+            "supports_ed25519_link_handshake_any: %d,\n" \
+            "supports_ed25519_hs_intro: %d,\n" \
+            "supports_establish_intro_dos_extension: %d,\n" \
+            "supports_v3_hsdir: %d,\n" \
+            "supports_v3_rendezvous_point: %d,\n" \
+            "supports_hs_setup_padding: %d.", \
+            (flags).protocols_known, \
+            (flags).supports_extend2_cells, \
+            (flags).supports_accepting_ipv6_extends, \
+            (flags).supports_initiating_ipv6_extends, \
+            (flags).supports_canonical_ipv6_conns, \
+            (flags).supports_ed25519_link_handshake_compat, \
+            (flags).supports_ed25519_link_handshake_any, \
+            (flags).supports_ed25519_hs_intro, \
+            (flags).supports_establish_intro_dos_extension, \
+            (flags).supports_v3_hsdir, \
+            (flags).supports_v3_rendezvous_point, \
+            (flags).supports_hs_setup_padding); \
+    STMT_END
+
 /* Test that the proto_string version version_macro sets summary_flag. */
 #define TEST_PROTOVER(proto_string, version_macro, summary_flag) \
   STMT_BEGIN \
@@ -733,6 +763,7 @@ test_protover_vote_roundtrip_ours(void *args)
   summarize_protover_flags(&flags, \
                            PROTOVER(proto_string, version_macro), \
                            NULL); \
+  DEBUG_PROTOVER(flags); \
   tt_int_op(flags.protocols_known, OP_EQ, 1); \
   tt_int_op(flags.summary_flag, OP_EQ, 1); \
   flags.protocols_known = 0; \
@@ -747,17 +778,21 @@ test_protover_summarize_flags(void *args)
   char pv[30];
   memset(&pv, 0, sizeof(pv));
 
+  protover_summary_cache_free_all();
+
   protover_summary_flags_t zero_flags;
   memset(&zero_flags, 0, sizeof(zero_flags));
   protover_summary_flags_t flags;
 
   memset(&flags, 0, sizeof(flags));
   summarize_protover_flags(&flags, NULL, NULL);
+  DEBUG_PROTOVER(flags);
   tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
 
   /* "" sets the protocols_known flag */
   memset(&flags, 0, sizeof(flags));
   summarize_protover_flags(&flags, "", "");
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   /* Now clear that flag, and check the rest are zero */
   flags.protocols_known = 0;
@@ -768,6 +803,7 @@ test_protover_summarize_flags(void *args)
   /* EXTEND2 cell support */
   memset(&flags, 0, sizeof(flags));
   summarize_protover_flags(&flags, NULL, "Tor 0.2.4.8-alpha");
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   tt_int_op(flags.supports_extend2_cells, OP_EQ, 1);
   /* Now clear those flags, and check the rest are zero */
@@ -780,6 +816,7 @@ test_protover_summarize_flags(void *args)
   summarize_protover_flags(&flags,
                            PROTOVER("HSDir", PROTOVER_HSDIR_V3),
                            NULL);
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   tt_int_op(flags.supports_v3_hsdir, OP_EQ, 1);
   /* Now clear those flags, and check the rest are zero */
@@ -791,6 +828,7 @@ test_protover_summarize_flags(void *args)
   summarize_protover_flags(&flags,
                            PROTOVER("HSDir", PROTOVER_HSDIR_V3),
                            "Tor 0.3.0.7");
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   /* Now clear that flag, and check the rest are zero */
   flags.protocols_known = 0;
@@ -804,6 +842,7 @@ test_protover_summarize_flags(void *args)
                            PROTOVER("LinkAuth",
                                     PROTOVER_LINKAUTH_ED25519_HANDSHAKE),
                            NULL);
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   tt_int_op(flags.supports_ed25519_link_handshake_compat, OP_EQ, 1);
   tt_int_op(flags.supports_ed25519_link_handshake_any, OP_EQ, 1);
@@ -818,6 +857,7 @@ test_protover_summarize_flags(void *args)
   snprintf(pv, sizeof(pv),
            "%s=%d", "LinkAuth", PROTOVER_LINKAUTH_ED25519_HANDSHAKE + 1);
   summarize_protover_flags(&flags, pv, NULL);
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   tt_int_op(flags.supports_ed25519_link_handshake_compat, OP_EQ, 0);
   tt_int_op(flags.supports_ed25519_link_handshake_any, OP_EQ, 1);
@@ -832,6 +872,7 @@ test_protover_summarize_flags(void *args)
   snprintf(pv, sizeof(pv),
            "%s=%d", "LinkAuth", PROTOVER_LINKAUTH_ED25519_HANDSHAKE - 1);
   summarize_protover_flags(&flags, pv, NULL);
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   tt_int_op(flags.supports_ed25519_link_handshake_compat, OP_EQ, 0);
   tt_int_op(flags.supports_ed25519_link_handshake_any, OP_EQ, 0);
@@ -850,6 +891,7 @@ test_protover_summarize_flags(void *args)
   tt_int_op(PROTOVER_RELAY_EXTEND2, OP_EQ, PROTOVER_RELAY_ACCEPT_IPV6);
   summarize_protover_flags(&flags,
                            PROTOVER("Relay", PROTOVER_RELAY_EXTEND2), NULL);
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   tt_int_op(flags.supports_extend2_cells, OP_EQ, 1);
   tt_int_op(flags.supports_accepting_ipv6_extends, OP_EQ, 1);
@@ -865,6 +907,7 @@ test_protover_summarize_flags(void *args)
   summarize_protover_flags(&flags,
                            PROTOVER("Relay", PROTOVER_RELAY_EXTEND_IPV6),
                            NULL);
+  DEBUG_PROTOVER(flags);
   tt_int_op(flags.protocols_known, OP_EQ, 1);
   tt_int_op(flags.supports_accepting_ipv6_extends, OP_EQ, 1);
   tt_int_op(flags.supports_initiating_ipv6_extends, OP_EQ, 1);
