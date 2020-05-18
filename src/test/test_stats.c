@@ -30,7 +30,6 @@
 #define CIRCUITLIST_PRIVATE
 #define MAINLOOP_PRIVATE
 #define STATEFILE_PRIVATE
-#define CONFIG_PRIVATE
 
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
