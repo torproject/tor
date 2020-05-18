@@ -30,6 +30,8 @@
 #define CIRCUITLIST_PRIVATE
 #define MAINLOOP_PRIVATE
 #define STATEFILE_PRIVATE
+#define BW_ARRAY_ST_PRIVATE
+#define BW_ARRAY_PRIVATE
 
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
@@ -40,6 +42,7 @@
 #include "core/mainloop/mainloop.h"
 #include "lib/memarea/memarea.h"
 #include "feature/stats/rephist.h"
+#include "feature/stats/bw_array_st.h"
 #include "feature/stats/bw_array.h"
 #include "app/config/statefile.h"
 

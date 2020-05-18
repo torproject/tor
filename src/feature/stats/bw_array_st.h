@@ -9,6 +9,8 @@
 #ifndef BW_ARRAY_ST_H
 #define BW_ARRAY_ST_H
 
+#ifdef BW_ARRAY_ST_PRIVATE
+
 /** For how many seconds do we keep track of individual per-second bandwidth
  * totals? */
 #define NUM_SECS_ROLLING_MEASURE 10
@@ -50,5 +52,7 @@ typedef struct bw_array_t {
    * periods */
   uint64_t totals[NUM_TOTALS];
 } bw_array_t;
+
+#endif /* defined(BW_ARRAY_ST_PRIVATE) */
 
 #endif /* !defined(BW_ARRAY_ST_H) */

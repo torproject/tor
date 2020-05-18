@@ -74,6 +74,9 @@
  * (The "rephist" name originally stood for "reputation and history". )
  **/
 
+#define BW_ARRAY_ST_PRIVATE
+#define BW_ARRAY_PRIVATE
+
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "app/config/statefile.h"
@@ -85,6 +88,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
+#include "feature/stats/bw_array_st.h"
 #include "feature/stats/bw_array.h"
 #include "lib/container/order.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -995,9 +999,6 @@ bw_array_new(void)
   b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
   return b;
 }
-
-#define bw_array_free(val) \
-  FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
 
 /** Free storage held by bandwidth array <b>b</b>. */
 STATIC void

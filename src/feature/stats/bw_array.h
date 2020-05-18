@@ -2,14 +2,16 @@
 /* See LICENSE for licensing information */
 
 /**
- * @file bw_array_st.h
+ * @file bw_array.h
  * @brief Bandwidth array manipulation functions.
  **/
 
 #ifndef BW_ARRAY_H
 #define BW_ARRAY_H
 
-#include "feature/stats/bw_array_st.h"
+#ifdef BW_ARRAY_PRIVATE
+
+struct bw_array_t;
 
 STATIC void commit_max(bw_array_t *b);
 STATIC void add_obs(bw_array_t *b, time_t when, uint64_t n);
@@ -24,5 +26,7 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b);
 
 #define bw_array_free(val) \
   FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
+
+#endif /* defined(BW_ARRAY_PRIVATE) */
 
 #endif /* !defined(BW_ARRAY_H). */
