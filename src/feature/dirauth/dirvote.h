@@ -241,6 +241,10 @@ STATIC
 int compare_routerinfo_by_ipv6(const void **a, const void **b);
 
 STATIC
+digestmap_t * get_sybil_list_by_ip_version(
+    const smartlist_t *routers, sa_family_t family);
+
+STATIC
 char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
                                                    int consensus_method);

@@ -4294,7 +4294,7 @@ compare_routerinfo_usefulness(const void **a, const void **b)
  * are the identity digests of those routers that we're going to exclude for
  * Sybil-like appearance.
  */
-static digestmap_t *
+STATIC digestmap_t *
 get_sybil_list_by_ip_version(const smartlist_t *routers, sa_family_t family)
 {
   const dirauth_options_t *options = dirauth_get_options();
