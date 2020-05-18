@@ -1,0 +1,2 @@
+  o Minor features (dirvote):
+    - Add IPv6 support in protection against Sybil attacks. Closes ticket7193

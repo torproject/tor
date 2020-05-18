@@ -121,6 +121,7 @@ routerinfo_new(router_values *status, int family, int addr)
     for (size_t i = 0; i < 16; i++) {
       ipv6.addr.in6_addr.s6_addr[i] = addr;
     }
+    ri->addr = 0;
   }
   ri->ipv6_addr = ipv6;
   return ri;
@@ -470,6 +471,117 @@ end:
   tor_free(omit_as_sybil);
 }
 
+static void
+test_dirvote_get_all_possible_sybil(void *arg)
+{
+  // It is assumed that global_dirauth_options.AuthDirMaxServersPerAddr == 2
+  (void)arg;
+  MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
+  MOCK(node_get_by_id, mock_node_get_by_id);
+  MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
+  running_node = tor_malloc(sizeof(node_t));
+  running_node->is_running = 1;
+  non_running_node = tor_malloc(sizeof(node_t));
+  non_running_node->is_running = 0;
+  router_properties = digestmap_new();
+  smartlist_t *routers;
+  routers = smartlist_new();
+  digestmap_t *true_sybil_routers = NULL;
+  true_sybil_routers = digestmap_new();
+  digestmap_t *omit_as_sybil;
+
+  CREATE_ROUTER("aaaa", aaaa, 123, AF_INET);
+  smartlist_add(routers, aaaa_ri);
+  CREATE_ROUTER("bbbb", bbbb, 123, AF_INET);
+  smartlist_add(routers, bbbb_ri);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("cccc", cccc, 123, AF_INET);
+  smartlist_add(routers, cccc_ri);
+  digestmap_set(true_sybil_routers, cccc_digest, cccc_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("dddd", dddd, 123, AF_INET);
+  smartlist_add(routers, dddd_ri);
+  digestmap_set(true_sybil_routers, dddd_digest, dddd_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("eeee", eeee, 456, AF_INET);
+  smartlist_add(routers, eeee_ri);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("ffff", ffff, 456, AF_INET);
+  smartlist_add(routers, ffff_ri);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("gggg", gggg, 456, AF_INET);
+  smartlist_add(routers, gggg_ri);
+  digestmap_set(true_sybil_routers, gggg_digest, gggg_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("hhhh", hhhh, 456, AF_INET);
+  smartlist_add(routers, hhhh_ri);
+  digestmap_set(true_sybil_routers, hhhh_digest, hhhh_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("iiii", iiii,123, AF_INET6);
+  smartlist_add(routers, iiii_ri);
+  CREATE_ROUTER("jjjj", jjjj, 123, AF_INET6);
+  smartlist_add(routers, jjjj_ri);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("kkkk", kkkk, 123, AF_INET6);
+  smartlist_add(routers, kkkk_ri);
+  digestmap_set(true_sybil_routers, kkkk_digest, kkkk_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("llll", llll, 123, AF_INET6);
+  smartlist_add(routers, llll_ri);
+  digestmap_set(true_sybil_routers, llll_digest, llll_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("mmmm", mmmm, 456, AF_INET6);
+  smartlist_add(routers, mmmm_ri);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("nnnn", nnnn, 456, AF_INET6);
+  smartlist_add(routers, nnnn_ri);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("oooo", oooo, 456, AF_INET6);
+  smartlist_add(routers, oooo_ri);
+  digestmap_set(true_sybil_routers, oooo_digest, oooo_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+  CREATE_ROUTER("pppp", pppp, 456, AF_INET6);
+  smartlist_add(routers, pppp_ri);
+  digestmap_set(true_sybil_routers, pppp_digest, pppp_digest);
+  omit_as_sybil = get_all_possible_sybil(routers);
+  TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+
+end:
+  UNMOCK(router_digest_is_trusted_dir_type);
+  UNMOCK(node_get_by_id);
+  UNMOCK(dirserv_get_bandwidth_for_router_kb);
+  tor_free(running_node);
+  tor_free(non_running_node);
+  tor_free(router_properties);
+  tor_free(routers);
+  tor_free(omit_as_sybil);
+}
 #define NODE(name, flags)                           \
   {                                                 \
 #    name, test_dirvote_##name, (flags), NULL, NULL \
@@ -481,4 +593,5 @@ struct testcase_t dirvote_tests[] = {
     NODE(compare_routerinfo_by_ipv4, TT_FORK),
     NODE(get_sybil_by_ip_version_ipv4, TT_FORK),
     NODE(get_sybil_by_ip_version_ipv6, TT_FORK),
+    NODE(get_all_possible_sybil, TT_FORK),
     END_OF_TESTCASES};

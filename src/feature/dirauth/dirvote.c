@@ -4341,7 +4341,7 @@ get_sybil_list_by_ip_version(const smartlist_t *routers, sa_family_t family)
 /** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
  * whose keys are the identity digests of those routers that we're going to
  * exclude for Sybil-like appearance. */
-static digestmap_t *
+STATIC digestmap_t *
 get_all_possible_sybil(const smartlist_t *routers)
 {
   smartlist_t  *routers_ipv6, *routers_ipv4;
@@ -4365,7 +4365,7 @@ get_all_possible_sybil(const smartlist_t *routers)
   });
   routers_sort_by_identity(routers_ipv4);
   routers_sort_by_identity(routers_ipv6);
-  omit_as_sybil_ipv4 = get_sybil_list_by_ip_version(routers_ipv6, AF_INET);
+  omit_as_sybil_ipv4 = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   omit_as_sybil_ipv6 = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
 
   // Add all possible sybils to the common digestmap

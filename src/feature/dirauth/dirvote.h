@@ -245,6 +245,9 @@ digestmap_t * get_sybil_list_by_ip_version(
     const smartlist_t *routers, sa_family_t family);
 
 STATIC
+digestmap_t * get_all_possible_sybil(const smartlist_t *routers);
+
+STATIC
 char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
                                                    int consensus_method);
