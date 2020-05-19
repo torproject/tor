@@ -4119,8 +4119,13 @@ hs_service_dump_stats(int severity)
 
       DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                            hs_service_intro_point_t *, ip) {
-        const node_t *intro_node = get_node_from_intro_point(ip);
-        const char *nickname = node_get_nickname(intro_node);
+        const node_t *intro_node;
+        const char *nickname;
+
+        intro_node = get_node_from_intro_point(ip);
+        tor_assert(intro_node);
+        nickname = node_get_nickname(intro_node);
+        tor_assert(nickname);
 
         circ = hs_circ_service_get_intro_circ(ip);
         if (!circ) {
