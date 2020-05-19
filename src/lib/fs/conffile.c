@@ -152,6 +152,7 @@ config_process_include(const char *path, int recursion_level, int extended,
 
   int rv = -1;
   SMARTLIST_FOREACH_BEGIN(config_files, const char *, config_file) {
+    log_notice(LD_CONFIG, "Including configuration file \"%s\".", config_file);
     config_line_t *included_config = NULL;
     config_line_t *included_config_last = NULL;
     if (config_get_included_config(config_file, recursion_level, extended,
