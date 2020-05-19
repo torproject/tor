@@ -4,6 +4,9 @@
 
 @section welcome Welcome to Tor
 
+(For an up-to-date rendered copy of this documentation, see
+https://src-ref.docs.torproject.org/tor/index.html .)
+
 This documentation describes the general structure of the Tor codebase, how
 it fits together, what functionality is available for extending Tor, and
 gives some notes on how Tor got that way.  It also includes a reference for
