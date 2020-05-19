@@ -652,7 +652,7 @@ smartlist_sort_pointers(smartlist_t *sl)
 #define LEFT_CHILD(i)  ( 2*(i) + 1 )
 #define RIGHT_CHILD(i) ( 2*(i) + 2 )
 #define PARENT(i)      ( ((i)-1) / 2 )
-/** }@ */
+/** @} */
 
 /** @{ */
 /** Helper macros for heaps: Given a local variable <b>idx_field_offset</b>
