@@ -198,3 +198,4 @@ tor_gmtime_r_msg(const time_t *timep, struct tm *result, char **err_out)
   return correct_tm(0, timep, result, r, err_out);
 }
 #endif /* defined(HAVE_GMTIME_R) || ... */
+/**@}*/

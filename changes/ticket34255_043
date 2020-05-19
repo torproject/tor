@@ -1,0 +1,3 @@
+  o Documentation:
+    - Fix several doxygen warnings related to imbalanced groups.
+      Closes ticket 34255.
