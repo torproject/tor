@@ -4111,9 +4111,7 @@ hs_service_dump_stats(int severity)
 {
   origin_circuit_t *circ;
 
-  for (hs_service_t **iter = HT_START(hs_service_ht, hs_service_map);
-       iter != NULL; iter = HT_NEXT(hs_service_ht, hs_service_map, iter)) {
-    hs_service_t *hs = *iter;
+  FOR_EACH_SERVICE_BEGIN(hs) {
 
     tor_log(severity, LD_GENERAL, "Service configured in %s:",
             service_escaped_dir(hs));
@@ -4135,7 +4133,7 @@ hs_service_dump_stats(int severity)
       } DIGEST256MAP_FOREACH_END;
 
     } FOR_EACH_DESCRIPTOR_END;
-  }
+  } FOR_EACH_SERVICE_END;
 }
 
 /** Put all service object in the given service list. After this, the caller
