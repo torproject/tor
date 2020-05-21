@@ -294,6 +294,19 @@ process_signal(int sig)
   }
 }
 
+#ifdef _WIN32
+/** Activate SIGINT on reciving a control signal in console */
+static BOOL WINAPI
+process_win32_console_ctrl(DWORD ctrl_type)
+{
+  /* Ignore type of the ctrl signal */
+  (void) ctrl_type;
+
+  activate_signal(SIGINT);
+  return TRUE;
+}
+#endif
+
 /**
  * Write current memory usage information to the log.
  */
@@ -496,6 +509,13 @@ handle_signals(void)
                       &signal_handlers[i].signal_value);
     }
   }
+
+#ifdef _WIN32
+    /* Windows lacks traditional POSIX signals but WinAPI provides a function
+     * to handle control signals like Ctrl+C in the console, we can use this to
+     * simulate the SIGINT signal */
+    if (enabled) SetConsoleCtrlHandler(process_win32_console_ctrl, TRUE);
+#endif
 }
 
 /* Cause the signal handler for signal_num to be called in the event loop. */

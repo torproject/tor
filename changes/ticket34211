@@ -1,0 +1,3 @@
+  o Minor features (windows):
+    - Add support for console control signals like Ctrl+C in Windows
+      Closes ticket 34211. Patch from Damon Harris (TheDcoder).
