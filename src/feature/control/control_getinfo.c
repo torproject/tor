@@ -1332,8 +1332,22 @@ getinfo_helper_events(control_connection_t *control_conn,
       }
       routerinfo_t *r;
       extrainfo_t *e;
-      if (router_build_fresh_descriptor(&r, &e) < 0) {
-        *errmsg = "Error generating descriptor";
+      int result;
+      if ((result = router_build_fresh_descriptor(&r, &e)) < 0) {
+        switch (result) {
+          case TOR_ROUTERINFO_ERROR_NO_EXT_ADDR:
+            *errmsg = "Cannot get relay address while generating descriptor";
+            break;
+          case TOR_ROUTERINFO_ERROR_DIGEST_FAILED:
+            *errmsg = "Key digest failed";
+            break;
+          case TOR_ROUTERINFO_ERROR_CANNOT_GENERATE:
+            *errmsg = "Cannot generate router descriptor";
+            break;
+          default:
+            *errmsg = "Error generating descriptor";
+            break;
+        }
         return -1;
       }
       size_t size = r->cache_info.signed_descriptor_len + 1;
