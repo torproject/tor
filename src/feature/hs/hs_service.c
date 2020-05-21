@@ -3115,7 +3115,7 @@ log_cant_upload_desc(const hs_service_t *service,
    * control that value in the code flow but will be apparent during
    * development if a reason is added but LOG_DESC_UPLOAD_REASON_NUM_ is not
    * updated. */
-  if (BUG(reason > LOG_DESC_UPLOAD_REASON_MAX || reason < 0)) {
+  if (BUG(reason > LOG_DESC_UPLOAD_REASON_MAX)) {
     return;
   }
 
