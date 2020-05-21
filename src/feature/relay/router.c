@@ -2784,6 +2784,9 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   address = tor_dup_ip(router->addr);
+  if (!address)
+    goto err;
+
   chunks = smartlist_new();
 
   /* Generate the easy portion of the router descriptor. */

@@ -358,6 +358,9 @@ trusted_dir_server_new(const char *nickname, const char *address,
     }
     if (!hostname)
       hostname = tor_dup_ip(a);
+
+    if (!hostname)
+      return NULL;
   } else {
     if (tor_lookup_hostname(address, &a)) {
       log_warn(LD_CONFIG,

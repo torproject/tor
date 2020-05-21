@@ -192,7 +192,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
   tor_addr_from_ipv4h(&myaddr,addr);
 
   addr_string = tor_dup_ip(addr);
-  if (tor_addr_is_internal(&myaddr, 0)) {
+  if (addr_string && tor_addr_is_internal(&myaddr, 0)) {
     /* make sure we're ok with publishing an internal IP */
     if (using_default_dir_authorities(options)) {
       /* if they are using the default authorities, disallow internal IPs
