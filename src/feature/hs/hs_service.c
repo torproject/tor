@@ -4123,9 +4123,13 @@ hs_service_dump_stats(int severity)
         const char *nickname;
 
         intro_node = get_node_from_intro_point(ip);
-        tor_assert(intro_node);
+        if (!intro_node) {
+          continue;
+        }
         nickname = node_get_nickname(intro_node);
-        tor_assert(nickname);
+        if (!nickname) {
+          continue;
+        }
 
         circ = hs_circ_service_get_intro_circ(ip);
         if (!circ) {
