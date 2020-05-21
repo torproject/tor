@@ -3061,7 +3061,7 @@ on the public Tor network.
     multiple times: the values from multiple lines are spliced together. When
     this is set then **VersioningAuthoritativeDirectory** should be set too.
 
-[[V3AuthDistDelay]] **V3AuthDistDelay** __N__ **minutes**|**hours**::
+[[V3AuthDistDelay]] **V3AuthDistDelay** __N__ **seconds**|**minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred  delay
     between publishing its consensus and signature and assuming  it has all the
     signatures from all the other authorities. Note that the actual time used
@@ -3082,7 +3082,7 @@ on the public Tor network.
     different identity.  This feature is used to migrate directory authority
     keys in the event of a compromise.  (Default: 0)
 
-[[V3AuthVoteDelay]] **V3AuthVoteDelay** __N__ **minutes**|**hours**::
+[[V3AuthVoteDelay]] **V3AuthVoteDelay** __N__ **seconds**|**minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred delay
     between publishing its vote and assuming it has all the votes from all the
     other authorities. Note that the actual time used is not the server's
@@ -3357,12 +3357,10 @@ The following options are used for running a testing Tor network.
     running.
     (Default: 0) +
 
-       ServerDNSAllowBrokenConfig 1
        DirAllowPrivateAddresses 1
        EnforceDistinctSubnets 0
        AssumeReachable 1
        AuthDirMaxServersPerAddr 0
-       AuthDirMaxServersPerAuthAddr 0
        ClientBootstrapConsensusAuthorityDownloadInitialDelay 0
        ClientBootstrapConsensusFallbackDownloadInitialDelay 0
        ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay 0
@@ -3374,11 +3372,11 @@ The following options are used for running a testing Tor network.
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
        V3AuthDistDelay 20 seconds
-       MinUptimeHidServDirectoryV2 0 seconds
-       TestingV3AuthInitialVotingInterval 5 minutes
+       TestingV3AuthInitialVotingInterval 150 seconds
        TestingV3AuthInitialVoteDelay 20 seconds
        TestingV3AuthInitialDistDelay 20 seconds
        TestingAuthDirTimeToLearnReachability 0 minutes
+       MinUptimeHidServDirectoryV2 0 minutes
        TestingServerDownloadInitialDelay 0
        TestingClientDownloadInitialDelay 0
        TestingServerConsensusDownloadInitialDelay 0
@@ -3389,8 +3387,9 @@ The following options are used for running a testing Tor network.
        TestingDirConnectionMaxStall 30 seconds
        TestingEnableConnBwEvent 1
        TestingEnableCellStatsEvent 1
+       RendPostPeriod 2 minutes
 
-[[TestingAuthDirTimeToLearnReachability]] **TestingAuthDirTimeToLearnReachability** __N__ **minutes**|**hours**::
+[[TestingAuthDirTimeToLearnReachability]] **TestingAuthDirTimeToLearnReachability** __N__ **seconds**|**minutes**|**hours**::
     After starting as an authority, do not make claims about whether routers
     are Running until this much time has passed. Changing this requires
     that **TestingTorNetwork** is set.  (Default: 30 minutes)
@@ -3520,17 +3519,17 @@ The following options are used for running a testing Tor network.
     we replace it and issue a new key?
     (Default: 3 hours for link and auth; 1 day for signing.)
 
-[[TestingV3AuthInitialDistDelay]] **TestingV3AuthInitialDistDelay** __N__ **minutes**|**hours**::
+[[TestingV3AuthInitialDistDelay]] **TestingV3AuthInitialDistDelay** __N__ **seconds**|**minutes**|**hours**::
     Like V3AuthDistDelay, but for initial voting interval before
     the first consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 5 minutes)
 
-[[TestingV3AuthInitialVoteDelay]] **TestingV3AuthInitialVoteDelay** __N__ **minutes**|**hours**::
+[[TestingV3AuthInitialVoteDelay]] **TestingV3AuthInitialVoteDelay** __N__ **seconds**|**minutes**|**hours**::
     Like V3AuthVoteDelay, but for initial voting interval before
     the first consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 5 minutes)
 
-[[TestingV3AuthInitialVotingInterval]] **TestingV3AuthInitialVotingInterval** __N__ **minutes**|**hours**::
+[[TestingV3AuthInitialVotingInterval]] **TestingV3AuthInitialVotingInterval** __N__ **seconds**|**minutes**|**hours**::
     Like V3AuthVotingInterval, but for initial voting interval before the first
     consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 30 minutes)
