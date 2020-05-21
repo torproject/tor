@@ -2018,7 +2018,7 @@ tor_dup_ip(uint32_t addr)
   in.s_addr = htonl(addr);
   ip_str = tor_inet_ntop(AF_INET, &in, buf, sizeof(buf));
 
-  tor_assertf_nonfatal(ip_str, "Failed to duplicate IP %04X", addr);
+  tor_assertf_nonfatal(ip_str, "Failed to duplicate IP %08X", addr);
   if (ip_str)
     return tor_strdup(buf);
 
