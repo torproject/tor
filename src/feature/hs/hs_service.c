@@ -4124,6 +4124,8 @@ hs_service_dump_stats(int severity)
 
         intro_node = get_node_from_intro_point(ip);
         if (!intro_node) {
+          tor_log(severity, LD_GENERAL, "  Couldn't find intro point, "
+                  "skipping");
           continue;
         }
         nickname = node_get_nickname(intro_node);
