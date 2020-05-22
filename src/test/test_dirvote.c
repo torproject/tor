@@ -42,6 +42,20 @@ digestmap_t *router_properties = NULL;
 node_t *running_node;
 node_t *non_running_node;
 
+/* Allocate memory to the global variables that represent a running
+ * and non-running node
+ */
+#define ALLOCATE_MOCK_NODES()                    \
+  running_node = tor_malloc(sizeof(node_t));     \
+  running_node->is_running = 1;                  \
+  non_running_node = tor_malloc(sizeof(node_t)); \
+  non_running_node->is_running = 0;
+
+/* Free the memory allocated to the mock nodes */
+#define FREE_MOCK_NODES() \
+  tor_free(running_node); \
+  tor_free(non_running_node);
+
 int mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type);
 int
 mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type)
@@ -134,11 +148,7 @@ test_dirvote_compare_routerinfo_usefulness(void *arg)
   MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
   MOCK(node_get_by_id, mock_node_get_by_id);
   MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
-
-  running_node = tor_malloc(sizeof(node_t));
-  running_node->is_running = 1;
-  non_running_node = tor_malloc(sizeof(node_t));
-  non_running_node->is_running = 0;
+  ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
 
   // Maybe can be cleaner using macros ?
@@ -189,9 +199,8 @@ end:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
-  tor_free(running_node);
-  tor_free(non_running_node);
-  tor_free(router_properties);
+  FREE_MOCK_NODES();
+  digestmap_free(router_properties, NULL);
   tor_free(status_one);
   tor_free(status_two);
   tor_free(status_three);
@@ -212,10 +221,7 @@ test_dirvote_compare_routerinfo_by_ipv4(void *arg)
   MOCK(node_get_by_id, mock_node_get_by_id);
   MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
 
-  running_node = tor_malloc(sizeof(node_t));
-  running_node->is_running = 1;
-  non_running_node = tor_malloc(sizeof(node_t));
-  non_running_node->is_running = 0;
+  ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
   tor_digest digest_one = "aaaa";
   router_values *status_one = router_values_new(0, 0, 0, digest_one);
@@ -246,9 +252,8 @@ end:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
-  tor_free(running_node);
-  tor_free(non_running_node);
-  tor_free(router_properties);
+  FREE_MOCK_NODES();
+  digestmap_free(router_properties, NULL);
   tor_free(status_one);
   tor_free(status_two);
   tor_free(first);
@@ -263,10 +268,7 @@ test_dirvote_compare_routerinfo_by_ipv6(void *arg)
   MOCK(node_get_by_id, mock_node_get_by_id);
   MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
 
-  running_node = tor_malloc(sizeof(node_t));
-  running_node->is_running = 1;
-  non_running_node = tor_malloc(sizeof(node_t));
-  non_running_node->is_running = 0;
+  ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
   char digest_one[DIGEST_LEN] = "aaaa";
   router_values *status_one = router_values_new(0, 0, 0, digest_one);
@@ -297,9 +299,8 @@ end:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
-  tor_free(running_node);
-  tor_free(non_running_node);
-  tor_free(router_properties);
+  FREE_MOCK_NODES();
+  digestmap_free(router_properties, NULL);
   tor_free(status_one);
   tor_free(status_two);
   tor_free(first);
@@ -315,7 +316,7 @@ end:
   router_values *name##_val = router_values_new(1, 1, 1, name##_digest);  \
   digestmap_set(router_properties, name##_digest, name##_val);            \
   routerinfo_t *name##_ri = routerinfo_new(name##_val, ip_version, addr); \
-  tor_free(name##_val);
+//  tor_free(name##_val);
 
 /** Test to see if the returned routers are exactly the ones that should be
  * flagged as sybils : we test for inclusion then for number of elements
@@ -336,10 +337,7 @@ test_dirvote_get_sybil_by_ip_version_ipv4(void *arg)
   MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
   MOCK(node_get_by_id, mock_node_get_by_id);
   MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
-  running_node = tor_malloc(sizeof(node_t));
-  running_node->is_running = 1;
-  non_running_node = tor_malloc(sizeof(node_t));
-  non_running_node->is_running = 0;
+  ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
   smartlist_t *routers_ipv4;
   routers_ipv4 = smartlist_new();
@@ -392,12 +390,11 @@ end:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
-  tor_free(running_node);
-  tor_free(non_running_node);
-  tor_free(router_properties);
-  tor_free(routers_ipv4);
-  tor_free(omit_as_sybil);
-  tor_free(true_sybil_routers);
+  FREE_MOCK_NODES();
+  digestmap_free(router_properties, NULL);
+  smartlist_free(routers_ipv4);
+  digestmap_free(omit_as_sybil, NULL);
+  digestmap_free(true_sybil_routers, NULL);
 }
 
 static void
@@ -408,10 +405,7 @@ test_dirvote_get_sybil_by_ip_version_ipv6(void *arg)
   MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
   MOCK(node_get_by_id, mock_node_get_by_id);
   MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
-  running_node = tor_malloc(sizeof(node_t));
-  running_node->is_running = 1;
-  non_running_node = tor_malloc(sizeof(node_t));
-  non_running_node->is_running = 0;
+  ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
   smartlist_t *routers_ipv6;
   routers_ipv6 = smartlist_new();
@@ -463,12 +457,11 @@ end:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
-  tor_free(true_sybil_routers);
-  tor_free(running_node);
-  tor_free(non_running_node);
-  tor_free(router_properties);
-  tor_free(routers_ipv6);
-  tor_free(omit_as_sybil);
+  FREE_MOCK_NODES();
+  digestmap_free(router_properties, NULL);
+  digestmap_free(true_sybil_routers, NULL);
+  smartlist_free(routers_ipv6);
+  digestmap_free(omit_as_sybil, NULL);
 }
 
 static void
@@ -479,10 +472,7 @@ test_dirvote_get_all_possible_sybil(void *arg)
   MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
   MOCK(node_get_by_id, mock_node_get_by_id);
   MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
-  running_node = tor_malloc(sizeof(node_t));
-  running_node->is_running = 1;
-  non_running_node = tor_malloc(sizeof(node_t));
-  non_running_node->is_running = 0;
+  ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
   smartlist_t *routers;
   routers = smartlist_new();
@@ -531,7 +521,7 @@ test_dirvote_get_all_possible_sybil(void *arg)
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
 
-  CREATE_ROUTER("iiii", iiii,123, AF_INET6);
+  CREATE_ROUTER("iiii", iiii, 123, AF_INET6);
   smartlist_add(routers, iiii_ri);
   CREATE_ROUTER("jjjj", jjjj, 123, AF_INET6);
   smartlist_add(routers, jjjj_ri);
@@ -576,11 +566,11 @@ end:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
-  tor_free(running_node);
-  tor_free(non_running_node);
-  tor_free(router_properties);
-  tor_free(routers);
-  tor_free(omit_as_sybil);
+  FREE_MOCK_NODES();
+  digestmap_free(router_properties, NULL);
+  smartlist_free(routers);
+  digestmap_free(omit_as_sybil, NULL);
+  digestmap_free(true_sybil_routers, NULL);
 }
 #define NODE(name, flags)                           \
   {                                                 \
