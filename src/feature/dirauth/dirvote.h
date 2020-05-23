@@ -232,8 +232,9 @@ int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           const char *source,
                                           int severity,
                                           const char **msg_out);
-STATIC
-int compare_routerinfo_usefulness(const void **a, const void **b);
+STATIC int
+compare_routerinfo_usefulness(const routerinfo_t *first,
+                              const routerinfo_t *second);
 STATIC
 int compare_routerinfo_by_ipv4(const void **a, const void **b);
 

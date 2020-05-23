@@ -4206,11 +4206,12 @@ MOCK_IMPL(uint32_t,dirserv_get_bandwidth_for_router_kb,
 STATIC int
 compare_routerinfo_by_ipv4(const void **a, const void **b)
 {
-  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
+  const routerinfo_t *first = *(routerinfo_t **)a;
+  const routerinfo_t *second = *(routerinfo_t **)b;
   // Don't use tor_addr_compare because it requires a tor_addr_t struct
   // If addresses are equal, use other comparison criterions
   if (first->addr == second->addr) {
-    return compare_routerinfo_usefulness(a,b);
+    return compare_routerinfo_usefulness(first, second);
   } else {
     // Otherwise, compare the addresses
     if (first->addr < second->addr)
@@ -4227,13 +4228,14 @@ compare_routerinfo_by_ipv4(const void **a, const void **b)
 STATIC int
 compare_routerinfo_by_ipv6(const void **a, const void **b)
 {
-  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
-  tor_addr_t *first_ipv6 = &(first->ipv6_addr);
-  tor_addr_t *second_ipv6 = &(second->ipv6_addr);
+  const routerinfo_t *first = *(routerinfo_t **)a;
+  const routerinfo_t *second = *(routerinfo_t **)b;
+  const tor_addr_t *first_ipv6 = &(first->ipv6_addr);
+  const tor_addr_t *second_ipv6 = &(second->ipv6_addr);
   int comparison = tor_addr_compare(first_ipv6, second_ipv6, CMP_EXACT);
   // If addresses are equal, use other comparison criterions
   if (comparison == 0)
-    return compare_routerinfo_usefulness(a, b);
+    return compare_routerinfo_usefulness(first, second);
   else
     return comparison;
 }
@@ -4245,9 +4247,9 @@ compare_routerinfo_by_ipv6(const void **a, const void **b)
 * is more useful than one with less.
 **/
 STATIC int
-compare_routerinfo_usefulness(const void **a, const void **b)
+compare_routerinfo_usefulness(const routerinfo_t *first,
+                              const routerinfo_t *second)
 {
-  routerinfo_t *first = *(routerinfo_t **) a, *second = *(routerinfo_t **) b;
   int first_is_auth, second_is_auth;
   const node_t *node_first, *node_second;
   int first_is_running, second_is_running;

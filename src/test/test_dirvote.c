@@ -35,7 +35,7 @@ typedef char tor_digest[DIGEST_LEN];
 
 // Use of global variable is justified because the functions that have to be
 // mocked take as arguments objects we have no control over
-digestmap_t *router_properties = NULL;
+static digestmap_t *router_properties = NULL;
 // Use of global variable is justified by its use in nodelist.c
 // and is necessary to avoid memory leaks when mocking the
 // function node_get_by_id
@@ -151,7 +151,6 @@ test_dirvote_compare_routerinfo_usefulness(void *arg)
   ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
 
-  // Maybe can be cleaner using macros ?
   // The router one is the "least useful" router, every router is compared to
   // it
   tor_digest digest_one = "aaaa";
@@ -173,27 +172,27 @@ test_dirvote_compare_routerinfo_usefulness(void *arg)
   // A router that has auth status is more useful than a non-auth one
   routerinfo_t *first = routerinfo_new(status_one, AF_INET, 0xf);
   routerinfo_t *second = routerinfo_new(status_two, AF_INET, 0xf);
-  int a = compare_routerinfo_usefulness((const void **)&first,
-                                        (const void **)&second);
+  int a = compare_routerinfo_usefulness(first, second);
   tt_assert(a == 1);
+  tor_free(second);
 
   // A running router is more useful than a non running one
   routerinfo_t *third = routerinfo_new(status_three, AF_INET, 0xf);
-  a = compare_routerinfo_usefulness((const void **)&first,
-                                    (const void **)&third);
+  a = compare_routerinfo_usefulness(first, third);
   tt_assert(a == 1);
+  tor_free(third);
 
   // A higher bandwidth is more useful
   routerinfo_t *fourth = routerinfo_new(status_four, AF_INET, 0xf);
-  a = compare_routerinfo_usefulness((const void **)&first,
-                                    (const void **)&fourth);
+  a = compare_routerinfo_usefulness(first, fourth);
   tt_assert(a == 1);
+  tor_free(fourth);
 
   // In case of tie, the digests are compared
   routerinfo_t *fifth = routerinfo_new(status_five, AF_INET, 0xf);
-  a = compare_routerinfo_usefulness((const void **)&first,
-                                    (const void **)&fifth);
+  a = compare_routerinfo_usefulness(first, fifth);
   tt_assert(a > 0);
+  tor_free(fifth);
 
 end:
   UNMOCK(router_digest_is_trusted_dir_type);
@@ -207,10 +206,6 @@ end:
   tor_free(status_four);
   tor_free(status_five);
   tor_free(first);
-  tor_free(second);
-  tor_free(third);
-  tor_free(fourth);
-  tor_free(fifth);
 }
 
 static void
@@ -316,7 +311,7 @@ end:
   router_values *name##_val = router_values_new(1, 1, 1, name##_digest);  \
   digestmap_set(router_properties, name##_digest, name##_val);            \
   routerinfo_t *name##_ri = routerinfo_new(name##_val, ip_version, addr); \
-//  tor_free(name##_val);
+  tor_free(name##_val);
 
 /** Test to see if the returned routers are exactly the ones that should be
  * flagged as sybils : we test for inclusion then for number of elements
