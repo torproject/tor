@@ -2907,8 +2907,8 @@ on the public Tor network.
     networkstatus documents rather than generating its own. (Default: 0)
 
 [[MinUptimeHidServDirectoryV2]] **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Minimum uptime of a v2 hidden service directory to be accepted as such by
-    authoritative directories. (Default: 25 hours)
+    Minimum uptime of a relay to be accepted as a hidden service directory
+    by directory authorities. (Default: 96 hours)
 
 [[RecommendedServerVersions]] **RecommendedServerVersions** __STRING__::
     STRING is a comma-separated list of Tor versions currently believed to be
