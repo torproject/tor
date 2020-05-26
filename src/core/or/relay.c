@@ -226,7 +226,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 {
   channel_t *chan = NULL;
   crypt_path_t *layer_hint=NULL;
-  char recognized=0;
+  char recognized = 0;
   int reason;
 
   tor_assert(cell);
@@ -265,7 +265,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     conn = relay_lookup_conn(circ, cell, cell_direction, layer_hint);
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
-      log_debug(LD_OR,"Sending away from origin.");
+      log_debug(LD_OR, "Sending away from origin.");
       reason = connection_edge_process_relay_cell(cell, circ, conn, NULL);
       if (reason < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -276,7 +276,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     }
     if (cell_direction == CELL_DIRECTION_IN) {
       ++stats_n_relay_cells_delivered;
-      log_debug(LD_OR,"Sending to origin.");
+      log_debug(LD_OR, "Sending to origin.");
       reason = connection_edge_process_relay_cell(cell, circ, conn,
                                                   layer_hint);
       if (reason < 0) {
@@ -341,7 +341,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 
-  log_debug(LD_OR,"Passing on unrecognized cell.");
+  log_debug(LD_OR, "Passing on unrecognized cell.");
 
   ++stats_n_relay_cells_relayed; /* XXXX no longer quite accurate {cells}
                                   * we might kill the circ before we relay
@@ -371,7 +371,7 @@ circuit_package_relay_cell, (cell_t *cell, circuit_t *circ,
   if (cell_direction == CELL_DIRECTION_OUT) {
     chan = circ->n_chan;
     if (!chan) {
-      log_warn(LD_BUG,"outgoing relay cell sent from %s:%d has n_chan==NULL."
+      log_warn(LD_BUG, "outgoing relay cell sent from %s:%d has n_chan==NULL."
                " Dropping. Circuit is in state %s (%d), and is "
                "%smarked for close. (%s:%d, %d)", filename, lineno,
                circuit_state_to_string(circ->state), circ->state,
@@ -381,13 +381,13 @@ circuit_package_relay_cell, (cell_t *cell, circuit_t *circ,
       if (CIRCUIT_IS_ORIGIN(circ)) {
         circuit_log_path(LOG_WARN, LD_BUG, TO_ORIGIN_CIRCUIT(circ));
       }
-      log_backtrace(LOG_WARN,LD_BUG,"");
+      log_backtrace(LOG_WARN, LD_BUG, "");
       return 0; /* just drop it */
     }
     if (!CIRCUIT_IS_ORIGIN(circ)) {
-      log_warn(LD_BUG,"outgoing relay cell sent from %s:%d on non-origin "
+      log_warn(LD_BUG, "outgoing relay cell sent from %s:%d on non-origin "
                "circ. Dropping.", filename, lineno);
-      log_backtrace(LOG_WARN,LD_BUG,"");
+      log_backtrace(LOG_WARN, LD_BUG, "");
       return 0; /* just drop it */
     }
 
@@ -402,7 +402,7 @@ circuit_package_relay_cell, (cell_t *cell, circuit_t *circ,
     if (CIRCUIT_IS_ORIGIN(circ)) {
       /* We should never package an _incoming_ cell from the circuit
        * origin; that means we messed up somewhere. */
-      log_warn(LD_BUG,"incoming relay cell at origin circuit. Dropping.");
+      log_warn(LD_BUG, "incoming relay cell at origin circuit. Dropping.");
       assert_circuit_ok(circ);
       return 0; /* just drop it */
     }
@@ -437,30 +437,30 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell,
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     for (tmpconn = TO_ORIGIN_CIRCUIT(circ)->p_streams; tmpconn;
-         tmpconn=tmpconn->next_stream) {
+         tmpconn = tmpconn->next_stream) {
       if (rh.stream_id == tmpconn->stream_id &&
           !tmpconn->base_.marked_for_close &&
           tmpconn->cpath_layer == layer_hint) {
-        log_debug(LD_APP,"found conn for stream %d.", rh.stream_id);
+        log_debug(LD_APP, "found conn for stream %d.", rh.stream_id);
         return tmpconn;
       }
     }
   } else {
     for (tmpconn = TO_OR_CIRCUIT(circ)->n_streams; tmpconn;
-         tmpconn=tmpconn->next_stream) {
+         tmpconn = tmpconn->next_stream) {
       if (rh.stream_id == tmpconn->stream_id &&
           !tmpconn->base_.marked_for_close) {
-        log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
+        log_debug(LD_EXIT, "found conn for stream %d.", rh.stream_id);
         if (cell_direction == CELL_DIRECTION_OUT ||
             connection_edge_is_rendezvous_stream(tmpconn))
           return tmpconn;
       }
     }
     for (tmpconn = TO_OR_CIRCUIT(circ)->resolving_streams; tmpconn;
-         tmpconn=tmpconn->next_stream) {
+         tmpconn = tmpconn->next_stream) {
       if (rh.stream_id == tmpconn->stream_id &&
           !tmpconn->base_.marked_for_close) {
-        log_debug(LD_EXIT,"found conn for stream %d.", rh.stream_id);
+        log_debug(LD_EXIT, "found conn for stream %d.", rh.stream_id);
         return tmpconn;
       }
     }
@@ -639,7 +639,7 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   /* Add random padding to the cell if we can. */
   pad_cell_payload(cell.payload, payload_len);
 
-  log_debug(LD_OR,"delivering %d cell %s.", relay_command,
+  log_debug(LD_OR, "delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
   /* Tell circpad we're sending a relay cell */
@@ -702,7 +702,7 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
 
   if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer,
                                  stream_id, filename, lineno) < 0) {
-    log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
+    log_warn(LD_BUG, "circuit_package_relay_cell failed. Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
     return -1;
   }
@@ -747,11 +747,11 @@ connection_edge_send_command(edge_connection_t *fromconn,
 
   if (!circ) {
     if (fromconn->base_.type == CONN_TYPE_AP) {
-      log_info(LD_APP,"no circ. Closing conn.");
+      log_info(LD_APP, "no circ. Closing conn.");
       connection_mark_unattached_ap(EDGE_TO_ENTRY_CONN(fromconn),
                                     END_STREAM_REASON_INTERNAL);
     } else {
-      log_info(LD_EXIT,"no circ. Closing conn.");
+      log_info(LD_EXIT, "no circ. Closing conn.");
       fromconn->edge_has_sent_end = 1; /* no circ to send to */
       fromconn->end_reason = END_STREAM_REASON_INTERNAL;
       connection_mark_for_close(TO_CONN(fromconn));
@@ -849,7 +849,7 @@ connection_ap_process_end_not_open(
       !connection_edge_is_rendezvous_stream(edge_conn)) {
     const char *chosen_exit_digest =
       circ->build_state->chosen_exit->identity_digest;
-    log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
+    log_info(LD_APP, "Address '%s' refused due to '%s'. Considering retrying.",
              safe_str(conn->socks_request->address),
              stream_end_reason_to_string(reason));
     exitrouter = node_get_mutable_by_id(chosen_exit_digest);
@@ -872,7 +872,7 @@ connection_ap_process_end_not_open(
               ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+17));
           }
           if (tor_addr_is_null(&addr)) {
-            log_info(LD_APP,"Address '%s' resolved to 0.0.0.0. Closing,",
+            log_info(LD_APP, "Address '%s' resolved to 0.0.0.0. Closing,",
                      safe_str(conn->socks_request->address));
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
@@ -890,7 +890,7 @@ connection_ap_process_end_not_open(
           }
           if (get_options()->ClientDNSRejectInternalAddresses &&
               tor_addr_is_internal(&addr, 0)) {
-            log_info(LD_APP,"Address '%s' resolved to internal. Closing,",
+            log_info(LD_APP, "Address '%s' resolved to internal. Closing,",
                      safe_str(conn->socks_request->address));
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
@@ -949,7 +949,7 @@ connection_ap_process_end_not_open(
         if (client_dns_incr_failures(conn->socks_request->address)
             < MAX_RESOLVE_FAILURES) {
           /* We haven't retried too many times; reattach the connection. */
-          circuit_log_path(LOG_INFO,LD_APP,circ);
+          circuit_log_path(LOG_INFO, LD_APP, circ);
           /* Mark this circuit "unusable for new streams". */
           mark_circuit_unusable_for_new_conns(circ);
 
@@ -986,13 +986,13 @@ connection_ap_process_end_not_open(
         /* else, will close below */
         break;
     } /* end switch */
-    log_info(LD_APP,"Giving up on retrying; conn can't be handled.");
+    log_info(LD_APP, "Giving up on retrying; conn can't be handled.");
   }
 
   log_info(LD_APP,
            "Edge got end (%s) before we're connected. Marking for close.",
        stream_end_reason_to_string(rh->length > 0 ? reason : -1));
-  circuit_log_path(LOG_INFO,LD_APP,circ);
+  circuit_log_path(LOG_INFO, LD_APP, circ);
   /* need to test because of detach_retriable */
   if (!ENTRY_TO_CONN(conn)->marked_for_close)
     connection_mark_unattached_ap(conn, control_reason);
@@ -1395,7 +1395,7 @@ connection_edge_process_relay_cell_not_open(
     }
     CONNECTION_AP_EXPECT_NONPENDING(entry_conn);
     conn->base_.state = AP_CONN_STATE_OPEN;
-    log_info(LD_APP,"'connected' received for circid %u streamid %d "
+    log_info(LD_APP, "'connected' received for circid %u streamid %d "
              "after %d seconds.",
              (unsigned)circ->n_circ_id,
              rh->stream_id,
@@ -1440,7 +1440,7 @@ connection_edge_process_relay_cell_not_open(
 
       remap_event_helper(entry_conn, &addr);
     }
-    circuit_log_path(LOG_INFO,LD_APP,TO_ORIGIN_CIRCUIT(circ));
+    circuit_log_path(LOG_INFO, LD_APP, TO_ORIGIN_CIRCUIT(circ));
     /* don't send a socks reply to transparent conns */
     tor_assert(entry_conn->socks_request != NULL);
     if (!entry_conn->socks_request->has_finished) {
@@ -1668,7 +1668,7 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
           }
         }
 
-        log_info(domain,"data cell dropped, unknown stream (streamid %d).",
+        log_info(domain, "data cell dropped, unknown stream (streamid %d).",
                  rh->stream_id);
         return 0;
       }
@@ -1728,7 +1728,7 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
             return 0;
           }
         }
-        log_info(domain,"end cell (%s) dropped, unknown stream.",
+        log_info(domain, "end cell (%s) dropped, unknown stream.",
                  stream_end_reason_to_string(reason));
         return 0;
       }
@@ -1762,7 +1762,7 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_EXTEND:
     case RELAY_COMMAND_EXTEND2: {
-      static uint64_t total_n_extend=0, total_nonearly=0;
+      static uint64_t total_n_extend = 0, total_nonearly = 0;
       total_n_extend++;
       if (rh->stream_id) {
         log_fn(LOG_PROTOCOL_WARN, domain,
@@ -1770,7 +1770,7 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
         return 0;
       }
       if (cell->command != CELL_RELAY_EARLY &&
-          !networkstatus_get_param(NULL,"AllowNonearlyExtend",0,0,1)) {
+          !networkstatus_get_param(NULL, "AllowNonearlyExtend", 0, 0, 1)) {
 #define EARLY_WARNING_INTERVAL 3600
         static ratelim_t early_warning_limit =
           RATELIM_INIT(EARLY_WARNING_INTERVAL);
@@ -1802,12 +1802,12 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
                "'extended' unsupported at non-origin. Dropping.");
         return 0;
       }
-      log_debug(domain,"Got an extended cell! Yay.");
+      log_debug(domain, "Got an extended cell! Yay.");
       {
         extended_cell_t extended_cell;
         if (extended_cell_parse(&extended_cell, rh->command,
                         (const uint8_t*)cell->payload+RELAY_HEADER_SIZE,
-                        rh->length)<0) {
+                        rh->length) < 0) {
           log_warn(LD_PROTOCOL,
                    "Can't parse EXTENDED cell; killing circuit.");
           return -END_CIRC_REASON_TORPROTOCOL;
@@ -1819,8 +1819,9 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
                      * here. */
         }
       }
-      if ((reason=circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)))<0) {
-        log_info(domain,"circuit_send_next_onion_skin() failed.");
+      if ((reason = circuit_send_next_onion_skin(
+                                             TO_ORIGIN_CIRCUIT(circ))) < 0) {
+        log_info(domain, "circuit_send_next_onion_skin() failed.");
         return reason;
       }
       /* Total all valid bytes delivered. */
@@ -1974,9 +1975,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                                    edge_connection_t *conn,
                                    crypt_path_t *layer_hint)
 {
-  static int num_seen=0;
+  static int num_seen = 0;
   relay_header_t rh;
-  unsigned domain = layer_hint?LD_APP:LD_EXIT;
+  unsigned domain = layer_hint ? LD_APP : LD_EXIT;
   int optimistic_data = 0; /* Set to 1 if we receive data on a stream
                             * that's in the EXIT_CONN_STATE_RESOLVING
                             * or EXIT_CONN_STATE_CONNECTING states. */
@@ -1985,7 +1986,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   tor_assert(circ);
 
   relay_header_unpack(&rh, cell->payload);
-//  log_fn(LOG_DEBUG,"command %d stream %d", rh.command, rh.stream_id);
+//  log_fn(LOG_DEBUG, "command %d stream %d", rh.command, rh.stream_id);
   num_seen++;
   log_debug(domain, "Now seen %d relay cells here (command %d, stream %d).",
             num_seen, rh.command, rh.stream_id);
@@ -2173,7 +2174,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
 
   circ = circuit_get_by_edge_conn(conn);
   if (!circ) {
-    log_info(domain,"conn has no circuit! Closing.");
+    log_info(domain, "conn has no circuit! Closing.");
     conn->end_reason = END_STREAM_REASON_CANT_ATTACH;
     return -1;
   }
@@ -2182,7 +2183,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     return 0;
 
   if (conn->package_window <= 0) {
-    log_info(domain,"called with package_window %d. Skipping.",
+    log_info(domain, "called with package_window %d. Skipping.",
              conn->package_window);
     connection_stop_reading(TO_CONN(conn));
     return 0;
@@ -2239,7 +2240,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   }
 
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,
-                                   payload, length) < 0 ) {
+                                   payload, length) < 0) {
     /* circuit got marked for close, don't continue, don't need to mark conn */
     return 0;
   }
@@ -2256,11 +2257,11 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   /* Handle the stream-level SENDME package window. */
   if (sendme_note_stream_data_packaged(conn) < 0) {
     connection_stop_reading(TO_CONN(conn));
-    log_debug(domain,"conn->package_window reached 0.");
+    log_debug(domain, "conn->package_window reached 0.");
     circuit_consider_stop_edge_reading(circ, cpath_layer);
     return 0; /* don't process the inbuf any more */
   }
-  log_debug(domain,"conn->package_window is now %d",conn->package_window);
+  log_debug(domain, "conn->package_window is now %d",conn->package_window);
 
   if (max_cells) {
     *max_cells -= 1;
@@ -2281,10 +2282,10 @@ static void
 circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
 {
   if (circuit_queue_streams_are_blocked(circ)) {
-    log_debug(layer_hint?LD_APP:LD_EXIT,"Too big queue, no resuming");
+    log_debug(layer_hint ? LD_APP : LD_EXIT, "Too big queue, no resuming");
     return;
   }
-  log_debug(layer_hint?LD_APP:LD_EXIT,"resuming");
+  log_debug(layer_hint ? LD_APP : LD_EXIT, "resuming");
 
   if (CIRCUIT_IS_ORIGIN(circ))
     circuit_resume_edge_reading_helper(TO_ORIGIN_CIRCUIT(circ)->p_streams,
@@ -2366,7 +2367,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
    * their inbuf, and enable reading on all of the connections. */
   n_packaging_streams = 0;
   /* Activate reading starting from the chosen stream */
-  for (conn=chosen_stream; conn; conn = conn->next_stream) {
+  for (conn = chosen_stream; conn; conn = conn->next_stream) {
     /* Start reading for the streams starting from here */
     if (conn->base_.marked_for_close || conn->package_window <= 0)
       continue;
@@ -2404,7 +2405,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
    * packaged, and n_streams_left with the number that still have data to
    * package.
    */
-  for (conn=first_conn; conn; conn=conn->next_stream) {
+  for (conn = first_conn; conn; conn = conn->next_stream) {
     if (conn->base_.marked_for_close || conn->package_window <= 0)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
@@ -2413,9 +2414,9 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
       r = connection_edge_package_raw_inbuf(conn, 1, &n);
 
       /* Note how many we packaged */
-      packaged_this_round += (cells_per_conn-n);
+      packaged_this_round += (cells_per_conn - n);
 
-      if (r<0) {
+      if (r < 0) {
         /* Problem while packaging. (We already sent an end cell if
          * possible) */
         connection_mark_for_close(TO_CONN(conn));
@@ -2463,23 +2464,23 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
 
   if (!layer_hint) {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
-    log_debug(domain,"considering circ->package_window %d",
+    log_debug(domain, "considering circ->package_window %d",
               circ->package_window);
     if (circ->package_window <= 0) {
-      log_debug(domain,"yes, not-at-origin. stopped.");
-      for (conn = or_circ->n_streams; conn; conn=conn->next_stream)
+      log_debug(domain, "yes, not-at-origin. stopped.");
+      for (conn = or_circ->n_streams; conn; conn = conn->next_stream)
         connection_stop_reading(TO_CONN(conn));
       return 1;
     }
     return 0;
   }
   /* else, layer hint is defined, use it */
-  log_debug(domain,"considering layer_hint->package_window %d",
+  log_debug(domain, "considering layer_hint->package_window %d",
             layer_hint->package_window);
   if (layer_hint->package_window <= 0) {
-    log_debug(domain,"yes, at-origin. stopped.");
+    log_debug(domain, "yes, at-origin. stopped.");
     for (conn = TO_ORIGIN_CIRCUIT(circ)->p_streams; conn;
-         conn=conn->next_stream) {
+         conn = conn->next_stream) {
       if (conn->cpath_layer == layer_hint)
         connection_stop_reading(TO_CONN(conn));
     }
