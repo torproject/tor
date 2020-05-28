@@ -969,6 +969,7 @@ test_close_intro_circuits_new_desc(void *arg)
   (void) arg;
 
   hs_init();
+  rend_cache_init();
 
   /* This is needed because of the client cache expiration timestamp is based
    * on having a consensus. See cached_client_descriptor_has_expired(). */
@@ -992,6 +993,51 @@ test_close_intro_circuits_new_desc(void *arg)
   tt_assert(circ);
   circ->purpose = CIRCUIT_PURPOSE_C_INTRODUCING;
   ocirc = TO_ORIGIN_CIRCUIT(circ);
+
+  /* Build a descriptor _without_ client authorization and thus not
+   * decryptable. Make sure the close circuit code path is not triggered. */
+  {
+    char *desc_encoded = NULL;
+    uint8_t descriptor_cookie[HS_DESC_DESCRIPTOR_COOKIE_LEN];
+    curve25519_keypair_t client_kp;
+    hs_descriptor_t *desc = NULL;
+
+    tt_int_op(0, OP_EQ, curve25519_keypair_generate(&client_kp, 0));
+    crypto_rand((char *) descriptor_cookie, sizeof(descriptor_cookie));
+
+    desc = hs_helper_build_hs_desc_with_client_auth(descriptor_cookie,
+                                                    &client_kp.pubkey,
+                                                    &service_kp);
+    tt_assert(desc);
+    ret = hs_desc_encode_descriptor(desc, &service_kp, descriptor_cookie,
+                                    &desc_encoded);
+    tt_int_op(ret, OP_EQ, 0);
+    /* Associate descriptor intro key with the dummy circuit. */
+    const hs_desc_intro_point_t *ip =
+      smartlist_get(desc->encrypted_data.intro_points, 0);
+    tt_assert(ip);
+    ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+    ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk,
+                        &ip->auth_key_cert->signed_key);
+    hs_descriptor_free(desc);
+    tt_assert(desc_encoded);
+    /* Put it in the cache. Should not be decrypted since the client
+     * authorization creds were not added to the global map. */
+    ret = hs_cache_store_as_client(desc_encoded, &service_kp.pubkey);
+    tor_free(desc_encoded);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_NEED_CLIENT_AUTH);
+
+    /* Clean cache with a future timestamp. It will trigger the clean up and
+     * attempt to close the circuit but only if the descriptor is decryptable.
+     * Cache object should be removed and circuit untouched. */
+    hs_cache_clean_as_client(mock_ns.valid_after + (60 * 60 * 24));
+    tt_assert(!hs_cache_lookup_as_client(&service_kp.pubkey));
+
+    /* Make sure the circuit still there. */
+    tt_assert(circuit_get_next_intro_circ(NULL, true));
+    /* Get rid of the ident, it will be replaced in the next tests. */
+    hs_ident_circuit_free(ocirc->hs_ident);
+  }
 
   /* Build the first descriptor and cache it. */
   {
