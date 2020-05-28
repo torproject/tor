@@ -1,0 +1,5 @@
+  o Minor features (control port, rephist):
+    - Introduce GETINFO "rephist/ntor/onion_handshakes_{assigned/requested}"
+      and "rephist/tap/onion_handshakes_{assigned/requested}" to get the
+      NTor and TAP circuit onion handshake rephist values respectively.
+      Closes ticket 28279. Patch by Neel Chauhan.
