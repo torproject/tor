@@ -51,6 +51,7 @@
 #include "feature/rend/rendcache.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/rephist.h"
 #include "lib/version/torversion.h"
 #include "lib/encoding/kvline.h"
 
@@ -1436,6 +1437,39 @@ getinfo_helper_liveness(control_connection_t *control_conn,
   return 0;
 }
 
+/** Implementation helper for GETINFO: answers queries about circuit onion
+ * handshake rephist values */
+STATIC int
+getinfo_helper_rephist(control_connection_t *control_conn,
+                       const char *question, char **answer,
+                       const char **errmsg)
+{
+  (void) control_conn;
+  (void) errmsg;
+  int result;
+
+  if (!strcmp(question, "stats/ntor/assigned")) {
+    result =
+      rep_hist_get_circuit_handshake_assigned(ONION_HANDSHAKE_TYPE_NTOR);
+  } else if (!strcmp(question, "stats/ntor/requested")) {
+    result =
+      rep_hist_get_circuit_handshake_requested(ONION_HANDSHAKE_TYPE_NTOR);
+  } else if (!strcmp(question, "stats/tap/assigned")) {
+    result =
+      rep_hist_get_circuit_handshake_assigned(ONION_HANDSHAKE_TYPE_TAP);
+  } else if (!strcmp(question, "stats/tap/requested")) {
+    result =
+      rep_hist_get_circuit_handshake_requested(ONION_HANDSHAKE_TYPE_TAP);
+  } else {
+    *errmsg = "Unrecognized handshake type";
+    return -1;
+  }
+
+  tor_asprintf(answer, "%d", result);
+
+  return 0;
+}
+
 /** Implementation helper for GETINFO: answers queries about shared random
  * value. */
 static int
@@ -1660,6 +1694,16 @@ static const getinfo_item_t getinfo_items[] = {
        "Onion services detached from the control connection."),
   ITEM("sr/current", sr, "Get current shared random value."),
   ITEM("sr/previous", sr, "Get previous shared random value."),
+  PREFIX("stats/ntor/", rephist, "NTor circuit handshake stats."),
+  ITEM("stats/ntor/assigned", rephist,
+       "Assigned NTor circuit handshake stats."),
+  ITEM("stats/ntor/requested", rephist,
+       "Requested NTor circuit handshake stats."),
+  PREFIX("stats/tap/", rephist, "TAP circuit handshake stats."),
+  ITEM("stats/tap/assigned", rephist,
+       "Assigned TAP circuit handshake stats."),
+  ITEM("stats/tap/requested", rephist,
+       "Requested TAP circuit handshake stats."),
   { NULL, NULL, NULL, 0 }
 };
 

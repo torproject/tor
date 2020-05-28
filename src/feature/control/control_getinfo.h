@@ -60,6 +60,10 @@ STATIC int getinfo_helper_current_time(
     control_connection_t *control_conn,
     const char *question, char **answer,
     const char **errmsg);
+STATIC int getinfo_helper_rephist(
+    control_connection_t *control_conn,
+    const char *question, char **answer,
+    const char **errmsg);
 #endif /* defined(CONTROL_GETINFO_PRIVATE) */
 
 #endif /* !defined(TOR_CONTROL_GETINFO_H) */
