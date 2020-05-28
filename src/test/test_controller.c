@@ -19,6 +19,7 @@
 #include "feature/rend/rendservice.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/stats/rephist.h"
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "lib/net/resolve.h"
@@ -2112,6 +2113,85 @@ test_control_getconf(void *arg)
   smartlist_free(reply_strs);
 }
 
+static int
+mock_rep_hist_get_circuit_handshake(uint16_t type)
+{
+  int ret;
+
+  switch (type) {
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      ret = 80;
+      break;
+    case ONION_HANDSHAKE_TYPE_TAP:
+      ret = 86;
+      break;
+    default:
+      ret = 0;
+      break;
+  }
+
+  return ret;
+}
+
+static void
+test_rep_hist(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void) arg;
+
+  /* We need these for returning the (mock) rephist. */
+  MOCK(rep_hist_get_circuit_handshake_requested,
+       mock_rep_hist_get_circuit_handshake);
+  MOCK(rep_hist_get_circuit_handshake_assigned,
+       mock_rep_hist_get_circuit_handshake);
+
+  /* NTor tests */
+  getinfo_helper_rephist(&dummy, "rephist/ntor/onion_handshakes_requested",
+                         &answer, &errmsg);
+  tt_ptr_op(answer, OP_NE, NULL);
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tt_str_op(answer, OP_EQ, "80");
+  tor_free(answer);
+  errmsg = NULL;
+
+  getinfo_helper_rephist(&dummy, "rephist/ntor/onion_handshakes_assigned",
+                         &answer, &errmsg);
+  tt_ptr_op(answer, OP_NE, NULL);
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tt_str_op(answer, OP_EQ, "80");
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* TAP tests */
+  getinfo_helper_rephist(&dummy, "rephist/tap/onion_handshakes_requested",
+                         &answer, &errmsg);
+  tt_ptr_op(answer, OP_NE, NULL);
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tt_str_op(answer, OP_EQ, "86");
+  tor_free(answer);
+  errmsg = NULL;
+
+  getinfo_helper_rephist(&dummy, "rephist/tap/onion_handshakes_assigned",
+                         &answer, &errmsg);
+  tt_ptr_op(answer, OP_NE, NULL);
+  tt_ptr_op(errmsg, OP_EQ, NULL);
+  tt_str_op(answer, OP_EQ, "86");
+  tor_free(answer);
+  errmsg = NULL;
+
+ done:
+  UNMOCK(rep_hist_get_circuit_handshake_requested);
+  UNMOCK(rep_hist_get_circuit_handshake_assigned);
+  tor_free(answer);
+
+  return;
+}
+
 #ifndef COCCI
 #define PARSER_TEST(type)                                             \
   { "parse/" #type, test_controller_parse_cmd, 0, &passthrough_setup, \
@@ -2146,5 +2226,6 @@ struct testcase_t controller_tests[] = {
   { "getinfo_md_all", test_getinfo_md_all, 0, NULL, NULL },
   { "control_reply", test_control_reply, 0, NULL, NULL },
   { "control_getconf", test_control_getconf, 0, NULL, NULL },
+  { "rep_hist", test_rep_hist, 0, NULL, NULL },
   END_OF_TESTCASES
 };
