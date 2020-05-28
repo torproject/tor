@@ -2455,6 +2455,20 @@ rep_hist_note_circuit_handshake_assigned(uint16_t type)
     onion_handshakes_assigned[type]++;
 }
 
+/** Get the circuit handshake value that is requested. */
+MOCK_IMPL(int,
+rep_hist_get_circuit_handshake_requested, (uint16_t type))
+{
+  return onion_handshakes_requested[type];
+}
+
+/** Get the circuit handshake value that is assigned. */
+MOCK_IMPL(int,
+rep_hist_get_circuit_handshake_assigned, (uint16_t type))
+{
+  return onion_handshakes_assigned[type];
+}
+
 /** Log our onionskin statistics since the last time we were called. */
 void
 rep_hist_log_circuit_handshake_stats(time_t now)
