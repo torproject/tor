@@ -54,6 +54,8 @@ subsys_wallclock_initialize(void)
 const subsys_fns_t sys_wallclock = {
   .name = "wallclock",
   .supported = true,
-  .level = -99,
+  /* Approximate time is a diagnostic feature, we want it to init right after
+   * low-level error handling. */
+  .level = -98,
   .initialize = subsys_wallclock_initialize,
 };
