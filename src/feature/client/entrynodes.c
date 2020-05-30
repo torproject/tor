@@ -1975,6 +1975,7 @@ entry_guards_update_primary(guard_selection_t *gs)
                g->confirmed_idx >= 0 ? " (confirmed)" : "",
                g->is_filtered_guard ? "" : " (excluded by filter)");
     } SMARTLIST_FOREACH_END(g);
+    smartlist_sort(new_primary_guards, compare_guards_by_sampled_idx);
   }
 
   smartlist_free(old_primary_guards);
