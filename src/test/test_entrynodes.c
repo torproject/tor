@@ -1679,10 +1679,13 @@ test_entry_guard_manage_primary(void *arg)
     tt_ptr_op(g, OP_EQ, smartlist_get(prev_guards, g_sl_idx));
   });
 
-  /* If we have one confirmed guard, that guards becomes the first primary
-   * guard, and the other primary guards get kept. */
+  /**
+   * If we have one confirmed guard, that guards becomes the first primary
+   * only if its sampled_idx is smaller
+   * */
 
-  /* find a non-primary guard... */
+  /* find a non-primary guard... it should have a sampled_idx higher than
+   * existing primary guards */
   entry_guard_t *confirmed = NULL;
   SMARTLIST_FOREACH(gs->sampled_entry_guards, entry_guard_t *, g, {
     if (! g->is_primary) {
@@ -1698,15 +1701,13 @@ test_entry_guard_manage_primary(void *arg)
   smartlist_add_all(prev_guards, gs->primary_entry_guards);
   entry_guards_update_primary(gs);
 
-  /*  and see what's primary now! */
+  /* the confirmed guard should be at the end of the primary list! Hopefully,
+   * one of the primary guards with a lower sampled_idx will confirm soon :)
+   * Doing this won't make the client switches between primaries depending on
+   * the order of confirming events */
   tt_int_op(smartlist_len(gs->primary_entry_guards), OP_EQ, n_primary);
-  tt_ptr_op(smartlist_get(gs->primary_entry_guards, 0), OP_EQ, confirmed);
-  SMARTLIST_FOREACH(gs->primary_entry_guards, entry_guard_t *, g, {
-    tt_assert(g->is_primary);
-    if (g_sl_idx == 0)
-      continue;
-    tt_ptr_op(g, OP_EQ, smartlist_get(prev_guards, g_sl_idx - 1));
-  });
+  tt_ptr_op(smartlist_get(gs->primary_entry_guards,
+        smartlist_len(gs->primary_entry_guards)-1), OP_EQ, confirmed);
   {
     entry_guard_t *prev_last_guard = smartlist_get(prev_guards, n_primary-1);
     tt_assert(! prev_last_guard->is_primary);
@@ -1794,6 +1795,48 @@ test_entry_guard_guard_preferred(void *arg)
  done:
   tor_free(g1);
   tor_free(g2);
+}
+
+static void
+test_entry_guard_correct_cascading_order(void *arg)
+{
+  (void)arg;
+  guard_selection_t *gs = guard_selection_new("default", GS_TYPE_NORMAL);
+  entry_guards_expand_sample(gs);
+  /** First, a test in which the primary guards need be pulled from different
+   * lists to fill up the primary list -- this may happen, if for example, not
+   * enough guards have confirmed yet */
+  entry_guard_t *g;
+  /** just one confirmed */
+  g = smartlist_get(gs->sampled_entry_guards, 2);
+  make_guard_confirmed(gs, g);
+  entry_guards_update_primary(gs);
+  g = smartlist_get(gs->primary_entry_guards, 0);
+  tt_int_op(g->sampled_idx, OP_EQ, 0);
+  g = smartlist_get(gs->primary_entry_guards, 1);
+  tt_int_op(g->sampled_idx, OP_EQ, 1);
+  g = smartlist_get(gs->primary_entry_guards, 2);
+  tt_int_op(g->sampled_idx, OP_EQ, 2);
+
+  /** Now the primaries get all confirmed, and the primary list should not
+   * change */
+  make_guard_confirmed(gs, smartlist_get(gs->primary_entry_guards, 0));
+  make_guard_confirmed(gs, smartlist_get(gs->primary_entry_guards, 1));
+  smartlist_t *old_primary_guards = smartlist_new();
+  smartlist_add_all(old_primary_guards, gs->primary_entry_guards);
+  entry_guards_update_primary(gs);
+  smartlist_ptrs_eq(gs->primary_entry_guards, old_primary_guards);
+  /** the confirmed guards should also have the same set of guards, in the same
+   * order :-) */
+  smartlist_ptrs_eq(gs->confirmed_entry_guards, gs->primary_entry_guards);
+  /** Now select a guard for a circuit, and make sure it is the first primary
+   * guard */
+  unsigned state = 9999;
+  g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
+  tt_ptr_op(g, OP_EQ, smartlist_get(gs->primary_entry_guards, 0));
+ done:
+  smartlist_free(old_primary_guards);
+  guard_selection_free(gs);
 }
 
 static void
@@ -3098,6 +3141,7 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(sample_reachable_filtered_empty),
   BFN_TEST(retry_unreachable),
   BFN_TEST(manage_primary),
+  BFN_TEST(correct_cascading_order),
 
   EN_TEST_FORK(guard_preferred),
 
