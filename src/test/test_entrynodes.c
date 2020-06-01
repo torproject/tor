@@ -1834,6 +1834,15 @@ test_entry_guard_correct_cascading_order(void *arg)
   unsigned state = 9999;
   g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
   tt_ptr_op(g, OP_EQ, smartlist_get(gs->primary_entry_guards, 0));
+  /** Now, let's mark this guard as unreachable and let's update the lists */
+  g->is_reachable = GUARD_REACHABLE_NO;
+  g->failing_since = approx_time() - 10;
+  g->last_tried_to_connect = approx_time() - 10;
+  state = 9999;
+  entry_guards_update_primary(gs);
+  g = select_entry_guard_for_circuit(gs, GUARD_USAGE_TRAFFIC, NULL, &state);
+  /** we should have switched to the next one is sampled order */
+  tt_int_op(g->sampled_idx, OP_EQ, 1);
  done:
   smartlist_free(old_primary_guards);
   guard_selection_free(gs);

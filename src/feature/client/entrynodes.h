@@ -118,7 +118,8 @@ struct entry_guard_t {
   time_t confirmed_on_date; /* 0 if not confirmed */
   /**
    * In what order was this guard sampled? Guards with
-   * lower indices appear earlier on the sampled list
+   * lower indices appear earlier on the sampled list, the confirmed list and
+   * the primary list as a result of Prop 310
    */
   int sampled_idx;
 
