@@ -65,6 +65,8 @@ install:
      # All installed library dlls must be copied to the test and app
      # directories, before running tor's tests. (See below.)
      #>
+    Execute-Command "C:\msys64\usr\bin\pacman" -Syu --verbose --noconfirm pacman ;
+- ps: >-
     Execute-Command "C:\msys64\usr\bin\pacman" -Sy --verbose --needed --noconfirm ${env:mingw_prefix}-libevent ${env:mingw_prefix}-openssl ${env:mingw_prefix}-pkg-config ${env:mingw_prefix}-xz ${env:mingw_prefix}-zstd ;
 
 build_script:
