@@ -1943,7 +1943,7 @@ circuit_find_to_cannibalize(uint8_t purpose_to_produce, extend_info_t *info,
       }
 
       /* Ignore any circuits for which we can't use the Guard. It is possible
-       * that the Guard was removed from the samepled set after the circuit
+       * that the Guard was removed from the sampled set after the circuit
        * was created so avoid using it. */
       if (!entry_guard_could_succeed(circ->guard_state)) {
         goto next;

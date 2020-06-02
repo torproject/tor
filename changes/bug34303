@@ -1,0 +1,5 @@
+  o Minor bugfixes (client performance):
+    - Resume being willing to use preemptively-built circuits when
+      UseEntryGuards is set to 0. We accidentally disabled this feature
+      with that config setting, leading to slower load times. Fixes bug
+      34303; bugfix on 0.3.3.2-alpha.
