@@ -12,6 +12,10 @@
 #ifndef TOR_PATH_H
 #define TOR_PATH_H
 
+#include <stdbool.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "lib/cc/compat_compiler.h"
 
 #ifdef _WIN32
@@ -26,5 +30,8 @@ int path_is_relative(const char *filename);
 void clean_fname_for_stat(char *name);
 int get_parent_directory(char *fname);
 char *make_path_absolute(const char *fname);
+struct smartlist_t *tor_glob(const char *pattern);
+bool has_glob(const char *s);
+struct smartlist_t *get_glob_opened_files(const char *pattern);
 
 #endif /* !defined(TOR_PATH_H) */

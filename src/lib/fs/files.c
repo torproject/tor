@@ -247,6 +247,22 @@ file_status(const char *fname)
   }
 }
 
+/** Returns true if <b>file_type</b> represents an existing file (even if
+ * empty). Returns false otherwise. */
+bool
+is_file(file_status_t file_type)
+{
+  return file_type != FN_ERROR && file_type != FN_NOENT && file_type != FN_DIR;
+}
+
+/** Returns true if <b>file_type</b> represents an existing directory. Returns
+ * false otherwise. */
+bool
+is_dir(file_status_t file_type)
+{
+  return file_type == FN_DIR;
+}
+
 /** Create a file named <b>fname</b> with the contents <b>str</b>.  Overwrite
  * the previous <b>fname</b> if possible.  Return 0 on success, -1 on failure.
  *

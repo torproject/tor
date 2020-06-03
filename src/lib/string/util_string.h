@@ -31,6 +31,7 @@ int tor_digest256_is_zero(const char *digest);
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s);
 void tor_strupper(char *s);
+void tor_strreplacechar(char *s, char find, char replacement);
 int tor_strisprint(const char *s);
 int tor_strisnonupper(const char *s);
 int tor_strisspace(const char *s);
