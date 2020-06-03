@@ -1693,12 +1693,20 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
   /* Find the first non-internal address, or the last internal address
    * Ideally, we want the default route, see #12377 for details */
   SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
+    char *addr_str;
+    int is_internal;
     tor_addr_copy(addr, a);
+    is_internal = tor_addr_is_internal(a, 0);
     rv = 0;
+
+    addr_str = tor_addr_to_str_dup(addr);
+    log_debug(LD_NET, "Found %s interface address '%s'",
+              (is_internal ? "internal" : "external"), addr_str);
+    tor_free(addr_str);
 
     /* If we found a non-internal address, declare success.  Otherwise,
      * keep looking. */
-    if (!tor_addr_is_internal(a, 0))
+    if (!is_internal)
       break;
   } SMARTLIST_FOREACH_END(a);
 
