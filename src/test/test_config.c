@@ -5875,6 +5875,7 @@ test_config_include_flag_both_without(void *data)
 
  done:
   tor_free(errmsg);
+  config_free_all();
 }
 
 static void
@@ -5915,6 +5916,7 @@ test_config_include_flag_torrc_only(void *data)
   tor_free(errmsg);
   tor_free(path);
   tor_free(dir);
+  config_free_all();
 }
 
 static void
@@ -5955,6 +5957,7 @@ test_config_include_flag_defaults_only(void *data)
   tor_free(errmsg);
   tor_free(path);
   tor_free(dir);
+  config_free_all();
 }
 
 static void
