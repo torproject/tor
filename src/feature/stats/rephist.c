@@ -101,9 +101,9 @@
 static void bw_arrays_init(void);
 
 /** Total number of bytes currently allocated in fields used by rephist.c. */
-uint64_t rephist_total_alloc=0;
+uint64_t rephist_total_alloc = 0;
 /** Number of or_history_t objects currently allocated. */
-uint32_t rephist_total_num=0;
+uint32_t rephist_total_num = 0;
 
 /** If the total weighted run count of all runs for a router ever falls
  * below this amount, the router can be treated as having 0 MTBF. */
@@ -112,7 +112,7 @@ uint32_t rephist_total_num=0;
  * is compounded every STABILITY_INTERVAL. */
 #define STABILITY_ALPHA     0.95
 /** Interval at which to discount all old intervals for MTBF purposes. */
-#define STABILITY_INTERVAL  (12*60*60)
+#define STABILITY_INTERVAL  (12 * 60 * 60)
 /* (This combination of ALPHA, INTERVAL, and EPSILON makes it so that an
  * interval that just ended counts twice as much as one that ended a week ago,
  * 20X as much as one that ended a month ago, and routers that have had no
@@ -174,7 +174,7 @@ typedef struct padding_counts_t {
   /** The maximum number of padding timers we've seen in 24 hours */
   uint64_t maximum_chanpad_timers;
   /** When did we first copy padding_current into padding_published? */
-  char first_published_at[ISO_TIME_LEN+1];
+  char first_published_at[ISO_TIME_LEN + 1];
 } padding_counts_t;
 
 /** Holds the current values of our padding statistics.
@@ -243,7 +243,7 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
 {
   or_history_t *hist = get_or_history(id);
   int was_in_run = 1;
-  char tbuf[ISO_TIME_LEN+1];
+  char tbuf[ISO_TIME_LEN + 1];
   int addr_changed, port_changed;
 
   tor_assert(hist);
@@ -279,19 +279,19 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
     networkstatus_t *ns;
 
     if ((ns = networkstatus_get_latest_consensus())) {
-      int fresh_interval = (int)(ns->fresh_until - ns->valid_after);
-      int live_interval = (int)(ns->valid_until - ns->valid_after);
+      int fresh_interval = (int) (ns->fresh_until - ns->valid_after);
+      int live_interval = (int) (ns->valid_until - ns->valid_after);
       /* on average, a descriptor addr change takes .5 intervals to make it
        * into a consensus, and half a liveness period to make it to
        * clients. */
-      penalty = (int)(fresh_interval + live_interval) / 2;
+      penalty = (int) (fresh_interval + live_interval) / 2;
     }
     format_local_iso_time(tbuf, hist->start_of_run);
-    log_info(LD_HIST,"Router %s still seems Running, but its address appears "
+    log_info(LD_HIST, "Router %s still seems Running, but its address appears "
              "to have changed since the last time it was reachable.  I'm "
              "going to treat it as having been down for %d seconds",
              hex_str(id, DIGEST_LEN), penalty);
-    rep_hist_note_router_unreachable(id, when-penalty);
+    rep_hist_note_router_unreachable(id, when - penalty);
     rep_hist_note_router_reachable(id, NULL, 0, when);
   } else {
     format_local_iso_time(tbuf, hist->start_of_run);
@@ -314,7 +314,7 @@ void
 rep_hist_note_router_unreachable(const char *id, time_t when)
 {
   or_history_t *hist = get_or_history(id);
-  char tbuf[ISO_TIME_LEN+1];
+  char tbuf[ISO_TIME_LEN + 1];
   int was_running = 0;
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
@@ -406,15 +406,15 @@ rep_hist_downrate_old_runs(time_t now)
   /* Multiply every w_r_l, t_r_w pair by alpha. */
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
-       orhist_it = digestmap_iter_next(history_map,orhist_it)) {
+       orhist_it = digestmap_iter_next(history_map, orhist_it)) {
     digestmap_iter_get(orhist_it, &digest1, &hist_p);
     hist = hist_p;
 
     hist->weighted_run_length =
-      (unsigned long)(hist->weighted_run_length * alpha);
+      (unsigned long) (hist->weighted_run_length * alpha);
     hist->total_run_weights *= alpha;
 
-    hist->weighted_uptime = (unsigned long)(hist->weighted_uptime * alpha);
+    hist->weighted_uptime = (unsigned long) (hist->weighted_uptime * alpha);
     hist->total_weighted_time = (unsigned long)
       (hist->total_weighted_time * alpha);
   }
@@ -544,7 +544,7 @@ rep_hist_have_measured_enough_stability(void)
 {
   /* XXXX++ This doesn't do so well when we change our opinion
    * as to whether we're tracking router stability. */
-  return started_tracking_stability < time(NULL) - 4*60*60;
+  return started_tracking_stability < time(NULL) - 4 * 60 * 60;
 }
 
 /** Log all the reliability data we have remembered, with the chosen
@@ -555,7 +555,7 @@ rep_hist_dump_stats(time_t now, int severity)
 {
   digestmap_iter_t *orhist_it;
   const char *name1, *digest1;
-  char hexdigest1[HEX_DIGEST_LEN+1];
+  char hexdigest1[HEX_DIGEST_LEN + 1];
   or_history_t *or_history;
   void *or_history_p;
   const node_t *node;
@@ -566,11 +566,11 @@ rep_hist_dump_stats(time_t now, int severity)
 
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
-       orhist_it = digestmap_iter_next(history_map,orhist_it)) {
+       orhist_it = digestmap_iter_next(history_map, orhist_it)) {
     double s;
     long stability;
     digestmap_iter_get(orhist_it, &digest1, &or_history_p);
-    or_history = (or_history_t*) or_history_p;
+    or_history = (or_history_t *) or_history_p;
 
     if ((node = node_get_by_id(digest1)) && node_get_nickname(node))
       name1 = node_get_nickname(node);
@@ -578,11 +578,9 @@ rep_hist_dump_stats(time_t now, int severity)
       name1 = "(unknown)";
     base16_encode(hexdigest1, sizeof(hexdigest1), digest1, DIGEST_LEN);
     s = get_stability(or_history, now);
-    stability = (long)s;
-    tor_log(severity, LD_HIST,
-        "OR %s [%s]: wmtbf %lu:%02lu:%02lu",
-        name1, hexdigest1,
-        stability/3600, (stability/60)%60, stability%60);
+    stability = (long) s;
+    tor_log(severity, LD_HIST, "OR %s [%s]: wmtbf %lu:%02lu:%02lu", name1,
+        hexdigest1, stability / 3600, (stability / 60) % 60, stability % 60);
   }
 }
 
@@ -625,7 +623,7 @@ rep_history_clean(time_t before)
 int
 rep_hist_record_mtbf_data(time_t now, int missing_means_down)
 {
-  char time_buf[ISO_TIME_LEN+1];
+  char time_buf[ISO_TIME_LEN + 1];
 
   digestmap_iter_t *orhist_it;
   const char *digest;
@@ -636,8 +634,8 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
 
   {
     char *filename = get_datadir_fname("router-stability");
-    f = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE|O_TEXT, 0600,
-                                    &open_file);
+    f = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE | O_TEXT,
+                                    0600, &open_file);
     tor_free(filename);
     if (!f)
       return -1;
@@ -652,8 +650,8 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
    *   RouterMTBFLine = Fingerprint SP WeightedRunLen SP
    *           TotalRunWeights [SP S=StartRunTime] NL
    */
-#define PUT(s) STMT_BEGIN if (fputs((s),f)<0) goto err; STMT_END
-#define PRINTF(args) STMT_BEGIN if (fprintf args <0) goto err; STMT_END
+#define PUT(s) STMT_BEGIN if (fputs((s), f) < 0) goto err; STMT_END
+#define PRINTF(args) STMT_BEGIN if (fprintf args < 0) goto err; STMT_END
 
   PUT("format 2\n");
 
@@ -676,11 +674,11 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
    * Not for 0.2.0. -NM */
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
-       orhist_it = digestmap_iter_next(history_map,orhist_it)) {
-    char dbuf[HEX_DIGEST_LEN+1];
+       orhist_it = digestmap_iter_next(history_map, orhist_it)) {
+    char dbuf[HEX_DIGEST_LEN + 1];
     const char *t = NULL;
     digestmap_iter_get(orhist_it, &digest, &or_history_p);
-    hist = (or_history_t*) or_history_p;
+    hist = (or_history_t *) or_history_p;
 
     base16_encode(dbuf, sizeof(dbuf), digest, DIGEST_LEN);
 
@@ -689,9 +687,8 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
       /* We think this relay is running, but it's not listed in our
        * consensus. Somehow it fell out without telling us it went
        * down. Complain and also correct it. */
-      log_info(LD_HIST,
-               "Relay '%s' is listed as up in rephist, but it's not in "
-               "our routerlist. Correcting.", dbuf);
+      log_info(LD_HIST, "Relay '%s' is listed as up in rephist, but it's not "
+               "in our routerlist. Correcting.", dbuf);
       rep_hist_note_router_unreachable(digest, now);
     }
 
@@ -700,17 +697,15 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
       format_iso_time(time_buf, hist->start_of_run);
       t = time_buf;
     }
-    PRINTF((f, "+MTBF %lu %.5f%s%s\n",
-            hist->weighted_run_length, hist->total_run_weights,
-            t ? " S=" : "", t ? t : ""));
+    PRINTF((f, "+MTBF %lu %.5f%s%s\n", hist->weighted_run_length,
+            hist->total_run_weights, t ? " S=" : "", t ? t : ""));
     t = NULL;
     if (hist->start_of_downtime > 0) {
       format_iso_time(time_buf, hist->start_of_downtime);
       t = time_buf;
     }
-    PRINTF((f, "+WFU %lu %lu%s%s\n",
-            hist->weighted_uptime, hist->total_weighted_time,
-            t ? " S=" : "", t ? t : ""));
+    PRINTF((f, "+WFU %lu %lu%s%s\n", hist->weighted_uptime,
+            hist->total_weighted_time, t ? " S=" : "", t ? t : ""));
   }
 
   PUT(".\n");
@@ -768,7 +763,7 @@ parse_possibly_bad_iso_time(const char *s, time_t *time_out)
 static inline time_t
 correct_time(time_t t, time_t now, time_t stored_at, time_t started_measuring)
 {
-  if (t < started_measuring - 24*60*60*365)
+  if (t < started_measuring - 24 * 60 * 60 * 365)
     return 0;
   else if (t < started_measuring)
     return started_measuring;
@@ -776,7 +771,7 @@ correct_time(time_t t, time_t now, time_t stored_at, time_t started_measuring)
     return 0;
   else {
     long run_length = stored_at - t;
-    t = (time_t)(now - run_length);
+    t = (time_t) (now - run_length);
     if (t < started_measuring)
       t = started_measuring;
     return t;
@@ -791,7 +786,7 @@ rep_hist_load_mtbf_data(time_t now)
   /* XXXX won't handle being called while history is already populated. */
   smartlist_t *lines;
   const char *line = NULL;
-  int r=0, i;
+  int r = 0, i;
   time_t last_downrated = 0, stored_at = 0, tracked_since = 0;
   time_t latest_possible_start = now;
   long format = -1;
@@ -809,7 +804,7 @@ rep_hist_load_mtbf_data(time_t now)
 
   {
     const char *firstline;
-    if (smartlist_len(lines)>4) {
+    if (smartlist_len(lines) > 4) {
       firstline = smartlist_get(lines, 0);
       if (!strcmpstart(firstline, "format "))
         format = tor_parse_long(firstline+strlen("format "),
@@ -826,17 +821,18 @@ rep_hist_load_mtbf_data(time_t now)
     if (!strcmp(line, "data"))
       break;
     if (!strcmpstart(line, "last-downrated ")) {
-      if (parse_iso_time(line+strlen("last-downrated "), &last_downrated)<0)
+      if (parse_iso_time(line + strlen("last-downrated "),
+                         &last_downrated) < 0)
         log_warn(LD_HIST,"Couldn't parse downrate time in mtbf "
                  "history file.");
     }
     if (!strcmpstart(line, "stored-at ")) {
-      if (parse_iso_time(line+strlen("stored-at "), &stored_at)<0)
+      if (parse_iso_time(line + strlen("stored-at "), &stored_at) < 0)
         log_warn(LD_HIST,"Couldn't parse stored time in mtbf "
                  "history file.");
     }
     if (!strcmpstart(line, "tracked-since ")) {
-      if (parse_iso_time(line+strlen("tracked-since "), &tracked_since)<0)
+      if (parse_iso_time(line + strlen("tracked-since "), &tracked_since) < 0)
         log_warn(LD_HIST,"Couldn't parse started-tracking time in mtbf "
                  "history file.");
     }
@@ -858,9 +854,9 @@ rep_hist_load_mtbf_data(time_t now)
 
   for (; i < smartlist_len(lines); ++i) {
     char digest[DIGEST_LEN];
-    char hexbuf[HEX_DIGEST_LEN+1];
-    char mtbf_timebuf[ISO_TIME_LEN+1];
-    char wfu_timebuf[ISO_TIME_LEN+1];
+    char hexbuf[HEX_DIGEST_LEN + 1];
+    char mtbf_timebuf[ISO_TIME_LEN + 1];
+    char wfu_timebuf[ISO_TIME_LEN + 1];
     time_t start_of_run = 0;
     time_t start_of_downtime = 0;
     int have_mtbf = 0, have_wfu = 0;
@@ -878,7 +874,7 @@ rep_hist_load_mtbf_data(time_t now)
 
     if (format == 1) {
       n = tor_sscanf(line, "%40s %ld %lf S=%10s %8s",
-                 hexbuf, &wrl, &trw, mtbf_timebuf, mtbf_timebuf+11);
+                 hexbuf, &wrl, &trw, mtbf_timebuf, mtbf_timebuf + 11);
       if (n != 3 && n != 5) {
         log_warn(LD_HIST, "Couldn't scan line %s", escaped(line));
         continue;
@@ -887,15 +883,15 @@ rep_hist_load_mtbf_data(time_t now)
     } else {
       // format == 2.
       int mtbf_idx, wfu_idx;
-      if (strcmpstart(line, "R ") || strlen(line) < 2+HEX_DIGEST_LEN)
+      if (strcmpstart(line, "R ") || strlen(line) < 2 + HEX_DIGEST_LEN)
         continue;
-      strlcpy(hexbuf, line+2, sizeof(hexbuf));
-      mtbf_idx = find_next_with(lines, i+1, "+MTBF ");
-      wfu_idx = find_next_with(lines, i+1, "+WFU ");
+      strlcpy(hexbuf, line + 2, sizeof(hexbuf));
+      mtbf_idx = find_next_with(lines, i + 1, "+MTBF ");
+      wfu_idx = find_next_with(lines, i + 1, "+WFU ");
       if (mtbf_idx >= 0) {
         const char *mtbfline = smartlist_get(lines, mtbf_idx);
         n = tor_sscanf(mtbfline, "+MTBF %lu %lf S=%10s %8s",
-                   &wrl, &trw, mtbf_timebuf, mtbf_timebuf+11);
+                   &wrl, &trw, mtbf_timebuf, mtbf_timebuf + 11);
         if (n == 2 || n == 4) {
           have_mtbf = 1;
         } else {
@@ -907,7 +903,7 @@ rep_hist_load_mtbf_data(time_t now)
         const char *wfuline = smartlist_get(lines, wfu_idx);
         n = tor_sscanf(wfuline, "+WFU %lu %lu S=%10s %8s",
                    &wt_uptime, &total_wt_time,
-                   wfu_timebuf, wfu_timebuf+11);
+                   wfu_timebuf, wfu_timebuf + 11);
         if (n == 2 || n == 4) {
           have_wfu = 1;
         } else {
@@ -938,7 +934,7 @@ rep_hist_load_mtbf_data(time_t now)
       hist->start_of_run = correct_time(start_of_run, now, stored_at,
                                         tracked_since);
       if (hist->start_of_run < latest_possible_start + wrl)
-        latest_possible_start = (time_t)(hist->start_of_run - wrl);
+        latest_possible_start = (time_t) (hist->start_of_run - wrl);
 
       hist->weighted_run_length = wrl;
       hist->total_run_weights = trw;
@@ -946,7 +942,7 @@ rep_hist_load_mtbf_data(time_t now)
     if (have_wfu) {
       if (wfu_timebuf[0]) {
         wfu_timebuf[10] = ' ';
-        if (parse_possibly_bad_iso_time(wfu_timebuf, &start_of_downtime)<0)
+        if (parse_possibly_bad_iso_time(wfu_timebuf, &start_of_downtime) < 0)
           log_warn(LD_HIST, "Couldn't parse time %s", escaped(wfu_timebuf));
       }
     }
@@ -958,7 +954,7 @@ rep_hist_load_mtbf_data(time_t now)
   if (strcmp(line, "."))
     log_warn(LD_HIST, "Truncated MTBF file.");
 
-  if (tracked_since < 86400*365) /* Recover from insanely early value. */
+  if (tracked_since < 86400 * 365) /* Recover from insanely early value. */
     tracked_since = latest_possible_start;
 
   stability_last_downrated = last_downrated;
@@ -977,11 +973,11 @@ rep_hist_load_mtbf_data(time_t now)
  * totals? */
 #define NUM_SECS_ROLLING_MEASURE 10
 /** How large are the intervals for which we track and report bandwidth use? */
-#define NUM_SECS_BW_SUM_INTERVAL (24*60*60)
+#define NUM_SECS_BW_SUM_INTERVAL (24 * 60 * 60)
 /** How far in the past do we remember and publish bandwidth use? */
-#define NUM_SECS_BW_SUM_IS_VALID (5*24*60*60)
+#define NUM_SECS_BW_SUM_IS_VALID (5 * 24 * 60 * 60)
 /** How many bandwidth usage intervals do we remember? (derived) */
-#define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
+#define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID / NUM_SECS_BW_SUM_INTERVAL)
 
 /** Structure to track bandwidth use, and remember the maxima for a given
  * time period.
@@ -1048,12 +1044,12 @@ advance_obs(bw_array_t *b)
   if (total > b->max_total)
     b->max_total = total;
 
-  nextidx = b->cur_obs_idx+1;
+  nextidx = b->cur_obs_idx + 1;
   if (nextidx == NUM_SECS_ROLLING_MEASURE)
     nextidx = 0;
 
   b->total_obs = total - b->obs[nextidx];
-  b->obs[nextidx]=0;
+  b->obs[nextidx] = 0;
   b->cur_obs_idx = nextidx;
 
   if (++b->cur_obs_time >= b->next_period)
@@ -1096,8 +1092,7 @@ bw_array_new(void)
   return b;
 }
 
-#define bw_array_free(val) \
-  FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
+#define bw_array_free(val) FREE_AND_NULL(bw_array_t, bw_array_free_, (val))
 
 /** Free storage held by bandwidth array <b>b</b>. */
 static void
@@ -1195,10 +1190,9 @@ STATIC uint64_t
 find_largest_max(bw_array_t *b)
 {
   int i;
-  uint64_t max;
-  max=0;
-  for (i=0; i<NUM_TOTALS; ++i) {
-    if (b->maxima[i]>max)
+  uint64_t max = 0;
+  for (i = 0; i < NUM_TOTALS; ++i) {
+    if (b->maxima[i] > max)
       max = b->maxima[i];
   }
   return max;
@@ -1213,13 +1207,13 @@ find_largest_max(bw_array_t *b)
 MOCK_IMPL(int,
 rep_hist_bandwidth_assess,(void))
 {
-  uint64_t w,r;
+  uint64_t w, r;
   r = find_largest_max(read_array);
   w = find_largest_max(write_array);
-  if (r>w)
-    return (int)(((double)w)/NUM_SECS_ROLLING_MEASURE);
+  if (r > w)
+    return (int) (((double) w) / NUM_SECS_ROLLING_MEASURE);
   else
-    return (int)(((double)r)/NUM_SECS_ROLLING_MEASURE);
+    return (int) (((double) r) / NUM_SECS_ROLLING_MEASURE);
 }
 
 /** Print the bandwidth history of b (either [dir-]read_array or
@@ -1254,7 +1248,7 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
     cutoff = UINT64_MAX;
   }
 
-  for (n=0; n<b->num_maxes_set; ++n,++i) {
+  for (n=0; n < b->num_maxes_set; ++n, ++i) {
     uint64_t total;
     if (i >= NUM_TOTALS)
       i -= NUM_TOTALS;
@@ -1264,10 +1258,10 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
     if (total > cutoff)
       total = cutoff;
 
-    if (n==(b->num_maxes_set-1))
-      tor_snprintf(cp, len-(cp-buf), "%"PRIu64, (total));
+    if (n==(b->num_maxes_set - 1))
+      tor_snprintf(cp, len - (cp - buf), "%"PRIu64, (total));
     else
-      tor_snprintf(cp, len-(cp-buf), "%"PRIu64",", (total));
+      tor_snprintf(cp, len - (cp - buf), "%"PRIu64",", (total));
     cp += strlen(cp);
   }
   return cp-buf;
@@ -1281,7 +1275,7 @@ char *
 rep_hist_get_bandwidth_lines(void)
 {
   char *buf, *cp;
-  char t[ISO_TIME_LEN+1];
+  char t[ISO_TIME_LEN + 1];
   int r;
   bw_array_t *b = NULL;
   const char *desc = NULL;
@@ -1290,11 +1284,11 @@ rep_hist_get_bandwidth_lines(void)
   /* [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
 /* The n,n,n part above. Largest representation of a uint64_t is 20 chars
  * long, plus the comma. */
-#define MAX_HIST_VALUE_LEN (21*NUM_TOTALS)
-  len = (67+MAX_HIST_VALUE_LEN)*4;
+#define MAX_HIST_VALUE_LEN (21 * NUM_TOTALS)
+  len = (67 + MAX_HIST_VALUE_LEN) * 4;
   buf = tor_malloc_zero(len);
   cp = buf;
-  for (r=0;r<4;++r) {
+  for (r = 0; r < 4; ++r) {
     char tmp[MAX_HIST_VALUE_LEN];
     size_t slen;
     switch (r) {
@@ -1321,12 +1315,12 @@ rep_hist_get_bandwidth_lines(void)
     if (slen == 0)
       continue;
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    tor_snprintf(cp, len-(cp-buf), "%s %s (%d s) ",
+    tor_snprintf(cp, len - (cp - buf), "%s %s (%d s) ",
                  desc, t, NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
-    strlcat(cp, tmp, len-(cp-buf));
+    strlcat(cp, tmp, len - (cp - buf));
     cp += slen;
-    strlcat(cp, "\n", len-(cp-buf));
+    strlcat(cp, "\n", len - (cp - buf));
     ++cp;
   }
   return buf;
@@ -1342,7 +1336,7 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
                                      time_t *s_begins,
                                      int *s_interval)
 {
-  int i,j;
+  int i, j;
   uint64_t maxval;
 
   if (*s_values) {
@@ -1360,7 +1354,7 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
      * so we don't have two defaults. */
     if (*s_begins != 0 || *s_interval != 900) {
       time_t now = time(NULL);
-      time_t save_at = get_options()->AvoidDiskWrites ? now+3600 : now+600;
+      time_t save_at = get_options()->AvoidDiskWrites ? now + 3600 : now + 600;
       or_state_mark_dirty(state, save_at);
     }
     *s_begins = 0;
@@ -1376,20 +1370,16 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
   *s_maxima = smartlist_new();
   /* Set i to first position in circular array */
   i = (b->num_maxes_set <= b->next_max_idx) ? 0 : b->next_max_idx;
-  for (j=0; j < b->num_maxes_set; ++j,++i) {
+  for (j = 0; j < b->num_maxes_set; ++j, ++i) {
     if (i >= NUM_TOTALS)
       i = 0;
-    smartlist_add_asprintf(*s_values, "%"PRIu64,
-                           (b->totals[i] & ~0x3ff));
+    smartlist_add_asprintf(*s_values, "%"PRIu64, (b->totals[i] & ~0x3ff));
     maxval = b->maxima[i] / NUM_SECS_ROLLING_MEASURE;
-    smartlist_add_asprintf(*s_maxima, "%"PRIu64,
-                           (maxval & ~0x3ff));
+    smartlist_add_asprintf(*s_maxima, "%"PRIu64, (maxval & ~0x3ff));
   }
-  smartlist_add_asprintf(*s_values, "%"PRIu64,
-                         (b->total_in_period & ~0x3ff));
+  smartlist_add_asprintf(*s_values, "%"PRIu64, (b->total_in_period & ~0x3ff));
   maxval = b->max_total / NUM_SECS_ROLLING_MEASURE;
-  smartlist_add_asprintf(*s_maxima, "%"PRIu64,
-                         (maxval & ~0x3ff));
+  smartlist_add_asprintf(*s_maxima, "%"PRIu64, (maxval & ~0x3ff));
 }
 
 /** Update <b>state</b> with the newest bandwidth history. Done before
@@ -1397,7 +1387,7 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
 void
 rep_hist_update_state(or_state_t *state)
 {
-#define UPDATE(arrname,st) \
+#define UPDATE(arrname, st) \
   rep_hist_update_bwhist_state_section(state,\
                                        (arrname),\
                                        &state->BWHistory ## st ## Values, \
@@ -1411,7 +1401,7 @@ rep_hist_update_state(or_state_t *state)
   UPDATE(dir_read_array, DirRead);
 
   if (server_mode(get_options())) {
-    or_state_mark_dirty(state, time(NULL)+(2*3600));
+    or_state_mark_dirty(state, time(NULL) + (2 * 3600));
   }
 #undef UPDATE
 }
@@ -1430,12 +1420,12 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
   time_t start;
 
   uint64_t v, mv;
-  int i,ok,ok_m = 0;
+  int i, ok, ok_m = 0;
   int have_maxima = s_maxima && s_values &&
     (smartlist_len(s_values) == smartlist_len(s_maxima));
 
   if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
-    start = s_begins - s_interval*(smartlist_len(s_values));
+    start = s_begins - s_interval * (smartlist_len(s_values));
     if (start > now)
       return 0;
     b->cur_obs_time = start;
@@ -1453,7 +1443,8 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
         }
         if (!ok) {
           retval = -1;
-          log_notice(LD_HIST, "Could not parse value '%s' into a number.'",cp);
+          log_notice(LD_HIST, "Could not parse value '%s' into a number.'",
+                     cp);
         }
         if (maxstr && !ok_m) {
           retval = -1;
@@ -1485,7 +1476,7 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
   }
 
   /* Clean up maxima and observed */
-  for (i=0; i<NUM_SECS_ROLLING_MEASURE; ++i) {
+  for (i = 0; i < NUM_SECS_ROLLING_MEASURE; ++i) {
     b->obs[i] = 0;
   }
   b->total_obs = 0;
@@ -1503,7 +1494,7 @@ rep_hist_load_state(or_state_t *state, char **err)
   tor_assert(read_array && write_array);
   tor_assert(dir_read_array && dir_write_array);
 
-#define LOAD(arrname,st)                                                \
+#define LOAD(arrname, st)                                                \
   if (rep_hist_load_bwhist_state_section(                               \
                                 (arrname),                              \
                                 state->BWHistory ## st ## Values,       \
@@ -1590,7 +1581,7 @@ rep_hist_exit_stats_term(void)
 static int
 compare_int_(const void *x, const void *y)
 {
-  return (*(int*)x - *(int*)y);
+  return (*(int *) x - *(int *) y);
 }
 
 /** Return a newly allocated string containing the exit port statistics
@@ -1607,7 +1598,7 @@ rep_hist_format_exit_stats(time_t now)
   uint32_t total_streams = 0, other_streams = 0;
   smartlist_t *written_strings, *read_strings, *streams_strings;
   char *written_string, *read_string, *streams_string;
-  char t[ISO_TIME_LEN+1];
+  char t[ISO_TIME_LEN + 1];
   char *result;
 
   if (!start_of_exit_stats_interval)
@@ -1683,8 +1674,7 @@ rep_hist_format_exit_stats(time_t now)
                      exit_bytes_written[cur_port],
                      EXIT_STATS_ROUND_UP_BYTES);
       num /= 1024;
-      smartlist_add_asprintf(written_strings, "%d=%"PRIu64,
-                             cur_port, (num));
+      smartlist_add_asprintf(written_strings, "%d=%"PRIu64, cur_port, (num));
       other_written -= exit_bytes_written[cur_port];
     }
     if (exit_bytes_read[cur_port] > 0) {
@@ -1692,13 +1682,11 @@ rep_hist_format_exit_stats(time_t now)
                      exit_bytes_read[cur_port],
                      EXIT_STATS_ROUND_UP_BYTES);
       num /= 1024;
-      smartlist_add_asprintf(read_strings, "%d=%"PRIu64,
-                             cur_port, (num));
+      smartlist_add_asprintf(read_strings, "%d=%"PRIu64, cur_port, (num));
       other_read -= exit_bytes_read[cur_port];
     }
     if (exit_streams[cur_port] > 0) {
-      uint32_t num = round_uint32_to_next_multiple_of(
-                     exit_streams[cur_port],
+      uint32_t num = round_uint32_to_next_multiple_of(exit_streams[cur_port],
                      EXIT_STATS_ROUND_UP_STREAMS);
       smartlist_add_asprintf(streams_strings, "%d=%u", cur_port, num);
       other_streams -= exit_streams[cur_port];
@@ -1709,13 +1697,11 @@ rep_hist_format_exit_stats(time_t now)
   other_written = round_uint64_to_next_multiple_of(other_written,
                   EXIT_STATS_ROUND_UP_BYTES);
   other_written /= 1024;
-  smartlist_add_asprintf(written_strings, "other=%"PRIu64,
-                         (other_written));
+  smartlist_add_asprintf(written_strings, "other=%"PRIu64, (other_written));
   other_read = round_uint64_to_next_multiple_of(other_read,
                EXIT_STATS_ROUND_UP_BYTES);
   other_read /= 1024;
-  smartlist_add_asprintf(read_strings, "other=%"PRIu64,
-                         (other_read));
+  smartlist_add_asprintf(read_strings, "other=%"PRIu64, (other_read));
   other_streams = round_uint32_to_next_multiple_of(other_streams,
                   EXIT_STATS_ROUND_UP_STREAMS);
   smartlist_add_asprintf(streams_strings, "other=%u", other_streams);
@@ -1782,16 +1768,15 @@ rep_hist_exit_stats_write(time_t now)
 /** Note that we wrote <b>num_written</b> bytes and read <b>num_read</b>
  * bytes to/from an exit connection to <b>port</b>. */
 void
-rep_hist_note_exit_bytes(uint16_t port, size_t num_written,
-                         size_t num_read)
+rep_hist_note_exit_bytes(uint16_t port, size_t num_written, size_t num_read)
 {
   if (!start_of_exit_stats_interval)
     return; /* Not initialized. */
   exit_bytes_written[port] += num_written;
   exit_bytes_read[port] += num_read;
   log_debug(LD_HIST, "Written %lu bytes and read %lu bytes to/from an "
-            "exit connection to port %d.",
-            (unsigned long)num_written, (unsigned long)num_read, port);
+            "exit connection to port %d.", (unsigned long) num_written,
+            (unsigned long) num_read, port);
 }
 
 /** Note that we opened an exit stream to <b>port</b>. */
@@ -1868,7 +1853,7 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
     return;
   start_of_interval = (circ->timestamp_created.tv_sec >
                        start_of_buffer_stats_interval) ?
-        (time_t)circ->timestamp_created.tv_sec :
+        (time_t) circ->timestamp_created.tv_sec :
         start_of_buffer_stats_interval;
   interval_length = (int) (end_of_interval - start_of_interval);
   if (interval_length <= 0)
@@ -1935,9 +1920,8 @@ rep_hist_format_buffer_stats(time_t now)
   double queued_cells[SHARES], time_in_queue[SHARES];
   smartlist_t *processed_cells_strings, *queued_cells_strings,
               *time_in_queue_strings;
-  char *processed_cells_string, *queued_cells_string,
-       *time_in_queue_string;
-  char t[ISO_TIME_LEN+1];
+  char *processed_cells_string, *queued_cells_string, *time_in_queue_string;
+  char t[ISO_TIME_LEN + 1];
   char *result;
 
   if (!start_of_buffer_stats_interval)
@@ -1976,8 +1960,7 @@ rep_hist_format_buffer_stats(time_t now)
   for (i = 0; i < SHARES; i++) {
     smartlist_add_asprintf(processed_cells_strings,
                            "%"PRIu64, !circs_in_share[i] ? 0 :
-                           (processed_cells[i] /
-                           circs_in_share[i]));
+                           (processed_cells[i] / circs_in_share[i]));
   }
   for (i = 0; i < SHARES; i++) {
     smartlist_add_asprintf(queued_cells_strings, "%.2f",
@@ -2114,7 +2097,7 @@ rep_hist_desc_stats_term(void)
 static char *
 rep_hist_format_desc_stats(time_t now)
 {
-  char t[ISO_TIME_LEN+1];
+  char t[ISO_TIME_LEN + 1];
   char *result;
 
   digestmap_iter_t *iter;
@@ -2135,14 +2118,14 @@ rep_hist_format_desc_stats(time_t now)
          iter = digestmap_iter_next(served_descs, iter)) {
       uintptr_t count;
       digestmap_iter_get(iter, &key, &val);
-      count = (uintptr_t)val;
-      vals[n++] = (int)count;
-      (void)key;
+      count = (uintptr_t) val;
+      vals[n++] = (int) count;
+      (void) key;
     }
-    max = find_nth_int(vals, size, size-1);
-    q3 = find_nth_int(vals, size, (3*size-1)/4);
-    md = find_nth_int(vals, size, (size-1)/2);
-    q1 = find_nth_int(vals, size, (size-1)/4);
+    max = find_nth_int(vals, size, size - 1);
+    q3 = find_nth_int(vals, size, (3 * size - 1) / 4);
+    md = find_nth_int(vals, size, (size - 1) / 2);
+    q1 = find_nth_int(vals, size, (size - 1) / 4);
     min = find_nth_int(vals, size, 0);
     tor_free(vals);
   }
@@ -2152,10 +2135,8 @@ rep_hist_format_desc_stats(time_t now)
   tor_asprintf(&result,
                "served-descs-stats-end %s (%d s) total=%lu unique=%u "
                "max=%d q3=%d md=%d q1=%d min=%d\n",
-               t,
-               (unsigned) (now - start_of_served_descs_stats_interval),
-               total_descriptor_downloads,
-               size, max, q3, md, q1, min);
+               t, (unsigned) (now - start_of_served_descs_stats_interval),
+               total_descriptor_downloads, size, max, q3, md, q1, min);
 
   return result;
 }
@@ -2204,10 +2185,10 @@ rep_hist_note_desc_served(const char * desc)
   if (!served_descs)
     return; // We're not collecting stats
   val = digestmap_get(served_descs, desc);
-  count = (uintptr_t)val;
+  count = (uintptr_t) val;
   if (count != INT_MAX)
     ++count;
-  digestmap_set(served_descs, desc, (void*)count);
+  digestmap_set(served_descs, desc, (void *) count);
   total_descriptor_downloads++;
 }
 
@@ -2353,10 +2334,9 @@ rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
     }
     while (when >= bidi_next_interval)
       bidi_next_interval += BIDI_INTERVAL;
-    log_info(LD_GENERAL, "%d below threshold, %d mostly read, "
-             "%d mostly written, %d both read and written.",
-             below_threshold, mostly_read, mostly_written,
-             both_read_and_written);
+    log_info(LD_GENERAL, "%d below threshold, %d mostly read, %d mostly "
+             "written, %d both read and written.", below_threshold,
+             mostly_read, mostly_written, both_read_and_written);
   }
   /* Add this connection's bytes. */
   if (num_read > 0 || num_written > 0) {
@@ -2382,7 +2362,7 @@ rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
 char *
 rep_hist_format_conn_stats(time_t now)
 {
-  char *result, written[ISO_TIME_LEN+1];
+  char *result, written[ISO_TIME_LEN + 1];
 
   if (!start_of_conn_stats_interval)
     return NULL; /* Not initialized. */
@@ -2390,12 +2370,9 @@ rep_hist_format_conn_stats(time_t now)
   tor_assert(now >= start_of_conn_stats_interval);
 
   format_iso_time(written, now);
-  tor_asprintf(&result, "conn-bi-direct %s (%d s) %d,%d,%d,%d\n",
-               written,
+  tor_asprintf(&result, "conn-bi-direct %s (%d s) %d,%d,%d,%d\n", written,
                (unsigned) (now - start_of_conn_stats_interval),
-               below_threshold,
-               mostly_read,
-               mostly_written,
+               below_threshold, mostly_read, mostly_written,
                both_read_and_written);
   return result;
 }
@@ -2434,8 +2411,8 @@ rep_hist_conn_stats_write(time_t now)
  * handshake we've received, and how many we've assigned to cpuworkers.
  * Useful for seeing trends in cpu load.
  * @{ */
-STATIC int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
-STATIC int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+STATIC int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE + 1] = {0};
+STATIC int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE + 1] = {0};
 /**@}*/
 
 /** A new onionskin (using the <b>type</b> handshake) has arrived. */
@@ -2459,7 +2436,7 @@ rep_hist_note_circuit_handshake_assigned(uint16_t type)
 void
 rep_hist_log_circuit_handshake_stats(time_t now)
 {
-  (void)now;
+  (void) now;
   log_notice(LD_HEARTBEAT, "Circuit handshake stats since last time: "
              "%d/%d TAP, %d/%d NTor.",
              onion_handshakes_assigned[ONION_HANDSHAKE_TYPE_TAP],
@@ -2584,10 +2561,9 @@ rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
 
   /* Check if this is the first time we've seen this hidden
      service. If it is, count it as new. */
-  if (!digestmap_get(hs_stats->onions_seen_this_period,
-                     pubkey_hash)) {
-    digestmap_set(hs_stats->onions_seen_this_period,
-                  pubkey_hash, (void*)(uintptr_t)1);
+  if (!digestmap_get(hs_stats->onions_seen_this_period, pubkey_hash)) {
+    digestmap_set(hs_stats->onions_seen_this_period, pubkey_hash,
+                  (void *) (uintptr_t) 1);
   }
 }
 
@@ -2619,7 +2595,7 @@ rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
 static char *
 rep_hist_format_hs_stats(time_t now)
 {
-  char t[ISO_TIME_LEN+1];
+  char t[ISO_TIME_LEN + 1];
   char *hs_stats_string;
   int64_t obfuscated_cells_seen;
   int64_t obfuscated_onions_seen;
@@ -2628,16 +2604,16 @@ rep_hist_format_hs_stats(time_t now)
     = round_uint64_to_next_multiple_of(hs_stats->rp_relay_cells_seen,
                                        REND_CELLS_BIN_SIZE);
   rounded_cells_seen = MIN(rounded_cells_seen, INT64_MAX);
-  obfuscated_cells_seen = add_laplace_noise((int64_t)rounded_cells_seen,
-                          crypto_rand_double(),
-                          REND_CELLS_DELTA_F, REND_CELLS_EPSILON);
+  obfuscated_cells_seen = add_laplace_noise((int64_t) rounded_cells_seen,
+                          crypto_rand_double(), REND_CELLS_DELTA_F,
+                          REND_CELLS_EPSILON);
 
   uint64_t rounded_onions_seen =
-    round_uint64_to_next_multiple_of((size_t)digestmap_size(
+    round_uint64_to_next_multiple_of((size_t) digestmap_size(
                                         hs_stats->onions_seen_this_period),
                                      ONIONS_SEEN_BIN_SIZE);
   rounded_onions_seen = MIN(rounded_onions_seen, INT64_MAX);
-  obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
+  obfuscated_onions_seen = add_laplace_noise((int64_t) rounded_onions_seen,
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
 
@@ -2648,11 +2624,9 @@ rep_hist_format_hs_stats(time_t now)
                "hidserv-dir-onions-seen %"PRId64" delta_f=%d "
                                         "epsilon=%.2f bin_size=%d\n",
                t, (unsigned) (now - start_of_hs_stats_interval),
-               (obfuscated_cells_seen), REND_CELLS_DELTA_F,
-               REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
-               (obfuscated_onions_seen),
-               ONIONS_SEEN_DELTA_F,
-               ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
+               (obfuscated_cells_seen), REND_CELLS_DELTA_F, REND_CELLS_EPSILON,
+               REND_CELLS_BIN_SIZE, (obfuscated_onions_seen),
+               ONIONS_SEEN_DELTA_F, ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
 
   return hs_stats_string;
 }
@@ -2692,7 +2666,7 @@ rep_hist_hs_stats_write(time_t now)
   return start_of_hs_stats_interval + WRITE_STATS_INTERVAL;
 }
 
-static uint64_t link_proto_count[MAX_LINK_PROTO+1][2];
+static uint64_t link_proto_count[MAX_LINK_PROTO + 1][2];
 
 /** Note that we negotiated link protocol version <b>link_proto</b>, on
  * a connection that started here iff <b>started_here</b> is true.
@@ -2851,7 +2825,7 @@ rep_hist_get_padding_count_lines(void)
                         "\n",
                padding_published.first_published_at,
                REPHIST_CELL_PADDING_COUNTS_INTERVAL,
-               (uint64_t)ROUND_CELL_COUNTS_TO,
+               (uint64_t) ROUND_CELL_COUNTS_TO,
                (padding_published.write_drop_cell_count),
                (padding_published.write_pad_cell_count),
                (padding_published.write_cell_count),
