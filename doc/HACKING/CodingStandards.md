@@ -193,8 +193,9 @@ Why use changes files instead of entries in the ChangeLog?
 
 ## Whitespace and C conformance
 
-Invoke `make check-spaces` from time to time, so it can tell you about
-deviations from our C whitespace style.  Generally, we use:
+Tor's C code is written in accordance with the C99 standard. Invoke `make
+check-spaces` from time to time, so it can tell you about deviations from our C
+whitespace style.  Generally, we use:
 
    - Unix-style line endings
    - K&R-style indentation
@@ -213,6 +214,8 @@ deviations from our C whitespace style.  Generally, we use:
    - Use `void foo(void)` to declare a function with no arguments.  Saying
      `void foo()` is C++ syntax.
    - Use `const` for new APIs.
+   - Variables should be initialized when declared, rather than declared at the
+     top of a scope.
 
 If you use an editor that has plugins for editorconfig.org, the file
 `.editorconfig` will help you to conform this coding style.
