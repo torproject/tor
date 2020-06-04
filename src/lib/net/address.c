@@ -1694,11 +1694,15 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
    * Ideally, we want the default route, see #12377 for details */
   SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
     tor_addr_copy(addr, a);
+    const bool is_internal = tor_addr_is_internal(a, 0);
     rv = 0;
+
+    log_debug(LD_NET, "Found %s interface address '%s'",
+              (is_internal ? "internal" : "external"), fmt_addr(addr));
 
     /* If we found a non-internal address, declare success.  Otherwise,
      * keep looking. */
-    if (!tor_addr_is_internal(a, 0))
+    if (!is_internal)
       break;
   } SMARTLIST_FOREACH_END(a);
 

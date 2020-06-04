@@ -110,6 +110,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 
   if (address && *address) {
     strlcpy(hostname, address, sizeof(hostname));
+    log_debug(LD_CONFIG, "Trying configured Address '%s' as local hostname",
+              hostname);
   } else { /* then we need to guess our address */
     explicit_ip = 0; /* it's implicit */
     explicit_hostname = 0; /* it's implicit */
@@ -129,6 +131,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 
   if (tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
+    log_debug(LD_CONFIG, "Local hostname '%s' is DNS address. "
+              "Trying to resolve to IP address.", hostname);
     explicit_ip = 0;
     if (tor_lookup_hostname(hostname, &addr)) { /* failed to resolve */
       uint32_t interface_ip; /* host order */
@@ -180,6 +184,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
       }
     }
   } else {
+    log_debug(LD_CONFIG, "Local hostname '%s' is already IP address, "
+              "skipping DNS resolution", hostname);
     addr = ntohl(in.s_addr); /* set addr so that addr_string is not
                               * illformed */
   }
