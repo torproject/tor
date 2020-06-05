@@ -1881,7 +1881,7 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
         int ntoa_res;
         in.s_addr = addrs[i];
         ntoa_res = tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
-        tor_assert_nonfatal(ntoa_res > 0);
+        tor_assert_nonfatal(ntoa_res >= 0);
         if (ntoa_res > 0)
           wildcard_increment_answer(answer_buf);
       }

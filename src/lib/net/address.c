@@ -1207,10 +1207,10 @@ fmt_addr32(uint32_t addr)
   in.s_addr = htonl(addr);
 
   success = tor_inet_ntoa(&in, buf, sizeof(buf));
-  tor_assertf_nonfatal(success > 0,
-      "Failed to convert IP %04X to string", addr);
+  tor_assertf_nonfatal(success >= 0,
+      "Failed to convert IP 0x%08X (HBO) to string", addr);
 
-  if (success <= 0) {
+  IF_BUG_ONCE(success < 0) {
     memset(buf, 0, INET_NTOA_BUF_LEN);
   }
 
