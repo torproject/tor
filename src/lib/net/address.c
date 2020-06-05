@@ -1196,14 +1196,24 @@ fmt_addrport(const tor_addr_t *addr, uint16_t port)
 
 /** Like fmt_addr(), but takes <b>addr</b> as a host-order IPv4
  * addresses. Also not thread-safe, also clobbers its return buffer on
- * repeated calls. */
+ * repeated calls. Clean internal buffer and return empty string on failure. */
 const char *
 fmt_addr32(uint32_t addr)
 {
   static char buf[INET_NTOA_BUF_LEN];
   struct in_addr in;
+  int success;
+
   in.s_addr = htonl(addr);
-  tor_inet_ntoa(&in, buf, sizeof(buf));
+
+  success = tor_inet_ntoa(&in, buf, sizeof(buf));
+  tor_assertf_nonfatal(success >= 0,
+      "Failed to convert IP 0x%08X (HBO) to string", addr);
+
+  IF_BUG_ONCE(success < 0) {
+    memset(buf, 0, INET_NTOA_BUF_LEN);
+  }
+
   return buf;
 }
 
@@ -1999,17 +2009,24 @@ parse_port_range(const char *port, uint16_t *port_min_out,
 }
 
 /** Given a host-order <b>addr</b>, call tor_inet_ntop() on it
- *  and return a strdup of the resulting address.
+ *  and return a strdup of the resulting address. Return NULL if
+ *  tor_inet_ntop() fails.
  */
 char *
 tor_dup_ip(uint32_t addr)
 {
+  const char *ip_str;
   char buf[TOR_ADDR_BUF_LEN];
   struct in_addr in;
 
   in.s_addr = htonl(addr);
-  tor_inet_ntop(AF_INET, &in, buf, sizeof(buf));
-  return tor_strdup(buf);
+  ip_str = tor_inet_ntop(AF_INET, &in, buf, sizeof(buf));
+
+  tor_assertf_nonfatal(ip_str, "Failed to duplicate IP %08X", addr);
+  if (ip_str)
+    return tor_strdup(buf);
+
+  return NULL;
 }
 
 /**

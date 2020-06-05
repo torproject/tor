@@ -224,7 +224,11 @@ inform_testing_reachability(void)
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!me)
     return 0;
+
   address = tor_dup_ip(me->addr);
+  if (!address)
+    return 0;
+
   control_event_server_status(LOG_NOTICE,
                               "CHECKING_REACHABILITY ORADDRESS=%s:%d",
                               address, me->or_port);
@@ -255,6 +259,10 @@ router_orport_found_reachable(void)
   const or_options_t *options = get_options();
   if (!can_reach_or_port && me) {
     char *address = tor_dup_ip(me->addr);
+
+    if (!address)
+      return;
+
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                options->PublishServerDescriptor_ != NO_DIRINFO
@@ -282,6 +290,10 @@ router_dirport_found_reachable(void)
   const or_options_t *options = get_options();
   if (!can_reach_dir_port && me) {
     char *address = tor_dup_ip(me->addr);
+
+    if (!address)
+      return;
+
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.%s",
                options->PublishServerDescriptor_ != NO_DIRINFO

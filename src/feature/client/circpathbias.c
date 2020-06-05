@@ -826,6 +826,11 @@ pathbias_send_usable_probe(circuit_t *circ)
   ocirc->pathbias_probe_nonce &= 0x00ffffff;
   probe_nonce = tor_dup_ip(ocirc->pathbias_probe_nonce);
 
+  if (!probe_nonce) {
+    log_err(LD_BUG, "Failed to generate nonce");
+    return -1;
+  }
+
   tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:25", probe_nonce);
   payload_len = (int)strlen(payload)+1;
 

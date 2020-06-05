@@ -137,6 +137,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       return -1;
     }
     *answer = tor_dup_ip(addr);
+    tor_assert_nonfatal(*answer);
   } else if (!strcmp(question, "traffic/read")) {
     tor_asprintf(answer, "%"PRIu64, (get_bytes_read()));
   } else if (!strcmp(question, "traffic/written")) {

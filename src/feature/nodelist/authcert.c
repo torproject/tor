@@ -464,11 +464,13 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
           (ds->addr != cert->addr ||
            ds->dir_port != cert->dir_port)) {
         char *a = tor_dup_ip(cert->addr);
-        log_notice(LD_DIR, "Updating address for directory authority %s "
-                   "from %s:%d to %s:%d based on certificate.",
-                   ds->nickname, ds->address, (int)ds->dir_port,
-                   a, cert->dir_port);
-        tor_free(a);
+        if (a) {
+          log_notice(LD_DIR, "Updating address for directory authority %s "
+                     "from %s:%d to %s:%d based on certificate.",
+                     ds->nickname, ds->address, (int)ds->dir_port,
+                     a, cert->dir_port);
+          tor_free(a);
+        }
         ds->addr = cert->addr;
         ds->dir_port = cert->dir_port;
       }
