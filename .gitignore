@@ -79,11 +79,9 @@ uptime-*.json
 /callgraph/
 
 # /contrib/
-/contrib/dist/tor.sh
 /contrib/dist/torctl
 /contrib/dist/tor.service
 /contrib/operator-tools/tor.logrotate
-/contrib/dist/suse/tor.sh
 
 # /debian/
 /debian/files
