@@ -45,6 +45,8 @@ matrix:
       hardening: --disable-gcc-hardening
 
 install:
+- ps: Execute-Command "C:\msys64\usr\bin\pacman" -Sy pacman
+- ps: Execute-Command "C:\msys64\usr\bin\pacman" -Su
 - ps: >-
     Function Execute-Command ($commandPath)
     {
