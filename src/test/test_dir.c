@@ -397,18 +397,14 @@ get_new_ntor_onion_key_line(const curve25519_public_key_t *ntor_onion_pubkey)
 {
   char *line = NULL;
   char cert_buf[256];
-  int rv = 0;
 
   tor_assert(ntor_onion_pubkey);
 
-  rv = base64_encode(cert_buf, sizeof(cert_buf),
-                     (const char*)ntor_onion_pubkey->public_key, 32,
-                     BASE64_ENCODE_MULTILINE);
-  tor_assert(rv > 0);
+  curve25519_public_to_base64(cert_buf, ntor_onion_pubkey, false);
   tor_assert(strlen(cert_buf) > 0);
 
   tor_asprintf(&line,
-               "ntor-onion-key %s",
+               "ntor-onion-key %s\n",
                cert_buf);
   tor_assert(line);
 
