@@ -1801,6 +1801,7 @@ static void
 test_entry_guard_correct_cascading_order(void *arg)
 {
   (void)arg;
+  smartlist_t *old_primary_guards = smartlist_new();
   guard_selection_t *gs = guard_selection_new("default", GS_TYPE_NORMAL);
   entry_guards_expand_sample(gs);
   /** First, a test in which the primary guards need be pulled from different
@@ -1822,7 +1823,6 @@ test_entry_guard_correct_cascading_order(void *arg)
    * change */
   make_guard_confirmed(gs, smartlist_get(gs->primary_entry_guards, 0));
   make_guard_confirmed(gs, smartlist_get(gs->primary_entry_guards, 1));
-  smartlist_t *old_primary_guards = smartlist_new();
   smartlist_add_all(old_primary_guards, gs->primary_entry_guards);
   entry_guards_update_primary(gs);
   smartlist_ptrs_eq(gs->primary_entry_guards, old_primary_guards);
