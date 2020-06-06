@@ -47,8 +47,7 @@
  * As a persistent ordered list whose elements are taken from the
  * sampled set, we track a CONFIRMED GUARDS LIST.  A guard becomes
  * confirmed when we successfully build a circuit through it, and decide
- * to use that circuit.  We order the guards on this list by the order
- * in which they became confirmed.
+ * to use that circuit.
  *
  * And as a final group, we have an ordered list of PRIMARY GUARDS,
  * whose elements are taken from the filtered set. We prefer
@@ -59,7 +58,7 @@
  *
  * To build circuits, we take a primary guard if possible -- or a
  * reachable filtered confirmed guard if no primary guard is possible --
- * or a random reachable filtered guard otherwise.  If the guard is
+ * or the first (by sampled order) filtered guard otherwise.  If the guard is
  * primary, we can use the circuit immediately on success.  Otherwise,
  * the guard is now "pending" -- we won't use its circuit unless all
  * of the circuits we're trying to build through better guards have
@@ -92,12 +91,16 @@
  * [x] Whenever we remove a guard from the sample, remove it from the primary
  * and confirmed lists.
  *
- * [x] When we make a guard confirmed, update the primary list.
+ * [x] When we make a guard confirmed, update the primary list, and sort them by
+ * sampled order.
  *
  * [x] When we make a guard filtered or unfiltered, update the primary list.
  *
  * [x] When we are about to pick a guard, make sure that the primary list is
  * full.
+ *
+ * [x] When we update the confirmed list, or when we re-build the primary list
+ * and detect a change, we sort those lists by sampled_idx
  *
  * [x] Before calling first_reachable_filtered_entry_guard(), make sure
  * that the filtered, primary, and confirmed flags are up-to-date.
@@ -1792,10 +1795,6 @@ first_reachable_filtered_entry_guard(guard_selection_t *gs,
   return result;
 }
 
-/**
- * Helper: compare two entry_guard_t by their confirmed_idx values.
- * Used to sort the confirmed list.
- */
 static int
 compare_guards_by_confirmed_idx(const void **a_, const void **b_)
 {
@@ -1838,7 +1837,7 @@ entry_guards_update_confirmed(guard_selection_t *gs)
   } SMARTLIST_FOREACH_END(guard);
 
   smartlist_sort(gs->confirmed_entry_guards, compare_guards_by_confirmed_idx);
-
+  /** Needed to keep a dense array of confirmed_idx */
   int any_changed = 0;
   SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards, entry_guard_t *, guard) {
     if (guard->confirmed_idx != guard_sl_idx) {
