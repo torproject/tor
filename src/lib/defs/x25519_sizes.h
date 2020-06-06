@@ -36,6 +36,9 @@
 /** Length of a Curve25519 key when encoded in base 64, with padding. */
 #define CURVE25519_BASE64_PADDED_LEN 44
 
+/** Length of a Curve25519 key when encoded in base 64, without padding. */
+#define CURVE25519_BASE64_LEN 43
+
 /** Length of a Ed25519 key when encoded in base 64, without padding. */
 #define ED25519_BASE64_LEN 43
 /** Length of a Ed25519 signature when encoded in base 64, without padding. */

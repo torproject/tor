@@ -55,6 +55,7 @@
 /* For unit tests.*/
 #define HS_DESCRIPTOR_PRIVATE
 
+#include <stdbool.h>
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "trunnel/ed25519_cert.h" /* Trunnel interface. */
@@ -404,7 +405,7 @@ encode_enc_key(const hs_desc_intro_point_t *ip)
   tor_assert(ip);
 
   /* Base64 encode the encryption key for the "enc-key" field. */
-  curve25519_public_to_base64(key_b64, &ip->enc_key);
+  curve25519_public_to_base64(key_b64, &ip->enc_key, true);
   if (tor_cert_encode_ed22519(ip->enc_key_cert, &encoded_cert) < 0) {
     goto done;
   }
@@ -430,7 +431,7 @@ encode_onion_key(const hs_desc_intro_point_t *ip)
   tor_assert(ip);
 
   /* Base64 encode the encryption key for the "onion-key" field. */
-  curve25519_public_to_base64(key_b64, &ip->onion_key);
+  curve25519_public_to_base64(key_b64, &ip->onion_key, true);
   tor_asprintf(&encoded, "%s ntor %s", str_ip_onion_key, key_b64);
 
   return encoded;
@@ -813,7 +814,7 @@ get_outer_encrypted_layer_plaintext(const hs_descriptor_t *desc,
     tor_assert(!fast_mem_is_zero((char *) ephemeral_pubkey->public_key,
                                 CURVE25519_PUBKEY_LEN));
 
-    curve25519_public_to_base64(ephemeral_key_base64, ephemeral_pubkey);
+    curve25519_public_to_base64(ephemeral_key_base64, ephemeral_pubkey, true);
     smartlist_add_asprintf(lines, "%s %s\n",
                            str_desc_auth_key, ephemeral_key_base64);
 
