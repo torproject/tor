@@ -12,6 +12,8 @@
 #ifndef TOR_CIRCUITSTATS_H
 #define TOR_CIRCUITSTATS_H
 
+#include "feature/control/control_events.h"
+
 const circuit_build_times_t *get_circuit_build_times(void);
 circuit_build_times_t *get_circuit_build_times_mutable(void);
 double get_circuit_build_close_time_ms(void);
@@ -49,6 +51,10 @@ double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 
 void circuit_build_times_update_last_circ(circuit_build_times_t *cbt);
 void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
+void circuit_build_times_reset(circuit_build_times_t *cbt);
+void cbt_control_event_buildtimeout_set(
+                                  const circuit_build_times_t *cbt,
+                                  buildtimeout_set_event_t type);
 
 /** Total size of the circuit timeout history to accumulate.
  * 1000 is approx 2.5 days worth of continual-use circuits. */
@@ -137,7 +143,6 @@ int32_t circuit_build_times_initial_timeout(void);
 STATIC double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
                                              double quantile);
 STATIC int circuit_build_times_update_alpha(circuit_build_times_t *cbt);
-STATIC void circuit_build_times_reset(circuit_build_times_t *cbt);
 
 /* Network liveness functions */
 STATIC int circuit_build_times_network_check_changed(

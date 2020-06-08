@@ -20,9 +20,11 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
+#include "core/or/circuitstats.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/dnsserv.h"
 #include "feature/client/entrynodes.h"
+#include "feature/control/control_events.h"
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_cmd.h"
@@ -1396,6 +1398,33 @@ handle_control_dropguards(control_connection_t *conn,
   return 0;
 }
 
+static const control_cmd_syntax_t droptimeouts_syntax = {
+  .max_args = 0,
+};
+
+/** Implementation for the DROPTIMEOUTS command. */
+static int
+handle_control_droptimeouts(control_connection_t *conn,
+                          const control_cmd_args_t *args)
+{
+  (void) args; /* We don't take arguments. */
+
+  static int have_warned = 0;
+  if (! have_warned) {
+    log_warn(LD_CONTROL, "DROPTIMEOUTS is dangerous; make sure you understand "
+             "the risks before using it. It may be removed in a future "
+             "version of Tor.");
+    have_warned = 1;
+  }
+
+  circuit_build_times_reset(get_circuit_build_times_mutable());
+  send_control_done(conn);
+  cbt_control_event_buildtimeout_set(get_circuit_build_times(),
+                                     BUILDTIMEOUT_SET_EVENT_RESET);
+
+  return 0;
+}
+
 static const char *hsfetch_keywords[] = {
   "SERVER", NULL,
 };
@@ -2331,6 +2360,7 @@ static const control_cmd_def_t CONTROL_COMMANDS[] =
   ONE_LINE(protocolinfo, 0),
   ONE_LINE(authchallenge, CMD_FL_WIPE),
   ONE_LINE(dropguards, 0),
+  ONE_LINE(droptimeouts, 0),
   ONE_LINE(hsfetch, 0),
   MULTLINE(hspost, 0),
   ONE_LINE(add_onion, CMD_FL_WIPE),

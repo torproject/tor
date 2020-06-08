@@ -53,9 +53,6 @@
 #undef log
 #include <math.h>
 
-static void cbt_control_event_buildtimeout_set(
-                                  const circuit_build_times_t *cbt,
-                                  buildtimeout_set_event_t type);
 static void circuit_build_times_scale_circ_counts(circuit_build_times_t *cbt);
 
 #define CBT_BIN_TO_MS(bin) ((bin)*CBT_BIN_WIDTH + (CBT_BIN_WIDTH/2))
@@ -545,7 +542,7 @@ circuit_build_times_get_initial_timeout(void)
  * Leave estimated parameters, timeout and network liveness intact
  * for future use.
  */
-STATIC void
+void
 circuit_build_times_reset(circuit_build_times_t *cbt)
 {
   memset(cbt->circuit_build_times, 0, sizeof(cbt->circuit_build_times));
@@ -1894,7 +1891,7 @@ circuit_build_times_update_last_circ(circuit_build_times_t *cbt)
   cbt->last_circ_at = approx_time();
 }
 
-static void
+void
 cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
                                    buildtimeout_set_event_t type)
 {
