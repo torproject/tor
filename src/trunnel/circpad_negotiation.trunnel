@@ -27,6 +27,13 @@ struct circpad_negotiate {
   // FIXME-MP-AP: Maybe we just say to transition to the first state
   // here instead.. Also what about delay before responding?
   u8 echo_request IN [0,1];
+
+  // This field is used for shutdown synchronization. It is OK if
+  // it wraps, because all we need to do is make sure the STOP
+  // command is actually for the currently active machine.
+  // For backward-compatibility, though, 0 has special meaning
+  // (it means match any machine).
+  u32 machine_ctr;
 };
 
 /**
@@ -41,4 +48,14 @@ struct circpad_negotiated {
   /** Machine type is left unbounded because we can specify
    * new machines in the consensus */
   u8 machine_type;
+
+  /**
+   * This field is used for shutdown synchronization. It is OK if
+   * it wraps, because all we need to do is make sure the STOP
+   * command is actually for the currently active machine.
+   * For backward-compatibility, though, 0 has special meaning
+   * (it means match any machine).
+   */
+  u32 machine_ctr;
+
 };
