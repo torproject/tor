@@ -565,6 +565,13 @@ typedef struct circpad_machine_runtime_t {
   /** What state is this machine in? */
   circpad_statenum_t current_state;
 
+  /** Machine counter, for shutdown sync.
+   *
+   *  Set from circuit_t.padding_machine_ctr, which is incremented each
+   *  padding machine instantiation.
+   */
+  uint32_t machine_ctr;
+
   /**
    * True if we have scheduled a timer for padding.
    *
@@ -726,11 +733,13 @@ signed_error_t circpad_handle_padding_negotiated(struct circuit_t *circ,
 signed_error_t circpad_negotiate_padding(struct origin_circuit_t *circ,
                           circpad_machine_num_t machine,
                           uint8_t target_hopnum,
-                          uint8_t command);
+                          uint8_t command,
+                          uint32_t machine_ctr);
 bool circpad_padding_negotiated(struct circuit_t *circ,
                            circpad_machine_num_t machine,
                            uint8_t command,
-                           uint8_t response);
+                           uint8_t response,
+                           uint32_t machine_ctr);
 
 circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t circ_purpose);
 

@@ -238,6 +238,12 @@ struct circuit_t {
    *  Each element of this array corresponds to a different padding machine,
    *  and we can have up to CIRCPAD_MAX_MACHINES such machines. */
   struct circpad_machine_runtime_t *padding_info[CIRCPAD_MAX_MACHINES];
+
+  /** padding_machine_ctr increments each time a new padding machine
+   * is negotiated. It is used for shutdown conditions, to ensure
+   * that STOP commands actually correspond to the current machine,
+   * and not a previous one. */
+  uint32_t padding_machine_ctr;
 };
 
 #endif /* !defined(CIRCUIT_ST_H) */
