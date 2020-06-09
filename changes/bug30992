@@ -1,0 +1,4 @@
+  o Minor bugfixes (circuitpadding):
+    - Add a per-circuit padding machine instance counter, so we can
+      differentiate between shutdown requests for old machines on a circuit;
+      Fixes bug 30992; bugfix on 0.4.1.1-alpha.
