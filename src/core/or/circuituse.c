@@ -1642,7 +1642,7 @@ static void
 circuit_testing_opened(origin_circuit_t *circ)
 {
   if (have_performed_bandwidth_test ||
-      !check_whether_orport_reachable(get_options())) {
+      !router_should_skip_orport_reachability_check(get_options())) {
     /* either we've already done everything we want with testing circuits,
      * or this testing circuit became open due to a fluke, e.g. we picked
      * a last hop where we already had the connection open due to an
@@ -1660,7 +1660,8 @@ static void
 circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 {
   const or_options_t *options = get_options();
-  if (server_mode(options) && check_whether_orport_reachable(options))
+  if (server_mode(options) &&
+      router_should_skip_orport_reachability_check(options))
     return;
 
   log_info(LD_GENERAL,
@@ -2092,11 +2093,18 @@ circuit_should_cannibalize_to_build(uint8_t purpose_to_build,
 }
 
 /** Launch a new circuit with purpose <b>purpose</b> and exit node
- * <b>extend_info</b> (or NULL to select a random exit node).  If flags
- * contains CIRCLAUNCH_NEED_UPTIME, choose among routers with high uptime.  If
- * CIRCLAUNCH_NEED_CAPACITY is set, choose among routers with high bandwidth.
- * If CIRCLAUNCH_IS_INTERNAL is true, the last hop need not be an exit node.
- * If CIRCLAUNCH_ONEHOP_TUNNEL is set, the circuit will have only one hop.
+ * <b>extend_info</b> (or NULL to select a random exit node).
+ *
+ * If flags contains:
+ *  - CIRCLAUNCH_ONEHOP_TUNNEL: the circuit will have only one hop;
+ *  - CIRCLAUNCH_NEED_UPTIME: choose routers with high uptime;
+ *  - CIRCLAUNCH_NEED_CAPACITY: choose routers with high bandwidth;
+ *  - CIRCLAUNCH_IS_IPV6_SELFTEST: the second-last hop must support IPv6
+ *                                 extends;
+ *  - CIRCLAUNCH_IS_INTERNAL: the last hop need not be an exit node;
+ *  - CIRCLAUNCH_IS_V3_RP: the last hop must support v3 onion service
+ *                         rendezvous.
+ *
  * Return the newly allocated circuit on success, or NULL on failure. */
 origin_circuit_t *
 circuit_launch_by_extend_info(uint8_t purpose,

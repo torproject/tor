@@ -19,6 +19,7 @@
 #include "core/or/channel.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
+#include "core/or/circuituse.h"
 #include "core/or/onion.h"
 
 #include "core/or/cell_st.h"
@@ -29,6 +30,7 @@
 
 #include "feature/client/entrynodes.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/relay/circuitbuild_relay.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
@@ -279,10 +281,10 @@ mock_node_get_by_id(const char *identity_digest)
   return mocked_node;
 }
 
-static int mocked_supports_ed25519_link_authentication = 0;
-static int
+static bool mocked_supports_ed25519_link_authentication = 0;
+static bool
 mock_node_supports_ed25519_link_authentication(const node_t *node,
-                                                int compatible_with_us)
+                                               bool compatible_with_us)
 {
   (void)node;
   (void)compatible_with_us;
@@ -1176,6 +1178,8 @@ mock_channel_get_canonical_remote_descr(channel_t *chan)
   return "mock_channel_get_canonical_remote_descr()";
 }
 
+/* Should mock_circuit_deliver_create_cell() expect a direct connection? */
+static bool mock_circuit_deliver_create_cell_expect_direct = false;
 static int mock_circuit_deliver_create_cell_calls = 0;
 static int mock_circuit_deliver_create_cell_result = 0;
 static int
@@ -1188,10 +1192,13 @@ mock_circuit_deliver_create_cell(circuit_t *circ,
   /* circuit_deliver_create_cell() requires non-NULL arguments,
    * but we only check circ and circ->n_chan here. */
   tt_ptr_op(circ, OP_NE, NULL);
-  tt_ptr_op(circ->n_chan, OP_NE, NULL);
+  /* We expect n_chan for relayed cells. But should we also expect it for
+   * direct connections? */
+  if (!mock_circuit_deliver_create_cell_expect_direct)
+    tt_ptr_op(circ->n_chan, OP_NE, NULL);
 
   /* We should only ever get relayed cells from extends */
-  tt_int_op(relayed, OP_EQ, 1);
+  tt_int_op(relayed, OP_EQ, !mock_circuit_deliver_create_cell_expect_direct);
 
   mock_circuit_deliver_create_cell_calls++;
   return mock_circuit_deliver_create_cell_result;
@@ -1352,6 +1359,7 @@ test_circuit_extend(void *arg)
 
   /* Mock circuit_deliver_create_cell(), so it doesn't crash */
   mock_circuit_deliver_create_cell_calls = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
   MOCK(circuit_deliver_create_cell, mock_circuit_deliver_create_cell);
 
   /* Test circuit established, re-using channel, successful delivery */
@@ -1516,6 +1524,355 @@ test_onionskin_answer(void *arg)
   tor_free(or_circ);
 }
 
+/* Test the different cases in origin_circuit_init(). */
+static void
+test_origin_circuit_init(void *arg)
+{
+  (void)arg;
+  origin_circuit_t *origin_circ = NULL;
+
+  /* Init with 0 purpose and 0 flags */
+  origin_circ = origin_circuit_init(0, 0);
+  tt_int_op(origin_circ->base_.purpose, OP_EQ, 0);
+  tt_int_op(origin_circ->base_.state, OP_EQ, CIRCUIT_STATE_CHAN_WAIT);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+  /* The circuits are automatically freed by the circuitlist. */
+
+  /* Init with a purpose */
+  origin_circ = origin_circuit_init(CIRCUIT_PURPOSE_C_GENERAL, 0);
+  tt_int_op(origin_circ->base_.purpose, OP_EQ, CIRCUIT_PURPOSE_C_GENERAL);
+
+  /* Init with each flag */
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_IS_INTERNAL);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_IS_IPV6_SELFTEST);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_NEED_CAPACITY);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_NEED_UPTIME);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 1);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 0);
+
+  origin_circ = origin_circuit_init(0, CIRCLAUNCH_ONEHOP_TUNNEL);
+  tt_ptr_op(origin_circ->build_state, OP_NE, NULL);
+  tt_int_op(origin_circ->build_state->is_internal, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->is_ipv6_selftest, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_capacity, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->need_uptime, OP_EQ, 0);
+  tt_int_op(origin_circ->build_state->onehop_tunnel, OP_EQ, 1);
+
+ done:
+  /* The circuits are automatically freed by the circuitlist. */
+  ;
+}
+
+/* Test the different cases in circuit_send_next_onion_skin(). */
+static void
+test_circuit_send_next_onion_skin(void *arg)
+{
+  (void)arg;
+  origin_circuit_t *origin_circ = NULL;
+  struct timeval circ_start_time;
+  memset(&circ_start_time, 0, sizeof(circ_start_time));
+
+  extend_info_t fakehop;
+  memset(&fakehop, 0, sizeof(fakehop));
+  extend_info_t *single_fakehop = &fakehop;
+  extend_info_t *multi_fakehop[DEFAULT_ROUTE_LEN] = {&fakehop,
+                                                     &fakehop,
+                                                     &fakehop};
+
+  extend_info_t ipv6_hop;
+  memset(&ipv6_hop, 0, sizeof(ipv6_hop));
+  tor_addr_make_null(&ipv6_hop.addr, AF_INET6);
+  extend_info_t *multi_ipv6_hop[DEFAULT_ROUTE_LEN] = {&ipv6_hop,
+                                                      &ipv6_hop,
+                                                      &ipv6_hop};
+
+  extend_info_t ipv4_hop;
+  memset(&ipv4_hop, 0, sizeof(ipv4_hop));
+  tor_addr_make_null(&ipv4_hop.addr, AF_INET);
+  extend_info_t *multi_ipv4_hop[DEFAULT_ROUTE_LEN] = {&ipv4_hop,
+                                                      &ipv4_hop,
+                                                      &ipv4_hop};
+
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  MOCK(circuit_deliver_create_cell, mock_circuit_deliver_create_cell);
+  server = 0;
+  MOCK(server_mode, mock_server_mode);
+
+  /* Try a direct connection, and succeed on a client */
+  server = 0;
+  origin_circ = new_test_origin_circuit(false,
+                                        circ_start_time,
+                                        1,
+                                        &single_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  /* Skip some of the multi-hop checks */
+  origin_circ->build_state->onehop_tunnel = 1;
+  /* This is a direct connection */
+  mock_circuit_deliver_create_cell_expect_direct = true;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ, 0);
+  /* The circuits are automatically freed by the circuitlist. */
+
+  /* Try a direct connection, and succeed on a server */
+  server = 1;
+  origin_circ = new_test_origin_circuit(false,
+                                        circ_start_time,
+                                        1,
+                                        &single_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->build_state->onehop_tunnel = 1;
+  mock_circuit_deliver_create_cell_expect_direct = true;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ, 0);
+
+  /* Start capturing bugs */
+  setup_full_capture_of_logs(LOG_WARN);
+  tor_capture_bugs_(1);
+
+  /* Try an extend, but fail the client valid address family check */
+  server = 0;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_fakehop),
+                                        multi_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  /* Fix the state */
+  origin_circ->base_.state = 0;
+  /* This is an indirect connection */
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  /* Fail because the address family is invalid */
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("Client trying to extend to a non-IPv4 address.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, but fail the server valid address check */
+  server = 1;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_fakehop),
+                                        multi_fakehop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("Server trying to extend to an invalid address family.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, but fail in the client code, with an IPv6 address */
+  server = 0;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv6_hop),
+                                        multi_ipv6_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("Client trying to extend to a non-IPv4 address.\n");
+  mock_clean_saved_logs();
+
+  /* Stop capturing bugs, but keep capturing logs */
+  tor_end_capture_bugs_();
+
+  /* Try an extend, pass the client IPv4 check, but fail later */
+  server = 0;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv4_hop),
+                                        multi_ipv4_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  /* Fail because the circuit data is invalid */
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("onion_skin_create failed.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, pass the server IPv4 check, but fail later */
+  server = 1;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv4_hop),
+                                        multi_ipv4_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("onion_skin_create failed.\n");
+  mock_clean_saved_logs();
+
+  /* Try an extend, pass the server IPv6 check, but fail later */
+  server = 1;
+  origin_circ = new_test_origin_circuit(true,
+                                        circ_start_time,
+                                        ARRAY_LENGTH(multi_ipv6_hop),
+                                        multi_ipv6_hop);
+  tt_ptr_op(origin_circ, OP_NE, NULL);
+  origin_circ->base_.state = 0;
+  mock_circuit_deliver_create_cell_expect_direct = false;
+  tt_int_op(circuit_send_next_onion_skin(origin_circ), OP_EQ,
+            -END_CIRC_REASON_INTERNAL);
+  expect_log_msg("onion_skin_create failed.\n");
+  mock_clean_saved_logs();
+
+  /* Things we're not testing right now:
+   * - the addresses in the extend cell inside
+   *   circuit_send_intermediate_onion_skin() matches the address in the
+   *   supplied extend_info.
+   * - valid circuit data.
+   * - actually extending the circuit to each hop. */
+
+ done:
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  teardown_capture_of_logs();
+
+  UNMOCK(circuit_deliver_create_cell);
+  UNMOCK(server_mode);
+  server = 0;
+
+  /* The circuits are automatically freed by the circuitlist. */
+}
+
+/* Test the different cases in cpath_build_state_to_crn_flags(). */
+static void
+test_cpath_build_state_to_crn_flags(void *arg)
+{
+  (void)arg;
+
+  cpath_build_state_t state;
+  memset(&state, 0, sizeof(state));
+
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            0);
+
+  memset(&state, 0, sizeof(state));
+  state.need_uptime = 1;
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_UPTIME);
+
+  memset(&state, 0, sizeof(state));
+  state.need_capacity = 1;
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_CAPACITY);
+
+  memset(&state, 0, sizeof(state));
+  state.need_capacity = 1;
+  state.need_uptime = 1;
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_CAPACITY | CRN_NEED_UPTIME);
+
+  /* Check that no other flags are handled */
+  memset(&state, 0xff, sizeof(state));
+  tt_int_op(cpath_build_state_to_crn_flags(&state), OP_EQ,
+            CRN_NEED_CAPACITY | CRN_NEED_UPTIME);
+
+ done:
+  ;
+}
+
+/* Test the different cases in cpath_build_state_to_crn_ipv6_extend_flag(). */
+static void
+test_cpath_build_state_to_crn_ipv6_extend_flag(void *arg)
+{
+  (void)arg;
+
+  cpath_build_state_t state;
+
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  tt_int_op(cpath_build_state_to_crn_ipv6_extend_flag(&state, 0), OP_EQ,
+            0);
+
+  /* Pass the state flag check, but not the length check */
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  state.is_ipv6_selftest = 1;
+  tt_int_op(cpath_build_state_to_crn_ipv6_extend_flag(&state, 0), OP_EQ,
+            0);
+
+  /* Pass the length check, but not the state flag check */
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  tt_int_op(
+      cpath_build_state_to_crn_ipv6_extend_flag(&state,
+                                                DEFAULT_ROUTE_LEN - 2),
+      OP_EQ, 0);
+
+  /* Pass both checks */
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = DEFAULT_ROUTE_LEN;
+  state.is_ipv6_selftest = 1;
+  tt_int_op(
+      cpath_build_state_to_crn_ipv6_extend_flag(&state,
+                                                DEFAULT_ROUTE_LEN - 2),
+      OP_EQ, CRN_INITIATE_IPV6_EXTEND);
+
+  /* Check that no other flags are handled */
+  memset(&state, 0xff, sizeof(state));
+  state.desired_path_len = INT_MAX;
+  tt_int_op(cpath_build_state_to_crn_ipv6_extend_flag(&state, INT_MAX), OP_EQ,
+            0);
+
+#ifndef ALL_BUGS_ARE_FATAL
+  /* Start capturing bugs */
+  setup_full_capture_of_logs(LOG_INFO);
+  tor_capture_bugs_(1);
+
+  /* Now test the single hop circuit case */
+#define SINGLE_HOP_ROUTE_LEN 1
+  memset(&state, 0, sizeof(state));
+  state.desired_path_len = SINGLE_HOP_ROUTE_LEN;
+  state.is_ipv6_selftest = 1;
+  tt_int_op(
+      cpath_build_state_to_crn_ipv6_extend_flag(&state,
+                                                SINGLE_HOP_ROUTE_LEN - 2),
+      OP_EQ, 0);
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(ASSERT_PREDICT_UNLIKELY_(state->desired_path_len < 2))");
+  mock_clean_saved_logs();
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
+
+ done:
+  tor_end_capture_bugs_();
+  mock_clean_saved_logs();
+  teardown_capture_of_logs();
+}
+
 #define TEST(name, flags, setup, cleanup) \
   { #name, test_ ## name, flags, setup, cleanup }
 
@@ -1524,6 +1881,9 @@ test_onionskin_answer(void *arg)
 
 #define TEST_CIRCUIT(name, flags) \
   { #name, test_circuit_ ## name, flags, NULL, NULL }
+
+#define TEST_CPATH(name, flags) \
+  { #name, test_cpath_ ## name, flags, NULL, NULL }
 
 #ifndef COCCI
 #define TEST_CIRCUIT_PASSTHROUGH(name, flags, arg) \
@@ -1543,12 +1903,19 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
   TEST_CIRCUIT(choose_ip_ap_for_extend, 0),
+
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "4"),
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "6"),
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "dual-stack"),
+
   TEST_CIRCUIT(extend, TT_FORK),
 
   TEST(onionskin_answer, TT_FORK, NULL, NULL),
+
+  TEST(origin_circuit_init, TT_FORK, NULL, NULL),
+  TEST_CIRCUIT(send_next_onion_skin, TT_FORK),
+  TEST_CPATH(build_state_to_crn_flags, 0),
+  TEST_CPATH(build_state_to_crn_ipv6_extend_flag, TT_FORK),
 
   END_OF_TESTCASES
 };

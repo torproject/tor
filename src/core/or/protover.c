@@ -326,6 +326,9 @@ protover_is_supported_here(protocol_type_t pr, uint32_t ver)
 /**
  * Return true iff "list" encodes a protocol list that includes support for
  * the indicated protocol and version.
+ *
+ * If the protocol list is unparseable, treat it as if it defines no
+ * protocols, and return 0.
  */
 int
 protocol_list_supports_protocol(const char *list, protocol_type_t tp,
@@ -348,6 +351,9 @@ protocol_list_supports_protocol(const char *list, protocol_type_t tp,
 /**
  * Return true iff "list" encodes a protocol list that includes support for
  * the indicated protocol and version, or some later version.
+ *
+ * If the protocol list is unparseable, treat it as if it defines no
+ * protocols, and return 0.
  */
 int
 protocol_list_supports_protocol_or_later(const char *list,
@@ -403,7 +409,7 @@ protover_get_supported_protocols(void)
 #endif
     "Microdesc=1-2 "
     "Padding=2 "
-    "Relay=1-2";
+    "Relay=1-3";
 }
 
 /** The protocols from protover_get_supported_protocols(), as parsed into a
@@ -739,6 +745,9 @@ protover_compute_vote(const smartlist_t *list_of_proto_strings,
 /** Return true if every protocol version described in the string <b>s</b> is
  * one that we support, and false otherwise.  If <b>missing_out</b> is
  * provided, set it to the list of protocols we do not support.
+ *
+ * If the protocol version string is unparseable, treat it as if it defines no
+ * protocols, and return 1.
  *
  * NOTE: This is quadratic, but we don't do it much: only a few times per
  * consensus. Checking signatures should be way more expensive than this

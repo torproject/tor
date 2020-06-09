@@ -1217,20 +1217,28 @@ fmt_addr32(uint32_t addr)
   return buf;
 }
 
-/** Return a string representing the family of <b>addr</b>.
+/** Like fmt_addrport(), but takes <b>addr</b> as a host-order IPv4
+ * addresses. Also not thread-safe, also clobbers its return buffer on
+ * repeated calls. */
+const char *
+fmt_addr32_port(uint32_t addr, uint16_t port)
+{
+  static char buf[INET_NTOA_BUF_LEN + 6];
+  snprintf(buf, sizeof(buf), "%s:%u", fmt_addr32(addr), port);
+  return buf;
+}
+
+/** Return a string representing <b>family</b>.
  *
  * This string is a string constant, and must not be freed.
  * This function is thread-safe.
  */
 const char *
-fmt_addr_family(const tor_addr_t *addr)
+fmt_af_family(sa_family_t family)
 {
   static int default_bug_once = 0;
 
-  IF_BUG_ONCE(!addr)
-    return "NULL pointer";
-
-  switch (tor_addr_family(addr)) {
+  switch (family) {
     case AF_INET6:
       return "IPv6";
     case AF_INET:
@@ -1242,12 +1250,26 @@ fmt_addr_family(const tor_addr_t *addr)
     default:
       if (!default_bug_once) {
         log_warn(LD_BUG, "Called with unknown address family %d",
-                 (int)tor_addr_family(addr));
+                 (int)family);
         default_bug_once = 1;
       }
       return "unknown";
   }
   //return "(unreachable code)";
+}
+
+/** Return a string representing the family of <b>addr</b>.
+ *
+ * This string is a string constant, and must not be freed.
+ * This function is thread-safe.
+ */
+const char *
+fmt_addr_family(const tor_addr_t *addr)
+{
+  IF_BUG_ONCE(!addr)
+    return "NULL pointer";
+
+  return fmt_af_family(tor_addr_family(addr));
 }
 
 /** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.  The string

@@ -439,7 +439,8 @@ onion_populate_cpath(origin_circuit_t *circ)
 
 /** Create and return a new origin circuit. Initialize its purpose and
  * build-state based on our arguments.  The <b>flags</b> argument is a
- * bitfield of CIRCLAUNCH_* flags. */
+ * bitfield of CIRCLAUNCH_* flags, see circuit_launch_by_extend_info() for
+ * more details. */
 origin_circuit_t *
 origin_circuit_init(uint8_t purpose, int flags)
 {
@@ -455,13 +456,16 @@ origin_circuit_init(uint8_t purpose, int flags)
     ((flags & CIRCLAUNCH_NEED_CAPACITY) ? 1 : 0);
   circ->build_state->is_internal =
     ((flags & CIRCLAUNCH_IS_INTERNAL) ? 1 : 0);
+  circ->build_state->is_ipv6_selftest =
+    ((flags & CIRCLAUNCH_IS_IPV6_SELFTEST) ? 1 : 0);
   circ->base_.purpose = purpose;
   return circ;
 }
 
-/** Build a new circuit for <b>purpose</b>. If <b>exit</b>
- * is defined, then use that as your exit router, else choose a suitable
- * exit node.
+/** Build a new circuit for <b>purpose</b>. If <b>exit</b> is defined, then use
+ * that as your exit router, else choose a suitable exit node. The <b>flags</b>
+ * argument is a bitfield of CIRCLAUNCH_* flags, see
+ * circuit_launch_by_extend_info() for more details.
  *
  * Also launch a connection to the first OR in the chosen path, if
  * it's not open already.
@@ -1050,7 +1054,8 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
     control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0);
     control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
     clear_broken_connection_map(1);
-    if (server_mode(options) && !check_whether_orport_reachable(options)) {
+    if (server_mode(options) &&
+        !router_should_skip_orport_reachability_check(options)) {
       inform_testing_reachability();
       router_do_reachability_checks(1, 1);
     }
@@ -1074,14 +1079,25 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                      crypt_path_t *hop)
 {
   int len;
+  int family = tor_addr_family(&hop->extend_info->addr);
   extend_cell_t ec;
   memset(&ec, 0, sizeof(ec));
 
   log_debug(LD_CIRC,"starting to send subsequent skin.");
 
-  if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
-    log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
-    return - END_CIRC_REASON_INTERNAL;
+  /* Relays and bridges can send IPv6 extends. But for clients, it's an
+   * obvious version distinguisher. */
+  if (server_mode(get_options())) {
+    if (family != AF_INET && family != AF_INET6) {
+      log_warn(LD_BUG, "Server trying to extend to an invalid address "
+               "family.");
+      return - END_CIRC_REASON_INTERNAL;
+    }
+  } else {
+    if (family != AF_INET) {
+      log_warn(LD_BUG, "Client trying to extend to a non-IPv4 address.");
+      return - END_CIRC_REASON_INTERNAL;
+    }
   }
 
   circuit_pick_extend_handshake(&ec.cell_type,
@@ -1089,9 +1105,17 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                 &ec.create_cell.handshake_type,
                                 hop->extend_info);
 
-  tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
-  ec.orport_ipv4.port = hop->extend_info->port;
-  tor_addr_make_unspec(&ec.orport_ipv6.addr);
+  /* At the moment, extend_info only has one ORPort address. We'll add a
+   * second address in #34069, to support dual-stack extend cells. */
+  if (family == AF_INET) {
+    tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
+    ec.orport_ipv4.port = hop->extend_info->port;
+    tor_addr_make_unspec(&ec.orport_ipv6.addr);
+  } else {
+    tor_addr_copy(&ec.orport_ipv6.addr, &hop->extend_info->addr);
+    ec.orport_ipv6.port = hop->extend_info->port;
+    tor_addr_make_unspec(&ec.orport_ipv4.addr);
+  }
   memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
   /* Set the ED25519 identity too -- it will only get included
    * in the extend2 cell if we're configured to use it, though. */
@@ -1539,7 +1563,23 @@ choose_good_exit_server_general(router_crn_flags_t flags)
   const node_t *selected_node=NULL;
   const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
   const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
-  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
+
+  /* We should not require guard flags on exits. */
+  IF_BUG_ONCE(flags & CRN_NEED_GUARD)
+    return NULL;
+
+  /* We reject single-hop exits for all node positions. */
+  IF_BUG_ONCE(flags & CRN_DIRECT_CONN)
+    return NULL;
+
+  /* This isn't the function for picking rendezvous nodes. */
+  IF_BUG_ONCE(flags & CRN_RENDEZVOUS_V3)
+    return NULL;
+
+  /* We only want exits to extend if we cannibalize the circuit.
+   * But we don't require IPv6 extends yet. */
+  IF_BUG_ONCE(flags & CRN_INITIATE_IPV6_EXTEND)
+    return NULL;
 
   connections = get_connection_array();
 
@@ -1572,18 +1612,13 @@ choose_good_exit_server_general(router_crn_flags_t flags)
        */
       continue;
     }
-    if (!node_has_preferred_descriptor(node, direct_conn)) {
+    if (!router_can_choose_node(node, flags)) {
       n_supported[i] = -1;
       continue;
     }
-    if (!node->is_running || node->is_bad_exit) {
+    if (node->is_bad_exit) {
       n_supported[i] = -1;
       continue; /* skip routers that are known to be down or bad exits */
-    }
-    if (node_get_purpose(node) != ROUTER_PURPOSE_GENERAL) {
-      /* never pick a non-general node as a random exit. */
-      n_supported[i] = -1;
-      continue;
     }
     if (routerset_contains_node(options->ExcludeExitNodesUnion_, node)) {
       n_supported[i] = -1;
@@ -1593,27 +1628,6 @@ choose_good_exit_server_general(router_crn_flags_t flags)
         !routerset_contains_node(options->ExitNodes, node)) {
       n_supported[i] = -1;
       continue; /* not one of our chosen exit nodes */
-    }
-
-    if (node_is_unreliable(node, need_uptime, need_capacity, 0)) {
-      n_supported[i] = -1;
-      continue; /* skip routers that are not suitable.  Don't worry if
-                 * this makes us reject all the possible routers: if so,
-                 * we'll retry later in this function with need_update and
-                 * need_capacity set to 0. */
-    }
-    if (!(node->is_valid)) {
-      /* if it's invalid and we don't want it */
-      n_supported[i] = -1;
-//      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- invalid router.",
-//             router->nickname, i);
-      continue; /* skip invalid routers */
-    }
-    /* We do not allow relays that allow single hop exits by default. Option
-     * was deprecated in 0.2.9.2-alpha and removed in 0.3.1.0-alpha. */
-    if (node_allows_single_hop_exits(node)) {
-      n_supported[i] = -1;
-      continue;
     }
     if (node_exit_policy_rejects_all(node)) {
       n_supported[i] = -1;
@@ -1771,13 +1785,7 @@ pick_restricted_middle_node(router_crn_flags_t flags,
   tor_assert(pick_from);
 
   /* Add all running nodes to all_live_nodes */
-  router_add_running_nodes_to_smartlist(all_live_nodes,
-                                        (flags & CRN_NEED_UPTIME) != 0,
-                                        (flags & CRN_NEED_CAPACITY) != 0,
-                                        (flags & CRN_NEED_GUARD) != 0,
-                                        (flags & CRN_NEED_DESC) != 0,
-                                        (flags & CRN_PREF_ADDR) != 0,
-                                        (flags & CRN_DIRECT_CONN) != 0);
+  router_add_running_nodes_to_smartlist(all_live_nodes, flags);
 
   /* Filter all_live_nodes to only add live *and* whitelisted middles
    * to the list whitelisted_live_middles. */
@@ -1957,6 +1965,43 @@ warn_if_last_router_excluded(origin_circuit_t *circ,
   return;
 }
 
+/* Return a set of generic CRN_* flags based on <b>state</b>.
+ *
+ * Called for every position in the circuit. */
+STATIC int
+cpath_build_state_to_crn_flags(const cpath_build_state_t *state)
+{
+  router_crn_flags_t flags = 0;
+  /* These flags apply to entry, middle, and exit nodes.
+   * If a flag only applies to a specific position, it should be checked in
+   * that function. */
+  if (state->need_uptime)
+    flags |= CRN_NEED_UPTIME;
+  if (state->need_capacity)
+    flags |= CRN_NEED_CAPACITY;
+  return flags;
+}
+
+/* Return the CRN_INITIATE_IPV6_EXTEND flag, based on <b>state</b> and
+ * <b>cur_len</b>.
+ *
+ * Only called for middle nodes (for now). Must not be called on single-hop
+ * circuits. */
+STATIC int
+cpath_build_state_to_crn_ipv6_extend_flag(const cpath_build_state_t *state,
+                                          int cur_len)
+{
+  IF_BUG_ONCE(state->desired_path_len < 2)
+    return 0;
+
+  /* The last node is the relay doing the self-test. So we want to extend over
+   * IPv6 from the second-last node. */
+  if (state->is_ipv6_selftest && cur_len == state->desired_path_len - 2)
+    return CRN_INITIATE_IPV6_EXTEND;
+  else
+    return 0;
+}
+
 /** Decide a suitable length for circ's cpath, and pick an exit
  * router (or use <b>exit</b> if provided). Store these in the
  * cpath.
@@ -1990,14 +2035,13 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
     exit_ei = extend_info_dup(exit_ei);
   } else { /* we have to decide one */
     router_crn_flags_t flags = CRN_NEED_DESC;
-    if (state->need_uptime)
-      flags |= CRN_NEED_UPTIME;
-    if (state->need_capacity)
-      flags |= CRN_NEED_CAPACITY;
-    if (is_hs_v3_rp_circuit)
-      flags |= CRN_RENDEZVOUS_V3;
+    flags |= cpath_build_state_to_crn_flags(state);
+    /* Some internal exits are one hop, for example directory connections.
+     * (Guards are always direct, middles are never direct.) */
     if (state->onehop_tunnel)
       flags |= CRN_DIRECT_CONN;
+    if (is_hs_v3_rp_circuit)
+      flags |= CRN_RENDEZVOUS_V3;
     const node_t *node =
       choose_good_exit_server(circ, flags, state->is_internal);
     if (!node) {
@@ -2059,32 +2103,27 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
   return 0;
 }
 
-/** Return the number of routers in <b>routers</b> that are currently up
- * and available for building circuits through.
+/** Return the number of routers in <b>nodes</b> that are currently up and
+ * available for building circuits through.
  *
- * (Note that this function may overcount or undercount, if we have
- * descriptors that are not the type we would prefer to use for some
- * particular router. See bug #25885.)
+ * If <b>direct</b> is true, only count nodes that are suitable for direct
+ * connections. Counts nodes regardless of whether their addresses are
+ * preferred.
  */
 MOCK_IMPL(STATIC int,
 count_acceptable_nodes, (const smartlist_t *nodes, int direct))
 {
   int num=0;
+  int flags = CRN_NEED_DESC;
+
+  if (direct)
+    flags |= CRN_DIRECT_CONN;
 
   SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
     //    log_debug(LD_CIRC,
-//              "Contemplating whether router %d (%s) is a new option.",
-//              i, r->nickname);
-    if (! node->is_running)
-//      log_debug(LD_CIRC,"Nope, the directory says %d is not running.",i);
-      continue;
-    if (! node->is_valid)
-//      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
-      continue;
-    if (! node_has_preferred_descriptor(node, direct))
-      continue;
-    /* The node has a descriptor, so we can just check the ntor key directly */
-    if (!node_has_curve25519_onion_key(node))
+    //              "Contemplating whether router %d (%s) is a new option.",
+    //              i, r->nickname);
+    if (!router_can_choose_node(node, flags))
       continue;
     ++num;
   } SMARTLIST_FOREACH_END(node);
@@ -2278,10 +2317,8 @@ choose_good_middle_server(uint8_t purpose,
 
   excluded = build_middle_exclude_list(purpose, state, head, cur_len);
 
-  if (state->need_uptime)
-    flags |= CRN_NEED_UPTIME;
-  if (state->need_capacity)
-    flags |= CRN_NEED_CAPACITY;
+  flags |= cpath_build_state_to_crn_flags(state);
+  flags |= cpath_build_state_to_crn_ipv6_extend_flag(state, cur_len);
 
   /** If a hidden service circuit wants a specific middle node, pin it. */
   if (middle_node_must_be_vanguard(options, purpose, cur_len)) {
@@ -2357,10 +2394,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
   }
 
   if (state) {
-    if (state->need_uptime)
-      flags |= CRN_NEED_UPTIME;
-    if (state->need_capacity)
-      flags |= CRN_NEED_CAPACITY;
+    flags |= cpath_build_state_to_crn_flags(state);
   }
 
   choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);

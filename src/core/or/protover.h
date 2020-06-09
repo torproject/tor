@@ -22,12 +22,32 @@ struct smartlist_t;
 ///                 `FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS`
 #define FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS "0.2.9.3-alpha"
 
-/** The protover version number that signifies HSDir support for HSv3 */
-#define PROTOVER_HSDIR_V3 2
+/** The protover version number that signifies ed25519 link handshake support
+ */
+#define PROTOVER_LINKAUTH_ED25519_HANDSHAKE 3
+
+/** The protover version number that signifies extend2 cell support */
+#define PROTOVER_RELAY_EXTEND2 2
+/** The protover version number where relays can accept IPv6 connections */
+#define PROTOVER_RELAY_ACCEPT_IPV6 2
+/** The protover version number where relays can initiate IPv6 extends */
+#define PROTOVER_RELAY_EXTEND_IPV6 3
+/** The protover version number where relays can consider IPv6 connections
+ *  canonical */
+#define PROTOVER_RELAY_CANONICAL_IPV6 3
+
 /** The protover version number that signifies HSv3 intro point support */
 #define PROTOVER_HS_INTRO_V3 4
+/** The protover version number where intro points support denial of service
+ * resistance */
+#define PROTOVER_HS_INTRO_DOS 5
+
 /** The protover version number that signifies HSv3 rendezvous point support */
 #define PROTOVER_HS_RENDEZVOUS_POINT_V3 2
+
+/** The protover version number that signifies HSDir support for HSv3 */
+#define PROTOVER_HSDIR_V3 2
+
 /** The protover that signals support for HS circuit setup padding machines */
 #define PROTOVER_HS_SETUP_PADDING 2
 

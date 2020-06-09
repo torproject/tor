@@ -84,12 +84,11 @@ struct node_t {
 
   /* Local info: derived. */
 
-  /** True if the IPv6 OR port is preferred over the IPv4 OR port.
-   * XX/teor - can this become out of date if the torrc changes? */
+  /** True if the IPv6 OR port is preferred over the IPv4 OR port. */
   unsigned int ipv6_preferred:1;
 
   /** According to the geoip db what country is this router in? */
-  /* XXXprop186 what is this suppose to mean with multiple OR ports? */
+  /* IPv6: what is this supposed to mean with multiple OR ports? */
   country_t country;
 
   /* The below items are used only by authdirservers for

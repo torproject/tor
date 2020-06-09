@@ -17,14 +17,37 @@
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 
-/** Copy the primary (IPv4) OR port (IP address and TCP port) for
- * <b>router</b> into *<b>ap_out</b>. */
-void
-router_get_prim_orport(const routerinfo_t *router, tor_addr_port_t *ap_out)
+/** Copy the OR port (IP address and TCP port) for <b>router</b> and
+ * <b>family</b> into *<b>ap_out</b>.
+ *
+ * If the requested ORPort does not exist, sets *<b>ap_out</b> to the null
+ * address and port, and returns -1. Otherwise, returns 0. */
+int
+router_get_orport(const routerinfo_t *router,
+                  tor_addr_port_t *ap_out,
+                  int family)
 {
   tor_assert(ap_out != NULL);
-  tor_addr_from_ipv4h(&ap_out->addr, router->addr);
-  ap_out->port = router->or_port;
+  if (family == AF_INET) {
+    tor_addr_from_ipv4h(&ap_out->addr, router->addr);
+    ap_out->port = router->or_port;
+    return 0;
+  } else if (family == AF_INET6) {
+    /* IPv6 addresses are optional, so check if it is valid. */
+    if (tor_addr_port_is_valid(&router->ipv6_addr, router->ipv6_orport, 0)) {
+      tor_addr_copy(&ap_out->addr, &router->ipv6_addr);
+      ap_out->port = router->ipv6_orport;
+      return 0;
+    } else {
+      tor_addr_port_make_null_ap(ap_out, AF_INET6);
+      return -1;
+    }
+  } else {
+    /* Unsupported address family */
+    tor_assert_nonfatal_unreached();
+    tor_addr_port_make_null_ap(ap_out, AF_UNSPEC);
+    return -1;
+  }
 }
 
 int

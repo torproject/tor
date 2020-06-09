@@ -1133,7 +1133,7 @@ node_ed25519_id_matches(const node_t *node, const ed25519_public_key_t *id)
 /** Dummy object that should be unreturnable.  Used to ensure that
  * node_get_protover_summary_flags() always returns non-NULL. */
 static const protover_summary_flags_t zero_protover_flags = {
-  0,0,0,0,0,0,0,0,0
+  0,0,0,0,0,0,0,0,0,0,0,0
 };
 
 /** Return the protover_summary_flags for a given node. */
@@ -1158,9 +1158,9 @@ node_get_protover_summary_flags(const node_t *node)
  * by ed25519 ID during the link handshake.  If <b>compatible_with_us</b>,
  * it needs to be using a link authentication method that we understand.
  * If not, any plausible link authentication method will do. */
-MOCK_IMPL(int,
+MOCK_IMPL(bool,
 node_supports_ed25519_link_authentication,(const node_t *node,
-                                           int compatible_with_us))
+                                           bool compatible_with_us))
 {
   if (! node_get_ed25519_id(node))
     return 0;
@@ -1175,7 +1175,7 @@ node_supports_ed25519_link_authentication,(const node_t *node,
 
 /** Return true iff <b>node</b> supports the hidden service directory version
  * 3 protocol (proposal 224). */
-int
+bool
 node_supports_v3_hsdir(const node_t *node)
 {
   tor_assert(node);
@@ -1185,7 +1185,7 @@ node_supports_v3_hsdir(const node_t *node)
 
 /** Return true iff <b>node</b> supports ed25519 authentication as an hidden
  * service introduction point.*/
-int
+bool
 node_supports_ed25519_hs_intro(const node_t *node)
 {
   tor_assert(node);
@@ -1193,20 +1193,9 @@ node_supports_ed25519_hs_intro(const node_t *node)
   return node_get_protover_summary_flags(node)->supports_ed25519_hs_intro;
 }
 
-/** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
- * extenstion. */
-int
-node_supports_establish_intro_dos_extension(const node_t *node)
-{
-  tor_assert(node);
-
-  return node_get_protover_summary_flags(node)->
-                           supports_establish_intro_dos_extension;
-}
-
-/** Return true iff <b>node</b> supports to be a rendezvous point for hidden
+/** Return true iff <b>node</b> can be a rendezvous point for hidden
  * service version 3 (HSRend=2). */
-int
+bool
 node_supports_v3_rendezvous_point(const node_t *node)
 {
   tor_assert(node);
@@ -1217,6 +1206,67 @@ node_supports_v3_rendezvous_point(const node_t *node)
   }
 
   return node_get_protover_summary_flags(node)->supports_v3_rendezvous_point;
+}
+
+/** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
+ * extenstion. */
+bool
+node_supports_establish_intro_dos_extension(const node_t *node)
+{
+  tor_assert(node);
+
+  return node_get_protover_summary_flags(node)->
+                           supports_establish_intro_dos_extension;
+}
+
+/** Return true iff <b>node</b> can initiate IPv6 extends (Relay=3).
+ *
+ * This check should only be performed by client path selection code.
+ *
+ * Extending relays should check their own IPv6 support using
+ * router_can_extend_over_ipv6(). Like other extends, they should not verify
+ * the link specifiers in the extend cell against the consensus, because it
+ * may be out of date. */
+bool
+node_supports_initiating_ipv6_extends(const node_t *node)
+{
+  tor_assert(node);
+
+  /* Relays can't initiate an IPv6 extend, unless they have an IPv6 ORPort. */
+  if (!node_has_ipv6_orport(node)) {
+    return 0;
+  }
+
+  /* Initiating relays also need to support the relevant protocol version. */
+  return
+    node_get_protover_summary_flags(node)->supports_initiating_ipv6_extends;
+}
+
+/** Return true iff <b>node</b> can accept IPv6 extends (Relay=2 or Relay=3)
+ * from other relays. If <b>need_canonical_ipv6_conn</b> is true, also check
+ * if the relay supports canonical IPv6 connections (Relay=3 only).
+ *
+ * This check should only be performed by client path selection code.
+ */
+bool
+node_supports_accepting_ipv6_extends(const node_t *node,
+                                            bool need_canonical_ipv6_conn)
+{
+  tor_assert(node);
+
+  /* Relays can't accept an IPv6 extend, unless they have an IPv6 ORPort. */
+  if (!node_has_ipv6_orport(node)) {
+    return 0;
+  }
+
+  /* Accepting relays also need to support the relevant protocol version. */
+  if (need_canonical_ipv6_conn) {
+    return
+      node_get_protover_summary_flags(node)->supports_canonical_ipv6_conns;
+  } else {
+    return
+      node_get_protover_summary_flags(node)->supports_accepting_ipv6_extends;
+  }
 }
 
 /** Return the RSA ID key's SHA1 digest for the provided node. */

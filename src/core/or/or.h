@@ -815,6 +815,18 @@ typedef struct protover_summary_flags_t {
    * accept EXTEND2 cells. This requires Relay=2. */
   unsigned int supports_extend2_cells:1;
 
+  /** True iff this router has a version or protocol list that allows it to
+   * accept IPv6 connections. This requires Relay=2 or Relay=3. */
+  unsigned int supports_accepting_ipv6_extends:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * initiate IPv6 connections. This requires Relay=3. */
+  unsigned int supports_initiating_ipv6_extends:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * consider IPv6 connections canonical. This requires Relay=3. */
+  unsigned int supports_canonical_ipv6_conns:1;
+
   /** True iff this router has a protocol list that allows it to negotiate
    * ed25519 identity keys on a link handshake with us. This
    * requires LinkAuth=3. */
@@ -830,6 +842,10 @@ typedef struct protover_summary_flags_t {
    * the v3 protocol detailed in proposal 224. This requires HSIntro=4. */
   unsigned int supports_ed25519_hs_intro : 1;
 
+  /** True iff this router has a protocol list that allows it to support the
+   * ESTABLISH_INTRO DoS cell extension. Requires HSIntro=5. */
+  unsigned int supports_establish_intro_dos_extension : 1;
+
   /** True iff this router has a protocol list that allows it to be an hidden
    * service directory supporting version 3 as seen in proposal 224. This
    * requires HSDir=2. */
@@ -841,12 +857,9 @@ typedef struct protover_summary_flags_t {
   unsigned int supports_v3_rendezvous_point: 1;
 
   /** True iff this router has a protocol list that allows clients to
-   * negotiate hs circuit setup padding. Requires Padding>=2. */
+   * negotiate hs circuit setup padding. Requires Padding=2. */
   unsigned int supports_hs_setup_padding : 1;
 
-  /** True iff this router has a protocol list that allows it to support the
-   * ESTABLISH_INTRO DoS cell extension. Requires HSIntro>=5. */
-  unsigned int supports_establish_intro_dos_extension : 1;
 } protover_summary_flags_t;
 
 typedef struct routerinfo_t routerinfo_t;

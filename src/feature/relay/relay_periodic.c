@@ -201,7 +201,7 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
       have_completed_a_circuit()) {
     /* every 20 minutes, check and complain if necessary */
     const routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !check_whether_orport_reachable(options)) {
+    if (me && !router_should_skip_orport_reachability_check(options)) {
       char *address = tor_dup_ip(me->addr);
       if (address) {
         log_warn(LD_CONFIG,
@@ -217,7 +217,7 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
       }
     }
 
-    if (me && !check_whether_dirport_reachable(options)) {
+    if (me && !router_should_skip_dirport_reachability_check(options)) {
       char *address = tor_dup_ip(me->addr);
       if (address) {
         log_warn(LD_CONFIG,

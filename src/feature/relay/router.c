@@ -1363,14 +1363,14 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  if (!check_whether_orport_reachable(options))
+  if (!router_should_skip_orport_reachability_check(options))
     return 0;
   if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL) {
     /* All set: there are no exits in the consensus (maybe this is a tiny
      * test network), so we can't check our DirPort reachability. */
     return 1;
   } else {
-    return check_whether_dirport_reachable(options);
+    return router_should_skip_dirport_reachability_check(options);
   }
 }
 
@@ -1501,7 +1501,22 @@ router_has_advertised_ipv6_orport(const or_options_t *options)
   return tor_addr_port_is_valid_ap(&ipv6_ap, 0);
 }
 
-/** Returns true if this router has an advertised IPv6 ORPort. */
+/** Returns true if this router can extend over IPv6.
+ *
+ * This check should only be performed by relay extend code.
+ *
+ * Clients should check if relays can initiate and accept IPv6 extends using
+ * node_supports_initiating_ipv6_extends() and
+ * node_supports_accepting_ipv6_extends().
+ *
+ * As with other extends, relays should assume the client has already
+ * performed the relevant checks for the next hop. (Otherwise, relays that
+ * have just added IPv6 ORPorts won't be able to self-test those ORPorts.)
+ *
+ * Accepting relays don't need to perform any IPv6-specific checks before
+ * accepting a connection, because having an IPv6 ORPort implies support for
+ * the relevant protocol version.
+ */
 MOCK_IMPL(bool,
 router_can_extend_over_ipv6,(const or_options_t *options))
 {

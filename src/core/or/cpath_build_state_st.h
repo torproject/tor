@@ -24,6 +24,8 @@ struct cpath_build_state_t {
   unsigned int need_capacity : 1;
   /** Whether the last hop was picked with exiting in mind. */
   unsigned int is_internal : 1;
+  /** Is this an IPv6 ORPort self-testing circuit? */
+  unsigned int is_ipv6_selftest : 1;
   /** Did we pick this as a one-hop tunnel (not safe for other streams)?
    * These are for encrypted dir conns that exit to this router, not
    * for arbitrary exits from the circuit. */

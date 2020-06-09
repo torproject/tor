@@ -96,7 +96,7 @@ problem function-size /src/core/or/channeltls.c:channel_tls_process_authenticate
 problem dependency-violation /src/core/or/channeltls.c 11
 problem include-count /src/core/or/circuitbuild.c 53
 problem function-size /src/core/or/circuitbuild.c:get_unique_circ_id_by_chan() 128
-problem function-size /src/core/or/circuitbuild.c:choose_good_exit_server_general() 206
+problem function-size /src/core/or/circuitbuild.c:choose_good_exit_server_general() 196
 problem dependency-violation /src/core/or/circuitbuild.c 25
 problem include-count /src/core/or/circuitlist.c 55
 problem function-size /src/core/or/circuitlist.c:HT_PROTOTYPE() 109
@@ -117,7 +117,7 @@ problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_cli
 problem dependency-violation /src/core/or/circuitpadding_machines.c 1
 problem function-size /src/core/or/circuitstats.c:circuit_build_times_parse_state() 123
 problem dependency-violation /src/core/or/circuitstats.c 11
-problem file-size /src/core/or/circuituse.c 3195
+problem file-size /src/core/or/circuituse.c 3250
 problem function-size /src/core/or/circuituse.c:circuit_is_acceptable() 128
 problem function-size /src/core/or/circuituse.c:circuit_expire_building() 389
 problem function-size /src/core/or/circuituse.c:circuit_log_ancient_one_hop_circuits() 126
@@ -146,7 +146,7 @@ problem function-size /src/core/or/connection_or.c:connection_or_client_learned_
 problem dependency-violation /src/core/or/connection_or.c 21
 problem dependency-violation /src/core/or/dos.c 6
 problem dependency-violation /src/core/or/onion.c 2
-problem file-size /src/core/or/or.h 1105
+problem file-size /src/core/or/or.h 1150
 problem include-count /src/core/or/or.h 48
 problem dependency-violation /src/core/or/or.h 1
 problem dependency-violation /src/core/or/or_periodic.c 1
@@ -198,7 +198,7 @@ problem function-size /src/feature/control/control_events.c:control_event_stream
 problem include-count /src/feature/control/control_getinfo.c 56
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_misc() 108
 problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_dir() 297
-problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_events() 234
+problem function-size /src/feature/control/control_getinfo.c:getinfo_helper_events() 237
 problem function-size /src/feature/dirauth/bwauth.c:dirserv_read_measured_bandwidths() 121
 problem file-size /src/feature/dirauth/dirvote.c 4734
 problem include-count /src/feature/dirauth/dirvote.c 55
@@ -255,11 +255,11 @@ problem function-size /src/feature/nodelist/microdesc.c:microdesc_cache_rebuild(
 problem include-count /src/feature/nodelist/networkstatus.c 65
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_check_consensus_signature() 175
 problem function-size /src/feature/nodelist/networkstatus.c:networkstatus_set_current_consensus() 289
-problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_server_impl() 122
+problem function-size /src/feature/nodelist/node_select.c:router_pick_directory_server_impl() 126
 problem function-size /src/feature/nodelist/node_select.c:compute_weighted_bandwidths() 204
-problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 112
+problem function-size /src/feature/nodelist/node_select.c:router_pick_trusteddirserver_impl() 116
 problem function-size /src/feature/nodelist/nodelist.c:compute_frac_paths_available() 190
-problem file-size /src/feature/nodelist/routerlist.c 3247
+problem file-size /src/feature/nodelist/routerlist.c 3350
 problem function-size /src/feature/nodelist/routerlist.c:router_rebuild_store() 148
 problem function-size /src/feature/nodelist/routerlist.c:router_add_to_routerlist() 168
 problem function-size /src/feature/nodelist/routerlist.c:routerlist_remove_old_routers() 121
