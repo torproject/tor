@@ -2008,7 +2008,7 @@ circpad_internal_event_state_length_up(circpad_machine_runtime_t *mi)
  * Returns true if the circuit matches the conditions.
  */
 static inline bool
-circpad_machine_conditions_met(origin_circuit_t *circ,
+circpad_machine_conditions_apply(origin_circuit_t *circ,
                                const circpad_machine_spec_t *machine)
 {
   /* If padding is disabled, no machines should match/apply. This has
@@ -2025,7 +2025,7 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
   }
 
   if (!(circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
-      & machine->conditions.purpose_mask))
+      & machine->conditions.apply_purpose_mask))
     return 0;
 
   if (machine->conditions.requires_vanguards) {
@@ -2041,13 +2041,33 @@ circpad_machine_conditions_met(origin_circuit_t *circ,
    * "I want to apply to circuits with either streams or no streams"; OR
    * "I only want to apply to circuits with streams"; OR
    * "I only want to apply to circuits without streams". */
-  if (!(circpad_circuit_state(circ) & machine->conditions.state_mask))
+  if (!(circpad_circuit_state(circ) & machine->conditions.apply_state_mask))
     return 0;
 
   if (circuit_get_cpath_opened_len(circ) < machine->conditions.min_hops)
     return 0;
 
   return 1;
+}
+
+/**
+ * Check to see if any of the keep conditions still apply to this circuit.
+ *
+ * These conditions keep the machines active if they match, but do not
+ * cause new machines to start up.
+ */
+static inline bool
+circpad_machine_conditions_keep(origin_circuit_t *circ,
+                                const circpad_machine_spec_t *machine)
+{
+  if ((circpad_circ_purpose_to_mask(TO_CIRCUIT(circ)->purpose)
+      & machine->conditions.keep_purpose_mask))
+    return 1;
+
+  if ((circpad_circuit_state(circ) & machine->conditions.keep_state_mask))
+    return 1;
+
+  return 0;
 }
 
 /**
@@ -2115,7 +2135,12 @@ circpad_shutdown_old_machines(origin_circuit_t *on_circ)
   circuit_t *circ = TO_CIRCUIT(on_circ);
 
   FOR_EACH_ACTIVE_CIRCUIT_MACHINE_BEGIN(i, circ) {
-    if (!circpad_machine_conditions_met(on_circ,
+    /* We shut down a machine if neither the apply conditions
+     * nor the keep conditions match. If either set of conditions match,
+     * keep it around. */
+    if (!circpad_machine_conditions_apply(on_circ,
+                                        circ->padding_machine[i]) &&
+        !circpad_machine_conditions_keep(on_circ,
                                         circ->padding_machine[i])) {
       uint32_t machine_ctr = circ->padding_info[i]->machine_ctr;
       // Clear machineinfo (frees timers)
@@ -2174,7 +2199,7 @@ circpad_add_matching_machines(origin_circuit_t *on_circ,
        * machines installed on a circuit. Make sure we only
        * add this machine if its target machine index is free. */
       if (machine->machine_index == i &&
-          circpad_machine_conditions_met(on_circ, machine)) {
+          circpad_machine_conditions_apply(on_circ, machine)) {
 
         // We can only replace this machine if the target hopnum
         // is the same, otherwise we'll get invalid data
@@ -2587,9 +2612,9 @@ circpad_circ_client_machine_init(void)
       = tor_malloc_zero(sizeof(circpad_machine_spec_t));
 
   circ_client_machine->conditions.min_hops = 2;
-  circ_client_machine->conditions.state_mask =
+  circ_client_machine->conditions.apply_state_mask =
       CIRCPAD_CIRC_BUILDING|CIRCPAD_CIRC_OPENED|CIRCPAD_CIRC_HAS_RELAY_EARLY;
-  circ_client_machine->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+  circ_client_machine->conditions.apply_purpose_mask = CIRCPAD_PURPOSE_ALL;
   circ_client_machine->conditions.reduced_padding_ok = 1;
 
   circ_client_machine->target_hopnum = 2;
