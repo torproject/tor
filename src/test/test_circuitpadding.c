@@ -1361,7 +1361,7 @@ test_circuitpadding_wronghop(void *arg)
 
   /* 5. Test that asking to stop the wrong machine does nothing */
   circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(client_side),
-                            255, 2, CIRCPAD_COMMAND_STOP);
+                            255, 2, CIRCPAD_COMMAND_STOP, 0);
   tt_ptr_op(client_side->padding_machine[0], OP_NE, NULL);
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_ptr_op(relay_side->padding_machine[0], OP_NE, NULL);
@@ -1409,7 +1409,7 @@ test_circuitpadding_wronghop(void *arg)
   circpad_padding_negotiated(relay_side,
                              CIRCPAD_MACHINE_CIRC_SETUP,
                              CIRCPAD_COMMAND_START,
-                             CIRCPAD_RESPONSE_OK);
+                             CIRCPAD_RESPONSE_OK, 0);
 
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
@@ -1418,7 +1418,7 @@ test_circuitpadding_wronghop(void *arg)
   circpad_padding_negotiated(relay_side,
                              CIRCPAD_MACHINE_CIRC_SETUP,
                              CIRCPAD_COMMAND_START,
-                             CIRCPAD_RESPONSE_ERR);
+                             CIRCPAD_RESPONSE_ERR, 0);
 
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
@@ -1521,7 +1521,7 @@ test_circuitpadding_negotiation(void *arg)
   /* Force negotiate padding. */
   circpad_negotiate_padding(TO_ORIGIN_CIRCUIT(client_side),
                             CIRCPAD_MACHINE_CIRC_SETUP,
-                            2, CIRCPAD_COMMAND_START);
+                            2, CIRCPAD_COMMAND_START, 0);
 
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
