@@ -1,0 +1,4 @@
+  o Minor features (compilation, testing):
+    - When the undefined behaviour sanitiser (UBSan) fails, and we don't have
+      runtime support, execute a trap instruction. Tor will log a backtrace
+      before exiting. Implements 29528.

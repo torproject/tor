@@ -1,0 +1,5 @@
+  o Minor bugfixes (compilation, testing):
+    - Correctly check for UBSan at configuration time, rather than using the
+      ASan results. When activating the undefined behaviour sanitiser (UBSan),
+      configure.ac was checking the address sanitiser (ASan) variables, instead
+      of the UBSan variables. Fixes bug 29830; bugfix on 0.2.9.1-alpha.

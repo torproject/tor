@@ -1,0 +1,3 @@
+  o Minor features (compilation, testing):
+    - When the undefined behaviour sanitiser (UBSan) fails, provide verbose
+      output, then exit. Implements 29528.
