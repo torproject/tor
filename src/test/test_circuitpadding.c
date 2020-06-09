@@ -1732,9 +1732,9 @@ helper_create_conditional_machines(void)
 
   add->conditions.requires_vanguards = 0;
   add->conditions.min_hops = 2;
-  add->conditions.state_mask = CIRCPAD_CIRC_BUILDING|
+  add->conditions.apply_state_mask = CIRCPAD_CIRC_BUILDING|
            CIRCPAD_CIRC_NO_STREAMS|CIRCPAD_CIRC_HAS_RELAY_EARLY;
-  add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+  add->conditions.apply_purpose_mask = CIRCPAD_PURPOSE_ALL;
   circpad_register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
@@ -1751,9 +1751,9 @@ helper_create_conditional_machines(void)
 
   add->conditions.requires_vanguards = 1;
   add->conditions.min_hops = 3;
-  add->conditions.state_mask = CIRCPAD_CIRC_OPENED|
+  add->conditions.apply_state_mask = CIRCPAD_CIRC_OPENED|
            CIRCPAD_CIRC_STREAMS|CIRCPAD_CIRC_HAS_NO_RELAY_EARLY;
-  add->conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+  add->conditions.apply_purpose_mask = CIRCPAD_PURPOSE_ALL;
   circpad_register_padding_machine(add, origin_padding_machines);
 
   add = helper_create_conditional_machine();
@@ -2727,8 +2727,8 @@ helper_create_ender_machine(void)
   circ_client_machine.states[CIRCPAD_STATE_START].
       next_state[CIRCPAD_EVENT_NONPADDING_RECV] = CIRCPAD_STATE_END;
 
-  circ_client_machine.conditions.state_mask = CIRCPAD_STATE_ALL;
-  circ_client_machine.conditions.purpose_mask = CIRCPAD_PURPOSE_ALL;
+  circ_client_machine.conditions.apply_state_mask = CIRCPAD_STATE_ALL;
+  circ_client_machine.conditions.apply_purpose_mask = CIRCPAD_PURPOSE_ALL;
 }
 
 static time_t mocked_timeofday;
