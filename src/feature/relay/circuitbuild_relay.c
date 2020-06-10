@@ -122,6 +122,50 @@ circuit_extend_add_ed25519_helper(struct extend_cell_t *ec)
   return 0;
 }
 
+/* Make sure the extend cell <b>ec</b> has an IPv4 address if the relay
+ * supports in, and if not, fill it in. */
+STATIC int
+circuit_extend_add_ipv4_helper(struct extend_cell_t *ec)
+{
+  IF_BUG_ONCE(!ec) {
+    return -1;
+  }
+
+  const node_t *node = node_get_by_id((const char*) ec->node_id);
+  if (node) {
+    tor_addr_port_t node_ipv4;
+    node_get_prim_orport(node, &node_ipv4);
+    if (tor_addr_is_null(&ec->orport_ipv4.addr) &&
+        !tor_addr_is_null(&node_ipv4.addr)) {
+      tor_addr_copy(&ec->orport_ipv4.addr, &node_ipv4.addr);
+    }
+  }
+
+  return 0;
+}
+
+/* Make sure the extend cell <b>ec</b> has an IPv6 address if the relay
+ * supports in, and if not, fill it in. */
+STATIC int
+circuit_extend_add_ipv6_helper(struct extend_cell_t *ec)
+{
+  IF_BUG_ONCE(!ec) {
+    return -1;
+  }
+
+  const node_t *node = node_get_by_id((const char*) ec->node_id);
+  if (node) {
+    tor_addr_port_t node_ipv6;
+    node_get_pref_ipv6_orport(node, &node_ipv6);
+    if (tor_addr_is_null(&ec->orport_ipv6.addr) &&
+        !tor_addr_is_null(&node_ipv6.addr)) {
+      tor_addr_copy(&ec->orport_ipv6.addr, &node_ipv6.addr);
+    }
+  }
+
+  return 0;
+}
+
 /* Check if the address and port in the tor_addr_port_t <b>ap</b> are valid,
  * and are allowed by the current ExtendAllowPrivateAddresses config.
  *
@@ -410,6 +454,12 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
     return -1;
 
   if (circuit_extend_lspec_valid_helper(&ec, circ) < 0)
+    return -1;
+
+  if (circuit_extend_add_ipv4_helper(&ec) < 0)
+    return -1;
+
+  if (circuit_extend_add_ipv6_helper(&ec) < 0)
     return -1;
 
   /* Check the addresses, without logging */
