@@ -91,8 +91,8 @@
  * [x] Whenever we remove a guard from the sample, remove it from the primary
  * and confirmed lists.
  *
- * [x] When we make a guard confirmed, update the primary list, and sort them by
- * sampled order.
+ * [x] When we make a guard confirmed, update the primary list, and sort them
+ * by sampled order.
  *
  * [x] When we make a guard filtered or unfiltered, update the primary list.
  *
