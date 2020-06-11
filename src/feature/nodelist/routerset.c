@@ -306,14 +306,16 @@ int
 routerset_contains_router(const routerset_t *set, const routerinfo_t *ri,
                           country_t country)
 {
-  tor_addr_t addr;
-  tor_addr_from_ipv4h(&addr, ri->addr);
-  return routerset_contains(set,
-                            &addr,
-                            ri->or_port,
-                            ri->nickname,
-                            ri->cache_info.identity_digest,
-                            country);
+  tor_addr_t addr_v4;
+  tor_addr_from_ipv4h(&addr_v4, ri->addr);
+  int v4_ret =
+    routerset_contains(set, &addr_v4, ri->or_port, ri->nickname,
+                       ri->cache_info.identity_digest, country);
+  int v6_ret =
+    routerset_contains(set, &ri->ipv6_addr, ri->ipv6_orport, ri->nickname,
+                       ri->cache_info.identity_digest, country);
+
+  return MAX(v4_ret, v6_ret);
 }
 
 /** Return true iff <b>rs</b> is in <b>set</b>.  If country is <b>-1</b>, we
