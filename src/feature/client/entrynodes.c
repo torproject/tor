@@ -2812,10 +2812,12 @@ entry_guards_update_all(guard_selection_t *gs)
 
 /**
  * Return a newly allocated string for encoding the persistent parts of
- * <b>guard</b> to the state file.
+ * <b>guard</b> to the state file. <b>dense_sampled_idx</b> refers to the
+ * sampled_idx made dense for this <b>guard</b>. Encoding all guards should
+ * lead to a dense array of sampled_idx in the state file.
  */
 STATIC char *
-entry_guard_encode_for_state(entry_guard_t *guard)
+entry_guard_encode_for_state(entry_guard_t *guard, int dense_sampled_idx)
 {
   /*
    * The meta-format we use is K=V K=V K=V... where K can be any
@@ -2844,7 +2846,8 @@ entry_guard_encode_for_state(entry_guard_t *guard)
 
   format_iso_time_nospace(tbuf, guard->sampled_on_date);
   smartlist_add_asprintf(result, "sampled_on=%s", tbuf);
-
+  // Replacing the sampled_idx by dense array
+  smartlist_add_asprintf(result, "sampled_idx=%d", dense_sampled_idx);
   if (guard->sampled_by_version) {
     smartlist_add_asprintf(result, "sampled_by=%s",
                            guard->sampled_by_version);
@@ -2900,11 +2903,12 @@ entry_guard_encode_for_state(entry_guard_t *guard)
 }
 
 /**
- * Extract key=val from the state string <b>s</s> and duplicate the value to 
+ * Extract key=val from the state string <b>s</b> and duplicate the value to
  * some string target declared in entry_guard_parse_from_state
  */
-static void parse_from_state_set_vals(const char *s, smartlist_t *entries,
-    smartlist_t *extra, strmap_t *vals)
+static void
+parse_from_state_set_vals(const char *s, smartlist_t *entries, smartlist_t
+    *extra, strmap_t *vals)
 {
     smartlist_split_string(entries, s, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -2933,8 +2937,9 @@ static void parse_from_state_set_vals(const char *s, smartlist_t *entries,
 /**
  * Handle part of the parsing state file logic, focused on time related things
  */
-static void parse_from_state_handle_time(entry_guard_t *guard, char *sampled_on,
-    char *unlisted_since, char *confirmed_on)
+static void
+parse_from_state_handle_time(entry_guard_t *guard, char *sampled_on, char
+    *unlisted_since, char *confirmed_on)
 {
 #define HANDLE_TIME(field) do {                                 \
     if (field) {                                                \
@@ -2985,6 +2990,7 @@ entry_guard_parse_from_state(const char *s)
   char *rsa_id = NULL;
   char *nickname = NULL;
   char *sampled_on = NULL;
+  char *sampled_idx = NULL;
   char *sampled_by = NULL;
   char *unlisted_since = NULL;
   char *listed  = NULL;
@@ -3001,6 +3007,7 @@ entry_guard_parse_from_state(const char *s)
   char *pb_collapsed_circuits = NULL;
   char *pb_unusable_circuits = NULL;
   char *pb_timeouts = NULL;
+  int invalid_sampled_idx = get_max_sample_size_absolute();
 
   /* Split up the entries.  Put the ones we know about in strings and the
    * rest in "extra". */
@@ -3014,6 +3021,7 @@ entry_guard_parse_from_state(const char *s)
     FIELD(rsa_id);
     FIELD(nickname);
     FIELD(sampled_on);
+    FIELD(sampled_idx);
     FIELD(sampled_by);
     FIELD(unlisted_since);
     FIELD(listed);
@@ -3078,12 +3086,12 @@ entry_guard_parse_from_state(const char *s)
   }
 
   /* Process the various time fields. */
-  parse_from_state_handle_time(guard, sampled_on, unlisted_since, confirmed_on);
+  parse_from_state_handle_time(guard, sampled_on, unlisted_since,
+      confirmed_on);
 
   /* Take sampled_by_version verbatim. */
   guard->sampled_by_version = sampled_by;
   sampled_by = NULL; /* prevent free */
-
   /* Listed is a boolean */
   if (listed && strcmp(listed, "0"))
     guard->currently_listed = 1;
@@ -3099,6 +3107,29 @@ entry_guard_parse_from_state(const char *s)
     } else {
       guard->confirmed_idx = (int)idx;
     }
+  }
+
+  if (sampled_idx) {
+    int ok = 1;
+    long idx = tor_parse_long(sampled_idx, 10, 0, INT_MAX, &ok, NULL);
+    if (!ok) {
+      log_warn(LD_GUARD, "Guard has invalid sampled_idx %s",
+          escaped(sampled_idx));
+      /* set it to a idx higher than the max sample size */
+      guard->sampled_idx = invalid_sampled_idx++;
+    } else {
+      guard->sampled_idx = (int)idx;
+    }
+  } else if (confirmed_idx) {
+    /* This state has been written by an older Tor version which did not have
+     * sample ordering  */
+
+    guard->sampled_idx = guard->confirmed_idx;
+  } else {
+    log_warn(LD_GUARD, "The state file seems to be into a status that could"
+        " yield to weird entry node selection: we're missing both a"
+        " sampled_idx and a confirmed_idx.");
+    guard->sampled_idx = invalid_sampled_idx++;
   }
 
   /* Anything we didn't recognize gets crammed together */
@@ -3155,6 +3186,7 @@ entry_guard_parse_from_state(const char *s)
   tor_free(listed);
   tor_free(confirmed_on);
   tor_free(confirmed_idx);
+  tor_free(sampled_idx);
   tor_free(bridge_addr);
   tor_free(pb_use_attempts);
   tor_free(pb_use_successes);
@@ -3184,13 +3216,15 @@ entry_guards_update_guards_in_state(or_state_t *state)
   config_line_t **nextline = &lines;
 
   SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+    int i = 0;
     SMARTLIST_FOREACH_BEGIN(gs->sampled_entry_guards, entry_guard_t *, guard) {
       if (guard->is_persistent == 0)
         continue;
       *nextline = tor_malloc_zero(sizeof(config_line_t));
       (*nextline)->key = tor_strdup("Guard");
-      (*nextline)->value = entry_guard_encode_for_state(guard);
+      (*nextline)->value = entry_guard_encode_for_state(guard, i);
       nextline = &(*nextline)->next;
+      i++;
     } SMARTLIST_FOREACH_END(guard);
   } SMARTLIST_FOREACH_END(gs);
 
@@ -3243,6 +3277,14 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
       tor_assert(gs);
       smartlist_add(gs->sampled_entry_guards, guard);
       guard->in_selection = gs;
+      /* Recompute the next_sampled_id from the state. We do not assume that
+       * sampled guards appear in the correct order within the file, and we
+       * need to know what would be the next sampled idx to give to any
+       * new sampled guard (i.e., max of guard->sampled_idx + 1)*/
+      if (gs->next_sampled_idx <= guard->sampled_idx) {
+        gs->next_sampled_idx = guard->sampled_idx + 1;
+      }
+
     } else {
       entry_guard_free(guard);
     }
@@ -3250,6 +3292,10 @@ entry_guards_load_guards_from_state(or_state_t *state, int set)
 
   if (set) {
     SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+      /** Guards should be in sample order within the file, but it is maybe
+       * better NOT to assume that. Let's order them before updating lists
+       */
+      smartlist_sort(gs->sampled_entry_guards, compare_guards_by_sampled_idx);
       entry_guards_update_all(gs);
     } SMARTLIST_FOREACH_END(gs);
   }
