@@ -57,6 +57,8 @@
 #include "feature/rend/rend_encoded_v2_service_descriptor_st.h"
 #include "feature/rend/rend_service_descriptor_st.h"
 
+#include "src/app/config/statefile.h"
+
 static int control_setconf_helper(control_connection_t *conn,
                                   const control_cmd_args_t *args,
                                   int use_defaults);
@@ -1419,6 +1421,7 @@ handle_control_droptimeouts(control_connection_t *conn,
 
   circuit_build_times_reset(get_circuit_build_times_mutable());
   send_control_done(conn);
+  or_state_mark_dirty(get_or_state(), 0);
   cbt_control_event_buildtimeout_set(get_circuit_build_times(),
                                      BUILDTIMEOUT_SET_EVENT_RESET);
 
