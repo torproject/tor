@@ -1421,7 +1421,7 @@ handle_control_droptimeouts(control_connection_t *conn,
 
   circuit_build_times_reset(get_circuit_build_times_mutable());
   send_control_done(conn);
-  or_state_mark_dirty(get_or_state(), approx_time());
+  or_state_mark_dirty(get_or_state(), 0);
   cbt_control_event_buildtimeout_set(get_circuit_build_times(),
                                      BUILDTIMEOUT_SET_EVENT_RESET);
 
