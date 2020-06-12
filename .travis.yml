@@ -206,10 +206,7 @@ install:
   ## If we're running chutney, install it.
   - if [[ "$CHUTNEY" != "" ]]; then git clone --depth 1 https://github.com/torproject/chutney.git ; export CHUTNEY_PATH="$(pwd)/chutney"; fi
   ## If we're running stem, install it.
-  ## XXXX We are temporarily fixing the version at d1174a83 to work around
-  ## https://github.com/torproject/stem/issues/63 .
-  ## - if [[ "$TEST_STEM" != "" ]]; then git clone --no-tags --depth 1 https://github.com/torproject/stem.git; export STEM_SOURCE_DIR=`pwd`/stem; fi
-  - if [[ "$TEST_STEM" != "" ]]; then git clone https://github.com/torproject/stem.git && ( cd ./stem && git checkout d1174a83c2dcb7b855d8fc986be3ab8f8d88d68c)  ; export STEM_SOURCE_DIR=`pwd`/stem; fi
+  - if [[ "$TEST_STEM" != "" ]]; then git clone --depth 1 https://github.com/torproject/stem.git ; export STEM_SOURCE_DIR=`pwd`/stem; fi
   ##
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
