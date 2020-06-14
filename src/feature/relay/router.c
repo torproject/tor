@@ -1475,6 +1475,9 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
     return;
   }
 
+  log_debug(LD_CONFIG, "Found configured IPv6 ORPort '%s'.",
+            fmt_addrport(addr, port));
+
   /* If the relay is configured using the default authorities, disallow
    * internal IPs. Otherwise, allow them. For IPv4 ORPorts and DirPorts,
    * this check is done in resolve_my_address(). See #33681. */
