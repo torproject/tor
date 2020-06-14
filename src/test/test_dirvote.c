@@ -39,8 +39,8 @@ static digestmap_t *router_properties = NULL;
 // Use of global variable is justified by its use in nodelist.c
 // and is necessary to avoid memory leaks when mocking the
 // function node_get_by_id
-node_t *running_node;
-node_t *non_running_node;
+static node_t *running_node;
+static node_t *non_running_node;
 
 /* Allocate memory to the global variables that represent a running
  * and non-running node
@@ -253,7 +253,7 @@ end:
   tor_free(status_two);
   tor_free(first);
   tor_free(second);
-};
+}
 
 static void
 test_dirvote_compare_routerinfo_by_ipv6(void *arg)
@@ -300,7 +300,7 @@ end:
   tor_free(status_two);
   tor_free(first);
   tor_free(second);
-};
+}
 
 /** Create routers values and routerinfos that always have the same
  * characteristics, and add them to the global digestmap. This macro is here to
@@ -316,13 +316,13 @@ end:
 /** Test to see if the returned routers are exactly the ones that should be
  * flagged as sybils : we test for inclusion then for number of elements
  */
-#define TEST_SYBIL(true_sybil, possible_sybil)               \
-  DIGESTMAP_FOREACH (true_sybil, sybil_id, void *, ignore) { \
-    (void)ignore;                                            \
-    tt_assert(digestmap_get(possible_sybil, sybil_id));      \
-  }                                                          \
-  DIGESTMAP_FOREACH_END;                                     \
-  tt_assert(digestmap_size(true_sybil) == digestmap_size(possible_sybil));
+#define TEST_SYBIL(true_sybil, possible_sybil)                 \
+    DIGESTMAP_FOREACH (true_sybil, sybil_id, void *, ignore) { \
+      (void)ignore;                                            \
+      tt_assert(digestmap_get(possible_sybil, sybil_id));      \
+    }                                                          \
+    DIGESTMAP_FOREACH_END;                                     \
+tt_assert(digestmap_size(true_sybil) == digestmap_size(possible_sybil));
 
 static void
 test_dirvote_get_sybil_by_ip_version_ipv4(void *arg)
