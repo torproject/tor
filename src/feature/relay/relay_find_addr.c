@@ -64,7 +64,7 @@ router_new_address_suggestion(const char *suggestion,
   }
 
   /* XXXX ipv6 */
-  cur = get_last_resolved_addr();
+  cur = get_last_resolved_addr_v4();
   if (cur ||
       resolve_my_address_v4(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
     /* We're all set -- we already know our address. Great. */
@@ -112,7 +112,7 @@ router_pick_published_address, (const or_options_t *options, uint32_t *addr,
                                 int cache_only))
 {
   /* First, check the cached output from resolve_my_address(). */
-  *addr = get_last_resolved_addr();
+  *addr = get_last_resolved_addr_v4();
   if (*addr)
     return 0;
 

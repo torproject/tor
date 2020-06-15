@@ -15,8 +15,8 @@ int resolve_my_address_v4(int warn_severity, const or_options_t *options,
                           uint32_t *addr_out,
                           const char **method_out, char **hostname_out);
 
-uint32_t get_last_resolved_addr(void);
-void reset_last_resolved_addr(void);
+uint32_t get_last_resolved_addr_v4(void);
+void reset_last_resolved_addr_v4(void);
 
 MOCK_DECL(int, is_local_addr, (const tor_addr_t *addr));
 

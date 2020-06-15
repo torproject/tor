@@ -20,20 +20,20 @@
 #include "lib/net/resolve.h"
 
 /** Last value actually set by resolve_my_address. */
-static uint32_t last_resolved_addr = 0;
+static uint32_t last_resolved_addr_v4 = 0;
 
-/** Accessor for last_resolved_addr from outside this file. */
+/** Accessor for last_resolved_addr_v4 from outside this file. */
 uint32_t
-get_last_resolved_addr(void)
+get_last_resolved_addr_v4(void)
 {
-  return last_resolved_addr;
+  return last_resolved_addr_v4;
 }
 
-/** Reset last_resolved_addr from outside this file. */
+/** Reset last_resolved_addr_v4 from outside this file. */
 void
-reset_last_resolved_addr(void)
+reset_last_resolved_addr_v4(void)
 {
-  last_resolved_addr = 0;
+  last_resolved_addr_v4 = 0;
 }
 
 /**
@@ -257,7 +257,7 @@ resolve_my_address_v4(int warn_severity, const or_options_t *options,
    * us up-to-date.
    */
 
-  if (last_resolved_addr && last_resolved_addr != *addr_out) {
+  if (last_resolved_addr_v4 && last_resolved_addr_v4 != *addr_out) {
     /* Leave this as a notice, regardless of the requested severity,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET,
@@ -269,14 +269,14 @@ resolve_my_address_v4(int warn_severity, const or_options_t *options,
     ip_address_changed(0);
   }
 
-  if (last_resolved_addr != *addr_out) {
+  if (last_resolved_addr_v4 != *addr_out) {
     control_event_server_status(LOG_NOTICE,
                                 "EXTERNAL_ADDRESS ADDRESS=%s METHOD=%s%s%s",
                                 addr_string, method_used,
                                 hostname_used ? " HOSTNAME=" : "",
                                 hostname_used ? hostname_used : "");
   }
-  last_resolved_addr = *addr_out;
+  last_resolved_addr_v4 = *addr_out;
 
   /*
    * And finally, clean up and return success.
@@ -303,11 +303,11 @@ is_local_addr, (const tor_addr_t *addr))
     /* It's possible that this next check will hit before the first time
      * resolve_my_address actually succeeds.  (For clients, it is likely that
      * resolve_my_address will never be called at all).  In those cases,
-     * last_resolved_addr will be 0, and so checking to see whether ip is on
-     * the same /24 as last_resolved_addr will be the same as checking whether
-     * it was on net 0, which is already done by tor_addr_is_internal.
+     * last_resolved_addr_v4 will be 0, and so checking to see whether ip is
+     * on the same /24 as last_resolved_addr_v4 will be the same as checking
+     * whether it was on net 0, which is already done by tor_addr_is_internal.
      */
-    if ((last_resolved_addr & (uint32_t)0xffffff00ul)
+    if ((last_resolved_addr_v4 & (uint32_t)0xffffff00ul)
         == (ip & (uint32_t)0xffffff00ul))
       return 1;
   }
