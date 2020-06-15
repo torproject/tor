@@ -1,4 +1,0 @@
-  o Minor bugfix (refactoring):
-    - Lift circuit_build_times_disabled out of circuit_expire_building loop to
-      save CPU time with many circuits open. Fixes bug 33977; bugfix on
-      0.3.5.9.

@@ -1,4 +1,0 @@
-  o Minor features (code safety):
-    - Check for failures of tor_inet_ntop() and tor_inet_ntoa() functions in
-      DNS and IP address processing code and adjust codepaths to make them
-      less likely to crash entire Tor instance. Resolves issue 33788.

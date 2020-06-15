@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Define and use a new constant TOR_ADDRPORT_BUF_LEN which is like
-      TOR_ADDR_BUF_LEN but includes enough space for an IP address,
-      brackets, seperating colon, and port number. Closes ticket 33956.
-      Patch by Neel Chauhan.

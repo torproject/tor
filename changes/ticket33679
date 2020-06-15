@@ -1,4 +1,0 @@
-  o Minor features (IPv6 Support, address.c):
-    - Adds IPv6 support to tor_addr_is_valid(). Adds tests for the
-      above changes and tor_addr_is_null(). Closes ticket 33679.
-      Patch by MrSquanchee.

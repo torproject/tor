@@ -1,4 +1,0 @@
-  o Documentation (manpage):
-    - Add cross reference links and a table of contents to the HTML
-      tor manpage.  Closes ticket 33369.  Work by Swati Thacker as
-      part of Google Season of Docs.

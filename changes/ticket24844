@@ -1,4 +1,0 @@
-  o Minor features (v3 onion servies):
-    - Add v3 onion service status to the dumpstats() call which is
-      triggered by a SIGUSR1 signal. Previously, we only did v2
-      onion services. Closes ticket 24844. Patch by Neel Chauhan.

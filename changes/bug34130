@@ -1,4 +1,0 @@
-  o Minor bugfixes (linux seccomp sandbox nss):
-    - Fix startup crash when tor is compiled with --enable-nss and 
-      sandbox support is enabled. Fixes bug 34130; bugfix on
-      0.3.5.1-alpha. Patch by Daniel Pinto.

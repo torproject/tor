@@ -1,3 +1,0 @@
-  o Minor bugfixes (mainloop):
-    - Better guard against growing a buffer past its maximum 2GB in size.
-      Fixes bug 33131; bugfix on 0.3.0.4-rc.

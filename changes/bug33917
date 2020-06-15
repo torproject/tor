@@ -1,5 +1,0 @@
-  o Minor bugfixes (logging, testing):
-    - Make all of tor's assertion macros support the ALL_BUGS_ARE_FATAL and
-      DISABLE_ASSERTS_IN_UNIT_TESTS debugging modes. Implements these modes
-      for IF_BUG_ONCE(). (It used to log a non-fatal warning, regardless of
-      the debugging mode.) Fixes bug 33917; bugfix on 0.2.9.1-alpha.

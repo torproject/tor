@@ -1,4 +1,0 @@
-  o Code simplification and refactoring (relay address):
-    - Move a series of functions related to address resolving into their own
-      files. Closes ticket 33789.
-
