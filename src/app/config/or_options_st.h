@@ -71,7 +71,10 @@ struct or_options_t {
   int CacheDirectoryGroupReadable; /**< Boolean: Is the CacheDirectory g+r? */
 
   char *Nickname; /**< OR only: nickname of this onion router. */
-  char *Address; /**< OR only: configured address for this onion router. */
+  /** OR only: configured address for this onion router. Up to two times this
+   * options is accepted as in IPv4 and IPv6. */
+  struct config_line_t *Address;
+
   char *PidFile; /**< Where to store PID of Tor process. */
 
   struct routerset_t *ExitNodes; /**< Structure containing nicknames, digests,

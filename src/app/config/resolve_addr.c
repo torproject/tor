@@ -15,6 +15,7 @@
 
 #include "feature/control/control_events.h"
 
+#include "lib/encoding/confline.h"
 #include "lib/net/gethostname.h"
 #include "lib/net/resolve.h"
 
@@ -97,7 +98,6 @@ resolve_my_address(int warn_severity, const or_options_t *options,
   int explicit_hostname=1;
   int from_interface=0;
   char *addr_string = NULL;
-  const char *address = options->Address;
   int notice_severity = warn_severity <= LOG_NOTICE ?
     LOG_NOTICE : warn_severity;
 
@@ -108,8 +108,9 @@ resolve_my_address(int warn_severity, const or_options_t *options,
    * Step one: Fill in 'hostname' to be our best guess.
    */
 
-  if (address && *address) {
-    strlcpy(hostname, address, sizeof(hostname));
+  if (options->Address) {
+    /* Only 1 Address is supported even though this is a list. */
+    strlcpy(hostname, options->Address->value, sizeof(hostname));
     log_debug(LD_CONFIG, "Trying configured Address '%s' as local hostname",
               hostname);
   } else { /* then we need to guess our address */

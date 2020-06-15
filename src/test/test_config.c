@@ -1190,6 +1190,7 @@ test_config_resolve_my_address(void *arg)
 {
   or_options_t *options;
   uint32_t resolved_addr;
+  char buf[1024];
   const char *method_used;
   char *hostname_out = NULL;
   int retval;
@@ -1215,8 +1216,8 @@ test_config_resolve_my_address(void *arg)
   * If options->Address is a valid IPv4 address string, we want
   * the corresponding address to be parsed and returned.
   */
-
-  options->Address = tor_strdup("128.52.128.105");
+  strlcpy(buf, "Address 128.52.128.105\n", sizeof(buf));
+  config_get_lines(buf, &(options->Address), 0);
 
   retval = resolve_my_address(LOG_NOTICE,options,&resolved_addr,
                               &method_used,&hostname_out);
@@ -1226,7 +1227,7 @@ test_config_resolve_my_address(void *arg)
   tt_want(hostname_out == NULL);
   tt_assert(resolved_addr == 0x80348069);
 
-  tor_free(options->Address);
+  config_free_lines(options->Address);
 
 /*
  * CASE 2:
@@ -1237,8 +1238,8 @@ test_config_resolve_my_address(void *arg)
 
   MOCK(tor_lookup_hostname,tor_lookup_hostname_01010101);
 
-  tor_free(options->Address);
-  options->Address = tor_strdup("www.torproject.org");
+  strlcpy(buf, "Address www.torproject.org\n", sizeof(buf));
+  config_get_lines(buf, &(options->Address), 0);
 
   prev_n_hostname_01010101 = n_hostname_01010101;
 
@@ -1253,7 +1254,7 @@ test_config_resolve_my_address(void *arg)
 
   UNMOCK(tor_lookup_hostname);
 
-  tor_free(options->Address);
+  config_free_lines(options->Address);
   tor_free(hostname_out);
 
 /*
@@ -1264,7 +1265,6 @@ test_config_resolve_my_address(void *arg)
  */
 
   resolved_addr = 0;
-  tor_free(options->Address);
   options->Address = NULL;
 
   MOCK(tor_gethostname,tor_gethostname_replacement);
@@ -1295,8 +1295,8 @@ test_config_resolve_my_address(void *arg)
  */
 
   resolved_addr = 0;
-  tor_free(options->Address);
-  options->Address = tor_strdup("127.0.0.1");
+  strlcpy(buf, "Address 127.0.0.1\n", sizeof(buf));
+  config_get_lines(buf, &(options->Address), 0);
 
   retval = resolve_my_address(LOG_NOTICE,options,&resolved_addr,
                               &method_used,&hostname_out);
@@ -1304,7 +1304,7 @@ test_config_resolve_my_address(void *arg)
   tt_want(resolved_addr == 0);
   tt_int_op(retval, OP_EQ, -1);
 
-  tor_free(options->Address);
+  config_free_lines(options->Address);
   tor_free(hostname_out);
 
 /*
@@ -1317,8 +1317,8 @@ test_config_resolve_my_address(void *arg)
 
   prev_n_hostname_failure = n_hostname_failure;
 
-  tor_free(options->Address);
-  options->Address = tor_strdup("www.tor-project.org");
+  strlcpy(buf, "Address www.tor-project.org\n", sizeof(buf));
+  config_get_lines(buf, &(options->Address), 0);
 
   retval = resolve_my_address(LOG_NOTICE,options,&resolved_addr,
                               &method_used,&hostname_out);
@@ -1328,7 +1328,8 @@ test_config_resolve_my_address(void *arg)
 
   UNMOCK(tor_lookup_hostname);
 
-  tor_free(options->Address);
+  config_free_lines(options->Address);
+  options->Address = NULL;
   tor_free(hostname_out);
 
 /*
@@ -1451,8 +1452,8 @@ test_config_resolve_my_address(void *arg)
 
   prev_n_hostname_failure = n_hostname_failure;
 
-  tor_free(options->Address);
-  options->Address = tor_strdup("some_hostname");
+  strlcpy(buf, "Address some_hostname\n", sizeof(buf));
+  config_get_lines(buf, &(options->Address), 0);
 
   retval = resolve_my_address(LOG_NOTICE, options, &resolved_addr,
                               &method_used,&hostname_out);
@@ -1484,7 +1485,7 @@ test_config_resolve_my_address(void *arg)
    *   and address from step 6.
    */
 
-  tor_free(options->Address);
+  config_free_lines(options->Address);
   options->Address = NULL;
 
   MOCK(tor_gethostname,tor_gethostname_replacement);
@@ -1563,7 +1564,7 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_gethostname);
 
  done:
-  tor_free(options->Address);
+  config_free_lines(options->Address);
   tor_free(options->DirAuthorities);
   or_options_free(options);
   tor_free(hostname_out);

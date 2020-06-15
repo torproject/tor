@@ -795,8 +795,7 @@ do_dump_config(void)
 static void
 init_addrinfo(void)
 {
-  if (! server_mode(get_options()) ||
-      (get_options()->Address && strlen(get_options()->Address) > 0)) {
+  if (! server_mode(get_options()) || get_options()->Address) {
     /* We don't need to seed our own hostname, because we won't be calling
      * resolve_my_address on it.
      */
