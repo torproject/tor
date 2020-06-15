@@ -78,7 +78,7 @@ options_validate_dirauth_mode(const or_options_t *old_options,
 
   /* confirm that our address isn't broken, so we can complain now */
   uint32_t tmp;
-  if (resolve_my_address(LOG_WARN, options, &tmp, NULL, NULL) < 0)
+  if (resolve_my_address_v4(LOG_WARN, options, &tmp, NULL, NULL) < 0)
     REJECT("Failed to resolve/guess local address. See logs for details.");
 
   if (!options->ContactInfo && !options->TestingTorNetwork)

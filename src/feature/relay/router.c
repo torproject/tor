@@ -2552,7 +2552,7 @@ check_descriptor_ipaddress_changed(time_t now)
 
   /* XXXX ipv6 */
   prev = my_ri->addr;
-  if (resolve_my_address(LOG_INFO, options, &cur, &method, &hostname) < 0) {
+  if (resolve_my_address_v4(LOG_INFO, options, &cur, &method, &hostname) < 0) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }

@@ -4492,7 +4492,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     log_err(LD_BUG, "Error computing identity key digest");
     return NULL;
   }
-  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname)<0) {
+  if (resolve_my_address_v4(LOG_WARN, options, &addr, NULL, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
     return NULL;
   }

@@ -66,7 +66,7 @@ router_new_address_suggestion(const char *suggestion,
   /* XXXX ipv6 */
   cur = get_last_resolved_addr();
   if (cur ||
-      resolve_my_address(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
+      resolve_my_address_v4(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
     /* We're all set -- we already know our address. Great. */
     tor_addr_from_ipv4h(&last_guessed_ip, cur); /* store it in case we
                                                    need it later */
@@ -118,7 +118,7 @@ router_pick_published_address, (const or_options_t *options, uint32_t *addr,
 
   /* Second, consider doing a resolve attempt right here. */
   if (!cache_only) {
-    if (resolve_my_address(LOG_INFO, options, addr, NULL, NULL) >= 0) {
+    if (resolve_my_address_v4(LOG_INFO, options, addr, NULL, NULL) >= 0) {
       log_info(LD_CONFIG,"Success: chose address '%s'.", fmt_addr32(*addr));
       return 0;
     }
