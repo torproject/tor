@@ -108,10 +108,10 @@ problem dependency-violation /src/core/or/circuitlist.h 1
 problem function-size /src/core/or/circuitmux.c:circuitmux_set_policy() 109
 problem function-size /src/core/or/circuitmux.c:circuitmux_attach_circuit() 113
 problem dependency-violation /src/core/or/circuitmux_ewma.c 2
-problem file-size /src/core/or/circuitpadding.c 3101
+problem file-size /src/core/or/circuitpadding.c 3183
 problem function-size /src/core/or/circuitpadding.c:circpad_machine_schedule_padding() 113
 problem dependency-violation /src/core/or/circuitpadding.c 6
-problem file-size /src/core/or/circuitpadding.h 813
+problem file-size /src/core/or/circuitpadding.h 832
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_relay_hide_intro_circuits() 103
 problem function-size /src/core/or/circuitpadding_machines.c:circpad_machine_client_hide_rend_circuits() 112
 problem dependency-violation /src/core/or/circuitpadding_machines.c 1
