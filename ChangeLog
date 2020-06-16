@@ -1,4 +1,4 @@
-Changes in version 0.4.4.1-alpha - 2020-06-1?
+Changes in version 0.4.4.1-alpha - 2020-06-16
   This is the first alpha release in the 0.4.4.x series.  It improves
   our guard selection algorithms, improves the amount of code that
   can be disabled when running without relay support, and includes numerous
