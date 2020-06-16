@@ -67,7 +67,7 @@ Changes in version 0.4.4.1-alpha - 2020-06-1?
   o Minor features (code safety):
     - Check for failures of tor_inet_ntop() and tor_inet_ntoa()
       functions in DNS and IP address processing code, and adjust
-      codepaths to make them less likely to crash entire Tor instance.
+      codepaths to make them less likely to crash entire Tor instances.
       Resolves issue 33788.
 
   o Minor features (compilation size):
@@ -123,7 +123,7 @@ Changes in version 0.4.4.1-alpha - 2020-06-1?
       harness, to avoid crashes due to uninitialized subsystems. Follow-
       up from ticket 33316.
 
-  o Minor features (v3 onion servies):
+  o Minor features (v3 onion services):
     - Add v3 onion service status to the dumpstats() call which is
       triggered by a SIGUSR1 signal. Previously, we only did v2 onion
       services. Closes ticket 24844. Patch by Neel Chauhan.
@@ -144,7 +144,7 @@ Changes in version 0.4.4.1-alpha - 2020-06-1?
       many circuits open. Fixes bug 33977; bugfix on 0.3.5.9.
 
   o Minor bugfixes (client performance):
-    - Resume use preemptively-built circuits when UseEntryGuards is set
+    - Resume use of preemptively-built circuits when UseEntryGuards is set
       to 0. We accidentally disabled this feature with that config
       setting, leading to slower load times. Fixes bug 34303; bugfix
       on 0.3.3.2-alpha.
@@ -231,7 +231,7 @@ Changes in version 0.4.4.1-alpha - 2020-06-1?
   o Code simplification and refactoring:
     - Define and use a new constant TOR_ADDRPORT_BUF_LEN which is like
       TOR_ADDR_BUF_LEN but includes enough space for an IP address,
-      brackets, seperating colon, and port number. Closes ticket 33956.
+      brackets, separating colon, and port number. Closes ticket 33956.
       Patch by Neel Chauhan.
     - Merge the orconn and ocirc events into the "core" subsystem, which
       manages or connections and origin circuits. Previously they were
@@ -283,7 +283,7 @@ Changes in version 0.4.4.1-alpha - 2020-06-1?
       add a mixed IPv6 chutney network. These networks are used in the
       test-network-all, test-network-ipv4, and test-network-ipv6 make
       targets. Closes ticket 33334.
-    - Use the "bridges+hs-v23" chutney network flavor in "make test-
+    - Use the "bridges+hs-v23" chutney network flavour in "make test-
       network". This test requires a recent version of chutney (mid-
       February 2020). Closes ticket 28208.
     - When a Travis chutney job fails, use chutney's new "diagnostics.sh"
