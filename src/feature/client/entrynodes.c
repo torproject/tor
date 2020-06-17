@@ -906,6 +906,11 @@ entry_guard_add_to_sample_impl(guard_selection_t *gs,
   guard->in_selection = gs;
   entry_guard_set_filtered_flags(get_options(), gs, guard);
   entry_guards_changed_for_guard_selection(gs);
+
+  /* Just added this guard to the sampled set and hence it might be used as a
+   * guard in the future: send GUARD NEW control event. */
+  control_event_guard(guard->nickname, guard->identity, "NEW");
+
   return guard;
 }
 
@@ -2259,6 +2264,9 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
   if (guard->failing_since == 0)
     guard->failing_since = approx_time();
 
+  /* This guard not reachable: send GUARD DOWN event */
+  control_event_guard(guard->nickname, guard->identity, "DOWN");
+
   log_info(LD_GUARD, "Recorded failure for %s%sguard %s",
            guard->is_primary?"primary ":"",
            guard->confirmed_idx>=0?"confirmed ":"",
@@ -2283,6 +2291,11 @@ entry_guards_note_guard_success(guard_selection_t *gs,
   /* Save this, since we're about to overwrite it. */
   const time_t last_time_on_internet = gs->last_time_on_internet;
   gs->last_time_on_internet = approx_time();
+
+  /* If guard was not already marked as reachable, send a GUARD UP signal */
+  if (guard->is_reachable != GUARD_REACHABLE_YES) {
+    control_event_guard(guard->nickname, guard->identity, "UP");
+  }
 
   guard->is_reachable = GUARD_REACHABLE_YES;
   guard->failing_since = 0;
