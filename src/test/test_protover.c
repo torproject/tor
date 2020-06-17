@@ -645,8 +645,8 @@ test_protover_vote_roundtrip_ours(void *args)
   (void) args;
   const char *examples[] = {
     protover_get_supported_protocols(),
-    DIRVOTE_RECCOMEND_RELAY_PROTO,
-    DIRVOTE_RECCOMEND_CLIENT_PROTO,
+    DIRVOTE_RECOMMEND_RELAY_PROTO,
+    DIRVOTE_RECOMMEND_CLIENT_PROTO,
     DIRVOTE_REQUIRE_RELAY_PROTO,
     DIRVOTE_REQUIRE_CLIENT_PROTO,
   };

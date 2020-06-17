@@ -4679,9 +4679,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   /* These are hardwired, to avoid disaster. */
   v3_out->recommended_relay_protocols =
-    tor_strdup(DIRVOTE_RECCOMEND_RELAY_PROTO);
+    tor_strdup(DIRVOTE_RECOMMEND_RELAY_PROTO);
   v3_out->recommended_client_protocols =
-    tor_strdup(DIRVOTE_RECCOMEND_CLIENT_PROTO);
+    tor_strdup(DIRVOTE_RECOMMEND_CLIENT_PROTO);
 
   v3_out->required_relay_protocols =
     tor_strdup(DIRVOTE_REQUIRE_RELAY_PROTO);
