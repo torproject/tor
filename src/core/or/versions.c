@@ -504,10 +504,10 @@ summarize_protover_flags(protover_summary_flags_t *out,
 {
   tor_assert(out);
   memset(out, 0, sizeof(*out));
-  if (protocols) {
+  if (protocols && strcmp(protocols, "")) {
     memoize_protover_summary(out, protocols);
   }
-  if (version && !strcmpstart(version, "Tor ")) {
+  if (version && strcmp(version, "") && !strcmpstart(version, "Tor ")) {
     if (!out->protocols_known) {
       /* The version is a "Tor" version, and where there is no
        * list of protocol versions that we should be looking at instead. */
