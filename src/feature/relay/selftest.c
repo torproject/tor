@@ -45,15 +45,15 @@
 #include "feature/relay/selftest.h"
 
 /** Whether we can reach our ORPort from the outside. */
-static int can_reach_or_port = 0;
+static bool can_reach_or_port = false;
 /** Whether we can reach our DirPort from the outside. */
-static int can_reach_dir_port = 0;
+static bool can_reach_dir_port = false;
 
 /** Forget what we have learned about our reachability status. */
 void
 router_reset_reachability(void)
 {
-  can_reach_or_port = can_reach_dir_port = 0;
+  can_reach_or_port = can_reach_dir_port = false;
 }
 
 /** Return 1 if we won't do reachability checks, because:
@@ -358,7 +358,7 @@ router_orport_found_reachable(void)
                options->PublishServerDescriptor_ != NO_DIRINFO
                && router_should_skip_dirport_reachability_check(options) ?
                  " Publishing server descriptor." : "");
-    can_reach_or_port = 1;
+    can_reach_or_port = true;
     mark_my_descriptor_dirty("ORPort found reachable");
     /* This is a significant enough change to upload immediately,
      * at least in a test network */
@@ -390,7 +390,7 @@ router_dirport_found_reachable(void)
                options->PublishServerDescriptor_ != NO_DIRINFO
                && router_should_skip_orport_reachability_check(options) ?
                " Publishing server descriptor." : "");
-    can_reach_dir_port = 1;
+    can_reach_dir_port = true;
     if (router_should_advertise_dirport(options, me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
       /* This is a significant enough change to upload immediately,
