@@ -38,10 +38,10 @@ test_process_descs_versions(void *arg)
     { "Tor 0.4.0.5", true },
     { "Tor 0.4.1.1-alpha", true },
     { "Tor 0.4.1.4-rc", true },
+    { "Tor 0.4.1.5", true },
     // new enough to be supported
     { "Tor 0.3.5.7", false },
     { "Tor 0.3.5.8", false },
-    { "Tor 0.4.1.5", false },
     { "Tor 0.4.2.1-alpha", false },
     { "Tor 0.4.2.4-rc", false },
     { "Tor 0.4.3.0-alpha-dev", false },
