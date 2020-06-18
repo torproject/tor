@@ -15,6 +15,10 @@ int resolve_my_address_v4(int warn_severity, const or_options_t *options,
                           uint32_t *addr_out,
                           const char **method_out, char **hostname_out);
 
+bool find_my_address(const or_options_t *options, int family,
+                     int warn_severity, tor_addr_t *addr_out,
+                     const char **method_out, char **hostname_out);
+
 uint32_t get_last_resolved_addr_v4(void);
 void reset_last_resolved_addr_v4(void);
 
