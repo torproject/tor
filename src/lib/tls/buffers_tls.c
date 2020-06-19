@@ -59,6 +59,9 @@ read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
  * Second, the TLS stream's events do not correspond directly to network
  * events: sometimes, before a TLS stream can read, the network must be
  * ready to write -- or vice versa.
+ *
+ * On success, return the number of bytes read. On error, a TOR_TLS_* negative
+ * code is returned (expect any of them except TOR_TLS_DONE).
  */
 int
 buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
@@ -92,8 +95,6 @@ buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
       return r; /* Error */
     tor_assert(total_read+r <= BUF_MAX_LEN);
     total_read += r;
-    if ((size_t)r < readlen) /* eof, block, or no more to read. */
-      break;
   }
   return (int)total_read;
 }
