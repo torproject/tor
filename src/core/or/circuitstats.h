@@ -12,8 +12,6 @@
 #ifndef TOR_CIRCUITSTATS_H
 #define TOR_CIRCUITSTATS_H
 
-#include "feature/control/control_events.h"
-
 const circuit_build_times_t *get_circuit_build_times(void);
 circuit_build_times_t *get_circuit_build_times_mutable(void);
 double get_circuit_build_close_time_ms(void);
@@ -52,9 +50,6 @@ double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 void circuit_build_times_update_last_circ(circuit_build_times_t *cbt);
 void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
 void circuit_build_times_reset(circuit_build_times_t *cbt);
-void cbt_control_event_buildtimeout_set(
-                                  const circuit_build_times_t *cbt,
-                                  buildtimeout_set_event_t type);
 
 /** Total size of the circuit timeout history to accumulate.
  * 1000 is approx 2.5 days worth of continual-use circuits. */
@@ -163,7 +158,6 @@ void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
 int circuit_build_times_network_check_live(const circuit_build_times_t *cbt);
 void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 
-#ifdef CIRCUITSTATS_PRIVATE
 /** Information about the state of our local network connection */
 typedef struct {
   /** The timestamp we last completed a TLS handshake or received a cell */
@@ -213,6 +207,5 @@ struct circuit_build_times_t {
   uint32_t num_circ_closed;
 
 };
-#endif /* defined(CIRCUITSTATS_PRIVATE) */
 
 #endif /* !defined(TOR_CIRCUITSTATS_H) */
