@@ -868,6 +868,7 @@ test_circuit_extend_add_ip(void *arg)
   /* The IPv4 should match */
   tt_int_op(tor_addr_compare(&ec->orport_ipv4.addr, &ipv4_tmp, CMP_SEMANTIC),
             OP_EQ, 0);
+  tt_int_op(ec->orport_ipv4.port, OP_EQ, VALID_PORT);
 
   /* Set up the fake variables for the IPv6 test */
   memcpy(ec, old_ec, sizeof(extend_cell_t));
@@ -879,6 +880,7 @@ test_circuit_extend_add_ip(void *arg)
   /* The IPv6 should match */
   tt_int_op(tor_addr_compare(&ec->orport_ipv6.addr, &fake_node->ri->ipv6_addr,
             CMP_SEMANTIC), OP_EQ, 0);
+  tt_int_op(ec->orport_ipv6.port, OP_EQ, VALID_PORT);
 
   /* Cleanup */
   mocked_node = NULL;
