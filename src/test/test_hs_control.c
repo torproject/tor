@@ -393,7 +393,7 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
-  tt_str_op(cp1, OP_EQ, "512 Invalid v3 addr \"house\"\r\n");
+  tt_str_op(cp1, OP_EQ, "512 Invalid v3 address \"house\"\r\n");
 
  done:
   tor_free(args);
