@@ -291,7 +291,8 @@ handle_control_onion_client_auth_view(control_connection_t *conn,
   if (argc >= 1) {
     hsaddress = smartlist_get(args->args, 0);
     if (!hs_address_is_valid(hsaddress)) {
-      control_printf_endreply(conn, 512, "Invalid v3 addr \"%s\"", hsaddress);
+      control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"",
+                              hsaddress);
       goto err;
     }
   }
