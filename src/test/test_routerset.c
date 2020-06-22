@@ -1417,8 +1417,18 @@ test_rset_contains_router(void *arg)
   ri.nickname = (char *)nickname;
 
   r = routerset_contains_router(set, &ri, country);
-
   tt_int_op(r, OP_EQ, 4);
+
+  /* IP address test. */
+  ri.addr = htonl(0x0a000001); /* 10.0.0.1 */
+  ri.or_port = 1234;
+
+  tor_addr_parse(&ri.ipv6_addr, "2600::1");
+  ri.ipv6_orport = 12345;
+
+  r = routerset_contains_router(set, &ri, country);
+  tt_int_op(r, OP_EQ, 4);
+
   done:
     routerset_free(set);
 }
