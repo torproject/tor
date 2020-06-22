@@ -131,13 +131,14 @@ circuit_extend_add_ipv4_helper(struct extend_cell_t *ec)
     return -1;
   }
 
-  const node_t *node = node_get_by_id((const char*) ec->node_id);
+  const node_t *node = node_get_by_id((const char *) ec->node_id);
   if (node) {
     tor_addr_port_t node_ipv4;
     node_get_prim_orport(node, &node_ipv4);
     if (tor_addr_is_null(&ec->orport_ipv4.addr) &&
         !tor_addr_is_null(&node_ipv4.addr)) {
       tor_addr_copy(&ec->orport_ipv4.addr, &node_ipv4.addr);
+      ec->orport_ipv4.port = node_ipv4.port;
     }
   }
 
@@ -153,13 +154,14 @@ circuit_extend_add_ipv6_helper(struct extend_cell_t *ec)
     return -1;
   }
 
-  const node_t *node = node_get_by_id((const char*) ec->node_id);
+  const node_t *node = node_get_by_id((const char *) ec->node_id);
   if (node) {
     tor_addr_port_t node_ipv6;
     node_get_pref_ipv6_orport(node, &node_ipv6);
     if (tor_addr_is_null(&ec->orport_ipv6.addr) &&
         !tor_addr_is_null(&node_ipv6.addr)) {
       tor_addr_copy(&ec->orport_ipv6.addr, &node_ipv6.addr);
+      ec->orport_ipv6.port = node_ipv6.port;
     }
   }
 
