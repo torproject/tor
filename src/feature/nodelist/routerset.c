@@ -223,11 +223,11 @@ routerset_len(const routerset_t *set)
  *
  * (If country is -1, then we take the country
  * from addr.) */
-STATIC int
-routerset_contains(const routerset_t *set, const tor_addr_t *addr,
-                   uint16_t orport,
-                   const char *nickname, const char *id_digest,
-                   country_t country)
+static int
+routerset_contains2(const routerset_t *set, const tor_addr_t *addr,
+                    uint16_t orport, const tor_addr_t *addr2,
+                    uint16_t orport2, const char *nickname,
+                    const char *id_digest, country_t country)
 {
   if (!set || !set->list)
     return 0;
@@ -236,6 +236,9 @@ routerset_contains(const routerset_t *set, const tor_addr_t *addr,
   if (id_digest && digestmap_get(set->digests, id_digest))
     return 4;
   if (addr && compare_tor_addr_to_addr_policy(addr, orport, set->policies)
+      == ADDR_POLICY_REJECTED)
+    return 3;
+  if (addr2 && compare_tor_addr_to_addr_policy(addr2, orport2, set->policies)
       == ADDR_POLICY_REJECTED)
     return 3;
   if (set->countries) {
@@ -247,6 +250,17 @@ routerset_contains(const routerset_t *set, const tor_addr_t *addr,
       return 2;
   }
   return 0;
+}
+
+/** Helper. Like routerset_contains2() but for a single IP/port combo.
+ */
+STATIC int
+routerset_contains(const routerset_t *set, const tor_addr_t *addr,
+                   uint16_t orport, const char *nickname,
+                   const char *id_digest, country_t country)
+{
+  return routerset_contains2(set, addr, orport, NULL, 0,
+                             nickname, id_digest, country);
 }
 
 /** If *<b>setp</b> includes at least one country code, or if
@@ -308,14 +322,9 @@ routerset_contains_router(const routerset_t *set, const routerinfo_t *ri,
 {
   tor_addr_t addr_v4;
   tor_addr_from_ipv4h(&addr_v4, ri->addr);
-  int v4_ret =
-    routerset_contains(set, &addr_v4, ri->or_port, ri->nickname,
-                       ri->cache_info.identity_digest, country);
-  int v6_ret =
-    routerset_contains(set, &ri->ipv6_addr, ri->ipv6_orport, ri->nickname,
-                       ri->cache_info.identity_digest, country);
-
-  return MAX(v4_ret, v6_ret);
+  return routerset_contains2(set, &addr_v4, ri->or_port, &ri->ipv6_addr,
+                             ri->ipv6_orport, ri->nickname,
+                             ri->cache_info.identity_digest, country);
 }
 
 /** Return true iff <b>rs</b> is in <b>set</b>.  If country is <b>-1</b>, we
