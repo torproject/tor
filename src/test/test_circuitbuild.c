@@ -36,6 +36,7 @@
 #include "feature/relay/routermode.h"
 
 #include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerinfo_st.h"
 
 /* Dummy nodes smartlist for testing */
 static smartlist_t dummy_nodes;
@@ -821,6 +822,77 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_free(ec);
   tor_free(or_circ);
   tor_free(p_chan);
+}
+
+#define NODE_SET_IPV4(node, ipv4_addr, ipv4_port) { \
+    tor_addr_t addr; \
+    tor_addr_parse(&addr, ipv4_addr); \
+    node->ri->addr = tor_addr_to_ipv4h(&addr); \
+    node->ri->or_port = ipv4_port; \
+  }
+
+#define NODE_CLEAR_IPV4(node) { \
+    node->ri->addr = 0; \
+    node->ri->or_port = 0; \
+  }
+
+#define NODE_SET_IPV6(node, ipv6_addr_str, ipv6_port) { \
+    tor_addr_parse(&node->ri->ipv6_addr, ipv6_addr_str); \
+    node->ri->ipv6_orport = ipv6_port; \
+  }
+
+/* Test the different cases in circuit_extend_add_ed25519_helper(). */
+static void
+test_circuit_extend_add_ip(void *arg)
+{
+  (void) arg;
+  tor_addr_t ipv4_tmp;
+  extend_cell_t *ec = tor_malloc_zero(sizeof(extend_cell_t));
+  extend_cell_t *old_ec = tor_malloc_zero(sizeof(extend_cell_t));
+
+  node_t *fake_node = tor_malloc_zero(sizeof(node_t));
+  routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
+
+  MOCK(node_get_by_id, mock_node_get_by_id);
+
+  /* Set up the fake variables for the IPv4 test */
+  fake_node->ri = ri;
+  mocked_node = fake_node;
+  memset(ec->node_id, 0xAA, sizeof(ec->node_id));
+  memcpy(old_ec, ec, sizeof(extend_cell_t));
+  NODE_SET_IPV4(fake_node, PUBLIC_IPV4, VALID_PORT);
+
+  /* Do the IPv4 test */
+  tt_int_op(circuit_extend_add_ipv4_helper(ec), OP_EQ, 0);
+  tor_addr_from_ipv4h(&ipv4_tmp, fake_node->ri->addr);
+  /* The IPv4 should match */
+  tt_int_op(tor_addr_compare(&ec->orport_ipv4.addr, &ipv4_tmp, CMP_SEMANTIC),
+            OP_EQ, 0);
+  tt_int_op(ec->orport_ipv4.port, OP_EQ, VALID_PORT);
+
+  /* Set up the fake variables for the IPv6 test */
+  memcpy(ec, old_ec, sizeof(extend_cell_t));
+  NODE_CLEAR_IPV4(fake_node);
+  NODE_SET_IPV6(fake_node, PUBLIC_IPV6, VALID_PORT);
+
+  /* Do the IPv6 test */
+  tt_int_op(circuit_extend_add_ipv6_helper(ec), OP_EQ, 0);
+  /* The IPv6 should match */
+  tt_int_op(tor_addr_compare(&ec->orport_ipv6.addr, &fake_node->ri->ipv6_addr,
+            CMP_SEMANTIC), OP_EQ, 0);
+  tt_int_op(ec->orport_ipv6.port, OP_EQ, VALID_PORT);
+
+  /* Cleanup */
+  mocked_node = NULL;
+
+ done:
+  UNMOCK(node_get_by_id);
+
+  tor_free(ec);
+  tor_free(old_ec);
+
+  tor_free(ri);
+  tor_free(fake_node);
 }
 
 static bool can_extend_over_ipv6_result = false;
@@ -1902,6 +1974,7 @@ struct testcase_t circuitbuild_tests[] = {
   TEST_CIRCUIT(extend_state_valid, TT_FORK),
   TEST_CIRCUIT(extend_add_ed25519, TT_FORK),
   TEST_CIRCUIT(extend_lspec_valid, TT_FORK),
+  TEST_CIRCUIT(extend_add_ip, TT_FORK),
   TEST_CIRCUIT(choose_ip_ap_for_extend, 0),
 
   TEST_CIRCUIT_PASSTHROUGH(open_connection_for_extend, TT_FORK, "4"),
