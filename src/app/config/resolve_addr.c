@@ -517,6 +517,8 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
     *hostname_out = NULL;
     if (strlen(hostname_used) > 0) {
       *hostname_out = hostname_used;
+    } else {
+      tor_free(hostname_used);
     }
   } else {
     tor_free(hostname_used);
