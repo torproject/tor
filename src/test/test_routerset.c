@@ -1433,11 +1433,6 @@ test_rset_contains_router_ipv4(void *arg)
   const char *s;
   (void) arg;
 
-  MOCK(router_parse_addr_policy_item_from_string,
-       rset_parse_policy_ipv4_parse_item_from_string);
-  rset_parse_policy_ipv4_mock_addr_policy =
-    tor_malloc_zero(sizeof(addr_policy_t));
-
   /* IPv4 address test. */
   memset(&ri, 0, sizeof(ri));
   set = routerset_new();
@@ -1462,11 +1457,6 @@ test_rset_contains_router_ipv6(void *arg)
   int r;
   const char *s;
   (void) arg;
-
-  MOCK(router_parse_addr_policy_item_from_string,
-       rset_parse_policy_ipv6_parse_item_from_string);
-  rset_parse_policy_ipv6_mock_addr_policy =
-    tor_malloc_zero(sizeof(addr_policy_t));
 
   /* IPv6 address test. */
   memset(&ri, 0, sizeof(ri));
