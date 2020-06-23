@@ -4463,7 +4463,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   const or_options_t *options = get_options();
   const dirauth_options_t *d_options = dirauth_get_options();
   networkstatus_t *v3_out = NULL;
-  uint32_t addr;
+  tor_addr_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
   const char *contact;
   smartlist_t *routers, *routerstatuses;
@@ -4492,13 +4492,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     log_err(LD_BUG, "Error computing identity key digest");
     return NULL;
   }
-  if (resolve_my_address_v4(LOG_WARN, options, &addr, NULL, &hostname)<0) {
+  if (!find_my_address(options, AF_INET, LOG_WARN, &addr, NULL, &hostname)) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
     return NULL;
   }
   if (!hostname || !strchr(hostname, '.')) {
     tor_free(hostname);
-    hostname = tor_dup_ip(addr);
+    hostname = tor_addr_to_str_dup(&addr);
   }
 
   if (!hostname) {
@@ -4722,7 +4722,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
   voter->sigs = smartlist_new();
   voter->address = hostname;
-  voter->addr = addr;
+  voter->addr = tor_addr_to_ipv4h(&addr);
   voter->dir_port = router_get_advertised_dir_port(options, 0);
   voter->or_port = router_get_advertised_or_port(options);
   voter->contact = tor_strdup(contact);
