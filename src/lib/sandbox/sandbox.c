@@ -117,6 +117,10 @@
 
 #endif /* defined(__i386__) || ... */
 
+#ifdef M_SYSCALL
+#define SYSCALL_NAME_DEBUGGING
+#endif
+
 /**Determines if at least one sandbox is active.*/
 static int sandbox_active = 0;
 /** Holds the parameter list configuration for the sandbox.*/
@@ -1545,8 +1549,10 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   return (rc < 0 ? -rc : rc);
 }
 
+#ifdef SYSCALL_NAME_DEBUGGING
 #include "lib/sandbox/linux_syscalls.inc"
 
+/** Return a string containing the name of a given syscall (if we know it) */
 static const char *
 get_syscall_name(int syscall_num)
 {
@@ -1564,6 +1570,28 @@ get_syscall_name(int syscall_num)
   }
 }
 
+/** Return the syscall number from a ucontext_t that we got in a signal
+ * handler (if we know how to do that). */
+static int
+get_syscall_from_ucontext(const ucontext_t *ctx)
+{
+  return (int) ctx->uc_mcontext.M_SYSCALL;
+}
+#else
+static const char *
+get_syscall_name(int syscall_num)
+{
+  (void) syscall_num;
+  return "unknown";
+}
+static int
+get_syscall_from_ucontext(const ucontext_t *ctx)
+{
+  (void) ctx;
+  return -1;
+}
+#endif
+
 #ifdef USE_BACKTRACE
 #define MAX_DEPTH 256
 static void *syscall_cb_buf[MAX_DEPTH];
@@ -1579,7 +1607,6 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 {
   ucontext_t *ctx = (ucontext_t *) (void_context);
   const char *syscall_name;
-  int syscall;
 #ifdef USE_BACKTRACE
   size_t depth;
   int n_fds, i;
@@ -1594,7 +1621,7 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
   if (!ctx)
     return;
 
-  syscall = (int) ctx->uc_mcontext.M_SYSCALL;
+  int syscall = get_syscall_from_ucontext(ctx);
 
 #ifdef USE_BACKTRACE
   depth = backtrace(syscall_cb_buf, MAX_DEPTH);
