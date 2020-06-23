@@ -44,9 +44,6 @@
 /** Last resolved addresses. */
 static tor_addr_t last_resolved_addrs[IDX_SIZE];
 
-/** Last value actually set by resolve_my_address. */
-static uint32_t last_resolved_addr_v4 = 0;
-
 /** Copy the last resolved address of family into addr_out.
  *
  * If not last resolved address existed, the addr_out is a null address (use
@@ -596,27 +593,44 @@ resolve_my_address_v4(int warn_severity, const or_options_t *options,
 /** Return true iff <b>addr</b> is judged to be on the same network as us, or
  * on a private network.
  */
-MOCK_IMPL(int,
-is_local_addr, (const tor_addr_t *addr))
+MOCK_IMPL(bool,
+resolved_addr_is_local, (const tor_addr_t *addr))
 {
-  if (tor_addr_is_internal(addr, 0))
-    return 1;
-  /* Check whether ip is on the same /24 as we are. */
-  if (get_options()->EnforceDistinctSubnets == 0)
-    return 0;
-  if (tor_addr_family(addr) == AF_INET) {
-    uint32_t ip = tor_addr_to_ipv4h(addr);
+  const int family = tor_addr_family(addr);
+  const tor_addr_t *last_resolved_addr = &last_resolved_addrs[family];
+
+  /* Internal address is always local. */
+  if (tor_addr_is_internal(addr, 0)) {
+    return true;
+  }
+
+  /* Address is not local if we don't enforce subnet distinction. */
+  if (get_options()->EnforceDistinctSubnets == 0) {
+    return false;
+  }
+
+  switch (family) {
+  case AF_INET:
+    /* XXX: Why is this /24 and not /16 which the rest of tor does? Unknown
+     * reasons at the moment highlighted in ticket #40009. Because of that, we
+     * can't use addrs_in_same_network_family(). */
 
     /* It's possible that this next check will hit before the first time
-     * resolve_my_address actually succeeds.  (For clients, it is likely that
-     * resolve_my_address will never be called at all).  In those cases,
+     * resolve_my_address_v4 actually succeeds. For clients, it is likely that
+     * resolve_my_address_v4 will never be called at all. In those cases,
      * last_resolved_addr_v4 will be 0, and so checking to see whether ip is
-     * on the same /24 as last_resolved_addr_v4 will be the same as checking
-     * whether it was on net 0, which is already done by tor_addr_is_internal.
-     */
-    if ((last_resolved_addr_v4 & (uint32_t)0xffffff00ul)
-        == (ip & (uint32_t)0xffffff00ul))
-      return 1;
+     * on the same /24 as last_resolved_addrs[AF_INET] will be the same as
+     * checking whether it was on net 0, which is already done by
+     * tor_addr_is_internal. */
+    return tor_addr_compare_masked(addr, last_resolved_addr, 24,
+                                   CMP_SEMANTIC) == 0;
+  case AF_INET6:
+    /* Look at the /32 like addrs_in_same_network_family() does. */
+    return tor_addr_compare_masked(addr, last_resolved_addr, 32,
+                                   CMP_SEMANTIC) == 0;
+    break;
+  default:
+    /* Unknown address type so not local. */
+    return false;
   }
-  return 0;
 }
