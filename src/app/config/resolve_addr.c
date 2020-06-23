@@ -47,18 +47,23 @@ static tor_addr_t last_resolved_addrs[IDX_SIZE];
 /** Last value actually set by resolve_my_address. */
 static uint32_t last_resolved_addr_v4 = 0;
 
-/** Accessor for last_resolved_addr_v4 from outside this file. */
-uint32_t
-get_last_resolved_addr_v4(void)
+/** Copy the last resolved address of family into addr_out.
+ *
+ * If not last resolved address existed, the addr_out is a null address (use
+ * tor_addr_is_null()). */
+void
+resolved_addr_get_last(int family, tor_addr_t *addr_out)
 {
-  return last_resolved_addr_v4;
+  tor_addr_copy(addr_out, &last_resolved_addrs[family]);
 }
 
-/** Reset last_resolved_addr_v4 from outside this file. */
+/** Reset the last resolved address of family.
+ *
+ * This makes it null address. */
 void
-reset_last_resolved_addr_v4(void)
+resolved_addr_reset_last(int family)
 {
-  last_resolved_addr_v4 = 0;
+  tor_addr_make_null(&last_resolved_addrs[family], family);
 }
 
 /** @brief Return true iff the given IP address can be used as a valid

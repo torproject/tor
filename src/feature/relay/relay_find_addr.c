@@ -45,7 +45,7 @@ void
 router_new_address_suggestion(const char *suggestion,
                               const dir_connection_t *d_conn)
 {
-  tor_addr_t addr;
+  tor_addr_t addr, last_resolved_addr;
   uint32_t cur = 0;             /* Current IPv4 address.  */
   const or_options_t *options = get_options();
 
@@ -64,14 +64,22 @@ router_new_address_suggestion(const char *suggestion,
   }
 
   /* XXXX ipv6 */
-  cur = get_last_resolved_addr_v4();
-  if (cur ||
-      resolve_my_address_v4(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
+  resolved_addr_get_last(AF_INET, &last_resolved_addr);
+  if (!tor_addr_is_null(&last_resolved_addr)) {
+    /* Lets use this one. */
+    tor_addr_copy(&last_guessed_ip, &last_resolved_addr);
+    return;
+  }
+
+  /* Attempt to find our address. */
+  if (resolve_my_address_v4(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
     /* We're all set -- we already know our address. Great. */
     tor_addr_from_ipv4h(&last_guessed_ip, cur); /* store it in case we
                                                    need it later */
     return;
   }
+
+  /* Consider the suggestion from the directory. */
   if (tor_addr_is_internal(&addr, 0)) {
     /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
     return;
@@ -111,10 +119,14 @@ MOCK_IMPL(int,
 router_pick_published_address, (const or_options_t *options, uint32_t *addr,
                                 int cache_only))
 {
-  /* First, check the cached output from resolve_my_address(). */
-  *addr = get_last_resolved_addr_v4();
-  if (*addr)
+  tor_addr_t last_resolved_addr;
+
+  /* First, check the cached output from resolve_my_address_v4(). */
+  resolved_addr_get_last(AF_INET, &last_resolved_addr);
+  if (!tor_addr_is_null(&last_resolved_addr)) {
+    *addr = tor_addr_to_ipv4h(&last_resolved_addr);
     return 0;
+  }
 
   /* Second, consider doing a resolve attempt right here. */
   if (!cache_only) {
