@@ -201,15 +201,15 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
       have_completed_a_circuit()) {
     /* every 20 minutes, check and complain if necessary */
     const routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !router_should_skip_orport_reachability_check(options)) {
+    bool v4_ok =
+      router_should_skip_orport_reachability_check_family(options,AF_INET);
+    bool v6_ok =
+      router_should_skip_orport_reachability_check_family(options,AF_INET6);
+    if (me && !(v4_ok && v6_ok)) {
       /* We need to warn that one or more of our ORPorts isn't reachable.
        * Determine which, and give a reasonable warning. */
       char *address4 = tor_dup_ip(me->addr);
       char *address6 = tor_addr_to_str_dup(&me->ipv6_addr);
-      bool v4_ok =
-        router_should_skip_orport_reachability_check_family(options,AF_INET);
-      bool v6_ok =
-        router_should_skip_orport_reachability_check_family(options,AF_INET6);
       if (address4 || address6) {
         char *where4=NULL, *where6=NULL;
         if (!v4_ok)
