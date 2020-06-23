@@ -96,12 +96,16 @@ router_should_skip_orport_reachability_check_family(
     return true;
   }
 
-  if (family != AF_INET6) {
+  // Which reachability flags should we look at?
+  const bool checking_ipv4 = (family == AF_INET || family == 0);
+  const bool checking_ipv6 = (family == AF_INET6 || family == 0);
+
+  if (checking_ipv4) {
     if (have_orport_for_family(AF_INET) && !can_reach_or_port_ipv4) {
       return false;
     }
   }
-  if (family != AF_INET) {
+  if (checking_ipv6) {
     if (have_orport_for_family(AF_INET6) && !can_reach_or_port_ipv6) {
       return false;
     }
