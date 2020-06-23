@@ -528,70 +528,6 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   return true;
 }
 
-/**
- * Attempt getting our non-local (as judged by tor_addr_is_internal()
- * function) IP address using following techniques, listed in
- * order from best (most desirable, try first) to worst (least
- * desirable, try if everything else fails).
- *
- * First, attempt using <b>options-\>Address</b> to get our
- * non-local IP address.
- *
- * If <b>options-\>Address</b> represents a non-local IP address,
- * consider it ours.
- *
- * If <b>options-\>Address</b> is a DNS name that resolves to
- * a non-local IP address, consider this IP address ours.
- *
- * If <b>options-\>Address</b> is NULL, fall back to getting local
- * hostname and using it in above-described ways to try and
- * get our IP address.
- *
- * In case local hostname cannot be resolved to a non-local IP
- * address, try getting an IP address of network interface
- * in hopes it will be non-local one.
- *
- * Fail if one or more of the following is true:
- *   - DNS name in <b>options-\>Address</b> cannot be resolved.
- *   - <b>options-\>Address</b> is a local host address.
- *   - Attempt at getting local hostname fails.
- *   - Attempt at getting network interface address fails.
- *
- * Return 0 if all is well, or -1 if we can't find a suitable
- * public IP address.
- *
- * If we are returning 0:
- *   - Put our public IP address (in host order) into *<b>addr_out</b>.
- *   - If <b>method_out</b> is non-NULL, set *<b>method_out</b> to a static
- *     string describing how we arrived at our answer.
- *      - "CONFIGURED" - parsed from IP address string in
- *        <b>options-\>Address</b>
- *      - "RESOLVED" - resolved from DNS name in <b>options-\>Address</b>
- *      - "GETHOSTNAME" - resolved from a local hostname.
- *      - "INTERFACE" - retrieved from a network interface.
- *   - If <b>hostname_out</b> is non-NULL, and we resolved a hostname to
- *     get our address, set *<b>hostname_out</b> to a newly allocated string
- *     holding that hostname. (If we didn't get our address by resolving a
- *     hostname, set *<b>hostname_out</b> to NULL.)
- *
- * XXXX ipv6
- */
-int
-resolve_my_address_v4(int warn_severity, const or_options_t *options,
-                      uint32_t *addr_out,
-                      const char **method_out, char **hostname_out)
-{
-  tor_addr_t my_addr;
-  bool ret = find_my_address(options, AF_INET, warn_severity, &my_addr,
-                             method_out, hostname_out);
-  if (!ret) {
-    return -1;
-  }
-
-  *addr_out = tor_addr_to_ipv4h(&my_addr);
-  return 0;
-}
-
 /** Return true iff <b>addr</b> is judged to be on the same network as us, or
  * on a private network.
  */
@@ -618,8 +554,8 @@ resolved_addr_is_local, (const tor_addr_t *addr))
      * can't use addrs_in_same_network_family(). */
 
     /* It's possible that this next check will hit before the first time
-     * resolve_my_address_v4 actually succeeds. For clients, it is likely that
-     * resolve_my_address_v4 will never be called at all. In those cases,
+     * find_my_address actually succeeds. For clients, it is likely that
+     * find_my_address will never be called at all. In those cases,
      * last_resolved_addr_v4 will be 0, and so checking to see whether ip is
      * on the same /24 as last_resolved_addrs[AF_INET] will be the same as
      * checking whether it was on net 0, which is already done by

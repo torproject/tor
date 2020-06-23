@@ -2540,6 +2540,7 @@ void
 check_descriptor_ipaddress_changed(time_t now)
 {
   uint32_t prev, cur;
+  tor_addr_t addr;
   const or_options_t *options = get_options();
   const char *method = NULL;
   char *hostname = NULL;
@@ -2552,10 +2553,12 @@ check_descriptor_ipaddress_changed(time_t now)
 
   /* XXXX ipv6 */
   prev = my_ri->addr;
-  if (resolve_my_address_v4(LOG_INFO, options, &cur, &method, &hostname) < 0) {
+  if (!find_my_address(options, AF_INET, LOG_INFO, &addr, &method,
+                       &hostname)) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }
+  cur = tor_addr_to_ipv4h(&addr);
 
   if (prev != cur) {
     char *source;
