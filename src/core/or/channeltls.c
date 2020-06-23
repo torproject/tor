@@ -203,7 +203,7 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
             tlschan,
             (chan->global_identifier));
 
-  if (is_local_addr(addr)) {
+  if (resolved_addr_is_local(addr)) {
     log_debug(LD_CHANNEL,
               "Marking new outgoing channel %"PRIu64 " at %p as local",
               (chan->global_identifier), chan);
@@ -340,7 +340,7 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   tlschan->conn = orconn;
   orconn->chan = tlschan;
 
-  if (is_local_addr(&(TO_CONN(orconn)->addr))) {
+  if (resolved_addr_is_local(&(TO_CONN(orconn)->addr))) {
     log_debug(LD_CHANNEL,
               "Marking new incoming channel %"PRIu64 " at %p as local",
               (chan->global_identifier), chan);
@@ -1353,7 +1353,7 @@ channel_tls_update_marks(or_connection_t *conn)
 
   chan = TLS_CHAN_TO_BASE(conn->chan);
 
-  if (is_local_addr(&(TO_CONN(conn)->addr))) {
+  if (resolved_addr_is_local(&(TO_CONN(conn)->addr))) {
     if (!channel_is_local(chan)) {
       log_debug(LD_CHANNEL,
                 "Marking channel %"PRIu64 " at %p as local",
