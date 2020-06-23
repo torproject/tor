@@ -490,8 +490,8 @@ memoize_protover_summary(protover_summary_flags_t *out,
 /** Summarize the protocols listed in <b>protocols</b> into <b>out</b>,
  * falling back or correcting them based on <b>version</b> as appropriate.
  *
- * If protocols and version are both NULL, returns a summary with no flags
- * set.
+ * If protocols and version are both NULL or "", returns a summary with no
+ * flags set.
  *
  * If the protover string does not contain any recognised protocols, and the
  * version is not recognised, sets protocols_known, but does not set any other
