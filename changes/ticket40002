@@ -1,0 +1,3 @@
+  o Minor feature (control port):
+    - Add a DROPTIMEOUTS control port command to drop circuit build timeout
+      history and reset the timeout. Closes ticket 40002.
