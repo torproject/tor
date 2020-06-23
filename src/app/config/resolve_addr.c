@@ -322,7 +322,7 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
 {
   /** Have we done a first resolve. This is used to control logging. */
   static bool have_resolved_once[IDX_SIZE] = { false, false };
-  bool done_one_resolve;
+  bool *done_one_resolve;
   bool have_hostname = false;
   tor_addr_t *last_resolved;
 
@@ -335,11 +335,11 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
 
   switch (tor_addr_family(addr)) {
   case AF_INET:
-    done_one_resolve = have_resolved_once[IDX_IPV4];
+    done_one_resolve = &have_resolved_once[IDX_IPV4];
     last_resolved = &last_resolved_addrs[IDX_IPV4];
     break;
   case AF_INET6:
-    done_one_resolve = have_resolved_once[IDX_IPV6];
+    done_one_resolve = &have_resolved_once[IDX_IPV6];
     last_resolved = &last_resolved_addrs[IDX_IPV6];
     break;
   default:
@@ -353,7 +353,7 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
   }
 
   /* Don't log notice if this is the first resolve we do. */
-  if (!done_one_resolve) {
+  if (*done_one_resolve) {
     /* Leave this as a notice, regardless of the requested severity,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET,
@@ -363,7 +363,6 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
                have_hostname ? " HOSTNAME=" : "",
                have_hostname ? hostname_used : "");
     ip_address_changed(0);
-    done_one_resolve = true;
   }
 
   /* Notify control port. */
@@ -374,6 +373,7 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
                               have_hostname ? hostname_used : "");
   /* Copy address to cache. */
   tor_addr_copy(last_resolved, addr);
+  *done_one_resolve = true;
 }
 
 /** @brief Attempt to find our IP address that can be used as our external
