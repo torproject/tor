@@ -19,8 +19,8 @@ bool find_my_address(const or_options_t *options, int family,
                      int warn_severity, tor_addr_t *addr_out,
                      const char **method_out, char **hostname_out);
 
-uint32_t get_last_resolved_addr_v4(void);
-void reset_last_resolved_addr_v4(void);
+void resolved_addr_get_last(int family, tor_addr_t *addr_out);
+void resolved_addr_reset_last(int family);
 
 MOCK_DECL(int, is_local_addr, (const tor_addr_t *addr));
 
