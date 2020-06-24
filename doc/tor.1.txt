@@ -2146,7 +2146,12 @@ is non-zero):
     don't do self-reachability testing; just upload your server descriptor
     immediately. If **AuthoritativeDirectory** is also set, this option
     instructs the dirserver to bypass remote reachability testing too and list
-    all connected servers as running.
+    all connected servers as running. (Default: 0)
+
+[[AssumeReachableIPv6]] **AssumeReachableIPv6** **0**|**1**|**auto**::
+    Like **AssumeReachable**, but affects only the relay's own IPv6 ORPort.
+    If this value is set to "auto", then Tor will look at **AssumeReachable**
+    instead. (Default: auto)
 
 [[BridgeRelay]] **BridgeRelay** **0**|**1**::
     Sets the relay to act as a "bridge" with respect to relaying connections

@@ -1374,13 +1374,13 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  if (!router_orport_seems_reachable(AF_INET)) {
+  if (!router_orport_seems_reachable(options, AF_INET)) {
     // We have an ipv4 orport, and it doesn't seem reachable.
     if (!publish_even_when_ipv4_orport_unreachable) {
       return 0;
     }
   }
-  if (!router_orport_seems_reachable(AF_INET6)) {
+  if (!router_orport_seems_reachable(options, AF_INET6)) {
     // We have an ipv6 orport, and it doesn't seem reachable.
     if (!publish_even_when_ipv6_orport_unreachable) {
       return 0;

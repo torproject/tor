@@ -1,0 +1,3 @@
+  o Minor features (relay, IPv6):
+    - Add an AssumeReachableIPv6 option to disable self-checking IPv6
+      reachability. Closes part of ticket 33224.

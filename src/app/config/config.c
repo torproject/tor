@@ -323,6 +323,7 @@ static const config_var_t option_vars_[] = {
   V(AlternateDirAuthority,       LINELIST, NULL),
   OBSOLETE("AlternateHSAuthority"),
   V(AssumeReachable,             BOOL,     "0"),
+  V(AssumeReachableIPv6,         AUTOBOOL, "auto"),
   OBSOLETE("AuthDirBadDir"),
   OBSOLETE("AuthDirBadDirCCs"),
   V(AuthDirBadExit,              LINELIST, NULL),
@@ -3227,6 +3228,10 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options->TokenBucketRefillInterval <= 0
       || options->TokenBucketRefillInterval > 1000) {
     REJECT("TokenBucketRefillInterval must be between 1 and 1000 inclusive.");
+  }
+
+  if (options->AssumeReachable && options->AssumeReachableIPv6 == 0) {
+    REJECT("Cannot set AssumeReachable 1 and AssumeReachableIPv6 0.");
   }
 
   if (options->ExcludeExitNodes || options->ExcludeNodes) {
