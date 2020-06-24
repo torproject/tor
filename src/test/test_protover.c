@@ -789,13 +789,9 @@ test_protover_summarize_flags(void *args)
   DEBUG_PROTOVER(flags);
   tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
 
-  /* "" sets the protocols_known flag */
   memset(&flags, 0, sizeof(flags));
   summarize_protover_flags(&flags, "", "");
   DEBUG_PROTOVER(flags);
-  tt_int_op(flags.protocols_known, OP_EQ, 1);
-  /* Now clear that flag, and check the rest are zero */
-  flags.protocols_known = 0;
   tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
 
   /* Now check version exceptions */
