@@ -1698,6 +1698,7 @@ notify_after_networkstatus_changes(void)
                                  get_circuit_build_times_mutable(), c);
   channelpadding_new_consensus_params(c);
   circpad_new_consensus_params(c);
+  router_new_consensus_params(c);
 }
 
 /** Copy all the ancillary information (like router download status and so on)

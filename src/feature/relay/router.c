@@ -1335,6 +1335,17 @@ should_refuse_unknown_exits(const or_options_t *options)
   }
 }
 
+/**
+ * If true, then we will publish our descriptor even if our own IPv4 ORPort
+ * seems to be unreachable.
+ **/
+static bool publish_even_when_ipv4_orport_unreachable = false;
+/**
+ * If true, then we will publish our descriptor even if our own IPv6 ORPort
+ * seems to be unreachable.
+ **/
+static bool publish_even_when_ipv6_orport_unreachable = false;
+
 /** Decide if we're a publishable server. We are a publishable server if:
  * - We don't have the ClientOnly option set
  * and
@@ -1363,8 +1374,18 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  if (!router_all_orports_seem_reachable(options))
-    return 0;
+  if (!router_orport_seems_reachable(AF_INET)) {
+    // We have an ipv4 orport, and it doesn't seem reachable.
+    if (!publish_even_when_ipv4_orport_unreachable) {
+      return 0;
+    }
+  }
+  if (!router_orport_seems_reachable(AF_INET6)) {
+    // We have an ipv6 orport, and it doesn't seem reachable.
+    if (!publish_even_when_ipv6_orport_unreachable) {
+      return 0;
+    }
+  }
   if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL) {
     /* All set: there are no exits in the consensus (maybe this is a tiny
      * test network), so we can't check our DirPort reachability. */
@@ -2386,6 +2407,24 @@ router_rebuild_descriptor(int force)
   desc_dirty_reason = NULL;
   control_event_my_descriptor_changed();
   return 0;
+}
+
+/** Called when we have a new set of consensus parameters. */
+void
+router_new_consensus_params(const networkstatus_t *ns)
+{
+  const int32_t DEFAULT_ASSUME_REACHABLE = 0;
+  const int32_t DEFAULT_ASSUME_REACHABLE_IPV6 = 0;
+  int ar, ar6;
+  ar = networkstatus_get_param(ns,
+                               "assume-reachable",
+                               DEFAULT_ASSUME_REACHABLE, 0, 1);
+  ar6 = networkstatus_get_param(ns,
+                                "assume-reachable-ipv6",
+                                DEFAULT_ASSUME_REACHABLE_IPV6, 0, 1);
+
+  publish_even_when_ipv4_orport_unreachable = ar;
+  publish_even_when_ipv6_orport_unreachable = ar || ar6;
 }
 
 /** If our router descriptor ever goes this long without being regenerated

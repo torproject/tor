@@ -34,6 +34,7 @@ void set_server_identity_key(crypto_pk_t *k);
 MOCK_DECL(crypto_pk_t *,get_server_identity_key,(void));
 #else
 #define get_server_identity_key() (tor_abort_(),NULL)
+#define router_new_consensus_params(c) ((void)(c))
 #endif
 int server_identity_key_is_set(void);
 void set_client_identity_key(crypto_pk_t *k);
@@ -81,6 +82,7 @@ int router_should_advertise_dirport(const or_options_t *options,
 void consider_publishable_server(int force);
 int should_refuse_unknown_exits(const or_options_t *options);
 
+void router_new_consensus_params(const networkstatus_t *);
 void router_upload_dir_desc_to_dirservers(int force);
 void mark_my_descriptor_dirty_if_too_old(time_t now);
 void mark_my_descriptor_dirty(const char *reason);
