@@ -572,7 +572,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
  * on a private network.
  */
 MOCK_IMPL(bool,
-resolved_addr_is_local, (const tor_addr_t *addr))
+is_local_to_resolve_addr, (const tor_addr_t *addr))
 {
   const int family = tor_addr_family(addr);
   const tor_addr_t *last_resolved_addr = &last_resolved_addrs[family];

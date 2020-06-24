@@ -18,7 +18,7 @@ bool find_my_address(const or_options_t *options, int family,
 void resolved_addr_get_last(int family, tor_addr_t *addr_out);
 void resolved_addr_reset_last(int family);
 
-MOCK_DECL(bool, resolved_addr_is_local, (const tor_addr_t *addr));
+MOCK_DECL(bool, is_local_to_resolve_addr, (const tor_addr_t *addr));
 
 #ifdef RESOLVE_ADDR_PRIVATE
 
