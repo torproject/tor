@@ -31,8 +31,13 @@
 
 /** Function in our address function table return one of these code. */
 typedef enum {
+  /* The address has been found. */
   FN_RET_OK   = 0,
+  /* The failure requirements were not met and thus it is recommended that the
+   * caller stops the search. */
   FN_RET_BAIL = 1,
+  /* The address was not found or failure is transient so the caller should go
+   * to the next method. */
   FN_RET_NEXT = 2,
 } fn_address_ret_t;
 
