@@ -201,20 +201,46 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
       have_completed_a_circuit()) {
     /* every 20 minutes, check and complain if necessary */
     const routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !router_should_skip_orport_reachability_check(options)) {
-      char *address = tor_dup_ip(me->addr);
-      if (address) {
+    bool v4_ok =
+      router_should_skip_orport_reachability_check_family(options,AF_INET);
+    bool v6_ok =
+      router_should_skip_orport_reachability_check_family(options,AF_INET6);
+    if (me && !(v4_ok && v6_ok)) {
+      /* We need to warn that one or more of our ORPorts isn't reachable.
+       * Determine which, and give a reasonable warning. */
+      char *address4 = tor_dup_ip(me->addr);
+      char *address6 = tor_addr_to_str_dup(&me->ipv6_addr);
+      if (address4 || address6) {
+        char *where4=NULL, *where6=NULL;
+        if (!v4_ok)
+          tor_asprintf(&where4, "%s:%d", address4, me->or_port);
+        if (!v6_ok)
+          tor_asprintf(&where6, "[%s]:%d", address6, me->or_port);
+        const char *opt_and = (!v4_ok && !v6_ok) ? "and" : "";
+
         log_warn(LD_CONFIG,
-                 "Your server (%s:%d) has not managed to confirm that "
-                 "its ORPort is reachable. Relays do not publish descriptors "
+                 "Your server has not managed to confirm reachability for "
+                 "its ORPort(s) at %s%s%s. Relays do not publish descriptors "
                  "until their ORPort and DirPort are reachable. Please check "
                  "your firewalls, ports, address, /etc/hosts file, etc.",
-                 address, me->or_port);
-        control_event_server_status(LOG_WARN,
-                                    "REACHABILITY_FAILED ORADDRESS=%s:%d",
-                                    address, me->or_port);
-        tor_free(address);
+                 where4?where4:"",
+                 opt_and,
+                 where6?where6:"");
+        tor_free(where4);
+        tor_free(where6);
+        if (!v4_ok) {
+          control_event_server_status(LOG_WARN,
+                                      "REACHABILITY_FAILED ORADDRESS=%s:%d",
+                                      address4, me->or_port);
+        }
+        if (!v6_ok) {
+          control_event_server_status(LOG_WARN,
+                                      "REACHABILITY_FAILED ORADDRESS=[%s]:%d",
+                                      address6, me->ipv6_orport);
+        }
       }
+      tor_free(address4);
+      tor_free(address6);
     }
 
     if (me && !router_should_skip_dirport_reachability_check(options)) {

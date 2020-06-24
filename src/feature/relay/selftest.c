@@ -44,16 +44,20 @@
 #include "feature/relay/router.h"
 #include "feature/relay/selftest.h"
 
-/** Whether we can reach our ORPort from the outside. */
-static int can_reach_or_port = 0;
+static bool have_orport_for_family(int family);
+
+/** Whether we can reach our IPv4 ORPort from the outside. */
+static bool can_reach_or_port_ipv4 = false;
+/** Whether we can reach our IPv6 ORPort from the outside. */
+static bool can_reach_or_port_ipv6 = false;
 /** Whether we can reach our DirPort from the outside. */
-static int can_reach_dir_port = 0;
+static bool can_reach_dir_port = false;
 
 /** Forget what we have learned about our reachability status. */
 void
 router_reset_reachability(void)
 {
-  can_reach_or_port = can_reach_dir_port = 0;
+  can_reach_or_port_ipv4 = can_reach_or_port_ipv6 = can_reach_dir_port = false;
 }
 
 /** Return 1 if we won't do reachability checks, because:
@@ -75,13 +79,39 @@ router_reachability_checks_disabled(const or_options_t *options)
  *   - we've seen a successful reachability check, or
  *   - AssumeReachable is set, or
  *   - the network is disabled.
+
+ * If `family'`is AF_INET or AF_INET6, return true only when we should skip
+ * the given family's orport check (Because it's been checked, or because we
+ * aren't checking it.)  If `family` is 0, return true if we can skip _all_
+ * orport checks.
  */
 int
-router_should_skip_orport_reachability_check(const or_options_t *options)
+router_should_skip_orport_reachability_check_family(
+                                                const or_options_t *options,
+                                                int family)
 {
+  tor_assert_nonfatal(family == AF_INET || family == AF_INET6 || family == 0);
   int reach_checks_disabled = router_reachability_checks_disabled(options);
-  return reach_checks_disabled ||
-         can_reach_or_port;
+  if (reach_checks_disabled) {
+    return true;
+  }
+
+  // Which reachability flags should we look at?
+  const bool checking_ipv4 = (family == AF_INET || family == 0);
+  const bool checking_ipv6 = (family == AF_INET6 || family == 0);
+
+  if (checking_ipv4) {
+    if (have_orport_for_family(AF_INET) && !can_reach_or_port_ipv4) {
+      return false;
+    }
+  }
+  if (checking_ipv6) {
+    if (have_orport_for_family(AF_INET6) && !can_reach_or_port_ipv6) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /** Return 0 if we need to do a DirPort reachability check, because:
@@ -131,6 +161,28 @@ router_should_check_reachability(int test_or, int test_dir)
     return 0;
   }
   return 1;
+}
+
+/**
+ * Return true if we have configured an ORPort for the given family that
+ * we would like to advertise.
+ *
+ * Like other self-testing functions, this function looks at our most
+ * recently built descriptor.
+ **/
+static bool
+have_orport_for_family(int family)
+{
+  const routerinfo_t *me = router_get_my_routerinfo();
+
+  if (!me)
+    return false;
+
+  tor_addr_port_t ap;
+  if (router_get_orport(me, &ap, family) < 0) {
+    return false;
+  }
+  return true;
 }
 
 /** Allocate and return a new extend_info_t that can be used to build
@@ -255,16 +307,22 @@ router_do_reachability_checks(int test_or, int test_dir)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
-  int orport_reachable = router_should_skip_orport_reachability_check(options);
+  int orport_reachable_v4 =
+    router_should_skip_orport_reachability_check_family(options, AF_INET);
+  int orport_reachable_v6 =
+    router_should_skip_orport_reachability_check_family(options, AF_INET6);
 
   if (router_should_check_reachability(test_or, test_dir)) {
-    if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-      /* At the moment, tor relays believe that they are reachable when they
-       * receive any create cell on an inbound connection. We'll do separate
-       * IPv4 and IPv6 reachability checks in #34067, and make them more
-       * precise. */
-      router_do_orport_reachability_checks(me, AF_INET, orport_reachable);
-      router_do_orport_reachability_checks(me, AF_INET6, orport_reachable);
+    bool need_testing = !circuit_enough_testing_circs();
+    /* At the moment, tor relays believe that they are reachable when they
+     * receive any create cell on an inbound connection, if the address
+     * family is correct.
+     */
+    if (test_or && (!orport_reachable_v4 || need_testing)) {
+      router_do_orport_reachability_checks(me, AF_INET, orport_reachable_v4);
+    }
+    if (test_or && (!orport_reachable_v6 || need_testing)) {
+      router_do_orport_reachability_checks(me, AF_INET6, orport_reachable_v6);
     }
 
     if (test_dir && !router_should_skip_dirport_reachability_check(options)) {
@@ -341,34 +399,58 @@ inform_testing_reachability(void)
   return 1;
 }
 
-/** Annotate that we found our ORPort reachable. */
+/**
+ * Return true if this module knows of no reason why we shouldn't publish
+ * a server descriptor.
+ **/
+static bool
+ready_to_publish(const or_options_t *options)
+{
+  return options->PublishServerDescriptor_ != NO_DIRINFO &&
+    router_should_skip_dirport_reachability_check(options) &&
+    router_should_skip_orport_reachability_check(options);
+}
+
+/** Annotate that we found our ORPort reachable with a given address
+ * family. */
 void
-router_orport_found_reachable(void)
+router_orport_found_reachable(int family)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
-  if (!can_reach_or_port && me) {
-    char *address = tor_dup_ip(me->addr);
-
-    if (!address)
+  bool *can_reach_ptr;
+  if (family == AF_INET) {
+    can_reach_ptr = &can_reach_or_port_ipv4;
+  } else if (family == AF_INET6) {
+    can_reach_ptr = &can_reach_or_port_ipv6;
+  } else {
+    tor_assert_nonfatal_unreached();
+    return;
+  }
+  if (!*can_reach_ptr && me) {
+    tor_addr_port_t ap;
+    if (router_get_orport(me, &ap, family) < 0) {
       return;
+    }
+    char *address = tor_strdup(fmt_addrport_ap(&ap));
 
-    log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
+    *can_reach_ptr = true;
+
+    log_notice(LD_OR,"Self-testing indicates your ORPort %s is reachable from "
                "the outside. Excellent.%s",
-               options->PublishServerDescriptor_ != NO_DIRINFO
-               && router_should_skip_dirport_reachability_check(options) ?
-                 " Publishing server descriptor." : "");
-    can_reach_or_port = 1;
+               address,
+               ready_to_publish(options) ?
+               " Publishing server descriptor." : "");
+
     mark_my_descriptor_dirty("ORPort found reachable");
     /* This is a significant enough change to upload immediately,
      * at least in a test network */
     if (options->TestingTorNetwork == 1) {
       reschedule_descriptor_update_check();
     }
-    /* We'll add an IPv6 event in #34068. */
     control_event_server_status(LOG_NOTICE,
-                                "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
-                                address, me->or_port);
+                                "REACHABILITY_SUCCEEDED ORADDRESS=%s",
+                                address);
     tor_free(address);
   }
 }
@@ -379,18 +461,19 @@ router_dirport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
+
   if (!can_reach_dir_port && me) {
     char *address = tor_dup_ip(me->addr);
 
     if (!address)
       return;
 
+    can_reach_dir_port = true;
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.%s",
-               options->PublishServerDescriptor_ != NO_DIRINFO
-               && router_should_skip_orport_reachability_check(options) ?
+               ready_to_publish(options) ?
                " Publishing server descriptor." : "");
-    can_reach_dir_port = 1;
+
     if (router_should_advertise_dirport(options, me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
       /* This is a significant enough change to upload immediately,

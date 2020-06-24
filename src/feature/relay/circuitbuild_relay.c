@@ -594,7 +594,11 @@ onionskin_answer(struct or_circuit_t *circ,
     /* record that we could process create cells from a non-local conn
      * that we didn't initiate; presumably this means that create cells
      * can reach us too. */
-    router_orport_found_reachable();
+    tor_addr_t remote_addr;
+    if (channel_get_addr_if_possible(circ->p_chan, &remote_addr)) {
+      int family = tor_addr_family(&remote_addr);
+      router_orport_found_reachable(family);
+    }
   }
 
   return 0;
