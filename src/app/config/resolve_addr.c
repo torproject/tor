@@ -137,8 +137,6 @@ address_can_be_used(const tor_addr_t *addr, const or_options_t *options,
  * This can fail is more than two Address statement are found for the same
  * address family. It also fails if no statement is found.
  *
- * On failure, no out parameters should be used or considered valid.
- *
  * @param options Global configuration options.
  * @param warn_severity Log level that should be used on error.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
@@ -165,6 +163,10 @@ get_address_from_config(const or_options_t *options, int warn_severity,
   tor_assert(addr_out);
   tor_assert(method_out);
   tor_assert(hostname_out);
+
+  /* Set them to NULL for safety reasons. */
+  *hostname_out = NULL;
+  *method_out = NULL;
 
   log_debug(LD_CONFIG, "Attempting to get address from configuration");
 
@@ -226,8 +228,6 @@ get_address_from_config(const or_options_t *options, int warn_severity,
 /** @brief Get IP address from the local hostname by calling gethostbyname()
  *         and doing a DNS resolution on the hostname.
  *
- * On failure, no out parameters should be used or considered valid.
- *
  * @param options Global configuration options.
  * @param warn_severity Log level that should be used on error.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
@@ -250,6 +250,10 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
 
   tor_assert(addr_out);
   tor_assert(method_out);
+
+  /* Set them to NULL for safety reasons. */
+  *hostname_out = NULL;
+  *method_out = NULL;
 
   log_debug(LD_CONFIG, "Attempting to get address from local hostname");
 
@@ -277,8 +281,6 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
 
 /** @brief Get IP address from a network interface.
  *
- * On failure, no out parameters should be used or considered valid.
- *
  * @param options Global configuration options.
  * @param warn_severity Log level that should be used on error.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
@@ -298,6 +300,9 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
 
   tor_assert(method_out);
   tor_assert(addr_out);
+
+  /* Set them to NULL for safety reasons. */
+  *method_out = NULL;
 
   log_debug(LD_CONFIG, "Attempting to get address from network interface");
 
@@ -330,8 +335,8 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
  * @param addr IP address to update the cache with.
  * @param method_used By which method did we resolved it (for logging and
  *                    control port).
- * @param hostname_used Which hostname was used. If none were used, it is an
- *                      empty string. (for logging and control port).
+ * @param hostname_used Which hostname was used. If none were used, it is
+ *                      NULL. (for logging and control port).
  */
 static void
 update_resolved_cache(const tor_addr_t *addr, const char *method_used,
@@ -345,10 +350,9 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
 
   tor_assert(addr);
   tor_assert(method_used);
-  tor_assert(hostname_used);
 
   /* Do we have an hostname. */
-  have_hostname = strlen(hostname_used) > 0;
+  have_hostname = (hostname_used != NULL);
 
   int idx = af_to_idx(tor_addr_family(addr));
   if (idx == IDX_NULL) {
@@ -398,7 +402,7 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
  *  On success, true is returned and depending on how the address was found,
  *  the out parameters can have different values.
  *
- *  On error, false is returned and all out parameters are untouched.
+ *  On error, false is returned and out parameters are set to NULL.
  *
  *  1. Look at the configuration Address option.
 
@@ -463,11 +467,15 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
 {
   int ret;
   const char *method_used;
-  char *hostname_used = tor_strdup("");
+  char *hostname_used = NULL;
   tor_addr_t my_addr;
 
   tor_assert(options);
   tor_assert(addr_out);
+
+  /* Set them to NULL for safety reasons. */
+  if (method_out) *method_out = NULL;
+  if (hostname_out) *hostname_out = NULL;
 
   /*
    * Step 1: Discover address by attempting 3 different methods consecutively.
@@ -528,10 +536,8 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   }
   if (hostname_out) {
     *hostname_out = NULL;
-    if (strlen(hostname_used) > 0) {
+    if (hostname_used) {
       *hostname_out = hostname_used;
-    } else {
-      tor_free(hostname_used);
     }
   } else {
     tor_free(hostname_used);
