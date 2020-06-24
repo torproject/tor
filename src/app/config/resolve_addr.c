@@ -37,12 +37,29 @@
 
 /** Ease our life. Arrays containing state per address family. These are to
  * add semantic to the code so we know what is accessed. */
-#define IDX_IPV4 0 /* Index to AF_INET. */
-#define IDX_IPV6 1 /* Index to AF_INET6. */
-#define IDX_SIZE 2 /* How many indexes do we have. */
+#define IDX_NULL 0 /* Index to zeroed address object. */
+#define IDX_IPV4 1 /* Index to AF_INET. */
+#define IDX_IPV6 2 /* Index to AF_INET6. */
+#define IDX_SIZE 3 /* How many indexes do we have. */
 
 /** Last resolved addresses. */
 static tor_addr_t last_resolved_addrs[IDX_SIZE];
+
+static inline int
+af_to_idx(const int family)
+{
+  switch (family) {
+  case AF_INET:
+    return IDX_IPV4;
+  case AF_INET6:
+    return IDX_IPV6;
+  default:
+    /* It wouldn't be safe to just die here with an assert but we can heavily
+     * scream with a bug. Return the index of the NULL address. */
+    tor_assert_nonfatal_unreached();
+    return IDX_NULL;
+  }
+}
 
 /** Copy the last resolved address of family into addr_out.
  *
@@ -51,7 +68,7 @@ static tor_addr_t last_resolved_addrs[IDX_SIZE];
 void
 resolved_addr_get_last(int family, tor_addr_t *addr_out)
 {
-  tor_addr_copy(addr_out, &last_resolved_addrs[family]);
+  tor_addr_copy(addr_out, &last_resolved_addrs[af_to_idx(family)]);
 }
 
 /** Reset the last resolved address of family.
@@ -60,7 +77,7 @@ resolved_addr_get_last(int family, tor_addr_t *addr_out)
 void
 resolved_addr_reset_last(int family)
 {
-  tor_addr_make_null(&last_resolved_addrs[family], family);
+  tor_addr_make_null(&last_resolved_addrs[af_to_idx(family)], family);
 }
 
 /** @brief Return true iff the given IP address can be used as a valid
@@ -321,7 +338,7 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
                       const char *hostname_used)
 {
   /** Have we done a first resolve. This is used to control logging. */
-  static bool have_resolved_once[IDX_SIZE] = { false, false };
+  static bool have_resolved_once[IDX_SIZE] = { false, false, false };
   bool *done_one_resolve;
   bool have_hostname = false;
   tor_addr_t *last_resolved;
@@ -333,19 +350,15 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
   /* Do we have an hostname. */
   have_hostname = strlen(hostname_used) > 0;
 
-  switch (tor_addr_family(addr)) {
-  case AF_INET:
-    done_one_resolve = &have_resolved_once[IDX_IPV4];
-    last_resolved = &last_resolved_addrs[IDX_IPV4];
-    break;
-  case AF_INET6:
-    done_one_resolve = &have_resolved_once[IDX_IPV6];
-    last_resolved = &last_resolved_addrs[IDX_IPV6];
-    break;
-  default:
-    tor_assert_nonfatal_unreached();
+  int idx = af_to_idx(tor_addr_family(addr));
+  if (idx == IDX_NULL) {
+    /* Not suppose to happen and if it does, af_to_idx() screams loudly. */
     return;
   }
+
+  /* Get values from cache. */
+  done_one_resolve = &have_resolved_once[idx];
+  last_resolved = &last_resolved_addrs[idx];
 
   /* Same address last resolved. Ignore. */
   if (tor_addr_eq(last_resolved, addr)) {
