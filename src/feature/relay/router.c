@@ -1363,7 +1363,7 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  if (!router_should_skip_orport_reachability_check(options))
+  if (!router_all_orports_seem_reachable(options))
     return 0;
   if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL) {
     /* All set: there are no exits in the consensus (maybe this is a tiny

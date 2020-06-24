@@ -408,7 +408,7 @@ ready_to_publish(const or_options_t *options)
 {
   return options->PublishServerDescriptor_ != NO_DIRINFO &&
     router_dirport_seems_reachable(options) &&
-    router_should_skip_orport_reachability_check(options);
+    router_all_orports_seem_reachable(options);
 }
 
 /** Annotate that we found our ORPort reachable with a given address
