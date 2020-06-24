@@ -22,25 +22,24 @@
 /** Maximum "Address" statement allowed in our configuration. */
 #define MAX_CONFIG_ADDRESS 2
 
-/** Errors use when finding our IP address. Some are transient and some are
- * persistent, just attach semantic to the values. They are all negative so
- * one can do a catch all. */
-
-#define ERR_FAIL_RESOLVE        -1 /* Hostname resolution failed. */
-#define ERR_GET_HOSTNAME        -2 /* Unable to get local hostname. */
-#define ERR_NO_OPT_ADDRESS      -3 /* No Address in config. */
-#define ERR_TOO_MANY_ADDRESS    -4 /* Too many Address for one family. */
-#define ERR_GET_INTERFACE       -5 /* Unable to query network interface. */
-#define ERR_UNUSABLE_ADDRESS    -6 /* Unusable address. It is internal. */
-#define ERR_DEFAULT_DIRAUTH     -7 /* Using default authorities. */
-#define ERR_ADDRESS_IS_INTERNAL -8 /* IP is internal. */
-
 /** Ease our life. Arrays containing state per address family. These are to
  * add semantic to the code so we know what is accessed. */
 #define IDX_NULL 0 /* Index to zeroed address object. */
 #define IDX_IPV4 1 /* Index to AF_INET. */
 #define IDX_IPV6 2 /* Index to AF_INET6. */
 #define IDX_SIZE 3 /* How many indexes do we have. */
+
+/** Function in our address function table return one of these code. */
+typedef enum {
+  /* The address has been found. */
+  FN_RET_OK   = 0,
+  /* The failure requirements were not met and thus it is recommended that the
+   * caller stops the search. */
+  FN_RET_BAIL = 1,
+  /* The address was not found or failure is transient so the caller should go
+   * to the next method. */
+  FN_RET_NEXT = 2,
+} fn_address_ret_t;
 
 /** Last resolved addresses. */
 static tor_addr_t last_resolved_addrs[IDX_SIZE];
@@ -79,6 +78,11 @@ resolved_addr_reset_last(int family)
 {
   tor_addr_make_null(&last_resolved_addrs[af_to_idx(family)], family);
 }
+
+/** Errors returned by address_can_be_used() in order for the caller to know
+ * why the address is denied or not. */
+#define ERR_DEFAULT_DIRAUTH     -1 /* Using default authorities. */
+#define ERR_ADDRESS_IS_INTERNAL -2 /* IP is internal. */
 
 /** @brief Return true iff the given IP address can be used as a valid
  *         external resolved address.
@@ -151,11 +155,12 @@ address_can_be_used(const tor_addr_t *addr, const or_options_t *options,
  * @return Return 0 on success that is an address has been found or resolved
  *         successfully. Return error code ERR_* found at the top of the file.
  */
-static int
+static fn_address_ret_t
 get_address_from_config(const or_options_t *options, int warn_severity,
                         int family, const char **method_out,
                         char **hostname_out, tor_addr_t *addr_out)
 {
+  int ret;
   bool explicit_ip = false;
   int num_valid_addr = 0;
 
@@ -172,7 +177,8 @@ get_address_from_config(const or_options_t *options, int warn_severity,
 
   if (!options->Address) {
     log_info(LD_CONFIG, "No Address option found in configuration.");
-    return ERR_NO_OPT_ADDRESS;
+    /* No Address statement, inform caller to try next method. */
+    return FN_RET_NEXT;
   }
 
   for (const config_line_t *cfg = options->Address; cfg != NULL;
@@ -199,11 +205,10 @@ get_address_from_config(const or_options_t *options, int warn_severity,
       num_valid_addr++;
       continue;
     } else {
-      /* If we have hostname we are unable to resolve, it is an persistent
-       * error and thus we stop right away. */
+      /* Hostname that can't be resolved, this is a fatal error. */
       log_fn(warn_severity, LD_CONFIG,
              "Could not resolve local Address '%s'. Failing.", cfg->value);
-      return ERR_FAIL_RESOLVE;
+      return FN_RET_BAIL;
     }
   }
 
@@ -211,18 +216,32 @@ get_address_from_config(const or_options_t *options, int warn_severity,
     log_fn(warn_severity, LD_CONFIG,
            "No Address option found for family %s in configuration.",
            fmt_af_family(family));
-    return ERR_NO_OPT_ADDRESS;
+    /* No Address statement for family, inform caller to try next method. */
+    return FN_RET_NEXT;
   }
 
   if (num_valid_addr >= MAX_CONFIG_ADDRESS) {
+    /* Too many Address for same family. This is a fatal error. */
     log_fn(warn_severity, LD_CONFIG,
            "Found %d Address statement of address family %s. "
            "Only one is allowed.", num_valid_addr, fmt_af_family(family));
-    return ERR_TOO_MANY_ADDRESS;
+    return FN_RET_BAIL;
   }
 
   /* Great, we found an address. */
-  return address_can_be_used(addr_out, options, warn_severity, explicit_ip);
+  ret = address_can_be_used(addr_out, options, warn_severity, explicit_ip);
+  if (ret != 0) {
+    /* One of the requirement of this interface is if an internal Address is
+     * used, custom authorities must be defined else it is a fatal error.
+     * Furthermore, if the Address was resolved to an internal interface, we
+     * stop immediately. */
+    return FN_RET_BAIL;
+  }
+
+  /* Address can be used. We are done. */
+  log_fn(warn_severity, LD_CONFIG, "Address found in configuration: %s",
+         fmt_addr(addr_out));
+  return FN_RET_OK;
 }
 
 /** @brief Get IP address from the local hostname by calling gethostbyname()
@@ -240,7 +259,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
  * @return Return 0 on success that is an address has been found and resolved
  *         successfully. Return error code ERR_* found at the top of the file.
  */
-static int
+static fn_address_ret_t
 get_address_from_hostname(const or_options_t *options, int warn_severity,
                           int family, const char **method_out,
                           char **hostname_out, tor_addr_t *addr_out)
@@ -259,24 +278,33 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
 
   if (tor_gethostname(hostname, sizeof(hostname)) < 0) {
     log_fn(warn_severity, LD_NET, "Error obtaining local hostname");
-    return ERR_GET_HOSTNAME;
+    /* Unable to obtain the local hostname is a fatal error. */
+    return FN_RET_BAIL;
   }
   if (tor_addr_lookup(hostname, family, addr_out)) {
     log_fn(warn_severity, LD_NET,
            "Could not resolve local hostname '%s'. Failing.", hostname);
-    return ERR_FAIL_RESOLVE;
+    /* Unable to resolve, inform caller to try next method. */
+    return FN_RET_NEXT;
   }
 
   ret = address_can_be_used(addr_out, options, warn_severity, false);
-  if (ret < 0) {
-    return ret;
+  if (ret == ERR_DEFAULT_DIRAUTH) {
+    /* Non custom authorities, inform caller to try next method. */
+    return FN_RET_NEXT;
+  } else if (ret == ERR_ADDRESS_IS_INTERNAL) {
+    /* Internal address is a fatal error. */
+    return FN_RET_BAIL;
   }
 
   /* addr_out contains the address of the local hostname. */
   *method_out = "GETHOSTNAME";
   *hostname_out = tor_strdup(hostname);
 
-  return 0;
+  /* Found it! */
+  log_fn(warn_severity, LD_CONFIG, "Address found from local hostname: %s",
+         fmt_addr(addr_out));
+  return FN_RET_OK;
 }
 
 /** @brief Get IP address from a network interface.
@@ -286,40 +314,49 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
  * @param method_out OUT: Always "INTERFACE" on success which is detailed in
  *                   the control-spec.txt as actions for "STATUS_SERVER".
+ * @param hostname_out OUT: String containing the local hostname. For this
+ *                     function, it is always set to NULL.
  * @param addr_out OUT: Tor address found attached to the interface.
  *
  * @return Return 0 on success that is an address has been found. Return
  *         error code ERR_* found at the top of the file.
  */
-static int
+static fn_address_ret_t
 get_address_from_interface(const or_options_t *options, int warn_severity,
                            int family, const char **method_out,
-                           tor_addr_t *addr_out)
+                           char **hostname_out, tor_addr_t *addr_out)
 {
   int ret;
 
   tor_assert(method_out);
+  tor_assert(hostname_out);
   tor_assert(addr_out);
 
   /* Set them to NULL for safety reasons. */
   *method_out = NULL;
+  *hostname_out = NULL;
 
   log_debug(LD_CONFIG, "Attempting to get address from network interface");
 
   if (get_interface_address6(warn_severity, family, addr_out) < 0) {
     log_fn(warn_severity, LD_CONFIG,
            "Could not get local interface IP address.");
-    return ERR_GET_INTERFACE;
+    /* Unable to get IP from interface. Inform caller to try next method. */
+    return FN_RET_NEXT;
   }
 
   ret = address_can_be_used(addr_out, options, warn_severity, false);
   if (ret < 0) {
-    return ret;
+    /* Unable to use address. Inform caller to try next method. */
+    return FN_RET_NEXT;
   }
 
   *method_out = "INTERFACE";
 
-  return 0;
+  /* Found it! */
+  log_fn(warn_severity, LD_CONFIG, "Address found from interface: %s",
+         fmt_addr(addr_out));
+  return FN_RET_OK;
 }
 
 /** @brief Update the last resolved address cache using the given address.
@@ -393,6 +430,21 @@ update_resolved_cache(const tor_addr_t *addr, const char *method_used,
   *done_one_resolve = true;
 }
 
+/** Address discovery function table. The order matters as in the first one is
+ * executed first and so on. */
+static fn_address_ret_t
+  (*fn_address_table[])(
+    const or_options_t *options, int warn_severity, int family,
+    const char **method_out, char **hostname_out, tor_addr_t *addr_out) =
+{
+  /* These functions are in order for our find address algorithm. */
+  get_address_from_config,
+  get_address_from_hostname,
+  get_address_from_interface,
+};
+/** Length of address table as in how many functions. */
+static const size_t fn_address_table_len = ARRAY_LENGTH(fn_address_table);
+
 /** @brief Attempt to find our IP address that can be used as our external
  *         reachable address.
  *
@@ -465,8 +517,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
                 tor_addr_t *addr_out, const char **method_out,
                 char **hostname_out)
 {
-  int ret;
-  const char *method_used;
+  const char *method_used = NULL;
   char *hostname_used = NULL;
   tor_addr_t my_addr;
 
@@ -481,51 +532,24 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
    * Step 1: Discover address by attempting 3 different methods consecutively.
    */
 
-  /* Attempt #1: Get address from configuration. */
-  ret = get_address_from_config(options, warn_severity, family, &method_used,
-                                &hostname_used, &my_addr);
-  if (ret == 0) {
-    log_fn(warn_severity, LD_CONFIG, "Address found in configuration: %s",
-           fmt_addr(&my_addr));
-  } else {
-    /* Unable to resolve an Address statement is a failure. Also, using
-     * default dirauth error means that the configured address is internal
-     * which is only accepted if custom authorities are used. */
-    if (ret == ERR_FAIL_RESOLVE || ret == ERR_DEFAULT_DIRAUTH) {
+  /* Go over the function table. They are in order. */
+  for (size_t idx = 0; idx < fn_address_table_len; idx++) {
+    fn_address_ret_t ret = fn_address_table[idx](options, warn_severity,
+                                                 family, &method_used,
+                                                 &hostname_used, &my_addr);
+    if (ret == FN_RET_BAIL) {
       return false;
+    } else if (ret == FN_RET_OK) {
+      goto found;
     }
-
-    /* Attempt #2: Get local hostname and resolve it. */
-    ret = get_address_from_hostname(options, warn_severity, family,
-                                    &method_used, &hostname_used, &my_addr);
-    if (ret == 0) {
-      log_fn(warn_severity, LD_CONFIG, "Address found from local hostname: "
-             "%s", fmt_addr(&my_addr));
-    } else if (ret < 0) {
-      /* Unable to get the hostname results in a failure. If the address is
-       * internal, we stop right away. */
-      if (ret == ERR_GET_HOSTNAME || ret == ERR_ADDRESS_IS_INTERNAL) {
-        return false;
-      }
-
-      /* Attempt #3: Get address from interface. */
-      ret = get_address_from_interface(options, warn_severity, family,
-                                       &method_used, &my_addr);
-      if (ret == 0) {
-        log_fn(warn_severity, LD_CONFIG, "Address found from interface: %s",
-               fmt_addr(&my_addr));
-      } else {
-        /* We've exhausted our attempts. Failure. */
-        log_fn(warn_severity, LD_CONFIG, "Unable to find our IP address.");
-        return false;
-      }
-    }
+    tor_assert(ret == FN_RET_NEXT);
   }
-  tor_assert(method_used);
 
-  /* From here, my_addr is a valid IP address of "family" and can be used as
-   * our external IP address. */
+  /* We've exhausted our attempts. Failure. */
+  log_fn(warn_severity, LD_CONFIG, "Unable to find our IP address.");
+  return false;
 
+ found:
   /*
    * Step 2: Update last resolved address cache and inform the control port.
    */
@@ -535,10 +559,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
     *method_out = method_used;
   }
   if (hostname_out) {
-    *hostname_out = NULL;
-    if (hostname_used) {
-      *hostname_out = hostname_used;
-    }
+    *hostname_out = hostname_used;
   } else {
     tor_free(hostname_used);
   }
