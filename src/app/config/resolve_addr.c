@@ -589,10 +589,6 @@ is_local_to_resolve_addr, (const tor_addr_t *addr))
 
   switch (family) {
   case AF_INET:
-    /* XXX: Why is this /24 and not /16 which the rest of tor does? Unknown
-     * reasons at the moment highlighted in ticket #40009. Because of that, we
-     * can't use addrs_in_same_network_family(). */
-
     /* It's possible that this next check will hit before the first time
      * find_my_address actually succeeds. For clients, it is likely that
      * find_my_address will never be called at all. In those cases,
@@ -600,7 +596,7 @@ is_local_to_resolve_addr, (const tor_addr_t *addr))
      * on the same /24 as last_resolved_addrs[AF_INET] will be the same as
      * checking whether it was on net 0, which is already done by
      * tor_addr_is_internal. */
-    return tor_addr_compare_masked(addr, last_resolved_addr, 24,
+    return tor_addr_compare_masked(addr, last_resolved_addr, 16,
                                    CMP_SEMANTIC) == 0;
   case AF_INET6:
     /* Look at the /32 like addrs_in_same_network_family() does. */

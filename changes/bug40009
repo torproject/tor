@@ -1,0 +1,4 @@
+  o Minor Bugfixes (IPv4):
+    - Make is_local_to_resolve_addr() compare addresses inside a /16 subnet
+      instead of a /24. This matches the behavior of the rest of Tor. Fixes
+      bug 40009; bugfix on 0.2.1.5-alpha. Patch by Neel Chauhan.
