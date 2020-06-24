@@ -32,8 +32,8 @@ const node_t *node_get_by_hex_id(const char *identity_digest,
                                  unsigned flags);
 node_t *nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out);
 node_t *nodelist_add_microdesc(microdesc_t *md);
-void nodelist_set_consensus(networkstatus_t *ns);
-void nodelist_ensure_freshness(networkstatus_t *ns);
+void nodelist_set_consensus(const networkstatus_t *ns);
+void nodelist_ensure_freshness(const networkstatus_t *ns);
 int nodelist_probably_contains_address(const tor_addr_t *addr);
 void nodelist_add_addr4_to_address_set(const uint32_t addr);
 void nodelist_add_addr6_to_address_set(const tor_addr_t *addr);

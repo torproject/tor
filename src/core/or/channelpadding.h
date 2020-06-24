@@ -37,7 +37,6 @@ int channelpadding_send_enable_command(channel_t *chan, uint16_t low_timeout,
 
 int channelpadding_get_circuits_available_timeout(void);
 unsigned int channelpadding_get_channel_idle_timeout(const channel_t *, int);
-void channelpadding_new_consensus_params(networkstatus_t *ns);
+void channelpadding_new_consensus_params(const networkstatus_t *ns);
 
 #endif /* !defined(TOR_CHANNELPADDING_H) */
-
