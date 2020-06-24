@@ -68,8 +68,8 @@ test_channeltls_create(void *arg)
 
   /* For this test we always want the address to be treated as non-local */
   tlschan_local = false;
-  /* Install resolved_addr_is_local() mock */
-  MOCK(resolved_addr_is_local, tlschan_resolved_addr_is_local_mock);
+  /* Install is_local_to_resolve_addr() mock */
+  MOCK(is_local_to_resolve_addr, tlschan_resolved_addr_is_local_mock);
 
   /* Install mock for connection_or_connect() */
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
@@ -92,7 +92,7 @@ test_channeltls_create(void *arg)
   }
 
   UNMOCK(connection_or_connect);
-  UNMOCK(resolved_addr_is_local);
+  UNMOCK(is_local_to_resolve_addr);
 
   return;
 }
@@ -117,8 +117,8 @@ test_channeltls_num_bytes_queued(void *arg)
 
   /* For this test we always want the address to be treated as non-local */
   tlschan_local = false;
-  /* Install resolved_addr_is_local() mock */
-  MOCK(resolved_addr_is_local, tlschan_resolved_addr_is_local_mock);
+  /* Install is_local_to_resolve_addr() mock */
+  MOCK(is_local_to_resolve_addr, tlschan_resolved_addr_is_local_mock);
 
   /* Install mock for connection_or_connect() */
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
@@ -178,7 +178,7 @@ test_channeltls_num_bytes_queued(void *arg)
   }
 
   UNMOCK(connection_or_connect);
-  UNMOCK(resolved_addr_is_local);
+  UNMOCK(is_local_to_resolve_addr);
 
   return;
 }
@@ -202,8 +202,8 @@ test_channeltls_overhead_estimate(void *arg)
 
   /* For this test we always want the address to be treated as non-local */
   tlschan_local = false;
-  /* Install resolved_addr_is_local() mock */
-  MOCK(resolved_addr_is_local, tlschan_resolved_addr_is_local_mock);
+  /* Install is_local_to_resolve_addr() mock */
+  MOCK(is_local_to_resolve_addr, tlschan_resolved_addr_is_local_mock);
 
   /* Install mock for connection_or_connect() */
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
@@ -252,7 +252,7 @@ test_channeltls_overhead_estimate(void *arg)
   }
 
   UNMOCK(connection_or_connect);
-  UNMOCK(resolved_addr_is_local);
+  UNMOCK(is_local_to_resolve_addr);
 
   return;
 }
