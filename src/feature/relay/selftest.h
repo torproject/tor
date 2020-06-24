@@ -16,11 +16,11 @@
 
 struct or_options_t;
 #define router_should_skip_orport_reachability_check(opts) \
-  router_should_skip_orport_reachability_check_family((opts),0)
-int router_should_skip_orport_reachability_check_family(
+  router_orport_seems_reachable((opts),0)
+int router_orport_seems_reachable(
                                          const struct or_options_t *options,
                                          int family);
-int router_should_skip_dirport_reachability_check(
+int router_dirport_seems_reachable(
                                          const struct or_options_t *options);
 
 void router_do_reachability_checks(int test_or, int test_dir);
@@ -36,9 +36,9 @@ void router_reset_reachability(void);
 
 #define router_should_skip_orport_reachability_check(opts)     \
   ((void)(opts), 0)
-#define router_should_skip_orport_reachability_check_family(opts, fam)  \
+#define router_orport_seems_reachable(opts, fam)  \
   ((void)(opts), (void)(fam), 0)
-#define router_should_skip_dirport_reachability_check(opts) \
+#define router_dirport_seems_reachable(opts) \
   ((void)(opts), 0)
 
 static inline void

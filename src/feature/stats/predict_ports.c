@@ -273,7 +273,7 @@ rep_hist_circbuilding_dormant(time_t now)
       (!router_should_skip_orport_reachability_check(options) ||
        !circuit_enough_testing_circs()))
     return 0;
-  if (!router_should_skip_dirport_reachability_check(options))
+  if (!router_dirport_seems_reachable(options))
     return 0;
 
   return 1;

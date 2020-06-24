@@ -1283,13 +1283,13 @@ getinfo_helper_events(control_connection_t *control_conn,
                     "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded/dir")) {
       *answer = tor_strdup(
-                    router_should_skip_dirport_reachability_check(options) ?
+                    router_dirport_seems_reachable(options) ?
                     "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded")) {
       tor_asprintf(
           answer, "OR=%d DIR=%d",
           router_should_skip_orport_reachability_check(options) ? 1 : 0,
-          router_should_skip_dirport_reachability_check(options) ? 1 : 0);
+          router_dirport_seems_reachable(options) ? 1 : 0);
     } else if (!strcmp(question, "status/bootstrap-phase")) {
       *answer = control_event_boot_last_msg();
     } else if (!strcmpstart(question, "status/version/")) {

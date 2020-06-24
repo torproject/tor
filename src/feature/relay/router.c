@@ -1370,7 +1370,7 @@ decide_if_publishable_server(void)
      * test network), so we can't check our DirPort reachability. */
     return 1;
   } else {
-    return router_should_skip_dirport_reachability_check(options);
+    return router_dirport_seems_reachable(options);
   }
 }
 
