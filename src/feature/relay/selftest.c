@@ -86,7 +86,7 @@ router_reachability_checks_disabled(const or_options_t *options)
  * orport checks.
  */
 int
-router_should_skip_orport_reachability_check_family(
+router_orport_seems_reachable(
                                                 const or_options_t *options,
                                                 int family)
 {
@@ -124,7 +124,7 @@ router_should_skip_orport_reachability_check_family(
  *   - the network is disabled.
  */
 int
-router_should_skip_dirport_reachability_check(const or_options_t *options)
+router_dirport_seems_reachable(const or_options_t *options)
 {
   int reach_checks_disabled = router_reachability_checks_disabled(options) ||
                               !options->DirPort_set;
@@ -308,9 +308,9 @@ router_do_reachability_checks(int test_or, int test_dir)
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
   int orport_reachable_v4 =
-    router_should_skip_orport_reachability_check_family(options, AF_INET);
+    router_orport_seems_reachable(options, AF_INET);
   int orport_reachable_v6 =
-    router_should_skip_orport_reachability_check_family(options, AF_INET6);
+    router_orport_seems_reachable(options, AF_INET6);
 
   if (router_should_check_reachability(test_or, test_dir)) {
     bool need_testing = !circuit_enough_testing_circs();
@@ -325,7 +325,7 @@ router_do_reachability_checks(int test_or, int test_dir)
       router_do_orport_reachability_checks(me, AF_INET6, orport_reachable_v6);
     }
 
-    if (test_dir && !router_should_skip_dirport_reachability_check(options)) {
+    if (test_dir && !router_dirport_seems_reachable(options)) {
       router_do_dirport_reachability_checks(me);
     }
   }
@@ -407,7 +407,7 @@ static bool
 ready_to_publish(const or_options_t *options)
 {
   return options->PublishServerDescriptor_ != NO_DIRINFO &&
-    router_should_skip_dirport_reachability_check(options) &&
+    router_dirport_seems_reachable(options) &&
     router_should_skip_orport_reachability_check(options);
 }
 
