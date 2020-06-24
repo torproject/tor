@@ -1174,7 +1174,6 @@ test_config_find_my_address(void *arg)
 {
   or_options_t *options;
   tor_addr_t resolved_addr, test_addr;
-  char buf[1024];
   const char *method_used;
   char *hostname_out = NULL;
   bool retval;
@@ -1198,8 +1197,7 @@ test_config_find_my_address(void *arg)
   * If options->Address is a valid IPv4 address string, we want
   * the corresponding address to be parsed and returned.
   */
-  strlcpy(buf, "Address 128.52.128.105\n", sizeof(buf));
-  config_get_lines(buf, &(options->Address), 0);
+  config_line_append(&options->Address, "Address", "128.52.128.105");
   tor_addr_parse(&test_addr, "128.52.128.105");
 
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
@@ -1208,7 +1206,7 @@ test_config_find_my_address(void *arg)
   tt_want(retval == true);
   tt_want_str_op(method_used,OP_EQ,"CONFIGURED");
   tt_want(hostname_out == NULL);
-  tt_int_op(tor_addr_eq(&resolved_addr, &test_addr), OP_EQ, 1);
+  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
 
   config_free_lines(options->Address);
 
@@ -1221,8 +1219,7 @@ test_config_find_my_address(void *arg)
 
   MOCK(tor_addr_lookup, tor_addr_lookup_01010101);
 
-  strlcpy(buf, "Address www.torproject.org\n", sizeof(buf));
-  config_get_lines(buf, &(options->Address), 0);
+  config_line_append(&options->Address, "Address", "www.torproject.org");
   tor_addr_parse(&test_addr, "1.1.1.1");
 
   prev_n_hostname_01010101 = n_hostname_01010101;
@@ -1234,7 +1231,7 @@ test_config_find_my_address(void *arg)
   tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
   tt_want_str_op(method_used,OP_EQ,"RESOLVED");
   tt_want_str_op(hostname_out,OP_EQ,"www.torproject.org");
-  tt_int_op(tor_addr_eq(&resolved_addr, &test_addr), OP_EQ, 1);
+  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
 
   UNMOCK(tor_addr_lookup);
 
@@ -1266,7 +1263,7 @@ test_config_find_my_address(void *arg)
   tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
   tt_want_str_op(method_used,OP_EQ,"GETHOSTNAME");
   tt_want_str_op(hostname_out,OP_EQ,"onionrouter!");
-  tt_int_op(tor_addr_eq(&resolved_addr, &test_addr), OP_EQ, 1);
+  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
 
   UNMOCK(tor_gethostname);
   UNMOCK(tor_addr_lookup);
@@ -1280,8 +1277,7 @@ test_config_find_my_address(void *arg)
  */
 
   tor_addr_make_unspec(&resolved_addr);
-  strlcpy(buf, "Address 127.0.0.1\n", sizeof(buf));
-  config_get_lines(buf, &(options->Address), 0);
+  config_line_append(&options->Address, "Address", "127.0.0.1");
   tor_addr_parse(&test_addr, "127.0.0.1");
 
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
@@ -1303,8 +1299,7 @@ test_config_find_my_address(void *arg)
 
   prev_n_hostname_failure = n_hostname_failure;
 
-  strlcpy(buf, "Address www.tor-project.org\n", sizeof(buf));
-  config_get_lines(buf, &(options->Address), 0);
+  config_line_append(&options->Address, "Address", "www.tor-project.org");
 
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
@@ -1365,7 +1360,7 @@ test_config_find_my_address(void *arg)
                  prev_n_get_interface_address6 + 1);
   tt_want_str_op(method_used,OP_EQ,"INTERFACE");
   tt_want(hostname_out == NULL);
-  tt_int_op(tor_addr_eq(&resolved_addr, &test_addr), OP_EQ, 1);
+  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
 
   UNMOCK(get_interface_address);
   tor_free(hostname_out);
@@ -1422,7 +1417,7 @@ test_config_find_my_address(void *arg)
   tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
   tt_want(retval == true);
   tt_want_str_op(method_used,OP_EQ,"INTERFACE");
-  tt_int_op(tor_addr_eq(&resolved_addr, &test_addr), OP_EQ, 1);
+  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
 
   UNMOCK(tor_addr_lookup);
   UNMOCK(tor_gethostname);
@@ -1444,8 +1439,7 @@ test_config_find_my_address(void *arg)
 
   prev_n_hostname_failure = n_hostname_failure;
 
-  strlcpy(buf, "Address some_hostname\n", sizeof(buf));
-  config_get_lines(buf, &(options->Address), 0);
+  config_line_append(&options->Address, "Address", "some_hostname");
 
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
@@ -1499,7 +1493,7 @@ test_config_find_my_address(void *arg)
   tt_str_op(method_used,OP_EQ,"INTERFACE");
   tt_ptr_op(hostname_out, OP_EQ, NULL);
   tt_want(retval == true);
-  tt_int_op(tor_addr_eq(&resolved_addr, &test_addr), OP_EQ, 1);
+  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
 
   /*
    * CASE 11b:
