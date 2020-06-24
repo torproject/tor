@@ -1029,7 +1029,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
 
   YES_IF_CHANGED_STRING(DataDirectory);
   YES_IF_CHANGED_STRING(Nickname);
-  YES_IF_CHANGED_STRING(Address);
+  YES_IF_CHANGED_LINELIST(Address);
   YES_IF_CHANGED_LINELIST(ExitPolicy);
   YES_IF_CHANGED_BOOL(ExitRelay);
   YES_IF_CHANGED_BOOL(ExitPolicyRejectPrivate);

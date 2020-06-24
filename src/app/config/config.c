@@ -313,7 +313,7 @@ static const config_var_t option_vars_[] = {
   V(AccountingMax,               MEMUNIT,  "0 bytes"),
   VAR("AccountingRule",          STRING,   AccountingRule_option,  "max"),
   V(AccountingStart,             STRING,   NULL),
-  V(Address,                     STRING,   NULL),
+  V(Address,                     LINELIST, NULL),
   OBSOLETE("AllowDotExit"),
   OBSOLETE("AllowInvalidNodes"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
@@ -4028,7 +4028,7 @@ options_check_transition_cb(const void *old_,
     if (! CFG_EQ_INT(old, new_val, opt))           \
       BAD_CHANGE_TO(opt," with Sandbox active")
 
-    SB_NOCHANGE_STR(Address);
+    SB_NOCHANGE_LINELIST(Address);
     SB_NOCHANGE_STR(ServerDNSResolvConfFile);
     SB_NOCHANGE_STR(DirPortFrontPage);
     SB_NOCHANGE_STR(CookieAuthFile);

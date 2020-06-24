@@ -4870,7 +4870,7 @@ client_check_address_changed(tor_socket_t sock)
     smartlist_clear(outgoing_addrs);
     smartlist_add(outgoing_addrs, tor_memdup(&out_addr, sizeof(tor_addr_t)));
     /* We'll need to resolve ourselves again. */
-    reset_last_resolved_addr();
+    resolved_addr_reset_last(AF_INET);
     /* Okay, now change our keys. */
     ip_address_changed(1);
   }

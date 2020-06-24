@@ -45,8 +45,7 @@ void
 router_new_address_suggestion(const char *suggestion,
                               const dir_connection_t *d_conn)
 {
-  tor_addr_t addr;
-  uint32_t cur = 0;             /* Current IPv4 address.  */
+  tor_addr_t addr, my_addr, last_resolved_addr;
   const or_options_t *options = get_options();
 
   /* first, learn what the IP address actually is */
@@ -64,14 +63,22 @@ router_new_address_suggestion(const char *suggestion,
   }
 
   /* XXXX ipv6 */
-  cur = get_last_resolved_addr();
-  if (cur ||
-      resolve_my_address(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
-    /* We're all set -- we already know our address. Great. */
-    tor_addr_from_ipv4h(&last_guessed_ip, cur); /* store it in case we
-                                                   need it later */
+  resolved_addr_get_last(AF_INET, &last_resolved_addr);
+  if (!tor_addr_is_null(&last_resolved_addr)) {
+    /* Lets use this one. */
+    tor_addr_copy(&last_guessed_ip, &last_resolved_addr);
     return;
   }
+
+  /* Attempt to find our address. */
+  if (find_my_address(options, AF_INET, LOG_INFO, &my_addr, NULL, NULL)) {
+    /* We're all set -- we already know our address. Great. */
+    tor_addr_copy(&last_guessed_ip, &my_addr); /* store it in case we
+                                                  need it later */
+    return;
+  }
+
+  /* Consider the suggestion from the directory. */
   if (tor_addr_is_internal(&addr, 0)) {
     /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
     return;
@@ -111,15 +118,21 @@ MOCK_IMPL(int,
 router_pick_published_address, (const or_options_t *options, uint32_t *addr,
                                 int cache_only))
 {
-  /* First, check the cached output from resolve_my_address(). */
-  *addr = get_last_resolved_addr();
-  if (*addr)
+  tor_addr_t last_resolved_addr;
+
+  /* First, check the cached output from find_my_address(). */
+  resolved_addr_get_last(AF_INET, &last_resolved_addr);
+  if (!tor_addr_is_null(&last_resolved_addr)) {
+    *addr = tor_addr_to_ipv4h(&last_resolved_addr);
     return 0;
+  }
 
   /* Second, consider doing a resolve attempt right here. */
   if (!cache_only) {
-    if (resolve_my_address(LOG_INFO, options, addr, NULL, NULL) >= 0) {
-      log_info(LD_CONFIG,"Success: chose address '%s'.", fmt_addr32(*addr));
+    tor_addr_t my_addr;
+    if (find_my_address(options, AF_INET, LOG_INFO, &my_addr, NULL, NULL)) {
+      log_info(LD_CONFIG,"Success: chose address '%s'.", fmt_addr(&my_addr));
+      *addr = tor_addr_to_ipv4h(&my_addr);
       return 0;
     }
   }

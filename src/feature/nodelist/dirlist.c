@@ -343,25 +343,25 @@ trusted_dir_server_new(const char *nickname, const char *address,
                        const char *digest, const char *v3_auth_digest,
                        dirinfo_type_t type, double weight)
 {
-  uint32_t a;
   tor_addr_t addr;
   char *hostname=NULL;
   dir_server_t *result;
 
   if (!address) { /* The address is us; we should guess. */
-    if (resolve_my_address(LOG_WARN, get_options(),
-                           &a, NULL, &hostname) < 0) {
+    if (!find_my_address(get_options(), AF_INET, LOG_WARN, &addr,
+                         NULL, &hostname)) {
       log_warn(LD_CONFIG,
                "Couldn't find a suitable address when adding ourself as a "
                "trusted directory server.");
       return NULL;
     }
     if (!hostname)
-      hostname = tor_dup_ip(a);
+      hostname = tor_addr_to_str_dup(&addr);
 
     if (!hostname)
       return NULL;
   } else {
+    uint32_t a;
     if (tor_lookup_hostname(address, &a)) {
       log_warn(LD_CONFIG,
                "Unable to lookup address for directory server at '%s'",
@@ -369,8 +369,8 @@ trusted_dir_server_new(const char *nickname, const char *address,
       return NULL;
     }
     hostname = tor_strdup(address);
+    tor_addr_from_ipv4h(&addr, a);
   }
-  tor_addr_from_ipv4h(&addr, a);
 
   result = dir_server_new(1, nickname, &addr, hostname,
                           dir_port, or_port,
