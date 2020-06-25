@@ -2151,7 +2151,7 @@ test_rep_hist(void *arg)
        mock_rep_hist_get_circuit_handshake);
 
   /* NTor tests */
-  getinfo_helper_rephist(&dummy, "rephist/ntor/onion_handshakes_requested",
+  getinfo_helper_rephist(&dummy, "stats/ntor/onion_handshakes_requested",
                          &answer, &errmsg);
   tt_ptr_op(answer, OP_NE, NULL);
   tt_ptr_op(errmsg, OP_EQ, NULL);
@@ -2159,7 +2159,7 @@ test_rep_hist(void *arg)
   tor_free(answer);
   errmsg = NULL;
 
-  getinfo_helper_rephist(&dummy, "rephist/ntor/onion_handshakes_assigned",
+  getinfo_helper_rephist(&dummy, "stats/ntor/onion_handshakes_assigned",
                          &answer, &errmsg);
   tt_ptr_op(answer, OP_NE, NULL);
   tt_ptr_op(errmsg, OP_EQ, NULL);
@@ -2168,7 +2168,7 @@ test_rep_hist(void *arg)
   errmsg = NULL;
 
   /* TAP tests */
-  getinfo_helper_rephist(&dummy, "rephist/tap/onion_handshakes_requested",
+  getinfo_helper_rephist(&dummy, "stats/tap/onion_handshakes_requested",
                          &answer, &errmsg);
   tt_ptr_op(answer, OP_NE, NULL);
   tt_ptr_op(errmsg, OP_EQ, NULL);
@@ -2176,7 +2176,7 @@ test_rep_hist(void *arg)
   tor_free(answer);
   errmsg = NULL;
 
-  getinfo_helper_rephist(&dummy, "rephist/tap/onion_handshakes_assigned",
+  getinfo_helper_rephist(&dummy, "stats/tap/onion_handshakes_assigned",
                          &answer, &errmsg);
   tt_ptr_op(answer, OP_NE, NULL);
   tt_ptr_op(errmsg, OP_EQ, NULL);
