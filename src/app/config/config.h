@@ -58,8 +58,7 @@ setopt_err_t options_trial_assign(struct config_line_t *list, unsigned flags,
 void options_init(or_options_t *options);
 
 #define OPTIONS_DUMP_MINIMAL 1
-#define OPTIONS_DUMP_DEFAULTS 2
-#define OPTIONS_DUMP_ALL 3
+#define OPTIONS_DUMP_ALL 2
 char *options_dump(const or_options_t *options, int how_to_dump);
 int options_init_from_torrc(int argc, char **argv);
 setopt_err_t options_init_from_string(const char *cf_defaults, const char *cf,

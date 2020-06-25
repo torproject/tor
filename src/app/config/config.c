@@ -2771,10 +2771,6 @@ options_dump(const or_options_t *options, int how_to_dump)
       use_defaults = global_default_options;
       minimal = 1;
       break;
-    case OPTIONS_DUMP_DEFAULTS:
-      use_defaults = NULL;
-      minimal = 1;
-      break;
     case OPTIONS_DUMP_ALL:
       use_defaults = NULL;
       minimal = 0;

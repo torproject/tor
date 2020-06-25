@@ -775,12 +775,14 @@ do_dump_config(void)
   if (!strcmp(arg, "short")) {
     how = OPTIONS_DUMP_MINIMAL;
   } else if (!strcmp(arg, "non-builtin")) {
-    how = OPTIONS_DUMP_DEFAULTS;
+    // Deprecated since 0.4.5.1-alpha.
+    fprintf(stderr, "'non-builtin' is deprecated; use 'short' instead.\n");
+    how = OPTIONS_DUMP_MINIMAL;
   } else if (!strcmp(arg, "full")) {
     how = OPTIONS_DUMP_ALL;
   } else {
     fprintf(stderr, "No valid argument to --dump-config found!\n");
-    fprintf(stderr, "Please select 'short', 'non-builtin', or 'full'.\n");
+    fprintf(stderr, "Please select 'short' or 'full'.\n");
 
     return -1;
   }
