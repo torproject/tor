@@ -2184,6 +2184,12 @@ test_rep_hist(void *arg)
   tor_free(answer);
   errmsg = NULL;
 
+  getinfo_helper_rephist(&dummy, "stats/tap/onion_circuits_ddosed",
+                         &answer, &errmsg);
+  tt_ptr_op(answer, OP_EQ, NULL);
+  tt_str_op(errmsg, OP_EQ, "Unrecognized handshake type");
+  errmsg = NULL;
+
  done:
   UNMOCK(rep_hist_get_circuit_handshake_requested);
   UNMOCK(rep_hist_get_circuit_handshake_assigned);
