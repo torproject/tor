@@ -603,8 +603,10 @@ is_local_to_resolve_addr, (const tor_addr_t *addr))
     return tor_addr_compare_masked(addr, last_resolved_addr, 24,
                                    CMP_SEMANTIC) == 0;
   case AF_INET6:
-    /* Look at the /32 like addrs_in_same_network_family() does. */
-    return tor_addr_compare_masked(addr, last_resolved_addr, 32,
+    /* Look at /48 because it is typically the smallest network in the global
+     * IPv6 routing tables, and it was previously the recommended per-customer
+     * network block. (See [RFC 6177: IPv6 End Site Address Assignment].) */
+    return tor_addr_compare_masked(addr, last_resolved_addr, 48,
                                    CMP_SEMANTIC) == 0;
     break;
   default:
