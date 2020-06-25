@@ -353,9 +353,7 @@ inform_testing_reachability(void)
    * start reachability tests, or fail to log after we actually started
    * reachability tests.
    *
-   * After we separate the IPv4 and IPv6 reachability flags in #34067, tor
-   * will test any IPv6 address that it discovers after launching reachability
-   * checks. We'll deal with late disabled IPv6 ORPorts and IPv4 DirPorts, and
+   * We'll deal with late disabled IPv6 ORPorts and IPv4 DirPorts, and
    * extra or skipped log messages in #34137.
    */
   const routerinfo_t *me = router_get_my_routerinfo();
@@ -374,6 +372,9 @@ inform_testing_reachability(void)
   if (has_ipv6) {
     strlcpy(ipv6_or_buf, fmt_addrport(&me->ipv6_addr, me->ipv6_orport),
             sizeof(ipv6_or_buf));
+    control_event_server_status(LOG_NOTICE,
+                                "CHECKING_REACHABILITY ORADDRESS=%s",
+                                ipv6_or_buf);
     /* We'll add an IPv6 control event in #34068. */
   }
   /* IPv4 DirPort (there are no advertised IPv6 DirPorts) */
