@@ -1448,16 +1448,16 @@ getinfo_helper_rephist(control_connection_t *control_conn,
   (void) errmsg;
   int result = -1;
 
-  if (!strcmp(question, "rephist/ntor/onion_handshakes_assigned")) {
+  if (!strcmp(question, "stats/ntor/onion_handshakes_assigned")) {
     result =
       rep_hist_get_circuit_handshake_assigned(ONION_HANDSHAKE_TYPE_NTOR);
-  } else if (!strcmp(question, "rephist/ntor/onion_handshakes_requested")) {
+  } else if (!strcmp(question, "stats/ntor/onion_handshakes_requested")) {
     result =
       rep_hist_get_circuit_handshake_requested(ONION_HANDSHAKE_TYPE_NTOR);
-  } else if (!strcmp(question, "rephist/tap/onion_handshakes_assigned")) {
+  } else if (!strcmp(question, "stats/tap/onion_handshakes_assigned")) {
     result =
       rep_hist_get_circuit_handshake_assigned(ONION_HANDSHAKE_TYPE_TAP);
-  } else if (!strcmp(question, "rephist/tap/onion_handshakes_requested")) {
+  } else if (!strcmp(question, "stats/tap/onion_handshakes_requested")) {
     result =
       rep_hist_get_circuit_handshake_requested(ONION_HANDSHAKE_TYPE_TAP);
   }
@@ -1693,14 +1693,14 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("sr/current", sr, "Get current shared random value."),
   ITEM("sr/previous", sr, "Get previous shared random value."),
   PREFIX("rephist/ntor", rephist, "NTor circuit handshake stats."),
-  ITEM("rephist/ntor/onion_handshakes_assigned", rephist,
+  ITEM("stats/ntor/onion_handshakes_assigned", rephist,
        "Assigned NTor circuit handshake stats."),
-  ITEM("rephist/ntor/onion_handshakes_requested", rephist,
+  ITEM("stats/ntor/onion_handshakes_requested", rephist,
        "Requested NTor circuit handshake stats."),
   PREFIX("rephist/tap", rephist, "TAP circuit handshake stats."),
-  ITEM("rephist/tap/onion_handshakes_assigned", rephist,
+  ITEM("stats/tap/onion_handshakes_assigned", rephist,
        "Assigned TAP circuit handshake stats."),
-  ITEM("rephist/tap/onion_handshakes_requested", rephist,
+  ITEM("stats/tap/onion_handshakes_requested", rephist,
        "Requested TAP circuit handshake stats."),
   { NULL, NULL, NULL, 0 }
 };
