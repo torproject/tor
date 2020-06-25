@@ -879,9 +879,9 @@ router_write_fingerprint(int hashed, int ed25519_identity)
     }
   }
 
-  log_notice(LD_GENERAL, "Your Tor %s identity key %s is '%s %s'",
+  log_notice(LD_GENERAL, "Your Tor %s identity key %s fingerprint is '%s %s'",
              hashed ? "bridge's hashed" : "server's",
-             ed25519_identity ? "ed25519 key" : "fingerprint",
+             ed25519_identity ? "ed25519" : "",
              options->Nickname, fingerprint);
 
   result = 0;
