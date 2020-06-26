@@ -1,4 +1,0 @@
-  o Minor features (testing, architeture):
-    - Our test scripts now double-check that subsystem initialization order
-      is consistent with the inter-module dependencies established by our
-      .may_include files.  Implements ticket 31634.

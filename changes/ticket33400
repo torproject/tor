@@ -1,3 +1,0 @@
-  o Minor feature (onion service v3):
-    - Log at INFO level why the service can not upload its descriptor(s). Closes
-      ticket 33400; bugfix on 0.3.2.1-alpha.

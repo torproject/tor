@@ -1,4 +1,0 @@
-  o Minor features (logging):
-    - When trying to find our own address, add debug-level logging
-      to report the sources of candidate addresses.  Closes ticket
-      32888.

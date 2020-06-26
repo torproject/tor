@@ -1,3 +1,0 @@
-  o Minor bugfixes (IPv4, relay):
-    - Check for invalid zero IPv4 addresses and ports, when sending and
-      receiving extend cells. Fixes bug 33900; bugfix on 0.2.4.8-alpha.

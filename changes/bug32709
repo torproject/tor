@@ -1,4 +1,0 @@
-  o Major features (v3 onion services):
-    - Allow v3 onion services to act as OnionBalance backend instances using
-      the HiddenServiceOnionBalanceInstance torrc option. Closes ticket 32709.
-

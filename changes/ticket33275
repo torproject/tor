@@ -1,5 +1,0 @@
-  o Documentation (manpage):
-    - Alphabetize the Denial of Service Mitigation Options, Directory
-      Authority Server Options, Hidden Service Options, and Testing
-      Network Options sections of the tor(1) manpage.  Closes ticket
-      33275.  Work by Swati Thacker as part of Google Season of Docs.

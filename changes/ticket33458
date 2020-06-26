@@ -1,4 +1,0 @@
-  o Minor bugfix (onion service v3):
-    - When cleaning the client descriptor cache, an attempt at closing circuits
-      for a non decrypted descriptor (lacking client authorization) lead to an
-      assert(). Fixes bug 33458; bugfix on 0.4.2.1-alpha.

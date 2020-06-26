@@ -1,4 +1,0 @@
-  o Minor features (continuous integration):
-    - Run unit-test and integration test (Stem, Chutney) jobs with
-      ALL_BUGS_ARE_FATAL macro being enabled on Travis and Appveyor.
-      Resolves ticket 32143.

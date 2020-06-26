@@ -1,3 +1,0 @@
-  o Documentation (manpage):
-    - Refrain from mentioning nicknames in manpage section for MyFamily torrc
-      option. Resolves issue 33417.

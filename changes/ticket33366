@@ -1,3 +1,0 @@
-  o Minor features (compilation size):
-    - Most Server-side DNS code is now disabled when building without
-      support for relay mode. Closes ticket 33366.
