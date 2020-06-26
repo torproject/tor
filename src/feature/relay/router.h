@@ -34,7 +34,6 @@ void set_server_identity_key(crypto_pk_t *k);
 MOCK_DECL(crypto_pk_t *,get_server_identity_key,(void));
 #else
 #define get_server_identity_key() (tor_abort_(),NULL)
-#define router_new_consensus_params(c) ((void)(c))
 #endif
 int server_identity_key_is_set(void);
 void set_client_identity_key(crypto_pk_t *k);
