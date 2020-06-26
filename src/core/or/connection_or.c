@@ -1692,7 +1692,8 @@ connection_tls_continue_handshake(or_connection_t *conn)
 
   switch (result) {
     CASE_TOR_TLS_ERROR_ANY:
-    log_info(LD_OR,"tls error [%s]. breaking connection.",
+      conn->tls_error = result;
+      log_info(LD_OR,"tls error [%s]. breaking connection.",
              tor_tls_err_to_string(result));
       return -1;
     case TOR_TLS_DONE:
@@ -1724,6 +1725,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
       log_debug(LD_OR,"wanted read");
       return 0;
     case TOR_TLS_CLOSE:
+      conn->tls_error = result;
       log_info(LD_OR,"tls closed. breaking connection.");
       return -1;
   }

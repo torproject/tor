@@ -4205,6 +4205,7 @@ connection_handle_write_impl(connection_t *conn, int force)
     switch (result) {
       CASE_TOR_TLS_ERROR_ANY:
       case TOR_TLS_CLOSE:
+        or_conn->tls_error = result;
         log_info(LD_NET, result != TOR_TLS_CLOSE ?
                  "tls error. breaking.":"TLS connection closed on flush");
         /* Don't flush; connection is dead. */
