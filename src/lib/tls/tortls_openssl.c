@@ -245,8 +245,28 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
   unsigned long err;
 
   while ((err = ERR_get_error()) != 0) {
+    if (tls)
+      tls->last_error = err;
     tor_tls_log_one_error(tls, err, severity, domain, doing);
   }
+}
+
+/**
+ * Return a string representing more detail about the last error received
+ * on TLS.
+ *
+ * May return null if no error was found.
+ **/
+const char *
+tor_tls_get_last_error_msg(const tor_tls_t *tls)
+{
+  IF_BUG_ONCE(!tls) {
+    return NULL;
+  }
+  if (tls->last_error == 0) {
+    return NULL;
+  }
+  return (const char*)ERR_reason_error_string(tls->last_error);
 }
 
 #define CATCH_SYSCALL 1

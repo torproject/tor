@@ -67,6 +67,8 @@ struct tor_tls_t {
    */
   unsigned long last_write_count;
   unsigned long last_read_count;
+  /** Most recent error value from ERR_get_error(). */
+  unsigned long last_error;
   /** If set, a callback to invoke whenever the client tries to renegotiate
    * the handshake. */
   void (*negotiated_callback)(tor_tls_t *tls, void *arg);
@@ -77,6 +79,7 @@ struct tor_tls_t {
   /** Last values retried from tor_get_prfiledesc_byte_counts(). */
   uint64_t last_write_count;
   uint64_t last_read_count;
+  long last_error;
 #endif
 };
 

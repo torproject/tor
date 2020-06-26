@@ -745,10 +745,16 @@ connection_or_about_to_close(or_connection_t *or_conn)
         int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
         connection_or_event_status(or_conn, OR_CONN_EVENT_FAILED,
                                    reason);
-        if (!authdir_mode_tests_reachability(options))
-          control_event_bootstrap_prob_or(
-                orconn_end_reason_to_control_string(reason),
-                reason, or_conn);
+        if (!authdir_mode_tests_reachability(options)) {
+          const char *warning = NULL;
+          if (reason == END_OR_CONN_REASON_TLS_ERROR && or_conn->tls) {
+            warning = tor_tls_get_last_error_msg(or_conn->tls);
+          }
+          if (warning == NULL) {
+            warning = orconn_end_reason_to_control_string(reason);
+          }
+          control_event_bootstrap_prob_or(warning, reason, or_conn);
+        }
       }
     }
   } else if (conn->hold_open_until_flushed) {
