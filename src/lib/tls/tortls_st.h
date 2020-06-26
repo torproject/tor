@@ -79,7 +79,7 @@ struct tor_tls_t {
   /** Last values retried from tor_get_prfiledesc_byte_counts(). */
   uint64_t last_write_count;
   uint64_t last_read_count;
-  PRErrorCode last_error;
+  long last_error;
 #endif
 };
 

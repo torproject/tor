@@ -402,7 +402,7 @@ tor_tls_get_last_error_msg(const tor_tls_t *tls)
   if (tls->last_error == 0) {
     return NULL;
   }
-  return PORT_ErrorToString(tls->last_error);
+  return PORT_ErrorToString((PRErrorCode)tls->last_error);
 }
 
 tor_tls_t *
