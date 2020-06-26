@@ -86,15 +86,19 @@ router_reachability_checks_disabled(const or_options_t *options)
  * orport checks.
  */
 int
-router_orport_seems_reachable(
-                                                const or_options_t *options,
-                                                int family)
+router_orport_seems_reachable(const or_options_t *options,
+                              int family)
 {
   tor_assert_nonfatal(family == AF_INET || family == AF_INET6 || family == 0);
   int reach_checks_disabled = router_reachability_checks_disabled(options);
   if (reach_checks_disabled) {
     return true;
   }
+
+  // Note that we do a == 1 here, not just a boolean check.  This value
+  // is also an autobool, so CFG_AUTO does not mean that we should
+  // assume IPv6 ports are reachable.
+  const bool ipv6_assume_reachable = (options->AssumeReachableIPv6 == 1);
 
   // Which reachability flags should we look at?
   const bool checking_ipv4 = (family == AF_INET || family == 0);
@@ -105,7 +109,7 @@ router_orport_seems_reachable(
       return false;
     }
   }
-  if (checking_ipv6) {
+  if (checking_ipv6 && !ipv6_assume_reachable) {
     if (have_orport_for_family(AF_INET6) && !can_reach_or_port_ipv6) {
       return false;
     }
@@ -409,7 +413,7 @@ ready_to_publish(const or_options_t *options)
 {
   return options->PublishServerDescriptor_ != NO_DIRINFO &&
     router_dirport_seems_reachable(options) &&
-    router_should_skip_orport_reachability_check(options);
+    router_all_orports_seem_reachable(options);
 }
 
 /** Annotate that we found our ORPort reachable with a given address

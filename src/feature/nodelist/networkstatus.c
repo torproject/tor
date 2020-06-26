@@ -1670,7 +1670,35 @@ notify_before_networkstatus_changes(const networkstatus_t *old_c,
 static void
 notify_after_networkstatus_changes(void)
 {
+  const networkstatus_t *c = networkstatus_get_latest_consensus();
+  const or_options_t *options = get_options();
+  const time_t now = approx_time();
+
   scheduler_notify_networkstatus_changed();
+
+  /* The "current" consensus has just been set and it is a usable flavor so
+   * the first thing we need to do is recalculate the voting schedule static
+   * object so we can use the timings in there needed by some subsystems
+   * such as hidden service and shared random. */
+  dirauth_sched_recalculate_timing(options, now);
+  reschedule_dirvote(options);
+
+  nodelist_set_consensus(c);
+
+  update_consensus_networkstatus_fetch_time(now);
+
+  /* Change the cell EWMA settings */
+  cmux_ewma_set_options(options, c);
+
+  /* XXXX this call might be unnecessary here: can changing the
+   * current consensus really alter our view of any OR's rate limits? */
+  connection_or_update_token_buckets(get_connection_array(), options);
+
+  circuit_build_times_new_consensus_params(
+                                 get_circuit_build_times_mutable(), c);
+  channelpadding_new_consensus_params(c);
+  circpad_new_consensus_params(c);
+  router_new_consensus_params(c);
 }
 
 /** Copy all the ancillary information (like router download status and so on)
@@ -2115,29 +2143,6 @@ networkstatus_set_current_consensus(const char *consensus,
     /* Notify that we just changed the consensus so the current global value
      * can be looked at. */
     notify_after_networkstatus_changes();
-
-    /* The "current" consensus has just been set and it is a usable flavor so
-     * the first thing we need to do is recalculate the voting schedule static
-     * object so we can use the timings in there needed by some subsystems
-     * such as hidden service and shared random. */
-    dirauth_sched_recalculate_timing(options, now);
-    reschedule_dirvote(options);
-
-    nodelist_set_consensus(c);
-
-    update_consensus_networkstatus_fetch_time(now);
-
-    /* Change the cell EWMA settings */
-    cmux_ewma_set_options(options, c);
-
-    /* XXXX this call might be unnecessary here: can changing the
-     * current consensus really alter our view of any OR's rate limits? */
-    connection_or_update_token_buckets(get_connection_array(), options);
-
-    circuit_build_times_new_consensus_params(
-                               get_circuit_build_times_mutable(), c);
-    channelpadding_new_consensus_params(c);
-    circpad_new_consensus_params(c);
   }
 
   /* Reset the failure count only if this consensus is actually valid. */

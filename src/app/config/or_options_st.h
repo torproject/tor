@@ -195,7 +195,14 @@ struct or_options_t {
   unsigned int HTTPTunnelPort_set : 1;
   /**@}*/
 
-  int AssumeReachable; /**< Whether to publish our descriptor regardless. */
+  /** Whether to publish our descriptor regardless of all our self-tests
+   */
+  int AssumeReachable;
+  /** Whether to publish our descriptor regardless of IPv6 self-tests.
+   *
+   * This is an autobool; when set to AUTO, it uses AssumeReachable.
+   **/
+  int AssumeReachableIPv6;
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */

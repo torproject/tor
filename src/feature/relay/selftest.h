@@ -15,7 +15,7 @@
 #ifdef HAVE_MODULE_RELAY
 
 struct or_options_t;
-#define router_should_skip_orport_reachability_check(opts) \
+#define router_all_orports_seem_reachable(opts) \
   router_orport_seems_reachable((opts),0)
 int router_orport_seems_reachable(
                                          const struct or_options_t *options,
@@ -34,7 +34,7 @@ void router_reset_reachability(void);
 
 #else /* !defined(HAVE_MODULE_RELAY) */
 
-#define router_should_skip_orport_reachability_check(opts)     \
+#define router_all_orports_seem_reachable(opts)     \
   ((void)(opts), 0)
 #define router_orport_seems_reachable(opts, fam)  \
   ((void)(opts), (void)(fam), 0)

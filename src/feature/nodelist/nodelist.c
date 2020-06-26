@@ -621,7 +621,7 @@ get_estimated_address_per_node, (void))
  * and grab microdescriptors into nodes as appropriate.
  */
 void
-nodelist_set_consensus(networkstatus_t *ns)
+nodelist_set_consensus(const networkstatus_t *ns)
 {
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v3(options);
@@ -952,7 +952,7 @@ nodelist_assert_ok(void)
 /** Ensure that the nodelist has been created with the most recent consensus.
  *  If that's not the case, make it so.  */
 void
-nodelist_ensure_freshness(networkstatus_t *ns)
+nodelist_ensure_freshness(const networkstatus_t *ns)
 {
   tor_assert(ns);
 

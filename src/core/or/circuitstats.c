@@ -399,7 +399,7 @@ circuit_build_times_initial_timeout(void)
  * and learn a new timeout.
  */
 static int32_t
-circuit_build_times_recent_circuit_count(networkstatus_t *ns)
+circuit_build_times_recent_circuit_count(const networkstatus_t *ns)
 {
   int32_t num;
   num = networkstatus_get_param(ns, "cbtrecentcount",
@@ -425,7 +425,7 @@ circuit_build_times_recent_circuit_count(networkstatus_t *ns)
  */
 void
 circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
-                                         networkstatus_t *ns)
+                                         const networkstatus_t *ns)
 {
   int32_t num;
 
