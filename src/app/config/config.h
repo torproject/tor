@@ -319,6 +319,10 @@ int options_validate(const or_options_t *old_options,
                      char **msg);
 #endif
 
+STATIC int parse_ports(or_options_t *options, int validate_only,
+                       char **msg, int *n_ports_out,
+                       int *world_writable_control_socket);
+
 #endif /* defined(CONFIG_PRIVATE) */
 
 #endif /* !defined(TOR_CONFIG_H) */
