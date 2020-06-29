@@ -615,6 +615,7 @@ process_socks5_client_request(socks_request_t *req,
                               int safe_socks)
 {
   socks_result_t res = SOCKS_RESULT_DONE;
+  tor_addr_t tmpaddr;
 
   if (req->command != SOCKS_COMMAND_CONNECT &&
       req->command != SOCKS_COMMAND_RESOLVE &&
@@ -625,11 +626,10 @@ process_socks5_client_request(socks_request_t *req,
   }
 
   if (req->command == SOCKS_COMMAND_RESOLVE_PTR &&
-      !string_is_valid_ipv4_address(req->address) &&
-      !string_is_valid_ipv6_address(req->address)) {
+      tor_addr_parse(&tmpaddr, req->address) < 0) {
     socks_request_set_socks5_error(req, SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
     log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
-                     "hostname type. Rejecting.");
+                     "a malformed address. Rejecting.");
 
     res = SOCKS_RESULT_INVALID;
     goto end;
