@@ -196,7 +196,7 @@
   STMT_END
 #define BUG(cond)                                                       \
   (ASSERT_PREDICT_UNLIKELY_(cond) ?                                     \
-  (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",1,NULL),1) \
+  (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,"!("#cond")",0,NULL),1) \
    : 0)
 #endif /* defined(ALL_BUGS_ARE_FATAL) || ... */
 
