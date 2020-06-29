@@ -596,9 +596,14 @@ send_introduce1(origin_circuit_t *intro_circ,
   /* We need to find which intro point in the descriptor we are connected to
    * on intro_circ. */
   ip = find_desc_intro_point_by_ident(intro_circ->hs_ident, desc);
-  if (BUG(ip == NULL)) {
-    /* If we can find a descriptor from this introduction circuit ident, we
-     * must have a valid intro point object. Permanent error. */
+  if (ip == NULL) {
+    /* The following is possible if the descriptor was changed while we had
+     * this introduction circuit open and waiting for the rendezvous circuit to
+     * be ready. Which results in this situation where we can't find the
+     * corresponding intro point within the descriptor of the service. */
+    log_info(LD_REND, "Unable to find introduction point for service %s "
+                      "while trying to send an INTRODUCE1 cell.",
+             safe_str_client(onion_address));
     goto perm_err;
   }
 
