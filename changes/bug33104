@@ -1,0 +1,4 @@
+  o Minor bugfixes (controller):
+    - When receiving "ACTIVE" or "DORMANT" signals on the control port,
+      report them as SIGNAL events. Fixes bug 33104; bugfix on
+      0.4.0.1-alpha.

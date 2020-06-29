@@ -16,6 +16,7 @@
 #include "core/mainloop/connection.h"
 #include "feature/control/control_events.h"
 #include "test/test.h"
+#include "test/log_test_helpers.h"
 
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
@@ -394,6 +395,43 @@ test_cntev_dirboot_defer_orconn(void *arg)
 }
 
 static void
+test_cntev_signal(void *arg)
+{
+  (void)arg;
+  int rv;
+
+  MOCK(queue_control_event_string, mock_queue_control_event_string);
+
+  /* Nothing is listening for signals, so no event should be queued. */
+  rv = control_event_signal(SIGHUP);
+  tt_int_op(0, OP_EQ, rv);
+  tt_ptr_op(saved_event_str, OP_EQ, NULL);
+
+  /* Now try with signals included in the event mask. */
+  control_testing_set_global_event_mask(EVENT_MASK_(EVENT_GOT_SIGNAL));
+  rv = control_event_signal(SIGHUP);
+  tt_int_op(0, OP_EQ, rv);
+  tt_str_op(saved_event_str, OP_EQ, "650 SIGNAL RELOAD\r\n");
+
+  rv = control_event_signal(SIGACTIVE);
+  tt_int_op(0, OP_EQ, rv);
+  tt_str_op(saved_event_str, OP_EQ, "650 SIGNAL ACTIVE\r\n");
+
+  /* Try a signal that doesn't exist. */
+  setup_full_capture_of_logs(LOG_WARN);
+  tor_free(saved_event_str);
+  rv = control_event_signal(99999);
+  tt_int_op(-1, OP_EQ, rv);
+  tt_ptr_op(saved_event_str, OP_EQ, NULL);
+  expect_single_log_msg_containing("Unrecognized signal 99999");
+
+ done:
+  tor_free(saved_event_str);
+ teardown_capture_of_logs();
+  UNMOCK(queue_control_event_string);
+}
+
+static void
 setup_orconn_state(orconn_event_msg_t *msg, uint64_t gid, uint64_t chan,
                    int proxy_type)
 {
@@ -541,6 +579,7 @@ struct testcase_t controller_event_tests[] = {
   TEST(event_mask, TT_FORK),
   TEST(dirboot_defer_desc, TT_FORK),
   TEST(dirboot_defer_orconn, TT_FORK),
+  TEST(signal, TT_FORK),
   TEST(orconn_state, TT_FORK),
   TEST(orconn_state_pt, TT_FORK),
   TEST(orconn_state_proxy, TT_FORK),
