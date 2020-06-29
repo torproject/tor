@@ -151,32 +151,6 @@ tor_log_reset_sigsafe_err_fds(void)
 }
 
 /**
- * Close the list of fds that get errors from inside a signal handler or
- * other emergency condition. These fds are shared with the logging code:
- * closing them flushes the log buffers, and prevents any further logging.
- *
- * This function closes stderr, so it should only be called immediately before
- * process shutdown.
- */
-void
-tor_log_close_sigsafe_err_fds(void)
-{
-  int n_fds, i;
-  const int *fds = NULL;
-
-  n_fds = tor_log_get_sigsafe_err_fds(&fds);
-  for (i = 0; i < n_fds; ++i) {
-    /* tor_log_close_sigsafe_err_fds_on_error() is called on error and on
-     * shutdown, so we can't log or take any useful action if close()
-     * fails. */
-    (void)close(fds[i]);
-  }
-
-  /* Don't even try logging, we've closed all the log fds. */
-  tor_log_set_sigsafe_err_fds(NULL, 0);
-}
-
-/**
  * Set the granularity (in ms) to use when reporting fatal errors outside
  * the logging system.
  */
@@ -217,13 +191,12 @@ tor_raw_assertion_failed_msg_(const char *file, int line, const char *expr,
 
 /**
  * Call the abort() function to kill the current process with a fatal
- * error. But first, close the raw error file descriptors, so error messages
- * are written before process termination.
+ * error. This is a separate function, so that log users don't have to include
+ * the header for abort().
  **/
 void
 tor_raw_abort_(void)
 {
-  tor_log_close_sigsafe_err_fds();
   abort();
 }
 
