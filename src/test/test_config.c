@@ -4956,6 +4956,71 @@ test_config_parse_port_config__ports__server_options(void *data)
 }
 
 static void
+test_config_get_first_advertised(void *data)
+{
+  (void)data;
+  int r, w=0, n=0;
+  char *msg=NULL;
+  or_options_t *opts = options_new();
+  int port;
+  const tor_addr_t *addr;
+
+  // no ports are configured? We get NULL.
+  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET);
+  tt_int_op(port, OP_EQ, 0);
+  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET);
+  tt_ptr_op(addr, OP_EQ, NULL);
+
+  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET6);
+  tt_int_op(port, OP_EQ, 0);
+  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET6);
+  tt_ptr_op(addr, OP_EQ, NULL);
+
+  config_line_append(&opts->ORPort_lines, "ORPort", "[1234::5678]:8080");
+  config_line_append(&opts->ORPort_lines, "ORPort",
+                     "1.2.3.4:9999 noadvertise");
+  config_line_append(&opts->ORPort_lines, "ORPort",
+                     "5.6.7.8:9911 nolisten");
+
+  r = parse_ports(opts, 0, &msg, &n, &w);
+  tt_assert(r == 0);
+
+  // UNSPEC gets us nothing.
+  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_UNSPEC);
+  tt_int_op(port, OP_EQ, 0);
+  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_UNSPEC);
+  tt_ptr_op(addr, OP_EQ, NULL);
+
+  // Try AF_INET.
+  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET);
+  tt_int_op(port, OP_EQ, 9911);
+  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET);
+  tt_ptr_op(addr, OP_NE, NULL);
+  tt_str_op(fmt_addrport(addr,port), OP_EQ, "5.6.7.8:9911");
+
+  // Try AF_INET6
+  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET6);
+  tt_int_op(port, OP_EQ, 8080);
+  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+                                              AF_INET6);
+  tt_ptr_op(addr, OP_NE, NULL);
+  tt_str_op(fmt_addrport(addr,port), OP_EQ, "[1234::5678]:8080");
+
+ done:
+  or_options_free(opts);
+  config_free_all();
+}
+
+static void
 test_config_parse_log_severity(void *data)
 {
   int ret;
@@ -6203,6 +6268,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(parse_port_config__ports__no_ports_given, 0),
   CONFIG_TEST(parse_port_config__ports__server_options, 0),
   CONFIG_TEST(parse_port_config__ports__ports_given, 0),
+  CONFIG_TEST(get_first_advertised, TT_FORK),
   CONFIG_TEST(parse_log_severity, 0),
   CONFIG_TEST(include_limit, 0),
   CONFIG_TEST(include_does_not_exist, 0),
