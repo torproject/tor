@@ -163,8 +163,7 @@ tor_bug_occurred_(const char *fname, unsigned int line,
 
 /**
  * Call the tor_raw_abort_() function to close raw logs, then kill the current
- * process with a fatal error. But first, close the file-based log file
- * descriptors, so error messages are written before process termination.
+ * process with a fatal error.
  *
  * (This is a separate function so that we declare it in util_bug.h without
  * including torerr.h in all the users of util_bug.h)
@@ -172,7 +171,6 @@ tor_bug_occurred_(const char *fname, unsigned int line,
 void
 tor_abort_(void)
 {
-  logs_close_sigsafe();
   tor_raw_abort_();
 }
 
