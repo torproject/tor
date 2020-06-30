@@ -63,10 +63,10 @@
 #include "trunnel/channelpadding_negotiation.h"
 #include "trunnel/netinfo.h"
 #include "core/or/channelpadding.h"
+#include "core/or/extendinfo.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cell_queue_st.h"
-#include "core/or/extend_info_st.h"
 #include "core/or/or_connection_st.h"
 #include "core/or/or_handshake_certs_st.h"
 #include "core/or/or_handshake_state_st.h"
@@ -702,9 +702,9 @@ channel_tls_matches_extend_info_method(channel_t *chan,
     return 0;
   }
 
-  return (tor_addr_eq(&(extend_info->addr),
-                      &(TO_CONN(tlschan->conn)->addr)) &&
-         (extend_info->port == TO_CONN(tlschan->conn)->port));
+  return extend_info_has_orport(extend_info,
+                                &TO_CONN(tlschan->conn)->addr,
+                                TO_CONN(tlschan->conn)->port);
 }
 
 /**

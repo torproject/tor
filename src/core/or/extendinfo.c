@@ -207,3 +207,16 @@ extend_info_addr_is_allowed(const tor_addr_t *addr)
  disallow:
   return 0;
 }
+
+/**
+ * Return true if @a addr : @a port is a listed ORPort in @a ei.
+ **/
+bool
+extend_info_has_orport(const extend_info_t *ei,
+                       const tor_addr_t *addr, uint16_t port)
+{
+  IF_BUG_ONCE(ei == NULL)
+    return false;
+
+  return tor_addr_eq(&ei->addr, addr) && ei->port == port;
+}
