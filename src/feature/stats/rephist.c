@@ -2484,7 +2484,7 @@ typedef struct hs_stats_t {
 
   /** Set of unique public key digests we've seen this stat period
    * (could also be implemented as sorted smartlist). */
-  digestmap_t *onions_seen_this_period;
+  digestmap_t *v2_onions_seen_this_period;
 } hs_stats_t;
 
 /** Our statistics structure singleton. */
@@ -2495,7 +2495,7 @@ static hs_stats_t *
 hs_stats_new(void)
 {
   hs_stats_t *new_hs_stats = tor_malloc_zero(sizeof(hs_stats_t));
-  new_hs_stats->onions_seen_this_period = digestmap_new();
+  new_hs_stats->v2_onions_seen_this_period = digestmap_new();
 
   return new_hs_stats;
 }
@@ -2511,7 +2511,7 @@ hs_stats_free_(hs_stats_t *victim_hs_stats)
     return;
   }
 
-  digestmap_free(victim_hs_stats->onions_seen_this_period, NULL);
+  digestmap_free(victim_hs_stats->v2_onions_seen_this_period, NULL);
   tor_free(victim_hs_stats);
 }
 
@@ -2537,8 +2537,8 @@ rep_hist_reset_hs_stats(time_t now)
 
   hs_stats->rp_relay_cells_seen = 0;
 
-  digestmap_free(hs_stats->onions_seen_this_period, NULL);
-  hs_stats->onions_seen_this_period = digestmap_new();
+  digestmap_free(hs_stats->v2_onions_seen_this_period, NULL);
+  hs_stats->v2_onions_seen_this_period = digestmap_new();
 
   start_of_hs_stats_interval = now;
 }
@@ -2584,9 +2584,9 @@ rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
 
   /* Check if this is the first time we've seen this hidden
      service. If it is, count it as new. */
-  if (!digestmap_get(hs_stats->onions_seen_this_period,
+  if (!digestmap_get(hs_stats->v2_onions_seen_this_period,
                      pubkey_hash)) {
-    digestmap_set(hs_stats->onions_seen_this_period,
+    digestmap_set(hs_stats->v2_onions_seen_this_period,
                   pubkey_hash, (void*)(uintptr_t)1);
   }
 }
@@ -2634,7 +2634,7 @@ rep_hist_format_hs_stats(time_t now)
 
   uint64_t rounded_onions_seen =
     round_uint64_to_next_multiple_of((size_t)digestmap_size(
-                                        hs_stats->onions_seen_this_period),
+                                        hs_stats->v2_onions_seen_this_period),
                                      ONIONS_SEEN_BIN_SIZE);
   rounded_onions_seen = MIN(rounded_onions_seen, INT64_MAX);
   obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
