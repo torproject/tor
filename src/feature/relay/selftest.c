@@ -45,6 +45,9 @@
 #include "feature/relay/selftest.h"
 
 static bool have_orport_for_family(int family);
+static void inform_testing_reachability(const tor_addr_t *addr,
+                                        uint16_t port,
+                                        bool is_dirport);
 
 /** Whether we can reach our IPv4 ORPort from the outside. */
 static bool can_reach_or_port_ipv4 = false;
@@ -255,6 +258,9 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
     log_info(LD_CIRC, "Testing %s of my %s ORPort: %s.",
              !orport_reachable ? "reachability" : "bandwidth",
              family_name, fmt_addrport(&ei->addr, ei->port));
+    if (!orport_reachable) {
+      inform_testing_reachability(&ei->addr, ei->port, false);
+    }
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                                   CIRCLAUNCH_NEED_CAPACITY|
                                   CIRCLAUNCH_IS_INTERNAL|
@@ -292,6 +298,8 @@ router_do_dirport_reachability_checks(const routerinfo_t *me)
     directory_request_set_resource(req, "authority.z");
     directory_initiate_request(req);
     directory_request_free(req);
+
+    inform_testing_reachability(&my_dirport.addr, my_dirport.port, true);
   }
 }
 
@@ -335,73 +343,35 @@ router_do_reachability_checks(int test_or, int test_dir)
   }
 }
 
-/** If reachability testing is in progress, let the user know that it's
- * happening.
+/** Log a message informing the user that we are testing a port for
+ * reachability.
  *
- * If all is set, log a notice-level message. Return 1 if we did, or 0 if
- * we chose not to log anything, because we were unable to test reachability.
- */
-int
-inform_testing_reachability(void)
+ * If @a is_dirport is true, then the port is a DirPort; otherwise it is an
+ * ORPort. */
+static void
+inform_testing_reachability(const tor_addr_t *addr,
+                            uint16_t port,
+                            bool is_dirport)
 {
-  char ipv4_or_buf[TOR_ADDRPORT_BUF_LEN];
-  char ipv6_or_buf[TOR_ADDRPORT_BUF_LEN];
-  char ipv4_dir_buf[TOR_ADDRPORT_BUF_LEN];
+  if (!router_get_my_routerinfo())
+    return;
 
-  /* There's a race condition here, between:
-   *  - tor launching reachability tests,
-   *  - any circuits actually completing,
-   *  - routerinfo updates, and
-   *  - these log messages.
-   * In rare cases, we might log the wrong ports, log when we didn't actually
-   * start reachability tests, or fail to log after we actually started
-   * reachability tests.
-   *
-   * We'll deal with late disabled IPv6 ORPorts and IPv4 DirPorts, and
-   * extra or skipped log messages in #34137.
-   */
-  const routerinfo_t *me = router_get_my_routerinfo();
-  if (!me)
-    return 0;
+  char addr_buf[TOR_ADDRPORT_BUF_LEN];
+  strlcpy(addr_buf, fmt_addrport(addr, port), sizeof(addr_buf));
 
-  /* IPv4 ORPort */
-  strlcpy(ipv4_or_buf, fmt_addr32_port(me->addr, me->or_port),
-          sizeof(ipv4_or_buf));
+  const char *control_addr_type = is_dirport ? "DIRADDRESS" : "ORADDRESS";
+  const char *port_type = is_dirport ? "DirPort" : "ORPort";
+  const char *afname = fmt_af_family(tor_addr_family(addr));
+
   control_event_server_status(LOG_NOTICE,
-                              "CHECKING_REACHABILITY ORADDRESS=%s",
-                              ipv4_or_buf);
-  /* IPv6 ORPort */
-  const bool has_ipv6 = tor_addr_port_is_valid(&me->ipv6_addr,
-                                               me->ipv6_orport, 0);
-  if (has_ipv6) {
-    strlcpy(ipv6_or_buf, fmt_addrport(&me->ipv6_addr, me->ipv6_orport),
-            sizeof(ipv6_or_buf));
-    control_event_server_status(LOG_NOTICE,
-                                "CHECKING_REACHABILITY ORADDRESS=%s",
-                                ipv6_or_buf);
-    /* We'll add an IPv6 control event in #34068. */
-  }
-  /* IPv4 DirPort (there are no advertised IPv6 DirPorts) */
-  if (me->dir_port) {
-    strlcpy(ipv4_dir_buf, fmt_addr32_port(me->addr, me->dir_port),
-            sizeof(ipv4_dir_buf));
-    control_event_server_status(LOG_NOTICE,
-                                "CHECKING_REACHABILITY DIRADDRESS=%s",
-                                ipv4_dir_buf);
-  }
-  log_notice(LD_OR, "Now checking whether ORPort%s %s%s%s%s%s %s reachable... "
+                              "CHECKING_REACHABILITY %s=%s",
+                              control_addr_type, addr_buf);
+
+  log_notice(LD_OR, "Now checking whether %s %s %s is reachable... "
              "(this may take up to %d minutes -- look for log "
              "messages indicating success)",
-             has_ipv6 ? "s" : "",
-             ipv4_or_buf,
-             has_ipv6 ? " and " : "",
-             has_ipv6 ? ipv6_or_buf : "",
-             me->dir_port ? " and DirPort " : "",
-             me->dir_port ? ipv4_dir_buf : "",
-             has_ipv6 || me->dir_port ? "are" : "is",
+             afname, port_type, addr_buf,
              TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
-
-  return 1;
 }
 
 /**

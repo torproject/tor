@@ -1114,8 +1114,6 @@ options_act_relay(const or_options_t *old_options)
 
       if (server_mode_turned_on) {
         ip_address_changed(0);
-        if (have_completed_a_circuit() || !any_predicted_circuits(time(NULL)))
-          inform_testing_reachability();
       }
       cpuworkers_rotate_keyinfo();
     }

@@ -1056,7 +1056,6 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
     clear_broken_connection_map(1);
     if (server_mode(options) &&
         !router_all_orports_seem_reachable(options)) {
-      inform_testing_reachability();
       router_do_reachability_checks(1, 1);
     }
   }
