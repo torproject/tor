@@ -2034,7 +2034,7 @@ nodelist_refresh_countries(void)
 /** Return true iff router1 and router2 have similar enough network addresses
  * that we should treat them as being in the same family */
 int
-addrs_in_same_network_family(const tor_addr_t *a1,
+router_addrs_in_same_network(const tor_addr_t *a1,
                              const tor_addr_t *a2)
 {
   if (tor_addr_is_null(a1) || tor_addr_is_null(a2))
@@ -2150,8 +2150,8 @@ nodes_in_same_family(const node_t *node1, const node_t *node2)
     node_get_pref_ipv6_orport(node1, &ap6_1);
     node_get_pref_ipv6_orport(node2, &ap6_2);
 
-    if (addrs_in_same_network_family(&a1, &a2) ||
-        addrs_in_same_network_family(&ap6_1.addr, &ap6_2.addr))
+    if (router_addrs_in_same_network(&a1, &a2) ||
+        router_addrs_in_same_network(&ap6_1.addr, &ap6_2.addr))
       return 1;
   }
 
@@ -2209,8 +2209,8 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
       tor_addr_port_t ap6;
       node_get_addr(node2, &a);
       node_get_pref_ipv6_orport(node2, &ap6);
-      if (addrs_in_same_network_family(&a, &node_addr) ||
-          addrs_in_same_network_family(&ap6.addr, &node_ap6.addr))
+      if (router_addrs_in_same_network(&a, &node_addr) ||
+          router_addrs_in_same_network(&ap6.addr, &node_ap6.addr))
         smartlist_add(sl, (void*)node2);
     } SMARTLIST_FOREACH_END(node2);
   }

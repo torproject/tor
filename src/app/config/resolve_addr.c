@@ -568,8 +568,26 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   return true;
 }
 
-/** Return true iff <b>addr</b> is judged to be on the same network as us, or
- * on a private network.
+/** @brief: Return true iff the given addr is judged to be local to our
+ * resolved address.
+ *
+ * This function is used to tell whether another address is 'remote' enough
+ * that we can trust it when it tells us that we are reachable, or that we
+ * have a certain address."
+ *
+ * The criterion to learn if the address is local are the following:
+ *
+ *    1. Internal address.
+ *    2. If EnforceDistinctSubnets is set then it is never local.
+ *    3. Network mask is compared. IPv4: /24 and IPv6 /48. This is different
+ *       from the path selection that looks at /16 and /32 because we only
+ *       want to learn here if the address is considered to come from the
+ *       Internet basically.
+ *
+ * @param addr The address to test if local and also test against our resovled
+ *             address.
+ *
+ * @return True iff address is considered local or else False.
  */
 MOCK_IMPL(bool,
 is_local_to_resolve_addr, (const tor_addr_t *addr))
@@ -589,10 +607,6 @@ is_local_to_resolve_addr, (const tor_addr_t *addr))
 
   switch (family) {
   case AF_INET:
-    /* XXX: Why is this /24 and not /16 which the rest of tor does? Unknown
-     * reasons at the moment highlighted in ticket #40009. Because of that, we
-     * can't use addrs_in_same_network_family(). */
-
     /* It's possible that this next check will hit before the first time
      * find_my_address actually succeeds. For clients, it is likely that
      * find_my_address will never be called at all. In those cases,

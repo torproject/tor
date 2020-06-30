@@ -1554,7 +1554,7 @@ guard_in_node_family(const entry_guard_t *guard, const node_t *node)
     if (get_options()->EnforceDistinctSubnets && guard->bridge_addr) {
       tor_addr_t node_addr;
       node_get_addr(node, &node_addr);
-      if (addrs_in_same_network_family(&node_addr,
+      if (router_addrs_in_same_network(&node_addr,
                                        &guard->bridge_addr->addr)) {
         return 1;
       }
