@@ -12,6 +12,7 @@
 #define DESCRIBE_PRIVATE
 
 #include "core/or/or.h"
+#include "core/or/extendinfo.h"
 #include "feature/nodelist/describe.h"
 
 #include "core/or/extend_info_st.h"
@@ -208,11 +209,16 @@ extend_info_describe(const extend_info_t *ei)
   if (!ei)
     return "<null>";
 
+  const tor_addr_port_t *ap4 = extend_info_get_orport(ei, AF_INET);
+  const tor_addr_port_t *ap6 = extend_info_get_orport(ei, AF_INET6);
+  uint32_t addr4 = ap4 ? tor_addr_to_ipv4h(&ap4->addr) : 0;
+  const tor_addr_t *addr6 = ap6 ? &ap6->addr : NULL;
+
   return format_node_description(buf,
                                  ei->identity_digest,
                                  ei->nickname,
-                                 &ei->addr,
-                                 0);
+                                 addr6,
+                                 addr4);
 }
 
 /** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the

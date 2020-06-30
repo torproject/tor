@@ -98,12 +98,13 @@ channel_connect_for_circuit,(const extend_info_t *ei))
 {
   channel_t *chan;
 
-  const tor_addr_t *addr = &ei->addr;
-  uint16_t port = ei->port;
+  const tor_addr_port_t *orport = extend_info_pick_orport(ei);
+  if (!orport)
+    return NULL;
   const char *id_digest = ei->identity_digest;
   const ed25519_public_key_t *ed_id = &ei->ed_identity;
 
-  chan = channel_connect(addr, port, id_digest, ed_id);
+  chan = channel_connect(&orport->addr, orport->port, id_digest, ed_id);
   if (chan) command_setup_channel(chan);
 
   return chan;
@@ -551,7 +552,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
    * - the address is internal, and
    * - we're not connecting to a configured bridge, and
    * - we're not configured to allow extends to private addresses. */
-  if (tor_addr_is_internal(&firsthop->extend_info->addr, 0) &&
+  if (extend_info_any_orport_addr_is_internal(firsthop->extend_info) &&
       !extend_info_is_a_configured_bridge(firsthop->extend_info) &&
       !options->ExtendAllowPrivateAddresses) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -560,19 +561,19 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   }
 
   /* now see if we're already connected to the first OR in 'route' */
-  log_debug(LD_CIRC,"Looking for firsthop '%s'",
-            fmt_addrport(&firsthop->extend_info->addr,
-                         firsthop->extend_info->port));
+  // TODO XXXX S55 -- remove this log
+  log_debug(LD_CIRC,"Looking for firsthop for %s",
+            extend_info_describe(firsthop->extend_info));
 
-  /* We'll cleanup this code in #33220, when we add an IPv6 address to
-   * extend_info_t. */
-  const bool addr_is_ipv4 =
-    (tor_addr_family(&firsthop->extend_info->addr) == AF_INET);
+  const tor_addr_port_t *orport4 =
+    extend_info_get_orport(firsthop->extend_info, AF_INET);
+  const tor_addr_port_t *orport6 =
+    extend_info_get_orport(firsthop->extend_info, AF_INET6);
   n_chan = channel_get_for_extend(
                           firsthop->extend_info->identity_digest,
                           &firsthop->extend_info->ed_identity,
-                          addr_is_ipv4 ? &firsthop->extend_info->addr : NULL,
-                          addr_is_ipv4 ? NULL : &firsthop->extend_info->addr,
+                          orport4 ? &orport4->addr : NULL,
+                          orport6 ? &orport6->addr : NULL,
                           &msg,
                           &should_launch);
 
@@ -1075,42 +1076,40 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                      crypt_path_t *hop)
 {
   int len;
-  int family = tor_addr_family(&hop->extend_info->addr);
   extend_cell_t ec;
-  memset(&ec, 0, sizeof(ec));
-
-  log_debug(LD_CIRC,"starting to send subsequent skin.");
-
   /* Relays and bridges can send IPv6 extends. But for clients, it's an
    * obvious version distinguisher. */
-  if (server_mode(get_options())) {
-    if (family != AF_INET && family != AF_INET6) {
-      log_warn(LD_BUG, "Server trying to extend to an invalid address "
-               "family.");
-      return - END_CIRC_REASON_INTERNAL;
-    }
-  } else {
-    if (family != AF_INET) {
-      log_warn(LD_BUG, "Client trying to extend to a non-IPv4 address.");
-      return - END_CIRC_REASON_INTERNAL;
-    }
-  }
+  const bool include_ipv6 = server_mode(get_options());
+  memset(&ec, 0, sizeof(ec));
+  tor_addr_make_unspec(&ec.orport_ipv4.addr);
+  tor_addr_make_unspec(&ec.orport_ipv6.addr);
+
+  log_debug(LD_CIRC,"starting to send subsequent skin.");
 
   circuit_pick_extend_handshake(&ec.cell_type,
                                 &ec.create_cell.cell_type,
                                 &ec.create_cell.handshake_type,
                                 hop->extend_info);
 
-  /* At the moment, extend_info only has one ORPort address. We'll add a
-   * second address in #34069, to support dual-stack extend cells. */
-  if (family == AF_INET) {
-    tor_addr_copy(&ec.orport_ipv4.addr, &hop->extend_info->addr);
-    ec.orport_ipv4.port = hop->extend_info->port;
-    tor_addr_make_unspec(&ec.orport_ipv6.addr);
-  } else {
-    tor_addr_copy(&ec.orport_ipv6.addr, &hop->extend_info->addr);
-    ec.orport_ipv6.port = hop->extend_info->port;
-    tor_addr_make_unspec(&ec.orport_ipv4.addr);
+  const tor_addr_port_t *orport4 =
+    extend_info_get_orport(hop->extend_info, AF_INET);
+  const tor_addr_port_t *orport6 =
+    extend_info_get_orport(hop->extend_info, AF_INET6);
+  int n_addrs_set = 0;
+  if (orport4) {
+    tor_addr_copy(&ec.orport_ipv4.addr, &orport4->addr);
+    ec.orport_ipv4.port = orport4->port;
+    ++n_addrs_set;
+  }
+  if (orport6 && include_ipv6) {
+    tor_addr_copy(&ec.orport_ipv6.addr, &orport6->addr);
+    ec.orport_ipv6.port = orport6->port;
+    ++n_addrs_set;
+  }
+
+  if (n_addrs_set == 0) {
+    log_warn(LD_BUG, "No supported address family found in extend_info.");
+    return - END_CIRC_REASON_INTERNAL;
   }
   memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
   /* Set the ED25519 identity too -- it will only get included

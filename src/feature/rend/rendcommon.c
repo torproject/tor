@@ -234,7 +234,12 @@ rend_encode_v2_intro_points(char **encoded, rend_service_descriptor_t *desc)
       goto done;
     }
     /* Assemble everything for this introduction point. */
-    address = tor_addr_to_str_dup(&info->addr);
+    const tor_addr_port_t *orport = extend_info_get_orport(info, AF_INET);
+    IF_BUG_ONCE(!orport) {
+      /* There must be an IPv4 address for v2 hs. */
+      goto done;
+    }
+    address = tor_addr_to_str_dup(&orport->addr);
     res = tor_snprintf(unenc + unenc_written, unenc_len - unenc_written,
                          "introduction-point %s\n"
                          "ip-address %s\n"
@@ -243,7 +248,7 @@ rend_encode_v2_intro_points(char **encoded, rend_service_descriptor_t *desc)
                          "service-key\n%s",
                        id_base32,
                        address,
-                       info->port,
+                       orport->port,
                        onion_key,
                        service_key);
     tor_free(address);

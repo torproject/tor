@@ -46,9 +46,33 @@ extend_info_new(const char *nickname,
   if (ntor_key)
     memcpy(&info->curve25519_onion_key, ntor_key,
            sizeof(curve25519_public_key_t));
-  tor_addr_copy(&info->addr, addr);
-  info->port = port;
+  for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
+    tor_addr_make_unspec(&info->orports[i].addr);
+  }
+
+  if (addr) {
+    extend_info_add_orport(info, addr, port);
+  }
   return info;
+}
+
+/**
+ * Add another address:port pair to a given extend_info_t, if there is
+ * room.  Return 0 on success, -1 on failure.
+ **/
+int
+extend_info_add_orport(extend_info_t *ei,
+                       const tor_addr_t *addr,
+                       uint16_t port)
+{
+  for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
+    if (tor_addr_is_unspec(&ei->orports[i].addr)) {
+      tor_addr_copy(&ei->orports[i].addr, addr);
+      ei->orports[i].port = port;
+      return 0;
+    }
+  }
+  return -1;
 }
 
 /** Allocate and return a new extend_info that can be used to build a
@@ -219,5 +243,61 @@ extend_info_has_orport(const extend_info_t *ei,
   IF_BUG_ONCE(ei == NULL)
     return false;
 
-  return tor_addr_eq(&ei->addr, addr) && ei->port == port;
+  for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
+    const tor_addr_port_t *ei_ap = &ei->orports[i];
+    if (tor_addr_eq(&ei_ap->addr, addr) && ei_ap->port == port)
+      return true;
+  }
+  return false;
+}
+
+/**
+ * If the extend_info @a ei has an orport of the chosen family, then return
+ * that orport.  Otherwise, return NULL.
+ **/
+const tor_addr_port_t *
+extend_info_get_orport(const extend_info_t *ei, int family)
+{
+  for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
+    if (tor_addr_is_unspec(&ei->orports[i].addr))
+      continue;
+    if (tor_addr_family(&ei->orports[i].addr) == family)
+      return &ei->orports[i];
+  }
+  return NULL;
+}
+
+/**
+ * Chose an addr_port_t within @a ei to connect to.
+ **/
+const tor_addr_port_t *
+extend_info_pick_orport(const extend_info_t *ei)
+{
+  // XXXX S55 -- for now, we just pick the first.  We'll work on
+  // XXXX more choices as we move forward.
+  IF_BUG_ONCE(!ei) {
+    return NULL;
+  }
+
+  if (tor_addr_is_unspec(&ei->orports[0].addr)) {
+    return NULL;
+  }
+  return &ei->orports[0];
+}
+
+/**
+ * Return true if any orport address in @a ei is an internal address.
+ **/
+bool
+extend_info_any_orport_addr_is_internal(const extend_info_t *ei)
+{
+  IF_BUG_ONCE(ei == NULL)
+    return false;
+
+  for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
+    if (! tor_addr_is_unspec(&ei->orports[i].addr) &&
+        tor_addr_is_internal(&ei->orports[i].addr, 0))
+      return true;
+  }
+  return false;
 }
