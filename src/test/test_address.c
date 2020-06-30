@@ -1152,23 +1152,23 @@ test_address_tor_addr_in_same_network_family(void *ignored)
 
   tor_addr_parse(&a, "8.8.8.8");
   tor_addr_parse(&b, "8.8.4.4");
-  tt_int_op(addrs_in_same_network_family(&a, &b), OP_EQ, 1);
+  tt_int_op(router_addrs_in_same_network(&a, &b), OP_EQ, 1);
 
   tor_addr_parse(&a, "8.8.8.8");
   tor_addr_parse(&b, "1.1.1.1");
-  tt_int_op(addrs_in_same_network_family(&a, &b), OP_EQ, 0);
+  tt_int_op(router_addrs_in_same_network(&a, &b), OP_EQ, 0);
 
   tor_addr_parse(&a, "8.8.8.8");
   tor_addr_parse(&b, "2001:4860:4860::8844");
-  tt_int_op(addrs_in_same_network_family(&a, &b), OP_EQ, 0);
+  tt_int_op(router_addrs_in_same_network(&a, &b), OP_EQ, 0);
 
   tor_addr_parse(&a, "2001:4860:4860::8888");
   tor_addr_parse(&b, "2001:4860:4860::8844");
-  tt_int_op(addrs_in_same_network_family(&a, &b), OP_EQ, 1);
+  tt_int_op(router_addrs_in_same_network(&a, &b), OP_EQ, 1);
 
   tor_addr_parse(&a, "2001:4860:4860::8888");
   tor_addr_parse(&b, "2001:470:20::2");
-  tt_int_op(addrs_in_same_network_family(&a, &b), OP_EQ, 0);
+  tt_int_op(router_addrs_in_same_network(&a, &b), OP_EQ, 0);
 
  done:
   return;
