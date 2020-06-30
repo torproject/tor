@@ -573,7 +573,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
  *
  * This function is used to tell whether another address is 'remote' enough
  * that we can trust it when it tells us that we are reachable, or that we
- * have a certain address."
+ * have a certain address.
  *
  * The criterion to learn if the address is local are the following:
  *
