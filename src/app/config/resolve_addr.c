@@ -220,8 +220,10 @@ get_address_from_config(const or_options_t *options, int warn_severity,
     log_fn(warn_severity, LD_CONFIG,
            "No Address option found for family %s in configuration.",
            fmt_af_family(family));
-    /* No Address statement for family, inform caller to try next method. */
-    return FN_RET_NEXT;
+    /* No Address statement for family but one exists since Address is not
+     * NULL thus we have to stop now and not attempt to send back a guessed
+     * address. */
+    return FN_RET_BAIL;
   }
 
   if (num_valid_addr >= MAX_CONFIG_ADDRESS) {
