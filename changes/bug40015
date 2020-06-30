@@ -1,0 +1,4 @@
+  o Major bugfixes (crash, relay, signing key):
+    - Avoid asserts when we run Tor from the command line with
+      `--key-expiration sign` when an ORPort is not set. Fixes
+      bug 40015; bugfix on 0.3.2.1-alpha. Patch by Neel Chauhan.

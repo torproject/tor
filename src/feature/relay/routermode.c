@@ -34,6 +34,7 @@ MOCK_IMPL(int,
 server_mode,(const or_options_t *options))
 {
   if (options->ClientOnly) return 0;
+  if (options->command == CMD_KEY_EXPIRATION) return 1;
   return (options->ORPort_set);
 }
 
