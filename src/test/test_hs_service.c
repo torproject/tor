@@ -1619,7 +1619,7 @@ test_build_update_descriptors(void *arg)
   /* We won't test the service IP object because there is a specific test
    * already for this but we'll make sure that the state is coherent.*/
 
-  /* Three link specifiers are mandatoy so make sure we do have them. */
+  /* Three link specifiers are mandatory so make sure we do have them. */
   tt_int_op(smartlist_len(ip_cur->base.link_specifiers), OP_EQ, 3);
   /* Make sure we have a valid encryption keypair generated when we pick an
    * intro point in the update process. */
