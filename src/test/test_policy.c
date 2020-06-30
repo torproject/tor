@@ -2085,8 +2085,8 @@ test_policies_fascist_firewall_allows_address(void *arg)
       expect_single_log_msg("Specified link specifiers is null"); \
     } else { \
       expect_no_log_entry(); \
-      tt_assert(tor_addr_eq(&(expect_ap).addr, &ei->addr)); \
-      tt_int_op((expect_ap).port, OP_EQ, ei->port); \
+      tt_assert(tor_addr_eq(&(expect_ap).addr, &ei->orports[0].addr)); \
+      tt_int_op((expect_ap).port, OP_EQ, ei->orports[0].port); \
       extend_info_free(ei); \
     } \
     teardown_capture_of_logs(); \

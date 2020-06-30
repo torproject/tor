@@ -253,9 +253,10 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
    * be NULL. */
   if (ei) {
     const char *family_name = fmt_af_family(family);
+    const tor_addr_port_t *ap = extend_info_get_orport(ei, family);
     log_info(LD_CIRC, "Testing %s of my %s ORPort: %s.",
              !orport_reachable ? "reachability" : "bandwidth",
-             family_name, fmt_addrport(&ei->addr, ei->port));
+             family_name, fmt_addrport_ap(ap));
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                                   CIRCLAUNCH_NEED_CAPACITY|
                                   CIRCLAUNCH_IS_INTERNAL|

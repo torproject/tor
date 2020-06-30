@@ -15,6 +15,11 @@
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
+/** Larges number of addresses we handle in an extend_info.
+ *
+ * More are permitted in an EXTEND cell, but we won't handle them. */
+#define EXTEND_INFO_MAX_ADDRS 2
+
 /** Information on router used when extending a circuit. We don't need a
  * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
  * connection, and onion_key to create the onionskin. Note that for one-hop
@@ -26,8 +31,9 @@ struct extend_info_t {
   char identity_digest[DIGEST_LEN];
   /** Ed25519 identity for this router, if any. */
   ed25519_public_key_t ed_identity;
-  uint16_t port; /**< OR port. */
-  tor_addr_t addr; /**< IP address. */
+  /** IP/Port values for this hop's ORPort(s).  Any unused values are set
+   * to a null address. */
+  tor_addr_port_t orports[EXTEND_INFO_MAX_ADDRS];
   /** TAP onion key for this hop. */
   crypto_pk_t *onion_key;
   /** Ntor onion key for this hop. */
