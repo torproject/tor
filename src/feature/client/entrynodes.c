@@ -3452,10 +3452,16 @@ entry_guards_update_state(or_state_t *state)
   entry_guards_dirty = 0;
 }
 
-/** Return true iff the circuit's guard can succeed that is can be used. */
+/** Return true iff the circuit's guard can succeed, that is, can be used. */
 int
 entry_guard_could_succeed(const circuit_guard_state_t *guard_state)
 {
+  if (get_options()->UseEntryGuards == 0) {
+    /* we're fine with this circuit's first hop, because we're not
+     * configured to use entry guards. */
+    return 1;
+  }
+
   if (!guard_state) {
     return 0;
   }
