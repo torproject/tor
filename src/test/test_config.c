@@ -1170,7 +1170,7 @@ get_interface_address6_failure(int severity, sa_family_t family,
 }
 
 static void
-test_config_find_my_address(void *arg)
+test_config_find_my_address_v4(void *arg)
 {
   or_options_t *options;
   tor_addr_t resolved_addr, test_addr;
@@ -6245,7 +6245,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(adding_dir_servers, TT_FORK),
   CONFIG_TEST(default_dir_servers, TT_FORK),
   CONFIG_TEST(default_fallback_dirs, 0),
-  CONFIG_TEST(find_my_address, TT_FORK),
+  CONFIG_TEST(find_my_address_v4, TT_FORK),
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),
   CONFIG_TEST(parse_transport_options_line, 0),
