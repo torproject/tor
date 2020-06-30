@@ -1058,6 +1058,46 @@ tor_addr_lookup_failure(const char *name, uint16_t family, tor_addr_t *addr)
   return -1;
 }
 
+/** Mock function for tor_addr_lookup().
+ *
+ * Depending on the given hostname and family, resolve either to IPv4 or IPv6.
+ *
+ * If the requested hostname family is not the same as the family provided, an
+ * error is returned.
+ *
+ * Possible hostnames:
+ *  - www.torproject.org.v4 for IPv4 -> 1.1.1.1
+ *  - www.torproject.org.v6 for IPv6 -> [0101::0101]
+ */
+static int
+tor_addr_lookup_mixed(const char *name, uint16_t family, tor_addr_t *addr)
+{
+  tt_assert(addr);
+  tt_assert(name);
+
+  if (!strcmp(name, "www.torproject.org.v4")) {
+    if (family == AF_INET) {
+      tor_addr_from_ipv4h(addr, 0x01010101);
+      return 0;
+    }
+    /* Resolving AF_INET but the asked family is different. Failure. */
+    return -1;
+  }
+
+  if (!strcmp(name, "www.torproject.org.v6")) {
+    if (family == AF_INET6) {
+      int ret = tor_addr_parse(addr, "0101::0101");
+      tt_int_op(ret, OP_EQ, AF_INET6);
+      return 0;
+    }
+    /* Resolving AF_INET6 but the asked family is not. Failure. */
+    return -1;
+  }
+
+ done:
+  return 0;
+}
+
 static int n_gethostname_replacement = 0;
 
 /** This mock function is meant to replace tor_gethostname(). It
@@ -1185,6 +1225,168 @@ get_interface_address6_failure(int severity, sa_family_t family,
    last_address6_family = family;
 
    return -1;
+}
+
+/** Helper macro: to validate the returned value from find_my_address() so we
+ * don't copy those all the time. */
+#undef VALIDATE_FOUND_ADDRESS
+#define VALIDATE_FOUND_ADDRESS(ret, method, hostname)     \
+  do {                                                    \
+    tt_int_op(retval, OP_EQ, ret);                        \
+    if (method == NULL) tt_assert(!method_used);          \
+    else tt_str_op(method_used, OP_EQ, method);           \
+    if (hostname == NULL) tt_assert(!hostname_out);       \
+    else tt_str_op(hostname_out, OP_EQ, hostname);        \
+    if (ret == true) {                                    \
+      tt_assert(tor_addr_eq(&resolved_addr, &test_addr)); \
+    }                                                     \
+  } while (0)
+
+/** Helper macro: Cleanup the address and variables used after a
+ * find_my_address() call. */
+#undef CLEANUP_FOUND_ADDRESS
+#define CLEANUP_FOUND_ADDRESS             \
+  do {                                    \
+    config_free_lines(options->Address);  \
+    tor_free(options->DirAuthorities);    \
+    tor_free(hostname_out);               \
+    tor_addr_make_unspec(&resolved_addr); \
+    tor_addr_make_unspec(&test_addr);     \
+  } while (0)
+
+/** Test both IPv4 and IPv6 coexisting together in the configuration. */
+static void
+test_config_find_my_address_mixed(void *arg)
+{
+  or_options_t *options;
+  tor_addr_t resolved_addr, test_addr;
+  const char *method_used;
+  char *hostname_out = NULL;
+  bool retval;
+
+  (void)arg;
+
+  options = options_new();
+
+  options_init(options);
+
+  /*
+   * CASE 1: Only IPv6 address. Accepted.
+   */
+  config_line_append(&options->Address, "Address",
+                     "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
+  tor_addr_parse(&test_addr, "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
+
+  /* IPv4 address not guessed since one Address statement exists. */
+  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  /* IPv6 address should be found and considered configured. */
+  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 2: IPv4 _and_ IPv6 given. Accepted.
+   */
+  config_line_append(&options->Address, "Address",
+                     "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
+  config_line_append(&options->Address, "Address", "1.1.1.1");
+  tor_addr_parse(&test_addr, "1.1.1.1");
+
+  /* IPv4 address should be found and considered configured. */
+  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+
+  /* IPv6 address should be found and considered configured. */
+  tor_addr_parse(&test_addr, "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
+  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 3: Two hostnames, IPv4 and IPv6.
+   */
+  config_line_append(&options->Address, "Address", "www.torproject.org.v4");
+  config_line_append(&options->Address, "Address", "www.torproject.org.v6");
+
+  /* Looks at specific hostname to learn which address family to use. */
+  MOCK(tor_addr_lookup, tor_addr_lookup_mixed);
+
+  /* IPv4 address should be found and considered resolved. */
+  tor_addr_parse(&test_addr, "1.1.1.1");
+  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v4");
+
+  /* IPv6 address should be found and considered resolved. */
+  tor_addr_parse(&test_addr, "0101::0101");
+  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v6");
+
+  CLEANUP_FOUND_ADDRESS;
+  UNMOCK(tor_addr_lookup);
+
+  /*
+   * Case 4: IPv4 address and a hostname resolving to IPV6.
+   */
+  config_line_append(&options->Address, "Address", "1.1.1.1");
+  config_line_append(&options->Address, "Address", "www.torproject.org.v6");
+
+  /* Looks at specific hostname to learn which address family to use. */
+  MOCK(tor_addr_lookup, tor_addr_lookup_mixed);
+
+  /* IPv4 address should be found and configured. */
+  tor_addr_parse(&test_addr, "1.1.1.1");
+  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+
+  /* IPv6 address should be found and considered resolved. */
+  tor_addr_parse(&test_addr, "0101::0101");
+  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v6");
+
+  CLEANUP_FOUND_ADDRESS;
+  UNMOCK(tor_addr_lookup);
+
+  /*
+   * Case 5: Hostname resolving to IPv4 and an IPv6 address.
+   */
+  config_line_append(&options->Address, "Address", "0101::0101");
+  config_line_append(&options->Address, "Address", "www.torproject.org.v4");
+
+  /* Looks at specific hostname to learn which address family to use. */
+  MOCK(tor_addr_lookup, tor_addr_lookup_mixed);
+
+  /* IPv4 address should be found and resolved. */
+  tor_addr_parse(&test_addr, "1.1.1.1");
+  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v4");
+
+  /* IPv6 address should be found and considered resolved. */
+  tor_addr_parse(&test_addr, "0101::0101");
+  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+
+  CLEANUP_FOUND_ADDRESS;
+  UNMOCK(tor_addr_lookup);
+
+ done:
+  config_free_lines(options->Address);
+  or_options_free(options);
+  tor_free(hostname_out);
+
+  UNMOCK(tor_addr_lookup);
 }
 
 static void
@@ -6661,6 +6863,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(default_fallback_dirs, 0),
   CONFIG_TEST(find_my_address_v4, TT_FORK),
   CONFIG_TEST(find_my_address_v6, TT_FORK),
+  CONFIG_TEST(find_my_address_mixed, TT_FORK),
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),
   CONFIG_TEST(parse_transport_options_line, 0),
