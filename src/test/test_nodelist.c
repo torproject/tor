@@ -1182,11 +1182,11 @@ test_nodelist_extend_info_describe(void *arg)
          sizeof(mock_ei_ipv4.identity_digest));
   strlcpy(mock_ei_ipv4.nickname, "TestOR7890123456789",
           sizeof(mock_ei_ipv4.nickname));
-  tor_addr_parse(&mock_ei_ipv4.addr, "111.222.233.244");
+  tor_addr_parse(&mock_ei_ipv4.orports[0].addr, "111.222.233.244");
 
   /* Create and modify the other extend info. */
   memcpy(&mock_ei_ipv6, &mock_ei_ipv4, sizeof(mock_ei_ipv6));
-  tor_addr_parse(&mock_ei_ipv6.addr,
+  tor_addr_parse(&mock_ei_ipv6.orports[0].addr,
                  "[1111:2222:3333:4444:5555:6666:7777:8888]");
 
   /* We don't test the no-nickname and no-IP cases, because they're covered by

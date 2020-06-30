@@ -1832,8 +1832,11 @@ rend_service_use_direct_connection(const or_options_t* options,
   /* We'll connect directly all reachable addresses, whether preferred or not.
    * The prefer_ipv6 argument to fascist_firewall_allows_address_addr is
    * ignored, because pref_only is 0. */
+  const tor_addr_port_t *ap = extend_info_get_orport(ei, AF_INET);
+  if (!ap)
+    return 0;
   return (rend_service_allow_non_anonymous_connection(options) &&
-          fascist_firewall_allows_address_addr(&ei->addr, ei->port,
+          fascist_firewall_allows_address_addr(&ap->addr, ap->port,
                                                FIREWALL_OR_CONNECTION, 0, 0));
 }
 
@@ -2262,7 +2265,8 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
   /* Make sure the RP we are being asked to connect to is _not_ a private
    * address unless it's allowed. Let's avoid to build a circuit to our
    * second middle node and fail right after when extending to the RP. */
-  if (!extend_info_addr_is_allowed(&rp->addr)) {
+  const tor_addr_port_t *orport = extend_info_get_orport(rp, AF_INET);
+  if (! orport || !extend_info_addr_is_allowed(&orport->addr)) {
     if (err_msg_out) {
       tor_asprintf(&err_msg,
                    "Relay IP in INTRODUCE2 cell is private address.");
@@ -2531,9 +2535,11 @@ rend_service_parse_intro_for_v2(
     goto err;
   }
 
-  extend_info = tor_malloc_zero(sizeof(extend_info_t));
-  tor_addr_from_ipv4n(&extend_info->addr, get_uint32(buf + 1));
-  extend_info->port = ntohs(get_uint16(buf + 5));
+  extend_info = extend_info_new(NULL, NULL, NULL, NULL, NULL, NULL, 0);
+  tor_addr_t addr;
+  tor_addr_from_ipv4n(&addr, get_uint32(buf + 1));
+  uint16_t port = ntohs(get_uint16(buf + 5));
+  extend_info_add_orport(extend_info, &addr, port);
   memcpy(extend_info->identity_digest, buf + 7, DIGEST_LEN);
   extend_info->nickname[0] = '$';
   base16_encode(extend_info->nickname + 1, sizeof(extend_info->nickname) - 1,

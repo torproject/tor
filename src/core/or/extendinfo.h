@@ -29,5 +29,12 @@ int extend_info_supports_ntor(const extend_info_t* ei);
 int extend_info_has_preferred_onion_key(const extend_info_t* ei);
 bool extend_info_has_orport(const extend_info_t *ei,
                             const tor_addr_t *addr, uint16_t port);
+int extend_info_add_orport(extend_info_t *ei,
+                           const tor_addr_t *addr,
+                           uint16_t port);
+const tor_addr_port_t *extend_info_get_orport(const extend_info_t *ei,
+                                              int family);
+const tor_addr_port_t *extend_info_pick_orport(const extend_info_t *ei);
+bool extend_info_any_orport_addr_is_internal(const extend_info_t *ei);
 
 #endif /* !defined(TOR_CORE_OR_EXTENDINFO_H) */
