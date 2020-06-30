@@ -41,6 +41,7 @@
 #include "feature/rend/rendcache.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuitbuild.h"
+#include "core/or/extendinfo.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
 #include "feature/nodelist/networkstatus.h"

@@ -145,6 +145,7 @@ problem function-size /src/core/or/connection_or.c:connection_or_group_set_badne
 problem function-size /src/core/or/connection_or.c:connection_or_client_learned_peer_id() 142
 problem dependency-violation /src/core/or/connection_or.c 21
 problem dependency-violation /src/core/or/dos.c 6
+problem dependency-violation /src/core/or/extendinfo.c 6
 problem dependency-violation /src/core/or/onion.c 2
 problem file-size /src/core/or/or.h 1150
 problem include-count /src/core/or/or.h 48

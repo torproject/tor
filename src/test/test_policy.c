@@ -8,6 +8,7 @@
 #include "app/config/config.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/policies.h"
+#include "core/or/extendinfo.h"
 #include "feature/dirparse/policy_parse.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_descriptor.h"

@@ -33,6 +33,7 @@
 #include "core/or/channel.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
+#include "core/or/extendinfo.h"
 #include "core/or/onion.h"
 #include "core/or/relay.h"
 

@@ -45,6 +45,7 @@
 #include "core/or/command.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/extendinfo.h"
 #include "core/or/onion.h"
 #include "core/or/ocirc_event.h"
 #include "core/or/policies.h"
@@ -78,9 +79,6 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
-#include "feature/nodelist/microdesc_st.h"
-#include "feature/nodelist/routerinfo_st.h"
-#include "feature/nodelist/routerstatus_st.h"
 
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
@@ -2462,143 +2460,6 @@ onion_extend_cpath(origin_circuit_t *circ)
   return 0;
 }
 
-/** Allocate a new extend_info object based on the various arguments. */
-extend_info_t *
-extend_info_new(const char *nickname,
-                const char *rsa_id_digest,
-                const ed25519_public_key_t *ed_id,
-                crypto_pk_t *onion_key,
-                const curve25519_public_key_t *ntor_key,
-                const tor_addr_t *addr, uint16_t port)
-{
-  extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
-  memcpy(info->identity_digest, rsa_id_digest, DIGEST_LEN);
-  if (ed_id && !ed25519_public_key_is_zero(ed_id))
-    memcpy(&info->ed_identity, ed_id, sizeof(ed25519_public_key_t));
-  if (nickname)
-    strlcpy(info->nickname, nickname, sizeof(info->nickname));
-  if (onion_key)
-    info->onion_key = crypto_pk_dup_key(onion_key);
-  if (ntor_key)
-    memcpy(&info->curve25519_onion_key, ntor_key,
-           sizeof(curve25519_public_key_t));
-  tor_addr_copy(&info->addr, addr);
-  info->port = port;
-  return info;
-}
-
-/** Allocate and return a new extend_info that can be used to build a
- * circuit to or through the node <b>node</b>. Use the primary address
- * of the node (i.e. its IPv4 address) unless
- * <b>for_direct_connect</b> is true, in which case the preferred
- * address is used instead. May return NULL if there is not enough
- * info about <b>node</b> to extend to it--for example, if the preferred
- * routerinfo_t or microdesc_t is missing, or if for_direct_connect is
- * true and none of the node's addresses is allowed by tor's firewall
- * and IP version config.
- **/
-extend_info_t *
-extend_info_from_node(const node_t *node, int for_direct_connect)
-{
-  crypto_pk_t *rsa_pubkey = NULL;
-  extend_info_t *info = NULL;
-  tor_addr_port_t ap;
-  int valid_addr = 0;
-
-  if (!node_has_preferred_descriptor(node, for_direct_connect)) {
-    return NULL;
-  }
-
-  /* Choose a preferred address first, but fall back to an allowed address. */
-  if (for_direct_connect)
-    fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0, &ap);
-  else {
-    node_get_prim_orport(node, &ap);
-  }
-  valid_addr = tor_addr_port_is_valid_ap(&ap, 0);
-
-  if (valid_addr)
-    log_debug(LD_CIRC, "using %s for %s",
-              fmt_addrport(&ap.addr, ap.port),
-              node->ri ? node->ri->nickname : node->rs->nickname);
-  else
-    log_warn(LD_CIRC, "Could not choose valid address for %s",
-              node->ri ? node->ri->nickname : node->rs->nickname);
-
-  /* Every node we connect or extend to must support ntor */
-  if (!node_has_curve25519_onion_key(node)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
-           "Attempted to create extend_info for a node that does not support "
-           "ntor: %s", node_describe(node));
-    return NULL;
-  }
-
-  const ed25519_public_key_t *ed_pubkey = NULL;
-
-  /* Don't send the ed25519 pubkey unless the target node actually supports
-   * authenticating with it. */
-  if (node_supports_ed25519_link_authentication(node, 0)) {
-    log_info(LD_CIRC, "Including Ed25519 ID for %s", node_describe(node));
-    ed_pubkey = node_get_ed25519_id(node);
-  } else if (node_get_ed25519_id(node)) {
-    log_info(LD_CIRC, "Not including the ed25519 ID for %s, since it won't "
-             "be able to authenticate it.",
-             node_describe(node));
-  }
-
-  /* Retrieve the curve25519 pubkey. */
-  const curve25519_public_key_t *curve_pubkey =
-    node_get_curve25519_onion_key(node);
-  rsa_pubkey = node_get_rsa_onion_key(node);
-
-  if (valid_addr && node->ri) {
-    info = extend_info_new(node->ri->nickname,
-                           node->identity,
-                           ed_pubkey,
-                           rsa_pubkey,
-                           curve_pubkey,
-                           &ap.addr,
-                           ap.port);
-  } else if (valid_addr && node->rs && node->md) {
-    info = extend_info_new(node->rs->nickname,
-                           node->identity,
-                           ed_pubkey,
-                           rsa_pubkey,
-                           curve_pubkey,
-                           &ap.addr,
-                           ap.port);
-  }
-
-  crypto_pk_free(rsa_pubkey);
-  return info;
-}
-
-/** Release storage held by an extend_info_t struct. */
-void
-extend_info_free_(extend_info_t *info)
-{
-  if (!info)
-    return;
-  crypto_pk_free(info->onion_key);
-  tor_free(info);
-}
-
-/** Allocate and return a new extend_info_t with the same contents as
- * <b>info</b>. */
-extend_info_t *
-extend_info_dup(extend_info_t *info)
-{
-  extend_info_t *newinfo;
-  tor_assert(info);
-  newinfo = tor_malloc(sizeof(extend_info_t));
-  memcpy(newinfo, info, sizeof(extend_info_t));
-  if (info->onion_key)
-    newinfo->onion_key = crypto_pk_dup_key(info->onion_key);
-  else
-    newinfo->onion_key = NULL;
-  return newinfo;
-}
-
 /** Return the node_t for the chosen exit router in <b>state</b>.
  * If there is no chosen exit, or if we don't know the node_t for
  * the chosen exit, return NULL.
@@ -2634,43 +2495,6 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
   return state->chosen_exit->nickname;
 }
 
-/** Return true iff the given address can be used to extend to. */
-int
-extend_info_addr_is_allowed(const tor_addr_t *addr)
-{
-  tor_assert(addr);
-
-  /* Check if we have a private address and if we can extend to it. */
-  if ((tor_addr_is_internal(addr, 0) || tor_addr_is_multicast(addr)) &&
-      !get_options()->ExtendAllowPrivateAddresses) {
-    goto disallow;
-  }
-  /* Allowed! */
-  return 1;
- disallow:
-  return 0;
-}
-
-/* Does ei have a valid TAP key? */
-int
-extend_info_supports_tap(const extend_info_t* ei)
-{
-  tor_assert(ei);
-  /* Valid TAP keys are not NULL */
-  return ei->onion_key != NULL;
-}
-
-/* Does ei have a valid ntor key? */
-int
-extend_info_supports_ntor(const extend_info_t* ei)
-{
-  tor_assert(ei);
-  /* Valid ntor keys have at least one non-zero byte */
-  return !fast_mem_is_zero(
-                          (const char*)ei->curve25519_onion_key.public_key,
-                          CURVE25519_PUBKEY_LEN);
-}
-
 /* Is circuit purpose allowed to use the deprecated TAP encryption protocol?
  * The hidden service protocol still uses TAP for some connections, because
  * ntor onion keys aren't included in HS descriptors or INTRODUCE cells. */
@@ -2703,15 +2527,6 @@ circuit_has_usable_onion_key(const origin_circuit_t *circ)
   tor_assert(circ->cpath->extend_info);
   return (extend_info_supports_ntor(circ->cpath->extend_info) ||
           circuit_can_use_tap(circ));
-}
-
-/* Does ei have an onion key which it would prefer to use?
- * Currently, we prefer ntor keys*/
-int
-extend_info_has_preferred_onion_key(const extend_info_t* ei)
-{
-  tor_assert(ei);
-  return extend_info_supports_ntor(ei);
 }
 
 /** Find the circuits that are waiting to find out whether their guards are
