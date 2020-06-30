@@ -30,6 +30,7 @@
 #include "core/crypto/onion_crypto.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
+#include "core/or/extendinfo.h"
 
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -259,4 +260,3 @@ cpath_get_n_hops(crypt_path_t **head_ptr)
 }
 
 #endif /* defined(TOR_UNIT_TESTS) */
-

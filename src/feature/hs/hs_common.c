@@ -16,6 +16,7 @@
 #include "app/config/config.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/policies.h"
+#include "core/or/extendinfo.h"
 #include "feature/dirauth/shared_random_state.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_circuitmap.h"
