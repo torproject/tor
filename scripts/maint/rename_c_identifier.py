@@ -239,7 +239,7 @@ def main(argv):
         print("I require an even number of identifiers.", file=sys.stderr)
         return 1
 
-    if any_uncommitted_changes():
+    if args.commit and any_uncommitted_changes():
         print("Uncommitted changes found. Not running.", file=sys.stderr)
         return 1
 
