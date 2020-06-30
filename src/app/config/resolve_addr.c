@@ -212,7 +212,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
       /* Hostname that can't be resolved, this is a fatal error. */
       log_fn(warn_severity, LD_CONFIG,
              "Could not resolve local Address '%s'. Failing.", cfg->value);
-      return FN_RET_BAIL;
+      continue;
     }
   }
 
