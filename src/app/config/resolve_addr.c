@@ -193,6 +193,10 @@ get_address_from_config(const or_options_t *options, int warn_severity,
       explicit_ip = true;
       num_valid_addr++;
       continue;
+    } else if (af != -1) {
+      /* Parsable address but just not the one from the family we want. Skip
+       * it so we don't attempt a resolve. */
+      continue;
     }
 
     /* Not an IP address. Considering this value a hostname and attempting to
