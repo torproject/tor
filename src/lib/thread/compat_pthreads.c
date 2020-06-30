@@ -265,6 +265,6 @@ tor_threads_init(void)
       pthread_attr_setdetachstate(&attr_detached, PTHREAD_CREATE_DETACHED);
     tor_assert(ret2 == 0);
     threads_initialized = 1;
-    set_main_thread();
   }
+  set_main_thread();
 }

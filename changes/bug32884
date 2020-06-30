@@ -1,0 +1,5 @@
+  o Minor bugfixes (embedded Tor):
+    - When starting Tor any time after the first time in a process, register
+      the thread in which it is running as the main thread.  Previously, we
+      only did this on Windows, which could lead to bugs like 23081 on
+      non-Windows platforms.  Fixes bug 32884; bugfix on 0.3.3.1-alpha.
