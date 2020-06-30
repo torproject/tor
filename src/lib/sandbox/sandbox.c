@@ -266,6 +266,11 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(listen),
     SCMP_SYS(connect),
     SCMP_SYS(getsockname),
+#ifdef ENABLE_NSS
+#ifdef __NR_getpeername
+    SCMP_SYS(getpeername),
+#endif
+#endif
     SCMP_SYS(recvmsg),
     SCMP_SYS(recvfrom),
     SCMP_SYS(sendto),
@@ -648,6 +653,15 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
         return rc;
     }
   }
+
+#ifdef ENABLE_NSS
+  rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
+    SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
+    SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM),
+    SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
+  if (rc)
+    return rc;
+#endif
 
   rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
       SCMP_CMP(0, SCMP_CMP_EQ, PF_UNIX),
