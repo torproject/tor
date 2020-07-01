@@ -401,11 +401,7 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
 
   if (should_launch) {
     /* we should try to open a connection */
-    channel_t *n_chan = channel_connect_for_circuit(
-                                                &circ->n_hop->addr,
-                                                circ->n_hop->port,
-                                                circ->n_hop->identity_digest,
-                                                &circ->n_hop->ed_identity);
+    channel_t *n_chan = channel_connect_for_circuit(circ->n_hop);
     if (!n_chan) {
       log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
       circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
