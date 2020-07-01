@@ -64,6 +64,7 @@
 #include "core/or/circuitstats.h"
 #include "core/or/circuitpadding.h"
 #include "core/or/crypt_path.h"
+#include "core/or/extendinfo.h"
 #include "core/mainloop/connection.h"
 #include "app/config/config.h"
 #include "core/or/connection_edge.h"

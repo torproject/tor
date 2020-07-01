@@ -70,6 +70,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/extendinfo.h"
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
@@ -1444,8 +1445,8 @@ connection_ap_fail_onehop(const char *failed_digest,
         continue;
       }
       if (tor_addr_parse(&addr, entry_conn->socks_request->address)<0 ||
-          !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
-          build_state->chosen_exit->port != entry_conn->socks_request->port)
+          !extend_info_has_orport(build_state->chosen_exit, &addr,
+                                  entry_conn->socks_request->port))
         continue;
     }
     log_info(LD_APP, "Closing one-hop stream to '%s/%s' because the OR conn "

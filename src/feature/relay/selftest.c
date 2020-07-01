@@ -24,6 +24,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/crypt_path_st.h"
+#include "core/or/extendinfo.h"
 #include "core/or/extend_info_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "core/or/relay.h"
@@ -255,9 +256,10 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
    * be NULL. */
   if (ei) {
     const char *family_name = fmt_af_family(family);
+    const tor_addr_port_t *ap = extend_info_get_orport(ei, family);
     log_info(LD_CIRC, "Testing %s of my %s ORPort: %s.",
              !orport_reachable ? "reachability" : "bandwidth",
-             family_name, fmt_addrport(&ei->addr, ei->port));
+             family_name, fmt_addrport_ap(ap));
     if (!orport_reachable) {
       /* This is only a 'reachability test' if we don't already think that
        * the port is reachable.  If we _do_ think it's reachable, then

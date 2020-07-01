@@ -31,7 +31,7 @@
  **/
 
 #include "core/or/or.h"
-#include "core/or/circuitbuild.h"
+#include "core/or/extendinfo.h"
 #include "core/crypto/onion_crypto.h"
 #include "core/crypto/onion_fast.h"
 #include "core/crypto/onion_ntor.h"
