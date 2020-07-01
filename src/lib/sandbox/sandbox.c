@@ -276,6 +276,12 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(poll)
 };
 
+/* opendir is not a syscall but it will use either open or openat. We do not
+ * want the decision to allow open/openat to be the callers reponsability, so
+ * we create a phony syscall number for opendir and sb_opendir will choose the
+ * correct syscall. */
+#define PHONY_OPENDIR_SYSCALL -2
+
 /* These macros help avoid the error where the number of filters we add on a
  * single rule don't match the arg_cnt param. */
 #define seccomp_rule_add_0(ctx,act,call) \
@@ -455,12 +461,22 @@ is_libc_at_least(int major, int minor)
 #endif /* defined(CHECK_LIBC_VERSION) */
 }
 
-/* Return true if we think we're running with a libc that always uses
- * openat on linux. */
+/* Return true if we think we're running with a libc that uses openat for the
+ * open function on linux. */
 static int
-libc_uses_openat_for_everything(void)
+libc_uses_openat_for_open(void)
 {
   return is_libc_at_least(2, 26);
+}
+
+/* Return true if we think we're running with a libc that uses openat for the
+ * opendir function on linux. */
+static int
+libc_uses_openat_for_opendir(void)
+{
+  // libc 2.27 and above or between 2.15 (inclusive) and 2.22 (exclusive)
+  return is_libc_at_least(2, 27) ||
+         (is_libc_at_least(2, 15) && !is_libc_at_least(2, 22));
 }
 
 /* Return true if we think we're running with a libc that needs to cast
@@ -496,7 +512,7 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   int rc;
   sandbox_cfg_t *elem = NULL;
 
-  int use_openat = libc_uses_openat_for_everything();
+  int use_openat = libc_uses_openat_for_open();
 
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
@@ -618,6 +634,38 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
           SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value),
           SCMP_CMP(2, SCMP_CMP_EQ, O_RDONLY|O_NONBLOCK|O_LARGEFILE|O_DIRECTORY|
               O_CLOEXEC));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received "
+            "libseccomp error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+
+static int
+sb_opendir(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  sandbox_cfg_t *elem = NULL;
+
+  // for each dynamic parameter filters
+  for (elem = filter; elem != NULL; elem = elem->next) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 && param->syscall
+        == PHONY_OPENDIR_SYSCALL) {
+      if (libc_uses_openat_for_opendir()) {
+        rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat),
+            SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+            SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value),
+            SCMP_CMP(2, SCMP_CMP_EQ, O_RDONLY|O_NONBLOCK|O_LARGEFILE|
+                O_DIRECTORY|O_CLOEXEC));
+      } else {
+        rc = allow_file_open(ctx, 0, param->value);
+      }
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received "
             "libseccomp error %d", rc);
@@ -1128,6 +1176,7 @@ static sandbox_filter_func_t filter_func[] = {
     sb_chmod,
     sb_open,
     sb_openat,
+    sb_opendir,
     sb_rename,
 #ifdef __NR_fcntl64
     sb_fcntl64,
@@ -1447,6 +1496,19 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
   return 0;
 }
 
+int
+sandbox_cfg_allow_opendir_dirname(sandbox_cfg_t **cfg, char *dir)
+{
+  sandbox_cfg_t *elem = NULL;
+
+  elem = new_element(PHONY_OPENDIR_SYSCALL, dir);
+
+  elem->next = *cfg;
+  *cfg = elem;
+
+  return 0;
+}
+
 /**
  * Function responsible for going through the parameter syscall filters and
  * call each function pointer in the list.
@@ -1749,6 +1811,13 @@ int
 sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 {
   (void)cfg; (void)file;
+  return 0;
+}
+
+int
+sandbox_cfg_allow_opendir_dirname(sandbox_cfg_t **cfg, char *dir)
+{
+  (void)cfg; (void)dir;
   return 0;
 }
 
