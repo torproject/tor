@@ -25,7 +25,6 @@ int router_dirport_seems_reachable(
 
 void router_do_reachability_checks(int test_or, int test_dir);
 void router_perform_bandwidth_test(int num_circs, time_t now);
-int inform_testing_reachability(void);
 
 void router_orport_found_reachable(int family);
 void router_dirport_found_reachable(void);
