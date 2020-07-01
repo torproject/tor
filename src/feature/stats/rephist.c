@@ -1789,9 +1789,8 @@ rep_hist_seen_new_rp_cell(void)
   hs_v2_stats->rp_relay_cells_seen++;
 }
 
-/** As HSDirs, we saw another hidden service with public key
- *  <b>pubkey</b>. Check whether we have counted it before, if not
- *  count it now! */
+/** As HSDirs, we saw another v2 onion with public key <b>pubkey</b>. Check
+ *  whether we have counted it before, if not count it now! */
 void
 rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
 {
@@ -1906,6 +1905,31 @@ static bool
 should_collect_v3_stats(void)
 {
   return start_of_hs_v3_stats_interval <= approx_time();
+}
+
+/** We just received a new descriptor with <b>blinded_key</b>. See if we've
+ * seen this blinded key before, and if not add it to the stats.  */
+void
+rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
+{
+  /* Return early if we don't collect HSv3 stats, or if it's not yet the time
+   * to collect them. */
+  if (!hs_v3_stats || !should_collect_v3_stats()) {
+    return;
+  }
+
+  bool seen_before = !!digestmap_get(hs_v3_stats->v3_onions_seen_this_period,
+                                     (char*)blinded_key);
+
+  log_info(LD_GENERAL, "Considering v3 descriptor with %s (%sseen before)",
+           safe_str(hex_str((char*)blinded_key, 32)),
+           seen_before ? "" : "not ");
+
+  /* Count it if we haven't seen it before. */
+  if (!seen_before) {
+    digestmap_set(hs_v3_stats->v3_onions_seen_this_period,
+                  (char*)blinded_key, (void*)(uintptr_t)1);
+  }
 }
 
 /* The number of cells that are supposed to be hidden from the adversary
