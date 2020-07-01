@@ -94,11 +94,14 @@ static const node_t *choose_good_middle_server(uint8_t purpose,
  * callbacks.
  */
 MOCK_IMPL(channel_t *,
-channel_connect_for_circuit,(const tor_addr_t *addr, uint16_t port,
-                             const char *id_digest,
-                             const struct ed25519_public_key_t *ed_id))
+channel_connect_for_circuit,(const extend_info_t *ei))
 {
   channel_t *chan;
+
+  const tor_addr_t *addr = &ei->addr;
+  uint16_t port = ei->port;
+  const char *id_digest = ei->identity_digest;
+  const ed25519_public_key_t *ed_id = &ei->ed_identity;
 
   chan = channel_connect(addr, port, id_digest, ed_id);
   if (chan) command_setup_channel(chan);
@@ -581,11 +584,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     circ->base_.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (should_launch) {
-      n_chan = channel_connect_for_circuit(
-          &firsthop->extend_info->addr,
-          firsthop->extend_info->port,
-          firsthop->extend_info->identity_digest,
-          &firsthop->extend_info->ed_identity);
+      n_chan = channel_connect_for_circuit(firsthop->extend_info);
       if (!n_chan) { /* connect failed, forget the whole thing */
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -END_CIRC_REASON_CONNECTFAILED;

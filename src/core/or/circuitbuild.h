@@ -56,13 +56,7 @@ const node_t *choose_good_entry_server(uint8_t purpose,
                            struct circuit_guard_state_t **guard_state_out);
 void circuit_upgrade_circuits_from_guard_wait(void);
 
-struct ed25519_public_key_t;
-
-MOCK_DECL(channel_t *,
-channel_connect_for_circuit,(const tor_addr_t *addr,
-                             uint16_t port,
-                             const char *id_digest,
-                             const struct ed25519_public_key_t *ed_id));
+MOCK_DECL(channel_t *, channel_connect_for_circuit,(const extend_info_t *ei));
 
 struct create_cell_t;
 MOCK_DECL(int,

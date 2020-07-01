@@ -1001,15 +1001,9 @@ mock_circuit_mark_for_close_(circuit_t *circ, int reason,
 static int mock_channel_connect_calls = 0;
 static channel_t *mock_channel_connect_nchan = NULL;
 static channel_t *
-mock_channel_connect_for_circuit(const tor_addr_t *addr,
-                                 uint16_t port,
-                                 const char *id_digest,
-                                 const struct ed25519_public_key_t *ed_id)
+mock_channel_connect_for_circuit(const extend_info_t *ei)
 {
-  (void)addr;
-  (void)port;
-  (void)id_digest;
-  (void)ed_id;
+  (void)ei;
   mock_channel_connect_calls++;
   return mock_channel_connect_nchan;
 }
