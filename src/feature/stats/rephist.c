@@ -2485,6 +2485,8 @@ typedef struct hs_stats_t {
   /** Set of unique public key digests we've seen this stat period
    * (could also be implemented as sorted smartlist). */
   digestmap_t *v2_onions_seen_this_period;
+
+  digestmap_t *v3_onions_seen_this_period;
 } hs_stats_t;
 
 /** Our statistics structure singleton. */
@@ -2496,6 +2498,7 @@ hs_stats_new(void)
 {
   hs_stats_t *new_hs_stats = tor_malloc_zero(sizeof(hs_stats_t));
   new_hs_stats->v2_onions_seen_this_period = digestmap_new();
+  new_hs_stats->v3_onions_seen_this_period = digestmap_new();
 
   return new_hs_stats;
 }
@@ -2512,6 +2515,7 @@ hs_stats_free_(hs_stats_t *victim_hs_stats)
   }
 
   digestmap_free(victim_hs_stats->v2_onions_seen_this_period, NULL);
+  digestmap_free(victim_hs_stats->v3_onions_seen_this_period, NULL);
   tor_free(victim_hs_stats);
 }
 
@@ -2539,6 +2543,9 @@ rep_hist_reset_hs_stats(time_t now)
 
   digestmap_free(hs_stats->v2_onions_seen_this_period, NULL);
   hs_stats->v2_onions_seen_this_period = digestmap_new();
+
+  digestmap_free(hs_stats->v3_onions_seen_this_period, NULL);
+  hs_stats->v3_onions_seen_this_period = digestmap_new();
 
   start_of_hs_stats_interval = now;
 }
@@ -2640,6 +2647,8 @@ rep_hist_format_hs_stats(time_t now)
   obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
+
+  // v3 onions
 
   format_iso_time(t, now);
   tor_asprintf(&hs_stats_string, "hidserv-stats-end %s (%d s)\n"
