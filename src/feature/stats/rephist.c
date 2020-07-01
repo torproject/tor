@@ -2626,13 +2626,14 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
 
 /** Allocate and return a string containing hidden service stats that
  *  are meant to be placed in the extra-info descriptor. */
-static char *
+STATIC char *
 rep_hist_format_hs_stats(time_t now)
 {
   char t[ISO_TIME_LEN+1];
   char *hs_stats_string;
   int64_t obfuscated_cells_seen;
-  int64_t obfuscated_onions_seen;
+  int64_t obfuscated_v2_onions_seen;
+  int64_t v3_onions_seen;
 
   uint64_t rounded_cells_seen
     = round_uint64_to_next_multiple_of(hs_stats->rp_relay_cells_seen,
@@ -2642,29 +2643,31 @@ rep_hist_format_hs_stats(time_t now)
                           crypto_rand_double(),
                           REND_CELLS_DELTA_F, REND_CELLS_EPSILON);
 
-  uint64_t rounded_onions_seen =
+  uint64_t rounded_v2_onions_seen =
     round_uint64_to_next_multiple_of((size_t)digestmap_size(
                                         hs_stats->v2_onions_seen_this_period),
                                      ONIONS_SEEN_BIN_SIZE);
-  rounded_onions_seen = MIN(rounded_onions_seen, INT64_MAX);
-  obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
+  rounded_v2_onions_seen = MIN(rounded_v2_onions_seen, INT64_MAX);
+  obfuscated_v2_onions_seen = add_laplace_noise((int64_t)rounded_v2_onions_seen,
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
 
-  // v3 onions
+  v3_onions_seen = (int64_t)digestmap_size(hs_stats->v3_onions_seen_this_period);
 
   format_iso_time(t, now);
   tor_asprintf(&hs_stats_string, "hidserv-stats-end %s (%d s)\n"
                "hidserv-rend-relayed-cells %"PRId64" delta_f=%d "
                                            "epsilon=%.2f bin_size=%d\n"
                "hidserv-dir-onions-seen %"PRId64" delta_f=%d "
-                                        "epsilon=%.2f bin_size=%d\n",
+                                        "epsilon=%.2f bin_size=%d\n"
+               "hidserv-dir-v3-onions-seen %"PRId64"\n",
                t, (unsigned) (now - start_of_hs_stats_interval),
                (obfuscated_cells_seen), REND_CELLS_DELTA_F,
                REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
-               (obfuscated_onions_seen),
+               (obfuscated_v2_onions_seen),
                ONIONS_SEEN_DELTA_F,
-               ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
+               ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE,
+               v3_onions_seen);
 
   return hs_stats_string;
 }

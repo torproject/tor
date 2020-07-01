@@ -346,8 +346,11 @@ test_rephist_v3_onions(void *arg)
   hs_descriptor_free(desc1);
   tor_free(desc1_str);
 
+  char *stats_string = rep_hist_format_hs_stats(approx_time());
+  tt_assert(strstr(stats_string, "hidserv-dir-v3-onions-seen 3"));
+
  done:
-  ;
+  tor_free(stats_string);
 }
 
 #define ENT(name)                                                       \
