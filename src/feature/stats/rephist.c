@@ -2459,6 +2459,9 @@ rep_hist_note_circuit_handshake_assigned(uint16_t type)
 MOCK_IMPL(int,
 rep_hist_get_circuit_handshake_requested, (uint16_t type))
 {
+  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
+    return 0;
+  }
   return onion_handshakes_requested[type];
 }
 
@@ -2466,6 +2469,9 @@ rep_hist_get_circuit_handshake_requested, (uint16_t type))
 MOCK_IMPL(int,
 rep_hist_get_circuit_handshake_assigned, (uint16_t type))
 {
+  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
+    return 0;
+  }
   return onion_handshakes_assigned[type];
 }
 

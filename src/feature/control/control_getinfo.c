@@ -1437,8 +1437,8 @@ getinfo_helper_liveness(control_connection_t *control_conn,
   return 0;
 }
 
-/** Implementation helper for GETINFO: answers queries about shared random
- * value. */
+/** Implementation helper for GETINFO: answers queries about circuit onion
+ * handshake rephist values */
 STATIC int
 getinfo_helper_rephist(control_connection_t *control_conn,
                        const char *question, char **answer,
@@ -1446,7 +1446,7 @@ getinfo_helper_rephist(control_connection_t *control_conn,
 {
   (void) control_conn;
   (void) errmsg;
-  int result = -1;
+  int result;
 
   if (!strcmp(question, "stats/ntor/assigned")) {
     result =
@@ -1460,8 +1460,10 @@ getinfo_helper_rephist(control_connection_t *control_conn,
   } else if (!strcmp(question, "stats/tap/requested")) {
     result =
       rep_hist_get_circuit_handshake_requested(ONION_HANDSHAKE_TYPE_TAP);
+  } else {
+    *errmsg = "Unrecognized handshake type";
+    return -1;
   }
-  /* Else statement here is unrecognized key so do nothing. */
 
   tor_asprintf(answer, "%d", result);
 
