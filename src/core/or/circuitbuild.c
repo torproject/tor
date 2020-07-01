@@ -561,10 +561,6 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   }
 
   /* now see if we're already connected to the first OR in 'route' */
-  // TODO XXXX S55 -- remove this log
-  log_debug(LD_CIRC,"Looking for firsthop for %s",
-            extend_info_describe(firsthop->extend_info));
-
   const tor_addr_port_t *orport4 =
     extend_info_get_orport(firsthop->extend_info, AF_INET);
   const tor_addr_port_t *orport6 =
@@ -603,7 +599,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     tor_assert(!circ->base_.n_hop);
     circ->base_.n_chan = n_chan;
     circuit_chan_publish(circ, n_chan);
-    log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
+    log_debug(LD_CIRC,"Conn open for %s. Delivering first onion skin.",
+              safe_str_client(extend_info_describe(firsthop->extend_info)));
     if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
       log_info(LD_CIRC,"circuit_send_next_onion_skin failed.");
       circ->base_.n_chan = NULL;
