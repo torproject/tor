@@ -2134,7 +2134,7 @@ mock_rep_hist_get_circuit_handshake(uint16_t type)
 }
 
 static void
-test_rep_hist(void *arg)
+test_stats(void *arg)
 {
   /* We just need one of these to pass, it doesn't matter what's in it */
   control_connection_t dummy;
@@ -2232,6 +2232,6 @@ struct testcase_t controller_tests[] = {
   { "getinfo_md_all", test_getinfo_md_all, 0, NULL, NULL },
   { "control_reply", test_control_reply, 0, NULL, NULL },
   { "control_getconf", test_control_getconf, 0, NULL, NULL },
-  { "rep_hist", test_rep_hist, 0, NULL, NULL },
+  { "stats", test_stats, 0, NULL, NULL },
   END_OF_TESTCASES
 };
