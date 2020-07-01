@@ -259,6 +259,9 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
              !orport_reachable ? "reachability" : "bandwidth",
              family_name, fmt_addrport(&ei->addr, ei->port));
     if (!orport_reachable) {
+      /* This is only a 'reachability test' if we don't already think that
+       * the port is reachable.  If we _do_ think it's reachable, then
+       * it counts as a 'bandwidth test'. */
       inform_testing_reachability(&ei->addr, ei->port, false);
     }
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
