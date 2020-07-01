@@ -717,7 +717,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
              safe_str(desc_id_base32), (int)encoded_size);
     /* Statistics: Note down this potentially new HS. */
     if (options->HiddenServiceStatistics) {
-      rep_hist_stored_maybe_new_hs(e->parsed->pk);
+      rep_hist_hsdir_stored_maybe_new_v2_onion(e->parsed->pk);
     }
 
     number_stored++;

@@ -2573,7 +2573,7 @@ rep_hist_seen_new_rp_cell(void)
  *  <b>pubkey</b>. Check whether we have counted it before, if not
  *  count it now! */
 void
-rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
+rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
 {
   char pubkey_hash[DIGEST_LEN];
 
