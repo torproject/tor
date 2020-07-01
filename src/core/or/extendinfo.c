@@ -35,7 +35,8 @@ extend_info_new(const char *nickname,
                 const tor_addr_t *addr, uint16_t port)
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
-  memcpy(info->identity_digest, rsa_id_digest, DIGEST_LEN);
+  if (rsa_id_digest)
+    memcpy(info->identity_digest, rsa_id_digest, DIGEST_LEN);
   if (ed_id && !ed25519_public_key_is_zero(ed_id))
     memcpy(&info->ed_identity, ed_id, sizeof(ed25519_public_key_t));
   if (nickname)
