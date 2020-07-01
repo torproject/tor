@@ -2143,9 +2143,7 @@ is non-zero):
 [[AssumeReachable]] **AssumeReachable** **0**|**1**::
     This option is used when bootstrapping a new Tor network. If set to 1,
     don't do self-reachability testing; just upload your server descriptor
-    immediately. If **AuthoritativeDirectory** is also set, this option
-    instructs the dirserver to bypass remote reachability testing too and list
-    all connected servers as running. (Default: 0)
+    immediately. (Default: 0)
 
 [[AssumeReachableIPv6]] **AssumeReachableIPv6** **0**|**1**|**auto**::
     Like **AssumeReachable**, but affects only the relay's own IPv6 ORPort.
@@ -3009,6 +3007,12 @@ on the public Tor network.
     regardless of their Ed25519 key. We should only ever set this option to 0
     if there is some major bug in Ed25519 link authentication that causes us
     to label all the relays as not Running.  (Default: 1)
+
+[[AuthDirTestReachability]] **AuthDirTestReachability** **0**|**1**::
+    Authoritative directories only. If set to 1, then we periodically
+    check every relay we know about to see whether it is running.
+    If set to 0, we vote Running for every relay, and don't perform
+    these tests. (Default: 1)
 
 [[BridgePassword]] **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to

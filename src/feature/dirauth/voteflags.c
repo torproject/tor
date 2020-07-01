@@ -487,7 +487,6 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     unreachable.
    */
   int answer;
-  const or_options_t *options = get_options();
   const dirauth_options_t *dirauth_options = dirauth_get_options();
   node_t *node = node_get_mutable_by_id(router->cache_info.identity_digest);
   tor_assert(node);
@@ -501,8 +500,9 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     /* A hibernating router is down unless we (somehow) had contact with it
      * since it declared itself to be hibernating. */
     answer = 0;
-  } else if (options->AssumeReachable) {
-    /* If AssumeReachable, everybody is up unless they say they are down! */
+  } else if (! dirauth_options->AuthDirTestReachability) {
+    /* If we aren't testing reachability, then everybody is up unless they say
+     * they are down. */
     answer = 1;
   } else {
     /* Otherwise, a router counts as up if we found all announced OR
