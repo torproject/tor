@@ -174,7 +174,10 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
    * old HS protocol cache subsystem for which we are tied with. */
   rend_cache_increment_allocation(cache_get_dir_entry_size(desc));
 
-  /* XXX: Update HS statistics. We should have specific stats for v3. */
+  /* Update HSv3 statistics */
+  if (get_options()->HiddenServiceStatistics) {
+    rep_hist_hsdir_stored_maybe_new_v3_onion(desc->key);
+  }
 
   return 0;
 

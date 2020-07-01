@@ -2569,9 +2569,8 @@ rep_hist_seen_new_rp_cell(void)
   hs_stats->rp_relay_cells_seen++;
 }
 
-/** As HSDirs, we saw another hidden service with public key
- *  <b>pubkey</b>. Check whether we have counted it before, if not
- *  count it now! */
+/** As HSDirs, we saw another v2 onion with public key <b>pubkey</b>. Check
+ *  whether we have counted it before, if not count it now! */
 void
 rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
 {
@@ -2595,6 +2594,23 @@ rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
                      pubkey_hash)) {
     digestmap_set(hs_stats->v2_onions_seen_this_period,
                   pubkey_hash, (void*)(uintptr_t)1);
+  }
+}
+
+/** We just received a new descriptor with <b>blinded_key</b>. See if we've
+ * seen this blinded key before, and if not add it to the stats.  */
+void
+rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
+{
+  if (!hs_stats) {
+    return; // We're not collecting stats
+  }
+
+  /* Count it if we haven't seen it before. */
+  if (!digestmap_get(hs_stats->v3_onions_seen_this_period,
+                     (char*)blinded_key)) {
+    digestmap_set(hs_stats->v3_onions_seen_this_period,
+                  (char*)blinded_key, (void*)(uintptr_t)1);
   }
 }
 
