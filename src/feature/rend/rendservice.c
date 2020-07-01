@@ -130,6 +130,22 @@ static smartlist_t *rend_service_list = NULL;
  * service on config reload. */
 static smartlist_t *rend_service_staging_list = NULL;
 
+/** Helper: log the deprecation warning for version 2 only once. */
+static void
+log_once_deprecation_warning(void)
+{
+  static bool logged_once = false;
+  if (!logged_once) {
+    log_warn(LD_REND, "DEPRECATED: Onion service version 2 are deprecated. "
+             "Please use version 3 which is the default now. "
+             "Currently, version 2 is planned to be obsolete in "
+             "the Tor version 0.4.6 stable series.");
+    logged_once = true;
+  }
+}
+/** Macro to make it very explicit that we are warning about deprecation. */
+#define WARN_ONCE_DEPRECATION() log_once_deprecation_warning()
+
 /* Like rend_get_service_list_mutable, but returns a read-only list. */
 static const smartlist_t*
 rend_get_service_list(const smartlist_t* substitute_service_list)
@@ -730,6 +746,9 @@ rend_config_service(const config_line_t *line_,
    * have one line that is the directory directive. */
   tor_assert(options);
   tor_assert(config);
+
+  /* We are about to configure a version 2 service. Warn of deprecation. */
+  WARN_ONCE_DEPRECATION();
 
   /* Use the staging service list so that we can check then do the pruning
    * process using the main list at the end. */
