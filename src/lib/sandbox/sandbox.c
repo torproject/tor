@@ -134,6 +134,10 @@ static sandbox_cfg_t *filter_dynamic = NULL;
  * the high bits of the value might get masked out improperly. */
 #define SCMP_CMP_MASKED(a,b,c) \
   SCMP_CMP4((a), SCMP_CMP_MASKED_EQ, ~(scmp_datum_t)(b), (c))
+/* For negative constants, the rule to add depends on the glibc version. */
+#define SCMP_CMP_NEG(a,op,b) (libc_negative_constant_needs_cast() ? \
+                              (SCMP_CMP((a), (op), (unsigned int)(b))) : \
+                              (SCMP_CMP_STR((a), (op), (b))))
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
@@ -424,29 +428,47 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 #endif
 #endif
 
-/* Return true if we think we're running with a libc that always uses
- * openat on linux. */
+/* Return true the libc version is greater or equal than
+ * <b>major</b>.<b>minor</b>. Returns false otherwise. */
 static int
-libc_uses_openat_for_everything(void)
+is_libc_at_least(int major, int minor)
 {
 #ifdef CHECK_LIBC_VERSION
   const char *version = gnu_get_libc_version();
   if (version == NULL)
     return 0;
 
-  int major = -1;
-  int minor = -1;
+  int libc_major = -1;
+  int libc_minor = -1;
 
-  tor_sscanf(version, "%d.%d", &major, &minor);
-  if (major >= 3)
+  tor_sscanf(version, "%d.%d", &libc_major, &libc_minor);
+  if (libc_major > major)
     return 1;
-  else if (major == 2 && minor >= 26)
+  else if (libc_major == major && libc_minor >= minor)
     return 1;
   else
     return 0;
 #else /* !(defined(CHECK_LIBC_VERSION)) */
+  (void)major;
+  (void)minor;
   return 0;
 #endif /* defined(CHECK_LIBC_VERSION) */
+}
+
+/* Return true if we think we're running with a libc that always uses
+ * openat on linux. */
+static int
+libc_uses_openat_for_everything(void)
+{
+  return is_libc_at_least(2, 26);
+}
+
+/* Return true if we think we're running with a libc that needs to cast
+ * negative arguments like AT_FDCWD for seccomp rules. */
+static int
+libc_negative_constant_needs_cast(void)
+{
+  return is_libc_at_least(2, 27);
 }
 
 /** Allow a single file to be opened.  If <b>use_openat</b> is true,
@@ -456,7 +478,7 @@ allow_file_open(scmp_filter_ctx ctx, int use_openat, const char *file)
 {
   if (use_openat) {
     return seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat),
-                              SCMP_CMP(0, SCMP_CMP_EQ, (unsigned int)AT_FDCWD),
+                              SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
                               SCMP_CMP_STR(1, SCMP_CMP_EQ, file));
   } else {
     return seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open),
@@ -592,7 +614,7 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     if (param != NULL && param->prot == 1 && param->syscall
         == SCMP_SYS(openat)) {
       rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat),
-          SCMP_CMP(0, SCMP_CMP_EQ, AT_FDCWD),
+          SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
           SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value),
           SCMP_CMP(2, SCMP_CMP_EQ, O_RDONLY|O_NONBLOCK|O_LARGEFILE|O_DIRECTORY|
               O_CLOEXEC));
