@@ -220,7 +220,8 @@ struct curve25519_public_key_t;
 #define END_OR_CONN_REASON_IO_ERROR       7 /* read/write error */
 #define END_OR_CONN_REASON_RESOURCE_LIMIT 8 /* sockets, buffers, etc */
 #define END_OR_CONN_REASON_PT_MISSING     9 /* PT failed or not available */
-#define END_OR_CONN_REASON_MISC           10
+#define END_OR_CONN_REASON_TLS_ERROR      10 /* Problem in TLS protocol */
+#define END_OR_CONN_REASON_MISC           11
 
 /* Reasons why we (or a remote OR) might close a stream. See tor-spec.txt for
  * documentation of these.  The values must match. */
