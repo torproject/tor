@@ -1404,7 +1404,14 @@ test_config_find_my_address_mixed(void *arg)
  * AF_INET6 but we have one interface to do so thus we run the same exact unit
  * tests for both without copying them. */
 typedef struct find_my_address_params_t {
-  /* Index where the mock function results are located. */
+  /* Index where the mock function results are located. For intance,
+   * tor_addr_lookup_01010101() will have its returned value depending on the
+   * family in ret_addr_lookup_01010101[].
+   *
+   * Values that can be found:
+   *    AF_INET : index 0.
+   *    AF_INET6: index 1.
+   */
   int idx;
   int family;
   const char *public_ip;
