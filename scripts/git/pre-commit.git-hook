@@ -7,6 +7,11 @@
 # it fails our code formatting, changelog entry formatting, module include
 # rules, or best practices tracker.
 
+# Run only if this environment variable is set.
+if [ -z "$TOR_EXTRA_PRE_COMMIT_CHECKS" ]; then
+  exit 0
+fi
+
 workdir=$(git rev-parse --show-toplevel)
 
 cd "$workdir" || exit 1
