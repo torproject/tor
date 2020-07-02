@@ -1,0 +1,5 @@
+  o Minor feature (address discovery):
+    - If no Address statements are found, relays now prioritize guessing their
+      address by looking at the local interface instead of the local hostname.
+      If the interface address can't be found, the local hostname is used.
+      Closes ticket 33238.

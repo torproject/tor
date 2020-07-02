@@ -53,6 +53,7 @@
 
 #include "test/test_helpers.h"
 #include "test/resolve_test_helpers.h"
+#include "test/log_test_helpers.h"
 
 #include "feature/dirclient/dir_server_st.h"
 #include "core/or/port_cfg_st.h"
@@ -989,6 +990,9 @@ test_config_fix_my_family(void *arg)
 }
 
 static int n_hostname_01010101 = 0;
+static const char *ret_addr_lookup_01010101[2] = {
+  "1.1.1.1", "0101::0101",
+};
 
 /** This mock function is meant to replace tor_addr_lookup().
  * It answers with 1.1.1.1 as IP adddress that resulted from lookup.
@@ -1002,12 +1006,13 @@ tor_addr_lookup_01010101(const char *name, uint16_t family, tor_addr_t *addr)
 
   if (family == AF_INET) {
     if (name && addr) {
-      tor_addr_from_ipv4h(addr, 0x01010101);
+      int ret = tor_addr_parse(addr, ret_addr_lookup_01010101[0]);
+      tt_int_op(ret, OP_EQ, family);
     }
   } else if (family == AF_INET6) {
     if (name && addr) {
-      int ret = tor_addr_parse(addr, "0101::0101");
-      tt_int_op(ret, OP_EQ, AF_INET6);
+      int ret = tor_addr_parse(addr, ret_addr_lookup_01010101[1]);
+      tt_int_op(ret, OP_EQ, family);
     }
   }
  done:
@@ -1154,6 +1159,9 @@ tor_gethostname_failure(char *name, size_t namelen)
 
 static int n_get_interface_address6 = 0;
 static sa_family_t last_address6_family;
+static const char *ret_get_interface_address6_08080808[2] = {
+  "8.8.8.8", "0808::0808",
+};
 
 /** This mock function is meant to replace get_interface_address().
  * It answers with address 8.8.8.8. This function increments
@@ -1169,11 +1177,12 @@ get_interface_address6_08080808(int severity, sa_family_t family,
 
   if (family == AF_INET) {
     if (addr) {
-      tor_addr_from_ipv4h(addr, 0x08080808);
+      int ret = tor_addr_parse(addr, ret_get_interface_address6_08080808[0]);
+      tt_int_op(ret, OP_EQ, AF_INET);
     }
   } else if (family == AF_INET6) {
     if (addr) {
-      int ret = tor_addr_parse(addr, "0808::0808");
+      int ret = tor_addr_parse(addr, ret_get_interface_address6_08080808[1]);
       tt_int_op(ret, OP_EQ, AF_INET6);
     }
   }
@@ -1188,6 +1197,7 @@ get_interface_address6_08080808(int severity, sa_family_t family,
  * This function increments <b>n_get_interface_address6</b> by one every
  * time it is called.
  */
+#if 0
 static int
 get_interface_address6_replacement(int severity, sa_family_t family,
                                    tor_addr_t *addr)
@@ -1205,6 +1215,7 @@ get_interface_address6_replacement(int severity, sa_family_t family,
 
   return 0;
 }
+#endif
 
 static int n_get_interface_address6_failure = 0;
 
@@ -1389,8 +1400,33 @@ test_config_find_my_address_mixed(void *arg)
   UNMOCK(tor_addr_lookup);
 }
 
+/** Parameters for the find_my_address() test. We test both AF_INET and
+ * AF_INET6 but we have one interface to do so thus we run the same exact unit
+ * tests for both without copying them. */
+typedef struct find_my_address_params_t {
+  /* Index where the mock function results are located. */
+  int idx;
+  int family;
+  const char *public_ip;
+  const char *internal_ip;
+} find_my_address_params_t;
+
+static find_my_address_params_t addr_param_v4 = {
+  .idx = 0,
+  .family = AF_INET,
+  .public_ip = "128.52.128.105",
+  .internal_ip = "127.0.0.1",
+};
+
+static find_my_address_params_t addr_param_v6 = {
+  .idx = 1,
+  .family = AF_INET6,
+  .public_ip = "4242::4242",
+  .internal_ip = "::1",
+};
+
 static void
-test_config_find_my_address_v6(void *arg)
+test_config_find_my_address(void *arg)
 {
   or_options_t *options;
   tor_addr_t resolved_addr, test_addr;
@@ -1398,786 +1434,306 @@ test_config_find_my_address_v6(void *arg)
   char *hostname_out = NULL;
   bool retval;
   int prev_n_hostname_01010101;
-  int prev_n_hostname_localhost;
   int prev_n_hostname_failure;
+  int prev_n_hostname_localhost;
   int prev_n_gethostname_replacement;
   int prev_n_gethostname_failure;
   int prev_n_gethostname_localhost;
   int prev_n_get_interface_address6;
   int prev_n_get_interface_address6_failure;
 
-  (void)arg;
+  const find_my_address_params_t *p = arg;
 
   options = options_new();
-
   options_init(options);
 
   /*
-   * CASE 1:
-   * If options->Address is a valid IPv6 address string, we want
-   * the corresponding address to be parsed and returned.
+   * Case 1:
+   *    1. Address is a valid IPv4.
+   *
+   * Expected to succeed.
    */
-  config_line_append(&options->Address, "Address",
-                     "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
-  tor_addr_parse(&test_addr, "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
+  config_line_append(&options->Address, "Address", p->public_ip);
+  tor_addr_parse(&test_addr, p->public_ip);
 
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  tt_want(retval == true);
-  tt_want_str_op(method_used, OP_EQ, "CONFIGURED");
-  tt_want(hostname_out == NULL);
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  config_free_lines(options->Address);
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  CLEANUP_FOUND_ADDRESS;
 
   /*
-   * CASE 2:
-   * If options->Address is a valid DNS address, we want find_my_address()
-   * function to ask tor_addr_lookup() for help with resolving it
-   * and return the address that was resolved (in host order).
+   * Case 2: Address is a resolvable IPv4. Expected to succeed.
    */
-
   MOCK(tor_addr_lookup, tor_addr_lookup_01010101);
 
   config_line_append(&options->Address, "Address", "www.torproject.org");
-  tor_addr_parse(&test_addr, "0101::0101");
+  tor_addr_parse(&test_addr, ret_addr_lookup_01010101[p->idx]);
 
   prev_n_hostname_01010101 = n_hostname_01010101;
 
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  tt_want(retval == true);
-  tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
-  tt_want_str_op(method_used, OP_EQ, "RESOLVED");
-  tt_want_str_op(hostname_out, OP_EQ, "www.torproject.org");
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
+  tt_int_op(n_hostname_01010101, OP_EQ, ++prev_n_hostname_01010101);
+  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org");
+  CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(tor_addr_lookup);
 
-  config_free_lines(options->Address);
-  tor_free(hostname_out);
+  /*
+   * Case 3: Address is a local IPv4. Expected to fail.
+   */
+  config_line_append(&options->Address, "Address", p->internal_ip);
+
+  setup_full_capture_of_logs(LOG_NOTICE);
+
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+
+  expect_log_msg_containing("is a private IP address. Tor relays that "
+                            "use the default DirAuthorities must have "
+                            "public IP addresses.");
+  teardown_capture_of_logs();
+
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
 
   /*
-   * CASE 3:
-   * Given that options->Address is NULL, we want find_my_address()
-   * to try and use tor_gethostname() to get hostname AND use
-   * tor_addr_lookup() to get IP address.
+   * Case 4: Address is a local IPv4 but custom authorities. Expected to
+   * succeed.
    */
+  config_line_append(&options->Address, "Address", p->internal_ip);
+  options->DirAuthorities = tor_malloc_zero(sizeof(config_line_t));
+  tor_addr_parse(&test_addr, p->internal_ip);
 
-  tor_addr_make_unspec(&resolved_addr);
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 5: Multiple IPv4 Address. Expected to fail.
+   */
+  config_line_append(&options->Address, "Address", p->public_ip);
+  config_line_append(&options->Address, "Address", p->public_ip);
+
+  setup_full_capture_of_logs(LOG_NOTICE);
+
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+
+  expect_log_msg_containing("Found 2 Address statement of address family");
+  teardown_capture_of_logs();
+
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 6: Another address family is configured. Expected to fail.
+   */
+  if (p->family == AF_INET) {
+    config_line_append(&options->Address, "Address", "4242::4242");
+  } else {
+    config_line_append(&options->Address, "Address", "1.1.1.1");
+  }
+
+  setup_full_capture_of_logs(LOG_NOTICE);
+
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+
+  expect_log_msg_containing("No Address option found for family");
+  teardown_capture_of_logs();
+
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 7: Address is a non resolvable hostname. Expected to fail.
+   */
+  MOCK(tor_addr_lookup, tor_addr_lookup_failure);
+
+  config_line_append(&options->Address, "Address", "www.torproject.org");
+  prev_n_hostname_failure = n_hostname_failure;
+
+  setup_full_capture_of_logs(LOG_NOTICE);
+
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+
+  expect_log_msg_containing("Could not resolve local Address "
+                            "'www.torproject.org'. Failing.");
+  teardown_capture_of_logs();
+
+  tt_int_op(n_hostname_failure, OP_EQ, ++prev_n_hostname_failure);
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  UNMOCK(tor_addr_lookup);
+
+  /*
+   * Case 8:
+   *    1. Address is NULL
+   *    2. Interface address is a valid IPv4.
+   *
+   * Expected to succeed.
+   */
   options->Address = NULL;
-  tor_addr_parse(&test_addr, "0101::0101");
+  tor_addr_parse(&test_addr, ret_get_interface_address6_08080808[p->idx]);
 
+  MOCK(get_interface_address6, get_interface_address6_08080808);
+
+  prev_n_get_interface_address6 = n_get_interface_address6;
+
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+
+  tt_int_op(n_get_interface_address6, OP_EQ, ++prev_n_get_interface_address6);
+  VALIDATE_FOUND_ADDRESS(true, "INTERFACE", NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  UNMOCK(get_interface_address6);
+
+  /*
+   * Case 9:
+   *    1. Address is NULL
+   *    2. Interface address fails to be found.
+   *    3. Local hostname resolves to a valid IPv4.
+   *
+   * Expected to succeed.
+   */
+  options->Address = NULL;
+  tor_addr_parse(&test_addr, ret_addr_lookup_01010101[p->idx]);
+
+  MOCK(get_interface_address6, get_interface_address6_failure);
   MOCK(tor_gethostname, tor_gethostname_replacement);
   MOCK(tor_addr_lookup, tor_addr_lookup_01010101);
 
-  prev_n_gethostname_replacement = n_gethostname_replacement;
+  prev_n_get_interface_address6_failure = n_get_interface_address6_failure;
   prev_n_hostname_01010101 = n_hostname_01010101;
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(retval == true);
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
-  tt_want_str_op(method_used, OP_EQ, "GETHOSTNAME");
-  tt_want_str_op(hostname_out, OP_EQ, "onionrouter!");
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  UNMOCK(tor_gethostname);
-  UNMOCK(tor_addr_lookup);
-
-  tor_free(hostname_out);
-
-  /*
-   * CASE 4:
-   * Given that options->Address is a local host address, we want
-   * find_my_address() function to fail.
-   */
-
-  tor_addr_make_unspec(&resolved_addr);
-  config_line_append(&options->Address, "Address", "::1");
-  tor_addr_parse(&test_addr, "::1");
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(tor_addr_is_null(&resolved_addr) == 1);
-  tt_want(retval == false);
-
-  config_free_lines(options->Address);
-  tor_free(hostname_out);
-
-  /*
-   * CASE 5:
-   * We want find_my_address() to fail if DNS address in options->Address
-   * cannot be resolved.
-   */
-
-  MOCK(tor_addr_lookup, tor_addr_lookup_failure);
-
-  prev_n_hostname_failure = n_hostname_failure;
-
-  config_line_append(&options->Address, "Address", "www.tor-project.org");
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_want(tor_addr_is_null(&resolved_addr) == 1);
-  tt_want(retval == false);
-
-  UNMOCK(tor_addr_lookup);
-
-  config_free_lines(options->Address);
-  options->Address = NULL;
-  tor_free(hostname_out);
-
-  /*
-   * CASE 6:
-   * If options->Address is NULL AND gettting local hostname fails, we want
-   * find_my_address() to fail as well.
-   */
-
-  MOCK(tor_gethostname,tor_gethostname_failure);
-
-  prev_n_gethostname_failure = n_gethostname_failure;
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_gethostname_failure == prev_n_gethostname_failure + 1);
-  tt_want(tor_addr_is_null(&resolved_addr) == 1);
-  tt_want(retval == false);
-
-  UNMOCK(tor_gethostname);
-  tor_free(hostname_out);
-
-  /*
-   * CASE 7:
-   * We want find_my_address() to try and get network interface address via
-   * get_interface_address() if hostname returned by tor_gethostname() cannot
-   * be resolved into IP address.
-   */
-
-  MOCK(tor_gethostname, tor_gethostname_replacement);
-  MOCK(tor_addr_lookup, tor_addr_lookup_failure);
-  MOCK(get_interface_address6, get_interface_address6_08080808);
-
-  tor_addr_parse(&test_addr, "0808::0808");
-
   prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_get_interface_address6 = n_get_interface_address6;
 
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  tt_want(retval == true);
-  tt_want_int_op(n_gethostname_replacement, OP_EQ,
-                 prev_n_gethostname_replacement + 1);
-  tt_want_int_op(n_get_interface_address6, OP_EQ,
-                 prev_n_get_interface_address6 + 1);
-  tt_want_str_op(method_used, OP_EQ, "INTERFACE");
-  tt_want(hostname_out == NULL);
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
+  tt_int_op(n_get_interface_address6_failure, OP_EQ,
+            ++prev_n_get_interface_address6_failure);
+  tt_int_op(n_hostname_01010101, OP_EQ,
+            ++prev_n_hostname_01010101);
+  tt_int_op(n_gethostname_replacement, OP_EQ,
+            ++prev_n_gethostname_replacement);
+  VALIDATE_FOUND_ADDRESS(true, "GETHOSTNAME", "onionrouter!");
+  CLEANUP_FOUND_ADDRESS;
 
-  UNMOCK(get_interface_address);
-  tor_free(hostname_out);
+  UNMOCK(get_interface_address6);
+  UNMOCK(tor_gethostname);
+  UNMOCK(tor_addr_lookup);
 
   /*
-   * CASE 8:
-   * Suppose options->Address is NULL AND hostname returned by
-   * tor_gethostname() is unresolvable. We want find_my_address to fail if
-   * get_interface_address() fails.
+   * Case 10:
+   *    1. Address is NULL
+   *    2. Interface address fails to be found.
+   *    3. Local hostname resolves to an internal IPv4.
+   *
+   * Expected to fail.
    */
+  options->Address = NULL;
 
   MOCK(get_interface_address6, get_interface_address6_failure);
-
-  prev_n_get_interface_address6_failure = n_get_interface_address6_failure;
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_get_interface_address6_failure ==
-          prev_n_get_interface_address6_failure + 1);
-  tt_want(n_gethostname_replacement ==
-          prev_n_gethostname_replacement + 1);
-  tt_want(retval == false);
-
-  UNMOCK(get_interface_address);
-  tor_free(hostname_out);
-
-  /*
-   * CASE 9:
-   * Given that options->Address is NULL AND tor_addr_lookup()
-   * fails AND hostname returned by gethostname() resolves
-   * to local IP address, we want find_my_address() function to
-   * call get_interface_address6(.,AF_INET6,.) and return IP address
-   * the latter function has found.
-   */
-
-  MOCK(tor_addr_lookup, tor_addr_lookup_failure);
-  MOCK(tor_gethostname, tor_gethostname_replacement);
-  MOCK(get_interface_address6, get_interface_address6_08080808);
-
-  tor_addr_parse(&test_addr, "0808::0808");
-
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_hostname_failure = n_hostname_failure;
-  prev_n_get_interface_address6 = n_get_interface_address6;
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(last_address6_family == AF_INET6);
-  tt_want(n_get_interface_address6 == prev_n_get_interface_address6 + 1);
-  tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(retval == true);
-  tt_want_str_op(method_used, OP_EQ, "INTERFACE");
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  UNMOCK(tor_addr_lookup);
-  UNMOCK(tor_gethostname);
-  UNMOCK(get_interface_address6);
-
-  tor_free(hostname_out);
-
-  /*
-   * CASE 10: We want find_my_address() to fail if all of the following
-   * are true:
-   *   1. options->Address is not NULL
-   *   2. ... but it cannot be converted to struct in_addr by
-   *      tor_inet_aton()
-   *   3. ... and tor_addr_lookup() fails to resolve the
-   *      options->Address
-   */
-
-  MOCK(tor_addr_lookup, tor_addr_lookup_failure);
-
-  prev_n_hostname_failure = n_hostname_failure;
-
-  config_line_append(&options->Address, "Address", "some_hostname");
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_want(retval == false);
-
-  UNMOCK(tor_gethostname);
-  UNMOCK(tor_addr_lookup);
-
-  tor_free(hostname_out);
-
-  /*
-   * CASE 11:
-   * Suppose the following sequence of events:
-   *   1. options->Address is NULL
-   *   2. tor_gethostname() succeeds to get hostname of machine Tor
-   *      if running on.
-   *   3. Hostname from previous step cannot be converted to
-   *      address by using tor_inet_aton() function.
-   *   4. However, tor_addr_lookup() succeeds in resolving the
-   *      hostname from step 2.
-   *   5. Unfortunately, tor_addr_is_internal() deems this address
-   *      to be internal.
-   *   6. get_interface_address6(.,AF_INET,.) returns non-internal
-   *      IPv4
-   *
-   *   We want resolve_my_addr() to succeed with method "INTERFACE"
-   *   and address from step 6.
-   */
-
-  config_free_lines(options->Address);
-  options->Address = NULL;
-  tor_addr_parse(&test_addr, "0808::0808");
-
-  MOCK(tor_gethostname, tor_gethostname_replacement);
+  MOCK(tor_gethostname, tor_gethostname_localhost);
   MOCK(tor_addr_lookup, tor_addr_lookup_localhost);
-  MOCK(get_interface_address6, get_interface_address6_08080808);
 
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_hostname_localhost = n_hostname_localhost;
-  prev_n_get_interface_address6 = n_get_interface_address6;
-
-  retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(n_hostname_localhost == prev_n_hostname_localhost + 1);
-  tt_want(n_get_interface_address6 == prev_n_get_interface_address6 + 1);
-
-  tt_str_op(method_used, OP_EQ, "INTERFACE");
-  tt_ptr_op(hostname_out, OP_EQ, NULL);
-  tt_want(retval == true);
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  /*
-   * CASE 11b:
-   *   1-5 as above.
-   *   6. get_interface_address6() fails.
-   *
-   *   In this subcase, we want find_my_address() to fail.
-   */
-
-  UNMOCK(get_interface_address6);
-  MOCK(get_interface_address6, get_interface_address6_failure);
-
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_hostname_localhost = n_hostname_localhost;
   prev_n_get_interface_address6_failure = n_get_interface_address6_failure;
-
-  retval = find_my_address(options, AF_INET6, LOG_DEBUG, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(n_hostname_localhost == prev_n_hostname_localhost + 1);
-  tt_want(n_get_interface_address6_failure ==
-          prev_n_get_interface_address6_failure + 1);
-
-  tt_want(retval == false);
-
-  UNMOCK(tor_gethostname);
-  UNMOCK(tor_addr_lookup);
-  UNMOCK(get_interface_address6);
-
-  /* CASE 12:
-   * Suppose the following happens:
-   *   1. options->Address is NULL AND options->DirAuthorities is non-NULL
-   *   2. tor_gethostname() succeeds in getting hostname of a machine ...
-   *   3. ... which is successfully parsed by tor_inet_aton() ...
-   *   4. into IPv4 address that tor_addr_is_inernal() considers to be
-   *      internal.
-   *
-   *  In this case, we want find_my_address() to fail.
-   */
-
-  tor_free(options->Address);
-  options->Address = NULL;
-  options->DirAuthorities = tor_malloc_zero(sizeof(config_line_t));
-
-  MOCK(tor_gethostname,tor_gethostname_localhost);
-
+  prev_n_hostname_localhost = n_hostname_localhost;
   prev_n_gethostname_localhost = n_gethostname_localhost;
 
-  retval = find_my_address(options, AF_INET6, LOG_DEBUG, &resolved_addr,
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  tt_want(n_gethostname_localhost == prev_n_gethostname_localhost + 1);
-  tt_want(retval == false);
+  tt_int_op(n_get_interface_address6_failure, OP_EQ,
+            ++prev_n_get_interface_address6_failure);
+  tt_int_op(n_hostname_localhost, OP_EQ,
+            ++prev_n_hostname_localhost);
+  tt_int_op(n_gethostname_localhost, OP_EQ,
+            ++prev_n_gethostname_localhost);
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
 
-  UNMOCK(tor_gethostname);
-
- done:
-  config_free_lines(options->Address);
-  tor_free(options->DirAuthorities);
-  or_options_free(options);
-  tor_free(hostname_out);
-
-  UNMOCK(tor_gethostname);
-  UNMOCK(tor_addr_lookup);
-  UNMOCK(get_interface_address);
   UNMOCK(get_interface_address6);
   UNMOCK(tor_gethostname);
-}
-
-static void
-test_config_find_my_address_v4(void *arg)
-{
-  or_options_t *options;
-  tor_addr_t resolved_addr, test_addr;
-  const char *method_used;
-  char *hostname_out = NULL;
-  bool retval;
-  int prev_n_hostname_01010101;
-  int prev_n_hostname_localhost;
-  int prev_n_hostname_failure;
-  int prev_n_gethostname_replacement;
-  int prev_n_gethostname_failure;
-  int prev_n_gethostname_localhost;
-  int prev_n_get_interface_address6;
-  int prev_n_get_interface_address6_failure;
-
-  (void)arg;
-
-  options = options_new();
-
-  options_init(options);
-
- /*
-  * CASE 1:
-  * If options->Address is a valid IPv4 address string, we want
-  * the corresponding address to be parsed and returned.
-  */
-  config_line_append(&options->Address, "Address", "128.52.128.105");
-  tor_addr_parse(&test_addr, "128.52.128.105");
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(retval == true);
-  tt_want_str_op(method_used,OP_EQ,"CONFIGURED");
-  tt_want(hostname_out == NULL);
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  config_free_lines(options->Address);
-
-/*
- * CASE 2:
- * If options->Address is a valid DNS address, we want find_my_address()
- * function to ask tor_addr_lookup() for help with resolving it
- * and return the address that was resolved (in host order).
- */
-
-  MOCK(tor_addr_lookup, tor_addr_lookup_01010101);
-
-  config_line_append(&options->Address, "Address", "www.torproject.org");
-  tor_addr_parse(&test_addr, "1.1.1.1");
-
-  prev_n_hostname_01010101 = n_hostname_01010101;
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(retval == true);
-  tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
-  tt_want_str_op(method_used,OP_EQ,"RESOLVED");
-  tt_want_str_op(hostname_out,OP_EQ,"www.torproject.org");
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
   UNMOCK(tor_addr_lookup);
 
-  config_free_lines(options->Address);
-  tor_free(hostname_out);
-
-/*
- * CASE 3:
- * Given that options->Address is NULL, we want find_my_address()
- * to try and use tor_gethostname() to get hostname AND use
- * tor_addr_lookup() to get IP address.
- */
-
-  tor_addr_make_unspec(&resolved_addr);
+  /*
+   * Case 11:
+   *    1. Address is NULL
+   *    2. Interface address fails to be found.
+   *    3. Local hostname fails to be found.
+   *
+   * Expected to fail.
+   */
   options->Address = NULL;
-  tor_addr_parse(&test_addr, "1.1.1.1");
 
-  MOCK(tor_gethostname,tor_gethostname_replacement);
-  MOCK(tor_addr_lookup,tor_addr_lookup_01010101);
+  MOCK(get_interface_address6, get_interface_address6_failure);
+  MOCK(tor_gethostname, tor_gethostname_failure);
 
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_hostname_01010101 = n_hostname_01010101;
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(retval == true);
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
-  tt_want_str_op(method_used,OP_EQ,"GETHOSTNAME");
-  tt_want_str_op(hostname_out,OP_EQ,"onionrouter!");
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  UNMOCK(tor_gethostname);
-  UNMOCK(tor_addr_lookup);
-
-  tor_free(hostname_out);
-
-/*
- * CASE 4:
- * Given that options->Address is a local host address, we want
- * find_my_address() function to fail.
- */
-
-  tor_addr_make_unspec(&resolved_addr);
-  config_line_append(&options->Address, "Address", "127.0.0.1");
-  tor_addr_parse(&test_addr, "127.0.0.1");
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(tor_addr_is_null(&resolved_addr) == 1);
-  tt_want(retval == false);
-
-  config_free_lines(options->Address);
-  tor_free(hostname_out);
-
-/*
- * CASE 5:
- * We want find_my_address() to fail if DNS address in options->Address
- * cannot be resolved.
- */
-
-  MOCK(tor_addr_lookup,tor_addr_lookup_failure);
-
-  prev_n_hostname_failure = n_hostname_failure;
-
-  config_line_append(&options->Address, "Address", "www.tor-project.org");
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_want(tor_addr_is_null(&resolved_addr) == 1);
-  tt_want(retval == false);
-
-  UNMOCK(tor_addr_lookup);
-
-  config_free_lines(options->Address);
-  options->Address = NULL;
-  tor_free(hostname_out);
-
-/*
- * CASE 6:
- * If options->Address is NULL AND gettting local hostname fails, we want
- * find_my_address() to fail as well.
- */
-
-  MOCK(tor_gethostname,tor_gethostname_failure);
-
+  prev_n_get_interface_address6_failure = n_get_interface_address6_failure;
   prev_n_gethostname_failure = n_gethostname_failure;
 
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  tt_want(n_gethostname_failure == prev_n_gethostname_failure + 1);
-  tt_want(tor_addr_is_null(&resolved_addr) == 1);
-  tt_want(retval == false);
+  tt_int_op(n_get_interface_address6_failure, OP_EQ,
+            ++prev_n_get_interface_address6_failure);
+  tt_int_op(n_gethostname_failure, OP_EQ,
+            ++prev_n_gethostname_failure);
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
 
+  UNMOCK(get_interface_address6);
   UNMOCK(tor_gethostname);
-  tor_free(hostname_out);
 
-/*
- * CASE 7:
- * We want find_my_address() to try and get network interface address via
- * get_interface_address() if hostname returned by tor_gethostname() cannot be
- * resolved into IP address.
- */
-
-  MOCK(tor_gethostname,tor_gethostname_replacement);
-  MOCK(tor_addr_lookup,tor_addr_lookup_failure);
-  MOCK(get_interface_address6, get_interface_address6_08080808);
-
-  tor_addr_parse(&test_addr, "8.8.8.8");
-
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_get_interface_address6 = n_get_interface_address6;
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(retval == true);
-  tt_want_int_op(n_gethostname_replacement, OP_EQ,
-                 prev_n_gethostname_replacement + 1);
-  tt_want_int_op(n_get_interface_address6, OP_EQ,
-                 prev_n_get_interface_address6 + 1);
-  tt_want_str_op(method_used,OP_EQ,"INTERFACE");
-  tt_want(hostname_out == NULL);
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  UNMOCK(get_interface_address);
-  tor_free(hostname_out);
-
-/*
- * CASE 8:
- * Suppose options->Address is NULL AND hostname returned by tor_gethostname()
- * is unresolvable. We want find_my_address to fail if
- * get_interface_address() fails.
- */
+  /*
+   * Case 12:
+   *    1. Address is NULL
+   *    2. Interface address fails to be found.
+   *    3. Local hostname can't be resolved.
+   *
+   * Expected to fail.
+   */
+  options->Address = NULL;
 
   MOCK(get_interface_address6, get_interface_address6_failure);
-
-  prev_n_get_interface_address6_failure = n_get_interface_address6_failure;
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_get_interface_address6_failure ==
-          prev_n_get_interface_address6_failure + 1);
-  tt_want(n_gethostname_replacement ==
-          prev_n_gethostname_replacement + 1);
-  tt_want(retval == false);
-
-  UNMOCK(get_interface_address);
-  tor_free(hostname_out);
-
-/*
- * CASE 9:
- * Given that options->Address is NULL AND tor_addr_lookup()
- * fails AND hostname returned by gethostname() resolves
- * to local IP address, we want find_my_address() function to
- * call get_interface_address6(.,AF_INET,.) and return IP address
- * the latter function has found.
- */
-
-  MOCK(tor_addr_lookup,tor_addr_lookup_failure);
-  MOCK(tor_gethostname,tor_gethostname_replacement);
-  MOCK(get_interface_address6,get_interface_address6_replacement);
-
-  tor_addr_parse(&test_addr, "9.9.9.9");
-
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_hostname_failure = n_hostname_failure;
-  prev_n_get_interface_address6 = n_get_interface_address6;
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(last_address6_family == AF_INET);
-  tt_want(n_get_interface_address6 == prev_n_get_interface_address6 + 1);
-  tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(retval == true);
-  tt_want_str_op(method_used,OP_EQ,"INTERFACE");
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  UNMOCK(tor_addr_lookup);
-  UNMOCK(tor_gethostname);
-  UNMOCK(get_interface_address6);
-
-  tor_free(hostname_out);
-
-  /*
-   * CASE 10: We want find_my_address() to fail if all of the following
-   * are true:
-   *   1. options->Address is not NULL
-   *   2. ... but it cannot be converted to struct in_addr by
-   *      tor_inet_aton()
-   *   3. ... and tor_addr_lookup() fails to resolve the
-   *      options->Address
-   */
-
+  MOCK(tor_gethostname, tor_gethostname_replacement);
   MOCK(tor_addr_lookup, tor_addr_lookup_failure);
 
+  prev_n_get_interface_address6_failure = n_get_interface_address6_failure;
+  prev_n_gethostname_replacement = n_gethostname_replacement;
   prev_n_hostname_failure = n_hostname_failure;
 
-  config_line_append(&options->Address, "Address", "some_hostname");
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  tt_want(n_hostname_failure == prev_n_hostname_failure + 1);
-  tt_want(retval == false);
-
-  UNMOCK(tor_gethostname);
-  UNMOCK(tor_addr_lookup);
-
-  tor_free(hostname_out);
-
-  /*
-   * CASE 11:
-   * Suppose the following sequence of events:
-   *   1. options->Address is NULL
-   *   2. tor_gethostname() succeeds to get hostname of machine Tor
-   *      if running on.
-   *   3. Hostname from previous step cannot be converted to
-   *      address by using tor_inet_aton() function.
-   *   4. However, tor_addr_lookup() succeeds in resolving the
-   *      hostname from step 2.
-   *   5. Unfortunately, tor_addr_is_internal() deems this address
-   *      to be internal.
-   *   6. get_interface_address6(.,AF_INET,.) returns non-internal
-   *      IPv4
-   *
-   *   We want resolve_my_addr() to succeed with method "INTERFACE"
-   *   and address from step 6.
-   */
-
-  config_free_lines(options->Address);
-  options->Address = NULL;
-  tor_addr_parse(&test_addr, "9.9.9.9");
-
-  MOCK(tor_gethostname,tor_gethostname_replacement);
-  MOCK(tor_addr_lookup,tor_addr_lookup_localhost);
-  MOCK(get_interface_address6,get_interface_address6_replacement);
-
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_hostname_localhost = n_hostname_localhost;
-  prev_n_get_interface_address6 = n_get_interface_address6;
-
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(n_hostname_localhost == prev_n_hostname_localhost + 1);
-  tt_want(n_get_interface_address6 == prev_n_get_interface_address6 + 1);
-
-  tt_str_op(method_used,OP_EQ,"INTERFACE");
-  tt_ptr_op(hostname_out, OP_EQ, NULL);
-  tt_want(retval == true);
-  tt_assert(tor_addr_eq(&resolved_addr, &test_addr));
-
-  /*
-   * CASE 11b:
-   *   1-5 as above.
-   *   6. get_interface_address6() fails.
-   *
-   *   In this subcase, we want find_my_address() to fail.
-   */
+  tt_int_op(n_get_interface_address6_failure, OP_EQ,
+            ++prev_n_get_interface_address6_failure);
+  tt_int_op(n_gethostname_replacement, OP_EQ,
+            ++prev_n_gethostname_replacement);
+  tt_int_op(n_hostname_failure, OP_EQ,
+            ++prev_n_hostname_failure);
+  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);
-  MOCK(get_interface_address6,get_interface_address6_failure);
-
-  prev_n_gethostname_replacement = n_gethostname_replacement;
-  prev_n_hostname_localhost = n_hostname_localhost;
-  prev_n_get_interface_address6_failure = n_get_interface_address6_failure;
-
-  retval = find_my_address(options, AF_INET, LOG_DEBUG, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(n_hostname_localhost == prev_n_hostname_localhost + 1);
-  tt_want(n_get_interface_address6_failure ==
-          prev_n_get_interface_address6_failure + 1);
-
-  tt_want(retval == false);
-
   UNMOCK(tor_gethostname);
   UNMOCK(tor_addr_lookup);
-  UNMOCK(get_interface_address6);
-
-  /* CASE 12:
-   * Suppose the following happens:
-   *   1. options->Address is NULL AND options->DirAuthorities is non-NULL
-   *   2. tor_gethostname() succeeds in getting hostname of a machine ...
-   *   3. ... which is successfully parsed by tor_inet_aton() ...
-   *   4. into IPv4 address that tor_addr_is_inernal() considers to be
-   *      internal.
-   *
-   *  In this case, we want find_my_address() to fail.
-   */
-
-  tor_free(options->Address);
-  options->Address = NULL;
-  options->DirAuthorities = tor_malloc_zero(sizeof(config_line_t));
-
-  MOCK(tor_gethostname,tor_gethostname_localhost);
-
-  prev_n_gethostname_localhost = n_gethostname_localhost;
-
-  retval = find_my_address(options, AF_INET, LOG_DEBUG, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  tt_want(n_gethostname_localhost == prev_n_gethostname_localhost + 1);
-  tt_want(retval == false);
-
-  UNMOCK(tor_gethostname);
 
  done:
-  config_free_lines(options->Address);
-  tor_free(options->DirAuthorities);
   or_options_free(options);
-  tor_free(hostname_out);
 
   UNMOCK(tor_gethostname);
   UNMOCK(tor_addr_lookup);
-  UNMOCK(get_interface_address);
   UNMOCK(get_interface_address6);
-  UNMOCK(tor_gethostname);
 }
 
 static void
@@ -6848,8 +6404,41 @@ test_config_getinfo_config_names(void *arg)
   tor_free(answer);
 }
 
+static int IPv4 = 1;
+static int IPv6 = 2;
+
+/** Setup function for the find_my_address() test. Return parameters for the
+ * test are based on the passed string as setup data. */
+static void *
+find_my_addr_setup_fn(const struct testcase_t *tc)
+{
+  if (*(int *) tc->setup_data == IPv4) {
+    return &addr_param_v4;
+  }
+  if (*(int *) tc->setup_data == IPv6) {
+    return &addr_param_v6;
+  }
+  return NULL;
+}
+
+/** Cleanup function for the find_my_address() test. */
+static int
+find_my_addr_cleanup_fn(const struct testcase_t *tc, void *arg)
+{
+  (void) tc;
+  (void) arg;
+  return 1;
+}
+
+static struct testcase_setup_t test_find_my_addr_setup = {
+  find_my_addr_setup_fn, find_my_addr_cleanup_fn,
+};
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
+
+#define CONFIG_TEST_SETUP(suffix, name, flags, setup, setup_data) \
+  { #name#suffix, test_config_ ## name, flags, setup, setup_data }
 
 struct testcase_t config_tests[] = {
   CONFIG_TEST(adding_trusted_dir_server, TT_FORK),
@@ -6861,8 +6450,10 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(adding_dir_servers, TT_FORK),
   CONFIG_TEST(default_dir_servers, TT_FORK),
   CONFIG_TEST(default_fallback_dirs, 0),
-  CONFIG_TEST(find_my_address_v4, TT_FORK),
-  CONFIG_TEST(find_my_address_v6, TT_FORK),
+  CONFIG_TEST_SETUP(_v4, find_my_address, TT_FORK,
+                    &test_find_my_addr_setup, &IPv4),
+  CONFIG_TEST_SETUP(_v6, find_my_address, TT_FORK,
+                    &test_find_my_addr_setup, &IPv6),
   CONFIG_TEST(find_my_address_mixed, TT_FORK),
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),

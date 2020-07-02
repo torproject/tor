@@ -445,8 +445,8 @@ static fn_address_ret_t
 {
   /* These functions are in order for our find address algorithm. */
   get_address_from_config,
-  get_address_from_hostname,
   get_address_from_interface,
+  get_address_from_hostname,
 };
 /** Length of address table as in how many functions. */
 static const size_t fn_address_table_len = ARRAY_LENGTH(fn_address_table);
@@ -478,7 +478,17 @@ static const size_t fn_address_table_len = ARRAY_LENGTH(fn_address_table);
  *
  *     If no given Address, fallback to the local hostname (see section 2).
  *
- *  2. Look at the local hostname.
+ *  2. Look at the network interface.
+ *
+ *     Attempt to find the first public usable address from the list of
+ *     network interface returned by the OS.
+ *
+ *     On failure, we attempt to look at the local hostname (3).
+ *
+ *     On success, addr_out is set with it, method_out is set to "INTERFACE"
+ *     and hostname_out is set to NULL.
+ *
+ *  3. Look at the local hostname.
  *
  *     If the local hostname resolves to a non internal address, addr_out is
  *     set with it, method_out is set to "GETHOSTNAME" and hostname_out is set
@@ -489,20 +499,7 @@ static const size_t fn_address_table_len = ARRAY_LENGTH(fn_address_table);
  *     If the local hostname resolves to an internal address, an error is
  *     returned.
  *
- *     If the local hostname can NOT be resolved, fallback to the network
- *     interface (see section 3).
- *
- *  3. Look at the network interface.
- *
- *     Attempt to find the first public usable address from the list of
- *     network interface returned by the OS.
- *
- *     On failure, an error is returned. This error indicates that all
- *     attempts have failed and thus the address for the given family can not
- *     be found.
- *
- *     On success, addr_out is set with it, method_out is set to "INTERFACE"
- *     and hostname_out is set to NULL.
+ *     If the local hostname can NOT be resolved, an error is returned.
  *
  * @param options Global configuration options.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
