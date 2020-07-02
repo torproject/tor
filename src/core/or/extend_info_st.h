@@ -15,7 +15,7 @@
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
-/** Larges number of addresses we handle in an extend_info.
+/** Largest number of addresses we handle in an extend_info.
  *
  * More are permitted in an EXTEND cell, but we won't handle them. */
 #define EXTEND_INFO_MAX_ADDRS 2
