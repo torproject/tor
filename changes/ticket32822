@@ -1,0 +1,5 @@
+  o Minor features (directory authorities, IPv6):
+    - Make authorities add their IPv6 ORPort (if any) to the trusted dir
+      servers list. Authorities currently add themselves to the trusted dir
+      servers list, but they only add their IPv4 address and ports to the list.
+      Closes ticket 32822.

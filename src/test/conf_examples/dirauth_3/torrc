@@ -1,0 +1,13 @@
+# Authority with IPv6 address
+
+AuthoritativeDirectory 1
+V3AuthoritativeDirectory 1
+
+ContactInfo tor_parse_test@example.net
+
+Address 192.0.2.1
+
+ORPort 192.0.2.1:1
+DirPort 192.0.2.1:2
+
+ORPort [2001:DB8::1]:3
