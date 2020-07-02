@@ -6404,36 +6404,6 @@ test_config_getinfo_config_names(void *arg)
   tor_free(answer);
 }
 
-static int IPv4 = 1;
-static int IPv6 = 2;
-
-/** Setup function for the find_my_address() test. Return parameters for the
- * test are based on the passed string as setup data. */
-static void *
-find_my_addr_setup_fn(const struct testcase_t *tc)
-{
-  if (*(int *) tc->setup_data == IPv4) {
-    return &addr_param_v4;
-  }
-  if (*(int *) tc->setup_data == IPv6) {
-    return &addr_param_v6;
-  }
-  return NULL;
-}
-
-/** Cleanup function for the find_my_address() test. */
-static int
-find_my_addr_cleanup_fn(const struct testcase_t *tc, void *arg)
-{
-  (void) tc;
-  (void) arg;
-  return 1;
-}
-
-static struct testcase_setup_t test_find_my_addr_setup = {
-  find_my_addr_setup_fn, find_my_addr_cleanup_fn,
-};
-
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
@@ -6451,9 +6421,9 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(default_dir_servers, TT_FORK),
   CONFIG_TEST(default_fallback_dirs, 0),
   CONFIG_TEST_SETUP(_v4, find_my_address, TT_FORK,
-                    &test_find_my_addr_setup, &IPv4),
+                    &passthrough_setup, &addr_param_v4),
   CONFIG_TEST_SETUP(_v6, find_my_address, TT_FORK,
-                    &test_find_my_addr_setup, &IPv6),
+                    &passthrough_setup, &addr_param_v6),
   CONFIG_TEST(find_my_address_mixed, TT_FORK),
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),
