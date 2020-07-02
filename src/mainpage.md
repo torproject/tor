@@ -84,7 +84,8 @@ The codebase is divided into a few top-level subdirectories, each of
 which contains several sub-modules.
 
    - `ext` -- Code maintained elsewhere that we include in the Tor
-     source distribution.
+     source distribution.  You should not edit this code if you can
+     avoid it: we try to keep it identical to the upstream versions.
 
    - \refdir{lib} -- Lower-level utility code, not necessarily
      tor-specific.
