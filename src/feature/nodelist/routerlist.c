@@ -1088,7 +1088,11 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible))
      * This just won't work. */;
     static ratelim_t no_sd_ratelim = RATELIM_INIT(1800);
     r = ROUTER_BAD_EI;
-    log_fn_ratelim(&no_sd_ratelim, severity, LD_BUG,
+    /* This is a DEBUG because it can happen naturally, if we tried
+     * to add an extrainfo for which we no longer have the
+     * corresponding routerinfo.
+     */
+    log_fn_ratelim(&no_sd_ratelim, LOG_DEBUG, LD_DIR,
                    "No entry found in extrainfo map.");
     goto done;
   }
