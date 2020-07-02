@@ -1449,7 +1449,7 @@ test_config_find_my_address(void *arg)
 
   /*
    * Case 1:
-   *    1. Address is a valid IPv4.
+   *    1. Address is a valid address.
    *
    * Expected to succeed.
    */
@@ -1463,7 +1463,7 @@ test_config_find_my_address(void *arg)
   CLEANUP_FOUND_ADDRESS;
 
   /*
-   * Case 2: Address is a resolvable IPv4. Expected to succeed.
+   * Case 2: Address is a resolvable address. Expected to succeed.
    */
   MOCK(tor_addr_lookup, tor_addr_lookup_01010101);
 
@@ -1482,7 +1482,7 @@ test_config_find_my_address(void *arg)
   UNMOCK(tor_addr_lookup);
 
   /*
-   * Case 3: Address is a local IPv4. Expected to fail.
+   * Case 3: Address is a local addressi (internal). Expected to fail.
    */
   config_line_append(&options->Address, "Address", p->internal_ip);
 
@@ -1500,7 +1500,7 @@ test_config_find_my_address(void *arg)
   CLEANUP_FOUND_ADDRESS;
 
   /*
-   * Case 4: Address is a local IPv4 but custom authorities. Expected to
+   * Case 4: Address is a local address but custom authorities. Expected to
    * succeed.
    */
   config_line_append(&options->Address, "Address", p->internal_ip);
@@ -1514,7 +1514,7 @@ test_config_find_my_address(void *arg)
   CLEANUP_FOUND_ADDRESS;
 
   /*
-   * Case 5: Multiple IPv4 Address. Expected to fail.
+   * Case 5: Multiple address in Address. Expected to fail.
    */
   config_line_append(&options->Address, "Address", p->public_ip);
   config_line_append(&options->Address, "Address", p->public_ip);
@@ -1576,7 +1576,7 @@ test_config_find_my_address(void *arg)
   /*
    * Case 8:
    *    1. Address is NULL
-   *    2. Interface address is a valid IPv4.
+   *    2. Interface address is a valid address.
    *
    * Expected to succeed.
    */
@@ -1600,7 +1600,7 @@ test_config_find_my_address(void *arg)
    * Case 9:
    *    1. Address is NULL
    *    2. Interface address fails to be found.
-   *    3. Local hostname resolves to a valid IPv4.
+   *    3. Local hostname resolves to a valid address.
    *
    * Expected to succeed.
    */
@@ -1635,7 +1635,7 @@ test_config_find_my_address(void *arg)
    * Case 10:
    *    1. Address is NULL
    *    2. Interface address fails to be found.
-   *    3. Local hostname resolves to an internal IPv4.
+   *    3. Local hostname resolves to an internal address.
    *
    * Expected to fail.
    */
