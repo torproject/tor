@@ -37,6 +37,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
+#include "core/or/extendinfo.h"
 #include "core/or/policies.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/bridges.h"
@@ -202,8 +203,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
           const int family = tor_addr_parse(&addr,
                                             conn->socks_request->address);
           if (family < 0 ||
-              !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
-              build_state->chosen_exit->port != conn->socks_request->port)
+              !extend_info_has_orport(build_state->chosen_exit, &addr,
+                                      conn->socks_request->port))
             return 0;
         }
       }

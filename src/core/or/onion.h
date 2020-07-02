@@ -48,8 +48,7 @@ typedef struct extend_cell_t {
   uint8_t cell_type;
   /** An IPv4 address and port for the node we're connecting to. */
   tor_addr_port_t orport_ipv4;
-  /** An IPv6 address and port for the node we're connecting to. Not currently
-   * used. */
+  /** An IPv6 address and port for the node we're connecting to. */
   tor_addr_port_t orport_ipv6;
   /** Identity fingerprint of the node we're conecting to.*/
   uint8_t node_id[DIGEST_LEN];

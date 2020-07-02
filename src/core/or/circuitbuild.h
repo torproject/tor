@@ -42,23 +42,8 @@ MOCK_DECL(int, circuit_all_predicted_ports_handled, (time_t now,
 
 int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
-extend_info_t *extend_info_new(const char *nickname,
-                               const char *rsa_id_digest,
-                               const struct ed25519_public_key_t *ed_id,
-                               crypto_pk_t *onion_key,
-                               const struct curve25519_public_key_t *ntor_key,
-                               const tor_addr_t *addr, uint16_t port);
-extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect);
-extend_info_t *extend_info_dup(extend_info_t *info);
-void extend_info_free_(extend_info_t *info);
-#define extend_info_free(info) \
-  FREE_AND_NULL(extend_info_t, extend_info_free_, (info))
-int extend_info_addr_is_allowed(const tor_addr_t *addr);
-int extend_info_supports_tap(const extend_info_t* ei);
-int extend_info_supports_ntor(const extend_info_t* ei);
 int circuit_can_use_tap(const origin_circuit_t *circ);
 int circuit_has_usable_onion_key(const origin_circuit_t *circ);
-int extend_info_has_preferred_onion_key(const extend_info_t* ei);
 const uint8_t *build_state_get_exit_rsa_id(cpath_build_state_t *state);
 MOCK_DECL(const node_t *,
           build_state_get_exit_node,(cpath_build_state_t *state));
@@ -71,13 +56,7 @@ const node_t *choose_good_entry_server(uint8_t purpose,
                            struct circuit_guard_state_t **guard_state_out);
 void circuit_upgrade_circuits_from_guard_wait(void);
 
-struct ed25519_public_key_t;
-
-MOCK_DECL(channel_t *,
-channel_connect_for_circuit,(const tor_addr_t *addr,
-                             uint16_t port,
-                             const char *id_digest,
-                             const struct ed25519_public_key_t *ed_id));
+MOCK_DECL(channel_t *, channel_connect_for_circuit,(const extend_info_t *ei));
 
 struct create_cell_t;
 MOCK_DECL(int,

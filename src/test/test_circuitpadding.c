@@ -23,6 +23,7 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitpadding.h"
 #include "core/or/circuitpadding_machines.h"
+#include "core/or/extendinfo.h"
 #include "core/mainloop/netstatus.h"
 #include "core/crypto/relay_crypto.h"
 #include "core/or/protover.h"

@@ -21,6 +21,7 @@
 #include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
 #include "core/or/circuitstats.h"
+#include "core/or/extendinfo.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/dnsserv.h"
 #include "feature/client/entrynodes.h"
