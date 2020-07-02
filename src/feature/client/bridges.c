@@ -273,8 +273,9 @@ extend_info_is_a_configured_bridge(const extend_info_t *ei)
     ap1 = &ei->orports[0];
   if (! tor_addr_is_null(&ei->orports[1].addr))
     ap2 = &ei->orports[1];
-  IF_BUG_ONCE(ap1 == NULL)
+  IF_BUG_ONCE(ap1 == NULL) {
     return 0;
+  }
   return addr_is_a_configured_bridge(&ap1->addr, ap1->port, digest) &&
     (ap2 == NULL ||
      addr_is_a_configured_bridge(&ap2->addr, ap2->port, digest));

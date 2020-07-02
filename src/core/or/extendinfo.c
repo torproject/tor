@@ -240,8 +240,9 @@ bool
 extend_info_has_orport(const extend_info_t *ei,
                        const tor_addr_t *addr, uint16_t port)
 {
-  IF_BUG_ONCE(ei == NULL)
+  IF_BUG_ONCE(ei == NULL) {
     return false;
+  }
 
   for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
     const tor_addr_port_t *ei_ap = &ei->orports[i];
@@ -291,8 +292,9 @@ extend_info_pick_orport(const extend_info_t *ei)
 bool
 extend_info_any_orport_addr_is_internal(const extend_info_t *ei)
 {
-  IF_BUG_ONCE(ei == NULL)
+  IF_BUG_ONCE(ei == NULL) {
     return false;
+  }
 
   for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
     if (! tor_addr_is_unspec(&ei->orports[i].addr) &&
