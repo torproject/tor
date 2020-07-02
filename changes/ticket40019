@@ -1,0 +1,5 @@
+  o Code simplification and refactoring (maintainer scripts):
+    - Disable by default the pre-commit hook. Use the environment variable
+      TOR_EXTRA_PRE_COMMIT_CHECKS in order to run it. Furthermore, stop running
+      practracker in the pre-commit hook and make check-local. Closes ticket
+      40019.
