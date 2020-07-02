@@ -273,7 +273,6 @@ check-local:					\
 	check-spaces				\
 	check-changes				\
 	check-includes				\
-	check-best-practices			\
 	shellcheck				\
 	check-cocci
 
