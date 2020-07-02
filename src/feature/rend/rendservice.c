@@ -747,7 +747,7 @@ rend_config_service(const config_line_t *line_,
   tor_assert(options);
   tor_assert(config);
 
-  /* We are about to configured a version 2 service. Warn of deprecation. */
+  /* We are about to configure a version 2 service. Warn of deprecation. */
   WARN_ONCE_DEPRECATION();
 
   /* Use the staging service list so that we can check then do the pruning
