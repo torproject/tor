@@ -173,11 +173,21 @@ typedef struct circpad_machine_conditions_t {
 
   /** Only apply the machine *if* the circuit's state matches any of
    *  the bits set in this bitmask. */
-  circpad_circuit_state_t state_mask;
+  circpad_circuit_state_t apply_state_mask;
 
   /** Only apply a machine *if* the circuit's purpose matches one
    *  of the bits set in this bitmask */
-  circpad_purpose_mask_t purpose_mask;
+  circpad_purpose_mask_t apply_purpose_mask;
+
+  /** Keep a machine if any of the circuits's state machine's match
+   *  the bits set in this bitmask, but don't apply new machines if
+   *  they match this mask. */
+  circpad_circuit_state_t keep_state_mask;
+
+  /** Keep a machine if any of the circuits's state machine's match
+   *  the bits set in this bitmask, but don't apply new machines if
+   *  they match this mask. */
+  circpad_purpose_mask_t keep_purpose_mask;
 
 } circpad_machine_conditions_t;
 
