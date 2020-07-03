@@ -722,29 +722,28 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
      * and the client descriptor cache that gets purged (NEWNYM) or the
      * cleaned up because it expired. Mark the circuit for close so a new
      * descriptor fetch can occur. */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-    goto end;
+    goto err;
   }
 
   /* We will go over every intro point and try to find which one is linked to
    * that circuit. Those lists are small so it's not that expensive. */
   ip = find_desc_intro_point_by_legacy_id(
                        circ->build_state->chosen_exit->identity_digest, desc);
-  if (ip) {
-    /* We got it, copy its authentication key to the identifier. */
-    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
-                        &ip->auth_key_cert->signed_key);
-    goto end;
+  if (!ip) {
+    /* Reaching this point means we didn't find any intro point for this
+     * circuit which is not supposed to happen. */
+    log_info(LD_REND,"Could not match opened intro circuit with intro point.");
+    goto err;
   }
 
-  /* Reaching this point means we didn't find any intro point for this circuit
-   * which is not supposed to happen. */
-  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-  log_info(LD_REND, "Could not match opened intro circuit with intro point.");
-  return -1;
-
- end:
+  /* We got it, copy its authentication key to the identifier. */
+  ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                      &ip->auth_key_cert->signed_key);
   return 0;
+
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+  return -1;
 }
 
 /** Called when an introduction circuit has opened. */
