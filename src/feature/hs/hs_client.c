@@ -705,8 +705,11 @@ send_introduce1(origin_circuit_t *intro_circ,
 }
 
 /** Using the introduction circuit circ, setup the authentication key of the
- * intro point this circuit has extended to. */
-static void
+ * intro point this circuit has extended to.
+ *
+ * Return 0 if everything went well, otherwise return -1 in the case of errors.
+ */
+static int
 setup_intro_circ_auth_key(origin_circuit_t *circ)
 {
   const hs_descriptor_t *desc;
@@ -737,10 +740,12 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
 
   /* Reaching this point means we didn't find any intro point for this circuit
    * which is not supposed to happen. */
-  tor_assert_nonfatal_unreached();
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+  log_info(LD_REND, "Could not match opened intro circuit with intro point.");
+  return -1;
 
  end:
-  return;
+  return 0;
 }
 
 /** Called when an introduction circuit has opened. */
@@ -755,7 +760,9 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
   /* This is an introduction circuit so we'll attach the correct
    * authentication key to the circuit identifier so it can be identified
    * properly later on. */
-  setup_intro_circ_auth_key(circ);
+  if (setup_intro_circ_auth_key(circ) < 0) {
+    return;
+  }
 
   connection_ap_attach_pending(1);
 }
