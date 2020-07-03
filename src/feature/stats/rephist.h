@@ -100,6 +100,19 @@ extern struct bw_array_t *write_array;
 #endif
 
 #ifdef REPHIST_PRIVATE
+/** Carries the various hidden service statistics, and any other
+ *  information needed. */
+typedef struct hs_stats_t {
+  /** How many relay cells have we seen as rendezvous points? */
+  uint64_t rp_relay_cells_seen;
+
+  /** Set of unique public key digests we've seen this stat period
+   * (could also be implemented as sorted smartlist). */
+  digestmap_t *v2_onions_seen_this_period;
+
+  digestmap_t *v3_onions_seen_this_period;
+} hs_stats_t;
+
 typedef struct bw_array_t bw_array_t;
 STATIC uint64_t find_largest_max(bw_array_t *b);
 STATIC void commit_max(bw_array_t *b);
@@ -130,5 +143,10 @@ char *rep_hist_get_padding_count_lines(void);
 void rep_hist_reset_padding_counts(void);
 void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
+
+#ifdef TOR_UNIT_TESTS
+typedef struct hs_stats_t hs_stats_t;
+const hs_stats_t *rep_hist_get_hs_stats(void);
+#endif
 
 #endif /* !defined(TOR_REPHIST_H) */

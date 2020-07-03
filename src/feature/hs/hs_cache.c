@@ -19,6 +19,7 @@
 #include "feature/hs/hs_descriptor.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/rend/rendcache.h"
+#include "feature/stats/rephist.h"
 
 #include "feature/hs/hs_cache.h"
 

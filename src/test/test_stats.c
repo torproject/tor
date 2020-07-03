@@ -12,6 +12,8 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "app/config/or_state_st.h"
 #include "test/rng_test_helpers.h"
+#include "feature/hs/hs_cache.h"
+#include "test/hs_test_helpers.h"
 
 #include <stdio.h>
 
@@ -30,6 +32,7 @@
 #define CIRCUITLIST_PRIVATE
 #define MAINLOOP_PRIVATE
 #define STATEFILE_PRIVATE
+#define REPHIST_PRIVATE
 
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
@@ -245,6 +248,108 @@ test_rephist_mtbf(void *arg)
   tor_free(ddir_fname);
 }
 
+/* Test v3 metrics */
+static void
+test_rephist_v3_onions(void *arg)
+{
+  int ret;
+
+  char *desc1_str = NULL;
+  ed25519_keypair_t signing_kp1;
+  hs_descriptor_t *desc1 = NULL;
+
+  const hs_stats_t *hs_stats = NULL;
+
+  (void) arg;
+
+  /* Initialize the subsystems */
+  hs_cache_init();
+  rep_hist_hs_stats_init(0);
+  update_approx_time(1010101010);
+
+  /* HS stats should be zero here */
+  hs_stats = rep_hist_get_hs_stats();
+  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 0);
+
+  /* Generate a valid descriptor */
+  ret = ed25519_keypair_generate(&signing_kp1, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  desc1 = hs_helper_build_hs_desc_with_rev_counter(&signing_kp1, 42);
+  tt_assert(desc1);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Store descriptor and check that stats got updated */
+  ret = hs_cache_store_as_dir(desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+  hs_stats = rep_hist_get_hs_stats();
+  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 1);
+
+  /* cleanup */
+  hs_descriptor_free(desc1);
+  tor_free(desc1_str);
+
+  /* Generate another valid descriptor */
+  ret = ed25519_keypair_generate(&signing_kp1, 0);
+  tt_int_op(ret, OP_EQ, 0);
+  desc1 = hs_helper_build_hs_desc_with_rev_counter(&signing_kp1, 42);
+  tt_assert(desc1);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Store descriptor and check that stats are updated */
+  ret = hs_cache_store_as_dir(desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+  hs_stats = rep_hist_get_hs_stats();
+  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 2);
+
+  /* Check that storing the same descriptor twice does not work */
+  ret = hs_cache_store_as_dir(desc1_str);
+  tt_int_op(ret, OP_EQ, -1);
+
+  /* cleanup */
+  hs_descriptor_free(desc1);
+  tor_free(desc1_str);
+
+  /* Create a descriptor with the same identity key but diff rev counter and
+     same blinded key */
+  desc1 = hs_helper_build_hs_desc_with_rev_counter(&signing_kp1, 43);
+  tt_assert(desc1);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Store descriptor and check that stats are updated */
+  ret = hs_cache_store_as_dir(desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 2);
+
+  /* cleanup */
+  hs_descriptor_free(desc1);
+  tor_free(desc1_str);
+
+  /* Now let's skip to four days forward so that the blinded key rolls forward */
+  update_approx_time(approx_time() + 345600);
+
+  /* Now create a descriptor with the same identity key but diff rev counter and
+     different blinded key */
+  desc1 = hs_helper_build_hs_desc_with_rev_counter(&signing_kp1, 44);
+  tt_assert(desc1);
+  ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Store descriptor and check that stats are updated */
+  ret = hs_cache_store_as_dir(desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 3);
+
+  /* cleanup */
+  hs_descriptor_free(desc1);
+  tor_free(desc1_str);
+
+ done:
+  ;
+}
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -253,6 +358,7 @@ test_rephist_mtbf(void *arg)
 struct testcase_t stats_tests[] = {
   FORK(stats),
   ENT(rephist_mtbf),
+  FORK(rephist_v3_onions),
 
   END_OF_TESTCASES
 };
