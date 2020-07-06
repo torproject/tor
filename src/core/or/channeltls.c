@@ -1688,6 +1688,41 @@ time_abs(time_t val)
   return (val < 0) ? -val : val;
 }
 
+/** Return true iff the channel can process a NETINFO cell. For this to return
+ * true, these channel conditions apply:
+ *
+ *    1. Link protocol is version 2 or higher (tor-spec.txt, NETINFO cells
+ *       section).
+ *
+ *    2. Underlying OR connection of the channel is either in v2 or v3
+ *       handshaking state.
+ */
+static bool
+can_process_netinfo_cell(const channel_tls_t *chan)
+{
+  /* NETINFO cells can only be negotiated on link protocol 2 or higher. */
+  if (chan->conn->link_proto < 2) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a NETINFO cell on %s connection; dropping.",
+           chan->conn->link_proto == 0 ? "non-versioned" : "a v1");
+    return false;
+  }
+
+  /* Can't process a NETINFO cell if the connection is not handshaking. */
+  if (chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V2 &&
+      chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V3) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a NETINFO cell on non-handshaking connection; dropping.");
+    return false;
+  }
+
+  /* Make sure we do have handshake state. */
+  tor_assert(chan->conn->handshake_state);
+  tor_assert(chan->conn->handshake_state->received_versions);
+
+  return true;
+}
+
 /**
  * Process a 'netinfo' cell
  *
@@ -1713,20 +1748,12 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   tor_assert(chan);
   tor_assert(chan->conn);
 
-  if (chan->conn->link_proto < 2) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Received a NETINFO cell on %s connection; dropping.",
-           chan->conn->link_proto == 0 ? "non-versioned" : "a v1");
+  /* Make sure we can process a NETINFO cell. Link protocol and state
+   * validation is done to make sure of it. */
+  if (!can_process_netinfo_cell(chan)) {
     return;
   }
-  if (chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V2 &&
-      chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V3) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Received a NETINFO cell on non-handshaking connection; dropping.");
-    return;
-  }
-  tor_assert(chan->conn->handshake_state &&
-             chan->conn->handshake_state->received_versions);
+
   started_here = connection_or_nonopen_was_started_here(chan->conn);
   identity_digest = chan->conn->identity_digest;
 
