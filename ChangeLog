@@ -8,10 +8,6 @@ Changes in version 0.4.3.6 - 2020-07-??
       setting, leading to slower load times. Fixes bug 34303; bugfix
       on 0.3.3.2-alpha.
 
-  o Minor bugfixes (compiler compatibility, backport from 0.4.4.1-alpha):
-    - Fix compilation warnings with GCC 10.0.1. Fixes bug 34077; bugfix
-      on 0.4.0.3-alpha.
-
   o Minor bugfixes (linux seccomp sandbox, nss, backport from 0.4.4.1-alpha):
     - Fix a startup crash when tor is compiled with --enable-nss and
       sandbox support is enabled. Fixes bug 34130; bugfix on
