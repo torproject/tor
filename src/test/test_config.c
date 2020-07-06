@@ -1334,6 +1334,7 @@ test_config_find_my_address_mixed(void *arg)
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
   VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v4");
+  tor_free(hostname_out);
 
   /* IPv6 address should be found and considered resolved. */
   tor_addr_parse(&test_addr, "0101::0101");
@@ -1382,14 +1383,15 @@ test_config_find_my_address_mixed(void *arg)
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
   VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v4");
+  tor_free(hostname_out);
 
   /* IPv6 address should be found and considered resolved. */
   tor_addr_parse(&test_addr, "0101::0101");
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
   VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
-
   CLEANUP_FOUND_ADDRESS;
+
   UNMOCK(tor_addr_lookup);
 
  done:

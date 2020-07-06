@@ -204,6 +204,9 @@ get_address_from_config(const or_options_t *options, int warn_severity,
     if (!tor_addr_lookup(cfg->value, family, &addr)) {
       tor_addr_copy(addr_out, &addr);
       *method_out = "RESOLVED";
+      if (*hostname_out) {
+        tor_free(*hostname_out);
+      }
       *hostname_out = tor_strdup(cfg->value);
       explicit_ip = false;
       num_valid_addr++;
@@ -231,6 +234,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
     log_fn(warn_severity, LD_CONFIG,
            "Found %d Address statement of address family %s. "
            "Only one is allowed.", num_valid_addr, fmt_af_family(family));
+    tor_free(*hostname_out);
     return FN_RET_BAIL;
   }
 
@@ -241,6 +245,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
      * used, custom authorities must be defined else it is a fatal error.
      * Furthermore, if the Address was resolved to an internal interface, we
      * stop immediately. */
+    tor_free(*hostname_out);
     return FN_RET_BAIL;
   }
 
