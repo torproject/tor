@@ -370,6 +370,63 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
   return FN_RET_OK;
 }
 
+/** @brief Get IP address from the ORPort (if any).
+ *
+ * @param options Global configuration options.
+ * @param warn_severity Log level that should be used on error.
+ * @param family IP address family. Only AF_INET and AF_INET6 are supported.
+ * @param method_out OUT: Always "CONFIGURED_ORPORT" on success which is
+ *                   detailed in the control-spec.txt as actions
+ *                   for "STATUS_SERVER".
+ * @param hostname_out OUT: String containing the ORPort hostname if any.
+ * @param addr_out OUT: Tor address found if any.
+ *
+ * @return Return 0 on success that is an address has been found. Return
+ *         error code ERR_* found at the top of the file.
+ */
+static fn_address_ret_t
+get_address_from_orport(const or_options_t *options, int warn_severity,
+                        int family, const char **method_out,
+                        char **hostname_out, tor_addr_t *addr_out)
+{
+  int ret;
+  const tor_addr_t *addr;
+
+  tor_assert(method_out);
+  tor_assert(hostname_out);
+  tor_assert(addr_out);
+
+  log_debug(LD_CONFIG, "Attempting to get address from ORPort");
+
+  if (!options->ORPort_set) {
+    log_info(LD_CONFIG, "No ORPort found in configuration.");
+    /* No ORPort statement, inform caller to try next method. */
+    return FN_RET_NEXT;
+  }
+
+  /* Get ORPort for requested family. */
+  addr = get_orport_addr(family);
+  if (!addr) {
+    /* No address configured for the ORPort. Ignore. */
+    return FN_RET_NEXT;
+  }
+
+  /* We found the ORPort address. Just make sure it can be used. */
+  ret = address_can_be_used(addr, options, warn_severity, true);
+  if (ret < 0) {
+    /* Unable to use address. Inform caller to try next method. */
+    return FN_RET_NEXT;
+  }
+
+  /* Found it! */
+  *method_out = "CONFIGURED_ORPORT";
+  tor_addr_copy(addr_out, addr);
+
+  log_fn(warn_severity, LD_CONFIG, "Address found from ORPort: %s",
+         fmt_addr(addr_out));
+  return FN_RET_OK;
+}
+
 /** @brief Update the last resolved address cache using the given address.
  *
  * A log notice is emitted if the given address has changed from before. Not
@@ -450,6 +507,7 @@ static fn_address_ret_t
 {
   /* These functions are in order for our find address algorithm. */
   get_address_from_config,
+  get_address_from_orport,
   get_address_from_interface,
   get_address_from_hostname,
 };
