@@ -30,6 +30,7 @@ const char *s = NULL;
 #define BUF_LEN 2048
 
 #define FILL_BUFFER_IMPL()                                              \
+  do {                                                                  \
   unsigned int i;                                                       \
   unsigned sum = 0;                                                     \
                                                                         \
@@ -42,7 +43,8 @@ const char *s = NULL;
   /* optimized away. */                                                 \
   for (i = 0; i < BUF_LEN; ++i) {                                       \
     sum += (unsigned char)buf[i];                                       \
-  }
+  }                                                                     \
+  } while (0)
 
 #ifdef OpenBSD
 /* Disable some of OpenBSD's malloc protections for this test. This helps
@@ -55,7 +57,7 @@ static unsigned
 fill_a_buffer_memset(void)
 {
   char buf[BUF_LEN];
-  FILL_BUFFER_IMPL()
+  FILL_BUFFER_IMPL();
   memset(buf, 0, sizeof(buf));
   return sum;
 }
@@ -64,7 +66,7 @@ static unsigned
 fill_a_buffer_memwipe(void)
 {
   char buf[BUF_LEN];
-  FILL_BUFFER_IMPL()
+  FILL_BUFFER_IMPL();
   memwipe(buf, 0, sizeof(buf));
   return sum;
 }
@@ -73,7 +75,7 @@ static unsigned
 fill_a_buffer_nothing(void)
 {
   char buf[BUF_LEN];
-  FILL_BUFFER_IMPL()
+  FILL_BUFFER_IMPL();
   return sum;
 }
 
@@ -116,7 +118,7 @@ static unsigned
 fill_heap_buffer_memset(void)
 {
   char *buf = heap_buf = raw_malloc(BUF_LEN);
-  FILL_BUFFER_IMPL()
+  FILL_BUFFER_IMPL();
   memset(buf, 0, BUF_LEN);
   raw_free(buf);
   return sum;
@@ -126,7 +128,7 @@ static unsigned
 fill_heap_buffer_memwipe(void)
 {
   char *buf = heap_buf = raw_malloc(BUF_LEN);
-  FILL_BUFFER_IMPL()
+  FILL_BUFFER_IMPL();
   memwipe(buf, 0, BUF_LEN);
   raw_free(buf);
   return sum;
@@ -136,7 +138,7 @@ static unsigned
 fill_heap_buffer_nothing(void)
 {
   char *buf = heap_buf = raw_malloc(BUF_LEN);
-  FILL_BUFFER_IMPL()
+  FILL_BUFFER_IMPL();
   raw_free(buf);
   return sum;
 }
