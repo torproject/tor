@@ -370,7 +370,7 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
   return FN_RET_OK;
 }
 
-/** @brief Update the last resolved address cache using the given address.
+/** @brief Set the last resolved address cache using the given address.
  *
  * A log notice is emitted if the given address has changed from before. Not
  * emitted on first resolve.
@@ -386,9 +386,9 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
  * @param hostname_used Which hostname was used. If none were used, it is
  *                      NULL. (for logging and control port).
  */
-static void
-update_resolved_cache(const tor_addr_t *addr, const char *method_used,
-                      const char *hostname_used)
+void
+resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
+                       const char *hostname_used)
 {
   /** Have we done a first resolve. This is used to control logging. */
   static bool have_resolved_once[IDX_SIZE] = { false, false, false };
@@ -561,7 +561,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   /*
    * Step 2: Update last resolved address cache and inform the control port.
    */
-  update_resolved_cache(&my_addr, method_used, hostname_used);
+  resolved_addr_set_last(&my_addr, method_used, hostname_used);
 
   if (method_out) {
     *method_out = method_used;
