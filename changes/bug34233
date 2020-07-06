@@ -1,4 +1,0 @@
-  o Minor bugfixes (portability):
-    - Fix a portability error in the configure script, where we
-      were using "==" instead of "=". Fixes bug 34233; bugfix on
-      0.4.3.5.

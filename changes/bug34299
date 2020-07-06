@@ -1,3 +1,0 @@
-  o Minor bugfixes (man page):
-    - Update the man page to reflect that MinUptimeHidServDirectoryV2
-      defaults to 96 hours. Fixes bug 34299; bugfix on 0.2.6.3-alpha.

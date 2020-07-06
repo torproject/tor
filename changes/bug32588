@@ -1,4 +1,0 @@
-  o Minor bugfixes (relays):
-    - Stop advertising incorrect IPv6 ORPorts in relay and bridge descriptors,
-      when the IPv6 port was configured as "auto".
-      Fixes bug 32588; bugfix on 0.2.3.9-alpha

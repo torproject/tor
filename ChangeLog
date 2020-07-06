@@ -1,3 +1,51 @@
+Changes in version 0.4.3.6 - 2020-07-??
+  Tor 0.4.3.6 backports several bugfixes from later releases, including
+  some affecting usability.
+
+  o Minor bugfixes (client performance, backport from 0.4.4.1-alpha):
+    - Resume use of preemptively-built circuits when UseEntryGuards is set
+      to 0. We accidentally disabled this feature with that config
+      setting, leading to slower load times. Fixes bug 34303; bugfix
+      on 0.3.3.2-alpha.
+
+  o Minor bugfixes (compiler compatibility, backport from 0.4.4.1-alpha):
+    - Fix compilation warnings with GCC 10.0.1. Fixes bug 34077; bugfix
+      on 0.4.0.3-alpha.
+
+  o Minor bugfixes (linux seccomp sandbox, nss, backport from 0.4.4.1-alpha):
+    - Fix a startup crash when tor is compiled with --enable-nss and
+      sandbox support is enabled. Fixes bug 34130; bugfix on
+      0.3.5.1-alpha. Patch by Daniel Pinto.
+
+  o Minor bugfixes (logging, backport from 0.4.4.2-alpha):
+    - Downgrade a noisy log message that could occur naturally when
+      receiving an extrainfo document that we no longer want. Fixes bug
+      16016; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (manual page, backport from 0.4.4.1-alpha):
+    - Update the man page to reflect that MinUptimeHidServDirectoryV2
+      defaults to 96 hours. Fixes bug 34299; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (onion service v3, backport from 0.4.4.1-alpha):
+    - Prevent an assert() that would occur when cleaning the client
+      descriptor cache, and attempting to close circuits for a non-
+      decrypted descriptor (lacking client authorization). Fixes bug
+      33458; bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (portability, backport from 0.4.4.1-alpha):
+    - Fix a portability error in the configure script, where we were
+      using "==" instead of "=". Fixes bug 34233; bugfix on 0.4.3.5.
+
+  o Minor bugfixes (relays, backport from 0.4.4.1-alpha):
+    - Stop advertising incorrect IPv6 ORPorts in relay and bridge
+      descriptors, when the IPv6 port was configured as "auto". Fixes
+      bug 32588; bugfix on 0.2.3.9-alpha.
+
+  o Documentation (backport from 0.4.4.1-alpha):
+    - Fix several doxygen warnings related to imbalanced groups. Closes
+      ticket 34255.
+
+
 Changes in version 0.4.3.5 - 2020-05-15
   Tor 0.4.3.5 is the first stable release in the 0.4.3.x series. This
   series adds support for building without relay code enabled, and
