@@ -72,6 +72,7 @@
 #include "core/or/or_handshake_state_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/var_cell_st.h"
+#include "src/feature/relay/relay_find_addr.h"
 
 #include "lib/tls/tortls.h"
 #include "lib/tls/x509.h"
@@ -1929,8 +1930,11 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
                        "NETINFO cell", "OR");
   }
 
-  /* XXX maybe act on my_apparent_addr, if the source is sufficiently
-   * trustworthy. */
+  /* Consider our apparent address as a possible suggestion for our address if
+   * we were unable to resolve it previously. The endpoint address is passed
+   * in order to make sure to never consider an address that is the same as
+   * our endpoint. */
+  relay_address_new_suggestion(&my_apparent_addr, &chan->conn->real_addr);
 
   if (! chan->conn->handshake_state->sent_netinfo) {
     /* If we were prepared to authenticate, but we never got an AUTH_CHALLENGE
