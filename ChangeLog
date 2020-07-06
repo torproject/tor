@@ -23,16 +23,16 @@ Changes in version 0.4.4.2-alpha - 2020-07-??
 
   o Minor features (linux seccomp2 sandbox, portability):
     - Allow Tor to build on platforms where it doesn't know how to
-      report which syscall had caused the linux seccomp2 sandbox to
-      fail. This change should make the sandbox code more portable to
-      less common Linux architectures. Closes ticket 34382.
+      report which syscall caused the linux seccomp2 sandbox to fail.
+      This change should make the sandbox code more portable to less
+      common Linux architectures. Closes ticket 34382.
     - Permit the unlinkat() syscall, which some Libc implementations use
       to implement unlink(). Closes ticket 33346.
 
   o Minor bugfixes (control port, onion service):
     - Consistently use 'address' in "Invalid v3 address" response to
-      ONION_CLIENT_AUTH commands. Fixes bug 40005; bugfix
-      on 0.4.3.1-alpha.
+      ONION_CLIENT_AUTH commands. Previously, we would sometimes say
+      'addr'. Fixes bug 40005; bugfix on 0.4.3.1-alpha.
 
   o Minor bugfixes (logging):
     - Downgrade a noisy log message that could occur naturally when
@@ -40,8 +40,7 @@ Changes in version 0.4.4.2-alpha - 2020-07-??
       16016; bugfix on 0.2.6.3-alpha.
 
   o Deprecated features (onion service v2):
-    - Add deprecation warning for version 2 onion services. Tor now logs
-      a warning when version 2 service is configured. Closes
+    - Add a deprecation warning for version 2 onion services. Closes
       ticket 40003.
 
 
