@@ -44,6 +44,12 @@ typedef enum {
 /** Last resolved addresses. */
 static tor_addr_t last_resolved_addrs[IDX_SIZE];
 
+/** Last suggested addresses.
+ *
+ * These addresses come from a NETINFO cell from a trusted relay (currently
+ * only authorities). We only use those in last resort. */
+static tor_addr_t last_suggested_addrs[IDX_SIZE];
+
 static inline int
 af_to_idx(const int family)
 {
@@ -58,6 +64,29 @@ af_to_idx(const int family)
     tor_assert_nonfatal_unreached();
     return IDX_NULL;
   }
+}
+
+/** Copy the last suggested address of family into addr_out.
+ *
+ * If no last suggested address exists, the addr_out is a null address (use
+ * tor_addr_is_null() to confirm). */
+void
+resolved_addr_get_suggested(int family, tor_addr_t *addr_out)
+{
+  tor_addr_copy(addr_out, &last_suggested_addrs[af_to_idx(family)]);
+}
+
+/** Set the last suggested address into our cache. This is called when we get
+ * a new NETINFO cell from a trusted source. */
+void
+resolved_addr_set_suggested(const tor_addr_t *addr)
+{
+  if (BUG(tor_addr_family(addr) != AF_INET ||
+          tor_addr_family(addr) != AF_INET6)) {
+    return;
+  }
+  tor_addr_copy(&last_suggested_addrs[af_to_idx(tor_addr_family(addr))],
+                addr);
 }
 
 /** Copy the last resolved address of family into addr_out.

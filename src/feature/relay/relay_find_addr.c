@@ -15,6 +15,7 @@
 
 #include "feature/control/control_events.h"
 #include "feature/dircommon/dir_connection_st.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
@@ -35,6 +36,59 @@ router_guess_address_from_dir_headers(uint32_t *guess)
     return 0;
   }
   return -1;
+}
+
+/** Consider the address suggestion suggested_addr as a possible one to use as
+ * our address.
+ *
+ * This is called when a valid NETINFO cell is recevied containing a candidate
+ * for our address.
+ *
+ * The suggested address is ignored if it does NOT come from a trusted source.
+ * At the moment, we only look a trusted directory authorities.
+ *
+ * The suggested address is ignored if it is internal or it is the same as the
+ * given peer_addr which is the address from the endpoint that sent the
+ * NETINFO cell.
+ *
+ * The suggested address is set in our suggested address cache if everything
+ * passes. */
+void
+relay_address_new_suggestion(const tor_addr_t *suggested_addr,
+                             const tor_addr_t *peer_addr)
+{
+  const or_options_t *options = get_options();
+
+  tor_assert(suggested_addr);
+  tor_assert(peer_addr);
+
+  /* This should never be called on a non Tor relay. */
+  if (BUG(!server_mode(options))) {
+    return;
+  }
+
+  /* Is the peer a trusted source? Ignore anything coming from non trusted
+   * source. In this case, we only look at trusted authorities. */
+  if (!router_addr_is_trusted_dir(peer_addr)) {
+    return;
+  }
+
+  /* Ignore a suggestion that is an internal address or the same as the one
+   * the peer address. */
+  if (tor_addr_is_internal(suggested_addr, 0)) {
+    /* Do not believe anyone who says our address is internal. */
+    return;
+  }
+  if (tor_addr_eq(suggested_addr, peer_addr)) {
+    /* Do not believe anyone who says our address is their address. */
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "A relay endpoint %s is telling us that their address is ours.",
+           fmt_addr(peer_addr));
+    return;
+  }
+
+  /* Save the suggestion in our cache. */
+  resolved_addr_set_suggested(suggested_addr);
 }
 
 /** A directory server <b>d_conn</b> told us our IP address is

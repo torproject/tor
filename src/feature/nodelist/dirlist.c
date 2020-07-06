@@ -250,6 +250,34 @@ router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
   return 0;
 }
 
+/** Return true iff the given address matches a trusted directory that matches
+ * at least one bit of type.
+ *
+ * If type is NO_DIRINFO or ALL_DIRINFO, any authority is matched. */
+bool
+router_addr_is_trusted_dir_type(const tor_addr_t *addr, dirinfo_type_t type)
+{
+  int family = tor_addr_family(addr);
+
+  if (!trusted_dir_servers) {
+    return false;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ent) {
+    /* Ignore entries that don't match the given type. */
+    if (type != NO_DIRINFO && (type & ent->type) == 0) {
+      continue;
+    }
+    /* Match IPv4 or IPv6 address. */
+    if ((family == AF_INET && tor_addr_eq_ipv4h(addr, ent->addr)) ||
+        (family == AF_INET6 && tor_addr_eq(addr, &ent->ipv6_addr))) {
+      return true;
+    }
+  } SMARTLIST_FOREACH_END(ent);
+
+  return false;
+}
+
 /** Create a directory server at <b>address</b>:<b>port</b>, with OR identity
  * key <b>digest</b> which has DIGEST_LEN bytes.  If <b>address</b> is NULL,
  * add ourself.  If <b>is_authority</b>, this is a directory authority.  Return
