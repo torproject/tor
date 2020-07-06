@@ -1723,6 +1723,50 @@ can_process_netinfo_cell(const channel_tls_t *chan)
   return true;
 }
 
+/** Mark the given channel endpoint as a client (which means either a tor
+ * client or a tor bridge).
+ *
+ * This MUST be done on an _unauthenticated_ channel. It is a mistake to mark
+ * an authenticated channel as a client.
+ *
+ * The following is done on the channel:
+ *
+ *    1. Marked as a client.
+ *    2. Type of circuit ID type is set.
+ *    3. The underlying OR connection is initialized with the address of the
+ *       endpoint.
+ */
+static void
+mark_channel_tls_endpoint_as_client(channel_tls_t *chan)
+{
+  /* Ending up here for an authenticated link is a mistake. */
+  if (BUG(chan->conn->handshake_state->authenticated)) {
+    return;
+  }
+
+  tor_assert(tor_digest_is_zero(
+            (const char*)(chan->conn->handshake_state->
+                authenticated_rsa_peer_id)));
+  tor_assert(fast_mem_is_zero(
+            (const char*)(chan->conn->handshake_state->
+                          authenticated_ed25519_peer_id.pubkey), 32));
+  /* If the client never authenticated, it's a tor client or bridge
+   * relay, and we must not use it for EXTEND requests (nor could we, as
+   * there are no authenticated peer IDs) */
+  channel_mark_client(TLS_CHAN_TO_BASE(chan));
+  channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL,
+         chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
+
+  connection_or_init_conn_from_address(chan->conn,
+            &(chan->conn->base_.addr),
+            chan->conn->base_.port,
+            /* zero, checked above */
+            (const char*)(chan->conn->handshake_state->
+                          authenticated_rsa_peer_id),
+            NULL, /* Ed25519 ID: Also checked as zero */
+            0);
+}
+
 /**
  * Process a 'netinfo' cell
  *
@@ -1768,30 +1812,13 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
         return;
       }
     } else {
-      /* we're the server.  If the client never authenticated, we have
-         some housekeeping to do.*/
+      /* We're the server. If the client never authenticated, we have some
+       * housekeeping to do.
+       *
+       * It's a tor client or bridge relay, and we must not use it for EXTEND
+       * requests (nor could we, as there are no authenticated peer IDs) */
       if (!(chan->conn->handshake_state->authenticated)) {
-        tor_assert(tor_digest_is_zero(
-                  (const char*)(chan->conn->handshake_state->
-                      authenticated_rsa_peer_id)));
-        tor_assert(fast_mem_is_zero(
-                  (const char*)(chan->conn->handshake_state->
-                                authenticated_ed25519_peer_id.pubkey), 32));
-        /* If the client never authenticated, it's a tor client or bridge
-         * relay, and we must not use it for EXTEND requests (nor could we, as
-         * there are no authenticated peer IDs) */
-        channel_mark_client(TLS_CHAN_TO_BASE(chan));
-        channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL,
-               chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
-
-        connection_or_init_conn_from_address(chan->conn,
-                  &(chan->conn->base_.addr),
-                  chan->conn->base_.port,
-                  /* zero, checked above */
-                  (const char*)(chan->conn->handshake_state->
-                                authenticated_rsa_peer_id),
-                  NULL, /* Ed25519 ID: Also checked as zero */
-                  0);
+        mark_channel_tls_endpoint_as_client(chan);
       }
     }
   }
