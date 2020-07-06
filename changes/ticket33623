@@ -1,2 +1,0 @@
-  o Minor feature (sendme, flow control):
-    - Default on sending SENDME version 1 cells. Closes ticket 33623.

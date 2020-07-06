@@ -1,6 +1,0 @@
-  o Major bugfixes (DoS defenses, bridges, pluggable transport):
-    - DoS subsystem was not given the transport name of the client connection
-      when tor is a bridge and thus failing to find the GeoIP cache entry for
-      that client address. This resulted in failing to apply DoS defenses on
-      bridges with a pluggable transport. Fixes bug 33491; bugfix on
-      0.3.3.2-alpha.
