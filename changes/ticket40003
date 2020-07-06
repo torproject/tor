@@ -1,3 +1,0 @@
-  o Deprecated features (onion service v2):
-    - Add deprecation warning for onion service version 2. Tor now logs a
-      warning once if a version 2 service is configured. Closes ticket 40003.

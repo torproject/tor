@@ -1,5 +1,0 @@
-  o Minor features (bootstrap reporting):
-    - Report more detailed reasons for bootstrap failure when the failure
-      happens due to a TLS error. Previously we would just call these errors
-      "MISC" when they happened during read, and "DONE" when they
-      happened during any other TLS operation. Closes ticket 32622.

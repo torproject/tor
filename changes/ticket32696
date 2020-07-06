@@ -1,7 +1,0 @@
-  o Minor features (directory authority):
-    - Authorities now recommend protocol versions that are supported
-      by Tor 0.3.5 and later. (Earlier versions of Tor have been
-      deprecated since January of this year.)  This recommendation
-      will cause older clients and relays to give a warning on startup,
-      or when they download a consensus directory.
-      Closes ticket 32696.

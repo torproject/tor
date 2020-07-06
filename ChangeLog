@@ -1,3 +1,50 @@
+Changes in version 0.4.4.2-alpha - 2020-07-??
+  This is the second alpha release in the 0.4.4.x series. It fixes a few
+  bugs in the previous release, and solves a few usability,
+  compatibility, and portability issues.
+
+  o Minor features (bootstrap reporting):
+    - Report more detailed reasons for bootstrap failure when the
+      failure happens due to a TLS error. Previously we would just call
+      these errors "MISC" when they happened during read, and "DONE"
+      when they happened during any other TLS operation. Closes
+      ticket 32622.
+
+  o Minor features (directory authority):
+    - Authorities now recommend the protocol versions that are supported
+      by Tor 0.3.5 and later. (Earlier versions of Tor have been
+      deprecated since January of this year.) This recommendation will
+      cause older clients and relays to give a warning on startup, or
+      when they download a consensus directory. Closes ticket 32696.
+
+  o Minor features (entry guards):
+    - Reinstate support for GUARD NEW/UP/DOWN control port events.
+      Closes ticket 40001.
+
+  o Minor features (linux seccomp2 sandbox, portability):
+    - Allow Tor to build on platforms where it doesn't know how to
+      report which syscall had caused the linux seccomp2 sandbox to
+      fail. This change should make the sandbox code more portable to
+      less common Linux architectures. Closes ticket 34382.
+    - Permit the unlinkat() syscall, which some Libc implementations use
+      to implement unlink(). Closes ticket 33346.
+
+  o Minor bugfixes (control port, onion service):
+    - Consistently use 'address' in "Invalid v3 address" response to
+      ONION_CLIENT_AUTH commands. Fixes bug 40005; bugfix
+      on 0.4.3.1-alpha.
+
+  o Minor bugfixes (logging):
+    - Downgrade a noisy log message that could occur naturally when
+      receiving an extrainfo document that we no longer want. Fixes bug
+      16016; bugfix on 0.2.6.3-alpha.
+
+  o Deprecated features (onion service v2):
+    - Add deprecation warning for version 2 onion services. Tor now logs
+      a warning when version 2 service is configured. Closes
+      ticket 40003.
+
+
 Changes in version 0.4.4.1-alpha - 2020-06-16
   This is the first alpha release in the 0.4.4.x series.  It improves
   our guard selection algorithms, improves the amount of code that
