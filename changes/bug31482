@@ -1,0 +1,6 @@
+  o Minor bugfixes (monotonic time, osx, ios):
+    - Avoid certain conversion errors when converting between
+      coarse-timestamps (easy to calculate with) and milliseconds
+      on some Apple platforms. Notably, this fix may improve the accuracy
+      of bandwidth rate-limiting on iOS. Fixes bug 31482; bugfix on
+      0.3.4.1-alpha.
