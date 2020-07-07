@@ -6413,11 +6413,13 @@ test_config_getinfo_config_names(void *arg)
   tor_free(answer);
 }
 
+#ifndef COCCI
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 #define CONFIG_TEST_SETUP(suffix, name, flags, setup, setup_data) \
   { #name#suffix, test_config_ ## name, flags, setup, setup_data }
+#endif
 
 struct testcase_t config_tests[] = {
   CONFIG_TEST(adding_trusted_dir_server, TT_FORK),
