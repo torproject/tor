@@ -873,7 +873,7 @@ monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
 {
   /* Recover as much precision as we can. */
   if (units <= monotime_coarse_stamp_cvt_ms_threshold) {
-    uint64_t abstime_diff = (units << monotime_shift);
+    uint64_t abstime_diff = ((units+1) << monotime_shift) - 1;
     return ((abstime_diff * mach_time_info.numer) /
             ((uint64_t)mach_time_info.denom * ONE_MILLION));
   } else {
