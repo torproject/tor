@@ -3846,6 +3846,9 @@ upload_service_descriptor(rend_service_t *service)
       rend_get_service_id(service->desc->pk, serviceid);
       if (get_options()->PublishHidServDescriptors) {
         /* Post the current descriptors to the hidden service directories. */
+        /* This log message is used by Chutney as part of its bootstrap
+         * detection mechanism. Please don't change without first checking
+         * Chutney. */
         log_info(LD_REND, "Launching upload for hidden service %s",
                      serviceid);
         directory_post_to_hs_dir(service->desc, descs, NULL, serviceid,

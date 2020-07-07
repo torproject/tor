@@ -2874,6 +2874,9 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
                                           hsdir->hsdir_index.store_first;
     char *blinded_pubkey_log_str =
       tor_strdup(hex_str((char*)&desc->blinded_kp.pubkey.pubkey, 32));
+    /* This log message is used by Chutney as part of its bootstrap
+     * detection mechanism. Please don't change without first checking
+     * Chutney. */
     log_info(LD_REND, "Service %s %s descriptor of revision %" PRIu64
                       " initiated upload request to %s with index %s (%s)",
              safe_str_client(service->onion_address),
