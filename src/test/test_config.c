@@ -1256,13 +1256,15 @@ get_interface_address6_failure(int severity, sa_family_t family,
 /** Helper macro: Cleanup the address and variables used after a
  * find_my_address() call. */
 #undef CLEANUP_FOUND_ADDRESS
-#define CLEANUP_FOUND_ADDRESS             \
-  do {                                    \
-    config_free_lines(options->Address);  \
-    tor_free(options->DirAuthorities);    \
-    tor_free(hostname_out);               \
-    tor_addr_make_unspec(&resolved_addr); \
-    tor_addr_make_unspec(&test_addr);     \
+#define CLEANUP_FOUND_ADDRESS                 \
+  do {                                        \
+    config_free_lines(options->Address);      \
+    config_free_lines(options->ORPort_lines); \
+    options->ORPort_set = 0;                  \
+    tor_free(options->DirAuthorities);        \
+    tor_free(hostname_out);                   \
+    tor_addr_make_unspec(&resolved_addr);     \
+    tor_addr_make_unspec(&test_addr);         \
   } while (0)
 
 /** Test both IPv4 and IPv6 coexisting together in the configuration. */
@@ -1418,6 +1420,7 @@ typedef struct find_my_address_params_t {
   int family;
   const char *public_ip;
   const char *internal_ip;
+  const char *orport;
 } find_my_address_params_t;
 
 static find_my_address_params_t addr_param_v4 = {
@@ -1430,8 +1433,8 @@ static find_my_address_params_t addr_param_v4 = {
 static find_my_address_params_t addr_param_v6 = {
   .idx = 1,
   .family = AF_INET6,
-  .public_ip = "4242::4242",
-  .internal_ip = "::1",
+  .public_ip = "[4242::4242]",
+  .internal_ip = "[::1]",
 };
 
 static void
@@ -1731,6 +1734,75 @@ test_config_find_my_address(void *arg)
   tt_int_op(n_hostname_failure, OP_EQ,
             ++prev_n_hostname_failure);
   VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 13:
+   *    1. Address is NULL.
+   *    2. ORPort has a valid public address.
+   */
+  {
+    char *msg = NULL;
+    int n, w, ret;
+    char *orport_line = NULL;
+
+    options->Address = NULL;
+    tor_asprintf(&orport_line, "%s:9001", p->public_ip);
+    config_line_append(&options->ORPort_lines, "ORPort", orport_line);
+    tor_free(orport_line);
+
+    if (p->family == AF_INET6) {
+      /* XXX: Tor does _not_ allow an IPv6 only ORPort thus we need to add a
+       * bogus IPv4 at the moment. */
+      config_line_append(&options->ORPort_lines, "ORPort", "1.1.1.1:9001");
+    }
+
+    ret = parse_ports(options, 0, &msg, &n, &w);
+    tt_int_op(ret, OP_EQ, 0);
+    tor_addr_parse(&test_addr, p->public_ip);
+  }
+
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED_ORPORT", NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 14:
+   *    1. Address is NULL.
+   *    2. ORPort has an internal address thus fails.
+   *    3. Interface as a valid address.
+   */
+  {
+    char *msg = NULL;
+    int n, w, ret;
+    char *orport_line = NULL;
+
+    options->Address = NULL;
+    tor_asprintf(&orport_line, "%s:9001", p->internal_ip);
+    config_line_append(&options->ORPort_lines, "ORPort", orport_line);
+    tor_free(orport_line);
+
+    if (p->family == AF_INET6) {
+      /* XXX: Tor does _not_ allow an IPv6 only ORPort thus we need to add a
+       * bogus IPv4 at the moment. */
+      config_line_append(&options->ORPort_lines, "ORPort", "1.1.1.1:9001");
+    }
+
+    ret = parse_ports(options, 0, &msg, &n, &w);
+    tt_int_op(ret, OP_EQ, 0);
+  }
+  tor_addr_parse(&test_addr, ret_get_interface_address6_08080808[p->idx]);
+
+  MOCK(get_interface_address6, get_interface_address6_08080808);
+
+  prev_n_get_interface_address6 = n_get_interface_address6;
+
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+
+  tt_int_op(n_get_interface_address6, OP_EQ, ++prev_n_get_interface_address6);
+  VALIDATE_FOUND_ADDRESS(true, "INTERFACE", NULL);
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);
