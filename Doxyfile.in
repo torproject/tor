@@ -863,7 +863,8 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = ./src/ext \
+EXCLUDE                = ./src/ext/ed25519 \
+                         ./src/ext/rust \
                          ./src/trunnel \
                          ./src/test \
                          ./src/rust/registry
