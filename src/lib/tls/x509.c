@@ -23,6 +23,7 @@ tor_tls_pick_certificate_lifetime(time_t now,
                                   time_t *start_time_out,
                                   time_t *end_time_out)
 {
+  tor_assert(cert_lifetime < INT_MAX);
   time_t start_time, end_time;
   /* Make sure we're part-way through the certificate lifetime, rather
    * than having it start right now. Don't choose quite uniformly, since
@@ -36,7 +37,7 @@ tor_tls_pick_certificate_lifetime(time_t now,
   const time_t start_granularity = 24*3600;
   time_t earliest_start_time;
   /* Don't actually start in the future! */
-  if (cert_lifetime <= min_real_lifetime + start_granularity) {
+  if ((int)cert_lifetime <= min_real_lifetime + start_granularity) {
     earliest_start_time = now - 1;
   } else {
     earliest_start_time = now + min_real_lifetime + start_granularity
