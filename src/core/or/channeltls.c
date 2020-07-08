@@ -1934,7 +1934,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
    * we were unable to resolve it previously. The endpoint address is passed
    * in order to make sure to never consider an address that is the same as
    * our endpoint. */
-  relay_address_new_suggestion(&my_apparent_addr, &chan->conn->real_addr);
+  relay_address_new_suggestion(&my_apparent_addr, &chan->conn->real_addr,
+                               identity_digest);
 
   if (! chan->conn->handshake_state->sent_netinfo) {
     /* If we were prepared to authenticate, but we never got an AUTH_CHALLENGE

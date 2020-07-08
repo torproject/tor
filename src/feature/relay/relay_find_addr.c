@@ -55,12 +55,14 @@ router_guess_address_from_dir_headers(uint32_t *guess)
  * passes. */
 void
 relay_address_new_suggestion(const tor_addr_t *suggested_addr,
-                             const tor_addr_t *peer_addr)
+                             const tor_addr_t *peer_addr,
+                             const char *identity_digest)
 {
   const or_options_t *options = get_options();
 
   tor_assert(suggested_addr);
   tor_assert(peer_addr);
+  tor_assert(identity_digest);
 
   /* This should never be called on a non Tor relay. */
   if (BUG(!server_mode(options))) {
@@ -68,8 +70,9 @@ relay_address_new_suggestion(const tor_addr_t *suggested_addr,
   }
 
   /* Is the peer a trusted source? Ignore anything coming from non trusted
-   * source. In this case, we only look at trusted authorities. */
-  if (!router_addr_is_trusted_dir(peer_addr)) {
+   * source. In this case, we only look at trusted directory authorities. */
+  if (!router_addr_is_trusted_dir(peer_addr) ||
+      !router_digest_is_trusted_dir(identity_digest)) {
     return;
   }
 
