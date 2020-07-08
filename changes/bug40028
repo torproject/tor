@@ -1,0 +1,3 @@
+  o Minor bugfixes (compiler warnings):
+    - Fix a compiler warning on platforms with 32-bit time_t values.
+      Fixes bug 40028; bugfix on 0.3.2.8-rc.
