@@ -42,13 +42,15 @@ typedef enum {
 } fn_address_ret_t;
 
 /** Last resolved addresses. */
-static tor_addr_t last_resolved_addrs[IDX_SIZE];
+static tor_addr_t last_resolved_addrs[IDX_SIZE] =
+  { TOR_ADDR_NULL, TOR_ADDR_NULL, TOR_ADDR_NULL };
 
 /** Last suggested addresses.
  *
  * These addresses come from a NETINFO cell from a trusted relay (currently
  * only authorities). We only use those in last resort. */
-static tor_addr_t last_suggested_addrs[IDX_SIZE];
+static tor_addr_t last_suggested_addrs[IDX_SIZE] =
+  { TOR_ADDR_NULL, TOR_ADDR_NULL, TOR_ADDR_NULL };
 
 static inline int
 af_to_idx(const int family)
