@@ -1,0 +1,7 @@
+  o Removed features (IPv6, revert):
+    - Revert the client port prefer IPv6 feature because it breaks the
+      torsocks use case. The SOCKS resolve command is lacking a mechanism to
+      ask for a specific address family (v4 or v6) thus prioritizing IPv6 when
+      an IPv4 address is asked on the resolve SOCKS interface resulting in a
+      failure. Tor Browser explicitly set PreferIPv6 so this should not affect
+      the majority of our users. Closes ticket 33796; bugfix on 0.4.4.1-alpha.
