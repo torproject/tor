@@ -1663,6 +1663,9 @@ parse_extended_hostname(char *address, hostname_type_t *type_out)
   log_warn(LD_APP, "Invalid %shostname %s; rejecting",
            is_onion ? "onion " : "",
            safe_str_client(address));
+  if (*type_out == ONION_V3_HOSTNAME) {
+      *type_out = BAD_HOSTNAME;
+  }
   return false;
 }
 
@@ -2139,7 +2142,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   if (!parse_extended_hostname(socks->address, &addresstype)) {
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
-    if (addresstype == ONION_V3_HOSTNAME) {
+    if (addresstype == BAD_HOSTNAME) {
       conn->socks_request->socks_extended_error_code = SOCKS5_HS_BAD_ADDRESS;
     }
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
