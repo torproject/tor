@@ -206,6 +206,54 @@ test_util_read_file_eof_zero_bytes(void *arg)
   test_util_read_until_eof_impl("tor_test_fifo_empty", 0, 10000);
 }
 
+static void
+test_util_read_file_endlines(void *arg)
+{
+  (void)arg;
+
+  char *fname = NULL;
+  char *read_content = NULL;
+  int r = -1;
+
+  /* Write a file that contains both \n and \r\n as line ending. */
+  const char *file_content = "foo bar\n"
+                             "foo bar baz\r\n"
+                             "foo bar\r\n";
+
+  const char *expected_file_content = "foo bar\n"
+                                      "foo bar baz\n"
+                                      "foo bar\n";
+
+  fname = tor_strdup(get_fname("file_with_crlf_ending"));
+
+  r = write_bytes_to_file(fname, file_content, strlen(file_content), 1);
+  tt_int_op(r, OP_EQ, 0);
+
+  /* Read the file in text mode: we strip \r's from the files on both Windows
+   * and UNIX. */
+  read_content = read_file_to_str(fname, 0, NULL);
+
+  tt_ptr_op(read_content, OP_NE, NULL);
+  tt_int_op(strlen(read_content), OP_EQ, strlen(expected_file_content));
+  tt_str_op(read_content, OP_EQ, expected_file_content);
+
+  tor_free(read_content);
+
+  /* Read the file in binary mode: we should preserve the \r here. */
+  read_content = read_file_to_str(fname, RFTS_BIN, NULL);
+
+  tt_ptr_op(read_content, OP_NE, NULL);
+  tt_int_op(strlen(read_content), OP_EQ, strlen(file_content));
+  tt_str_op(read_content, OP_EQ, file_content);
+
+  tor_free(read_content);
+
+ done:
+  unlink(fname);
+  tor_free(fname);
+  tor_free(read_content);
+}
+
 /* Test the basic expected behaviour for write_chunks_to_file.
  * NOTE: This will need to be updated if we ever change the tempfile location
  * or extension */
@@ -6495,6 +6543,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(read_file_eof_two_loops, 0),
   UTIL_TEST(read_file_eof_two_loops_b, 0),
   UTIL_TEST(read_file_eof_zero_bytes, 0),
+  UTIL_TEST(read_file_endlines, 0),
   UTIL_TEST(write_chunks_to_file, 0),
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(fraction, 0),
