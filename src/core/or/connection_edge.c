@@ -1504,6 +1504,16 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
   } SMARTLIST_FOREACH_END(conn);
 }
 
+/** Set the connection state to CONTROLLER_WAIT and send an control port event.
+ */
+void
+connection_entry_set_controller_wait(entry_connection_t *conn)
+{
+  CONNECTION_AP_EXPECT_NONPENDING(conn);
+  ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
+  control_event_enter_controller_wait();
+}
+
 /** The AP connection <b>conn</b> has just failed while attaching or
  * sending a BEGIN or resolving on <b>circ</b>, but another circuit
  * might work. Detach the circuit, and either reattach it, launch a
@@ -1535,8 +1545,7 @@ connection_ap_detach_retriable(entry_connection_t *conn,
     circuit_detach_stream(TO_CIRCUIT(circ),ENTRY_TO_EDGE_CONN(conn));
     connection_ap_mark_as_pending_circuit(conn);
   } else {
-    CONNECTION_AP_EXPECT_NONPENDING(conn);
-    ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
+    connection_entry_set_controller_wait(conn);
     circuit_detach_stream(TO_CIRCUIT(circ),ENTRY_TO_EDGE_CONN(conn));
   }
   return 0;
@@ -1686,8 +1695,7 @@ connection_ap_rewrite_and_attach_if_allowed,(entry_connection_t *conn,
   const or_options_t *options = get_options();
 
   if (options->LeaveStreamsUnattached) {
-    CONNECTION_AP_EXPECT_NONPENDING(conn);
-    ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
+    connection_entry_set_controller_wait(conn);
     return 0;
   }
   return connection_ap_handshake_rewrite_and_attach(conn, circ, cpath);

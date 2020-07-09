@@ -109,6 +109,7 @@ const struct control_event_t control_event_table[] = {
   { EVENT_HS_DESC, "HS_DESC" },
   { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
   { EVENT_NETWORK_LIVENESS, "NETWORK_LIVENESS" },
+  { EVENT_CONTROLLER_WAIT, "CONTROLLER_WAIT" },
   { 0, NULL },
 };
 
@@ -2361,6 +2362,15 @@ control_events_free_all(void)
   }
   global_event_mask = 0;
   disable_log_messages = 0;
+}
+
+/** Our own router descriptor has changed; tell any controllers that care.
+ */
+int
+control_event_enter_controller_wait(void)
+{
+  send_control_event(EVENT_CONTROLLER_WAIT, "650 CONTROLLER_WAIT\r\n");
+  return 0;
 }
 
 #ifdef TOR_UNIT_TESTS
