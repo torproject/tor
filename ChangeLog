@@ -48,6 +48,10 @@ Changes in version 0.4.4.2-alpha - 2020-07-09
     - Use the correct 64-bit printf format when compiling with MINGW on
       Appveyor. Fixes bug 40026; bugfix on 0.3.5.5-alpha.
 
+  o Minor bugfix (onion service v3 client):
+    - Remove a BUG() warning that could occur naturally. Fixes bug
+      34087; bugfix on 0.3.2.1-alpha.
+
   o Minor bugfix (SOCKS, onion service client):
     - Detect v3 onion service addresses of the wrong length when
       returning the F6 ExtendedErrors code. Fixes bug 33873; bugfix
@@ -75,6 +79,15 @@ Changes in version 0.4.4.2-alpha - 2020-07-09
   o Deprecated features (onion service v2):
     - Add a deprecation warning for version 2 onion services. Closes
       ticket 40003.
+
+  o Removed features (IPv6, revert):
+    - Revert the change in the default value of ClientPreferIPv6OrPort:
+      it breaks the torsocks use case. The SOCKS resolve command has no
+      mechanism to ask for a specific address family (v4 or v6), and so
+      prioritizing IPv6 when an IPv4 address is requested on the SOCKS
+      interface resulted in a failure. Tor Browser explicitly sets
+      PreferIPv6, so this should not affect the majority of our users.
+      Closes ticket 33796; bugfix on 0.4.4.1-alpha.
 
 
 Changes in version 0.4.4.1-alpha - 2020-06-16

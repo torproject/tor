@@ -1,3 +1,0 @@
-  o Minor bugfix (onion service v3 client):
-    - Remove a BUG() warning that can occur naturally. Fixes bug 34087; bugfix
-      on 0.3.2.1-alpha.
