@@ -2,6 +2,73 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.3.6 - 2020-07-09
+  Tor 0.4.3.6 backports several bugfixes from later releases, including
+  some affecting usability.
+
+  This release also fixes TROVE-2020-001, a medium-severity denial of
+  service vulnerability affecting all versions of Tor when compiled with
+  the NSS encryption library. (This is not the default configuration.)
+  Using this vulnerability, an attacker could cause an affected Tor
+  instance to crash remotely. This issue is also tracked as CVE-2020-
+  15572. Anybody running a version of Tor built with the NSS library
+  should upgrade to 0.3.5.11, 0.4.2.8, 0.4.3.6, or 0.4.4.2-alpha
+  or later.
+
+  o Major bugfixes (NSS, security, backport from 0.4.4.2-alpha):
+    - Fix a crash due to an out-of-bound memory access when Tor is
+      compiled with NSS support. Fixes bug 33119; bugfix on
+      0.3.5.1-alpha. This issue is also tracked as TROVE-2020-001
+      and CVE-2020-15572.
+
+  o Minor bugfix (CI, Windows, backport from 0.4.4.2-alpha):
+    - Use the correct 64-bit printf format when compiling with MINGW on
+      Appveyor. Fixes bug 40026; bugfix on 0.3.5.5-alpha.
+
+  o Minor bugfixes (client performance, backport from 0.4.4.1-alpha):
+    - Resume use of preemptively-built circuits when UseEntryGuards is set
+      to 0. We accidentally disabled this feature with that config
+      setting, leading to slower load times. Fixes bug 34303; bugfix
+      on 0.3.3.2-alpha.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.4.2-alpha):
+    - Fix a compiler warning on platforms with 32-bit time_t values.
+      Fixes bug 40028; bugfix on 0.3.2.8-rc.
+
+  o Minor bugfixes (linux seccomp sandbox, nss, backport from 0.4.4.1-alpha):
+    - Fix a startup crash when tor is compiled with --enable-nss and
+      sandbox support is enabled. Fixes bug 34130; bugfix on
+      0.3.5.1-alpha. Patch by Daniel Pinto.
+
+  o Minor bugfixes (logging, backport from 0.4.4.2-alpha):
+    - Downgrade a noisy log message that could occur naturally when
+      receiving an extrainfo document that we no longer want. Fixes bug
+      16016; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (manual page, backport from 0.4.4.1-alpha):
+    - Update the man page to reflect that MinUptimeHidServDirectoryV2
+      defaults to 96 hours. Fixes bug 34299; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (onion service v3, backport from 0.4.4.1-alpha):
+    - Prevent an assert() that would occur when cleaning the client
+      descriptor cache, and attempting to close circuits for a non-
+      decrypted descriptor (lacking client authorization). Fixes bug
+      33458; bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (portability, backport from 0.4.4.1-alpha):
+    - Fix a portability error in the configure script, where we were
+      using "==" instead of "=". Fixes bug 34233; bugfix on 0.4.3.5.
+
+  o Minor bugfixes (relays, backport from 0.4.4.1-alpha):
+    - Stop advertising incorrect IPv6 ORPorts in relay and bridge
+      descriptors, when the IPv6 port was configured as "auto". Fixes
+      bug 32588; bugfix on 0.2.3.9-alpha.
+
+  o Documentation (backport from 0.4.4.1-alpha):
+    - Fix several doxygen warnings related to imbalanced groups. Closes
+      ticket 34255.
+
+
 Changes in version 0.4.3.5 - 2020-05-15
   Tor 0.4.3.5 is the first stable release in the 0.4.3.x series. This
   series adds support for building without relay code enabled, and
