@@ -5611,7 +5611,7 @@ port_cfg_new(size_t namelen)
   /* entry_cfg flags */
   cfg->entry_cfg.ipv4_traffic = 1;
   cfg->entry_cfg.ipv6_traffic = 1;
-  cfg->entry_cfg.prefer_ipv6 = 1;
+  cfg->entry_cfg.prefer_ipv6 = 0;
   cfg->entry_cfg.dns_request = 1;
   cfg->entry_cfg.onion_traffic = 1;
   cfg->entry_cfg.prefer_ipv6_virtaddr = 1;
