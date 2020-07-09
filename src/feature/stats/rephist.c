@@ -2633,7 +2633,7 @@ rep_hist_format_hs_stats(time_t now)
   char *hs_stats_string;
   int64_t obfuscated_cells_seen;
   int64_t obfuscated_v2_onions_seen;
-  int64_t v3_onions_seen;
+  int64_t v3_onions_seen, v2_onions_seen;
 
   uint64_t rounded_cells_seen
     = round_uint64_to_next_multiple_of(hs_stats->rp_relay_cells_seen,
@@ -2652,6 +2652,7 @@ rep_hist_format_hs_stats(time_t now)
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
 
+  v2_onions_seen = (int64_t)digestmap_size(hs_stats->v2_onions_seen_this_period);
   v3_onions_seen = (int64_t)digestmap_size(hs_stats->v3_onions_seen_this_period);
 
   format_iso_time(t, now);
@@ -2660,6 +2661,7 @@ rep_hist_format_hs_stats(time_t now)
                                            "epsilon=%.2f bin_size=%d\n"
                "hidserv-dir-onions-seen %"PRId64" delta_f=%d "
                                         "epsilon=%.2f bin_size=%d\n"
+               "hidserv-dir-v2-onions-seen-unobfuscated %"PRId64"\n"
                "hidserv-dir-v3-onions-seen %"PRId64"\n",
                t, (unsigned) (now - start_of_hs_stats_interval),
                (obfuscated_cells_seen), REND_CELLS_DELTA_F,
@@ -2667,7 +2669,7 @@ rep_hist_format_hs_stats(time_t now)
                (obfuscated_v2_onions_seen),
                ONIONS_SEEN_DELTA_F,
                ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE,
-               v3_onions_seen);
+               v2_onions_seen, v3_onions_seen);
 
   return hs_stats_string;
 }
