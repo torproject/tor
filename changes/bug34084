@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion services v3):
+    - Avoid a non-fatal assert log in an edge-case of opening an intro circuit
+      as a client. Fixes bug 34084; bugfix on 0.3.2.1-alpha.
