@@ -25,6 +25,11 @@ int router_digest_is_fallback_dir(const char *digest);
 MOCK_DECL(dir_server_t *, trusteddirserver_get_by_v3_auth_digest,
           (const char *d));
 
+bool router_addr_is_trusted_dir_type(const tor_addr_t *addr,
+                                     dirinfo_type_t type);
+#define router_addr_is_trusted_dir(d) \
+  router_addr_is_trusted_dir_type((d), NO_DIRINFO)
+
 int router_digest_is_trusted_dir_type(const char *digest,
                                       dirinfo_type_t type);
 #define router_digest_is_trusted_dir(d) \

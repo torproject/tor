@@ -42,7 +42,17 @@ typedef enum {
 } fn_address_ret_t;
 
 /** Last resolved addresses. */
-static tor_addr_t last_resolved_addrs[IDX_SIZE];
+static tor_addr_t last_resolved_addrs[] =
+  { TOR_ADDR_NULL, TOR_ADDR_NULL, TOR_ADDR_NULL };
+CTASSERT(ARRAY_LENGTH(last_resolved_addrs) == IDX_SIZE);
+
+/** Last suggested addresses.
+ *
+ * These addresses come from a NETINFO cell from a trusted relay (currently
+ * only authorities). We only use those in last resort. */
+static tor_addr_t last_suggested_addrs[] =
+  { TOR_ADDR_NULL, TOR_ADDR_NULL, TOR_ADDR_NULL };
+CTASSERT(ARRAY_LENGTH(last_suggested_addrs) == IDX_SIZE);
 
 static inline int
 af_to_idx(const int family)
@@ -58,6 +68,29 @@ af_to_idx(const int family)
     tor_assert_nonfatal_unreached();
     return IDX_NULL;
   }
+}
+
+/** Copy the last suggested address of family into addr_out.
+ *
+ * If no last suggested address exists, the addr_out is a null address (use
+ * tor_addr_is_null() to confirm). */
+void
+resolved_addr_get_suggested(int family, tor_addr_t *addr_out)
+{
+  tor_addr_copy(addr_out, &last_suggested_addrs[af_to_idx(family)]);
+}
+
+/** Set the last suggested address into our cache. This is called when we get
+ * a new NETINFO cell from a trusted source. */
+void
+resolved_addr_set_suggested(const tor_addr_t *addr)
+{
+  if (BUG(tor_addr_family(addr) != AF_INET ||
+          tor_addr_family(addr) != AF_INET6)) {
+    return;
+  }
+  tor_addr_copy(&last_suggested_addrs[af_to_idx(tor_addr_family(addr))],
+                addr);
 }
 
 /** Copy the last resolved address of family into addr_out.
@@ -427,7 +460,7 @@ get_address_from_orport(const or_options_t *options, int warn_severity,
   return FN_RET_OK;
 }
 
-/** @brief Update the last resolved address cache using the given address.
+/** @brief Set the last resolved address cache using the given address.
  *
  * A log notice is emitted if the given address has changed from before. Not
  * emitted on first resolve.
@@ -443,12 +476,14 @@ get_address_from_orport(const or_options_t *options, int warn_severity,
  * @param hostname_used Which hostname was used. If none were used, it is
  *                      NULL. (for logging and control port).
  */
-static void
-update_resolved_cache(const tor_addr_t *addr, const char *method_used,
-                      const char *hostname_used)
+void
+resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
+                       const char *hostname_used)
 {
   /** Have we done a first resolve. This is used to control logging. */
-  static bool have_resolved_once[IDX_SIZE] = { false, false, false };
+  static bool have_resolved_once[] = { false, false, false };
+  CTASSERT(ARRAY_LENGTH(have_resolved_once) == IDX_SIZE);
+
   bool *done_one_resolve;
   bool have_hostname = false;
   tor_addr_t *last_resolved;
@@ -619,7 +654,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   /*
    * Step 2: Update last resolved address cache and inform the control port.
    */
-  update_resolved_cache(&my_addr, method_used, hostname_used);
+  resolved_addr_set_last(&my_addr, method_used, hostname_used);
 
   if (method_out) {
     *method_out = method_used;

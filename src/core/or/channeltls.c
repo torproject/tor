@@ -72,6 +72,7 @@
 #include "core/or/or_handshake_state_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/var_cell_st.h"
+#include "src/feature/relay/relay_find_addr.h"
 
 #include "lib/tls/tortls.h"
 #include "lib/tls/x509.h"
@@ -1688,6 +1689,85 @@ time_abs(time_t val)
   return (val < 0) ? -val : val;
 }
 
+/** Return true iff the channel can process a NETINFO cell. For this to return
+ * true, these channel conditions apply:
+ *
+ *    1. Link protocol is version 2 or higher (tor-spec.txt, NETINFO cells
+ *       section).
+ *
+ *    2. Underlying OR connection of the channel is either in v2 or v3
+ *       handshaking state.
+ */
+static bool
+can_process_netinfo_cell(const channel_tls_t *chan)
+{
+  /* NETINFO cells can only be negotiated on link protocol 2 or higher. */
+  if (chan->conn->link_proto < 2) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a NETINFO cell on %s connection; dropping.",
+           chan->conn->link_proto == 0 ? "non-versioned" : "a v1");
+    return false;
+  }
+
+  /* Can't process a NETINFO cell if the connection is not handshaking. */
+  if (chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V2 &&
+      chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V3) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a NETINFO cell on non-handshaking connection; dropping.");
+    return false;
+  }
+
+  /* Make sure we do have handshake state. */
+  tor_assert(chan->conn->handshake_state);
+  tor_assert(chan->conn->handshake_state->received_versions);
+
+  return true;
+}
+
+/** Mark the given channel endpoint as a client (which means either a tor
+ * client or a tor bridge).
+ *
+ * This MUST be done on an _unauthenticated_ channel. It is a mistake to mark
+ * an authenticated channel as a client.
+ *
+ * The following is done on the channel:
+ *
+ *    1. Marked as a client.
+ *    2. Type of circuit ID type is set.
+ *    3. The underlying OR connection is initialized with the address of the
+ *       endpoint.
+ */
+static void
+mark_channel_tls_endpoint_as_client(channel_tls_t *chan)
+{
+  /* Ending up here for an authenticated link is a mistake. */
+  if (BUG(chan->conn->handshake_state->authenticated)) {
+    return;
+  }
+
+  tor_assert(tor_digest_is_zero(
+            (const char*)(chan->conn->handshake_state->
+                authenticated_rsa_peer_id)));
+  tor_assert(fast_mem_is_zero(
+            (const char*)(chan->conn->handshake_state->
+                          authenticated_ed25519_peer_id.pubkey), 32));
+  /* If the client never authenticated, it's a tor client or bridge
+   * relay, and we must not use it for EXTEND requests (nor could we, as
+   * there are no authenticated peer IDs) */
+  channel_mark_client(TLS_CHAN_TO_BASE(chan));
+  channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL,
+         chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
+
+  connection_or_init_conn_from_address(chan->conn,
+            &(chan->conn->base_.addr),
+            chan->conn->base_.port,
+            /* zero, checked above */
+            (const char*)(chan->conn->handshake_state->
+                          authenticated_rsa_peer_id),
+            NULL, /* Ed25519 ID: Also checked as zero */
+            0);
+}
+
 /**
  * Process a 'netinfo' cell
  *
@@ -1713,20 +1793,12 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   tor_assert(chan);
   tor_assert(chan->conn);
 
-  if (chan->conn->link_proto < 2) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Received a NETINFO cell on %s connection; dropping.",
-           chan->conn->link_proto == 0 ? "non-versioned" : "a v1");
+  /* Make sure we can process a NETINFO cell. Link protocol and state
+   * validation is done to make sure of it. */
+  if (!can_process_netinfo_cell(chan)) {
     return;
   }
-  if (chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V2 &&
-      chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V3) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Received a NETINFO cell on non-handshaking connection; dropping.");
-    return;
-  }
-  tor_assert(chan->conn->handshake_state &&
-             chan->conn->handshake_state->received_versions);
+
   started_here = connection_or_nonopen_was_started_here(chan->conn);
   identity_digest = chan->conn->identity_digest;
 
@@ -1741,30 +1813,13 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
         return;
       }
     } else {
-      /* we're the server.  If the client never authenticated, we have
-         some housekeeping to do.*/
+      /* We're the server. If the client never authenticated, we have some
+       * housekeeping to do.
+       *
+       * It's a tor client or bridge relay, and we must not use it for EXTEND
+       * requests (nor could we, as there are no authenticated peer IDs) */
       if (!(chan->conn->handshake_state->authenticated)) {
-        tor_assert(tor_digest_is_zero(
-                  (const char*)(chan->conn->handshake_state->
-                      authenticated_rsa_peer_id)));
-        tor_assert(fast_mem_is_zero(
-                  (const char*)(chan->conn->handshake_state->
-                                authenticated_ed25519_peer_id.pubkey), 32));
-        /* If the client never authenticated, it's a tor client or bridge
-         * relay, and we must not use it for EXTEND requests (nor could we, as
-         * there are no authenticated peer IDs) */
-        channel_mark_client(TLS_CHAN_TO_BASE(chan));
-        channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL,
-               chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
-
-        connection_or_init_conn_from_address(chan->conn,
-                  &(chan->conn->base_.addr),
-                  chan->conn->base_.port,
-                  /* zero, checked above */
-                  (const char*)(chan->conn->handshake_state->
-                                authenticated_rsa_peer_id),
-                  NULL, /* Ed25519 ID: Also checked as zero */
-                  0);
+        mark_channel_tls_endpoint_as_client(chan);
       }
     }
   }
@@ -1875,8 +1930,12 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
                        "NETINFO cell", "OR");
   }
 
-  /* XXX maybe act on my_apparent_addr, if the source is sufficiently
-   * trustworthy. */
+  /* Consider our apparent address as a possible suggestion for our address if
+   * we were unable to resolve it previously. The endpoint address is passed
+   * in order to make sure to never consider an address that is the same as
+   * our endpoint. */
+  relay_address_new_suggestion(&my_apparent_addr, &chan->conn->real_addr,
+                               identity_digest);
 
   if (! chan->conn->handshake_state->sent_netinfo) {
     /* If we were prepared to authenticate, but we never got an AUTH_CHALLENGE
