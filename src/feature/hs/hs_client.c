@@ -1066,8 +1066,10 @@ close_or_reextend_intro_circ(origin_circuit_t *intro_circ)
   tor_assert(intro_circ);
 
   desc = hs_cache_lookup_as_client(&intro_circ->hs_ident->identity_pk);
-  if (BUG(desc == NULL)) {
-    /* We can't continue without a descriptor. */
+  if (desc == NULL) {
+    /* We can't continue without a descriptor. This is possible if the cache
+     * was cleaned up between the intro point established and the reception of
+     * the introduce ack. */
     goto close;
   }
   /* We still have the descriptor, great! Let's try to see if we can
