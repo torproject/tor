@@ -1,7 +1,22 @@
-Changes in version 0.4.4.2-alpha - 2020-07-??
+Changes in version 0.4.4.2-alpha - 2020-07-09
   This is the second alpha release in the 0.4.4.x series. It fixes a few
   bugs in the previous release, and solves a few usability,
   compatibility, and portability issues.
+
+  This release also fixes TROVE-2020-001, a medium-severity denial of
+  service vulnerability affecting all versions of Tor when compiled with
+  the NSS encryption library. (This is not the default configuration.)
+  Using this vulnerability, an attacker could cause an affected Tor
+  instance to crash remotely. This issue is also tracked as CVE-2020-
+  15572. Anybody running a version of Tor built with the NSS library
+  should upgrade to 0.3.5.11, 0.4.2.8, 0.4.3.6, or 0.4.4.2-alpha
+  or later.
+
+  o Major bugfixes (NSS, security):
+    - Fix a crash due to an out-of-bound memory access when Tor is
+      compiled with NSS support. Fixes bug 33119; bugfix on
+      0.3.5.1-alpha. This issue is also tracked as TROVE-2020-001
+      and CVE-2020-15572.
 
   o Minor features (bootstrap reporting):
     - Report more detailed reasons for bootstrap failure when the
@@ -29,6 +44,19 @@ Changes in version 0.4.4.2-alpha - 2020-07-??
     - Permit the unlinkat() syscall, which some Libc implementations use
       to implement unlink(). Closes ticket 33346.
 
+  o Minor bugfix (CI, Windows):
+    - Use the correct 64-bit printf format when compiling with MINGW on
+      Appveyor. Fixes bug 40026; bugfix on 0.3.5.5-alpha.
+
+  o Minor bugfix (SOCKS, onion service client):
+    - Detect v3 onion service addresses of the wrong length when
+      returning the F6 ExtendedErrors code. Fixes bug 33873; bugfix
+      on 0.4.3.1-alpha.
+
+  o Minor bugfixes (compiler warnings):
+    - Fix a compiler warning on platforms with 32-bit time_t values.
+      Fixes bug 40028; bugfix on 0.3.2.8-rc.
+
   o Minor bugfixes (control port, onion service):
     - Consistently use 'address' in "Invalid v3 address" response to
       ONION_CLIENT_AUTH commands. Previously, we would sometimes say
@@ -38,6 +66,11 @@ Changes in version 0.4.4.2-alpha - 2020-07-??
     - Downgrade a noisy log message that could occur naturally when
       receiving an extrainfo document that we no longer want. Fixes bug
       16016; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (onion services v3):
+    - Avoid a non-fatal assertion failure in certain edge-cases when
+      opening an intro circuit as a client. Fixes bug 34084; bugfix
+      on 0.3.2.1-alpha.
 
   o Deprecated features (onion service v2):
     - Add a deprecation warning for version 2 onion services. Closes
