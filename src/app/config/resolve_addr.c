@@ -42,15 +42,17 @@ typedef enum {
 } fn_address_ret_t;
 
 /** Last resolved addresses. */
-static tor_addr_t last_resolved_addrs[IDX_SIZE] =
+static tor_addr_t last_resolved_addrs[] =
   { TOR_ADDR_NULL, TOR_ADDR_NULL, TOR_ADDR_NULL };
+CTASSERT(ARRAY_LENGTH(last_resolved_addrs) == IDX_SIZE);
 
 /** Last suggested addresses.
  *
  * These addresses come from a NETINFO cell from a trusted relay (currently
  * only authorities). We only use those in last resort. */
-static tor_addr_t last_suggested_addrs[IDX_SIZE] =
+static tor_addr_t last_suggested_addrs[] =
   { TOR_ADDR_NULL, TOR_ADDR_NULL, TOR_ADDR_NULL };
+CTASSERT(ARRAY_LENGTH(last_suggested_addrs) == IDX_SIZE);
 
 static inline int
 af_to_idx(const int family)
@@ -422,7 +424,9 @@ resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
                        const char *hostname_used)
 {
   /** Have we done a first resolve. This is used to control logging. */
-  static bool have_resolved_once[IDX_SIZE] = { false, false, false };
+  static bool have_resolved_once[] = { false, false, false };
+  CTASSERT(ARRAY_LENGTH(have_resolved_once) == IDX_SIZE);
+
   bool *done_one_resolve;
   bool have_hostname = false;
   tor_addr_t *last_resolved;
