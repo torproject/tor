@@ -704,8 +704,11 @@ send_introduce1(origin_circuit_t *intro_circ,
 }
 
 /** Using the introduction circuit circ, setup the authentication key of the
- * intro point this circuit has extended to. */
-static void
+ * intro point this circuit has extended to.
+ *
+ * Return 0 if everything went well, otherwise return -1 in the case of errors.
+ */
+static int
 setup_intro_circ_auth_key(origin_circuit_t *circ)
 {
   const hs_descriptor_t *desc;
@@ -719,27 +722,28 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
      * and the client descriptor cache that gets purged (NEWNYM) or the
      * cleaned up because it expired. Mark the circuit for close so a new
      * descriptor fetch can occur. */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-    goto end;
+    goto err;
   }
 
   /* We will go over every intro point and try to find which one is linked to
    * that circuit. Those lists are small so it's not that expensive. */
   ip = find_desc_intro_point_by_legacy_id(
                        circ->build_state->chosen_exit->identity_digest, desc);
-  if (ip) {
-    /* We got it, copy its authentication key to the identifier. */
-    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
-                        &ip->auth_key_cert->signed_key);
-    goto end;
+  if (!ip) {
+    /* Reaching this point means we didn't find any intro point for this
+     * circuit which is not supposed to happen. */
+    log_info(LD_REND,"Could not match opened intro circuit with intro point.");
+    goto err;
   }
 
-  /* Reaching this point means we didn't find any intro point for this circuit
-   * which is not supposed to happen. */
-  tor_assert_nonfatal_unreached();
+  /* We got it, copy its authentication key to the identifier. */
+  ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                      &ip->auth_key_cert->signed_key);
+  return 0;
 
- end:
-  return;
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+  return -1;
 }
 
 /** Called when an introduction circuit has opened. */
@@ -754,7 +758,9 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
   /* This is an introduction circuit so we'll attach the correct
    * authentication key to the circuit identifier so it can be identified
    * properly later on. */
-  setup_intro_circ_auth_key(circ);
+  if (setup_intro_circ_auth_key(circ) < 0) {
+    return;
+  }
 
   connection_ap_attach_pending(1);
 }
