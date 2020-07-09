@@ -3,6 +3,292 @@ release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
 
+Changes in version 0.3.5.11 - 2020-07-09
+  Tor 0.3.5.11 backports fixes from later tor releases, including several
+  usability, portability, and reliability fixes.
+
+  This release also fixes TROVE-2020-001, a medium-severity denial of
+  service vulnerability affecting all versions of Tor when compiled with
+  the NSS encryption library. (This is not the default configuration.)
+  Using this vulnerability, an attacker could cause an affected Tor
+  instance to crash remotely. This issue is also tracked as CVE-2020-
+  15572. Anybody running a version of Tor built with the NSS library
+  should upgrade to 0.3.5.11, 0.4.2.8, 0.4.3.6, or 0.4.4.2-alpha
+  or later.
+
+  o Major bugfixes (NSS, security, backport from 0.4.4.2-alpha):
+    - Fix a crash due to an out-of-bound memory access when Tor is
+      compiled with NSS support. Fixes bug 33119; bugfix on
+      0.3.5.1-alpha. This issue is also tracked as TROVE-2020-001
+      and CVE-2020-15572.
+
+  o Major bugfixes (DoS defenses, bridges, pluggable transport, backport from 0.4.3.4-rc):
+    - Fix a bug that was preventing DoS defenses from running on bridges
+      with a pluggable transport. Previously, the DoS subsystem was not
+      given the transport name of the client connection, thus failed to
+      find the GeoIP cache entry for that client address. Fixes bug
+      33491; bugfix on 0.3.3.2-alpha.
+
+  o Minor features (testing, backport from 0.4.3.4-rc):
+    - The unit tests now support a "TOR_SKIP_TESTCASES" environment
+      variable to specify a list of space-separated test cases that
+      should not be executed. We will use this to disable certain tests
+      that are failing on Appveyor because of mismatched OpenSSL
+      libraries. Part of ticket 33643.
+
+  o Minor bugfix (CI, Windows, backport from 0.4.4.2-alpha):
+    - Use the correct 64-bit printf format when compiling with MINGW on
+      Appveyor. Fixes bug 40026; bugfix on 0.3.5.5-alpha.
+
+  o Minor bugfix (relay, configuration, backport from 0.4.3.3-alpha):
+    - Warn if the ContactInfo field is not set, and tell the relay
+      operator that not having a ContactInfo field set might cause their
+      relay to get rejected in the future. Fixes bug 33361; bugfix
+      on 0.1.1.10-alpha.
+
+  o Minor bugfixes (client performance, backport from 0.4.4.1-alpha):
+    - Resume use of preemptively-built circuits when UseEntryGuards is set
+      to 0. We accidentally disabled this feature with that config
+      setting, leading to slower load times. Fixes bug 34303; bugfix
+      on 0.3.3.2-alpha.
+
+  o Minor bugfixes (compiler compatibility, backport from 0.4.3.5):
+    - Avoid compiler warnings from Clang 10 related to the use of GCC-
+      style "/* falls through */" comments. Both Clang and GCC allow
+      __attribute__((fallthrough)) instead, so that's what we're using
+      now. Fixes bug 34078; bugfix on 0.3.1.3-alpha.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.4.2-alpha):
+    - Fix a compiler warning on platforms with 32-bit time_t values.
+      Fixes bug 40028; bugfix on 0.3.2.8-rc.
+
+  o Minor bugfixes (embedded Tor, backport from 0.4.3.1-alpha):
+    - When starting Tor any time after the first time in a process,
+      register the thread in which it is running as the main thread.
+      Previously, we only did this on Windows, which could lead to bugs
+      like 23081 on non-Windows platforms. Fixes bug 32884; bugfix
+      on 0.3.3.1-alpha.
+
+  o Minor bugfixes (key portability, backport from 0.4.3.4-rc):
+    - When reading PEM-encoded key data, tolerate CRLF line-endings even
+      if we are not running on Windows. Previously, non-Windows hosts
+      would reject these line-endings in certain positions, making
+      certain key files hard to move from one host to another. Fixes bug
+      33032; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.4.2-alpha):
+    - Downgrade a noisy log message that could occur naturally when
+      receiving an extrainfo document that we no longer want. Fixes bug
+      16016; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (onion service v3, client, backport from 0.4.3.3-alpha):
+    - Remove a BUG() warning that would cause a stack trace if an onion
+      service descriptor was freed while we were waiting for a
+      rendezvous circuit to complete. Fixes bug 28992; bugfix
+      on 0.3.2.1-alpha.
+
+  o Testing (CI, backport from 0.4.3.4-rc):
+    - In our Appveyor Windows CI, copy required DLLs to test and app
+      directories, before running tor's tests. This ensures that tor.exe
+      and test*.exe use the correct version of each DLL. This fix is not
+      required, but we hope it will avoid DLL search issues in future.
+      Fixes bug 33673; bugfix on 0.3.4.2-alpha.
+    - On Appveyor, skip the crypto/openssl_version test, which is
+      failing because of a mismatched library installation. Fix
+      for 33643.
+
+
+Changes in version 0.4.2.8 - 2020-07-09
+  Tor 0.4.2.8 backports various fixes from later releases, including
+  several that affect usability and portability.
+
+  This release also fixes TROVE-2020-001, a medium-severity denial of
+  service vulnerability affecting all versions of Tor when compiled with
+  the NSS encryption library. (This is not the default configuration.)
+  Using this vulnerability, an attacker could cause an affected Tor
+  instance to crash remotely. This issue is also tracked as CVE-2020-
+  15572. Anybody running a version of Tor built with the NSS library
+  should upgrade to 0.3.5.11, 0.4.2.8, 0.4.3.6, or 0.4.4.2-alpha
+  or later.
+
+  o Major bugfixes (NSS, security, backport from 0.4.4.2-alpha):
+    - Fix a crash due to an out-of-bound memory access when Tor is
+      compiled with NSS support. Fixes bug 33119; bugfix on
+      0.3.5.1-alpha. This issue is also tracked as TROVE-2020-001
+      and CVE-2020-15572.
+
+  o Major bugfixes (DoS defenses, bridges, pluggable transport, backport from 0.4.3.4-rc):
+    - Fix a bug that was preventing DoS defenses from running on bridges
+      with a pluggable transport. Previously, the DoS subsystem was not
+      given the transport name of the client connection, thus failed to
+      find the GeoIP cache entry for that client address. Fixes bug
+      33491; bugfix on 0.3.3.2-alpha.
+
+  o Minor feature (sendme, flow control, backport form 0.4.3.4-rc):
+    - Default to sending SENDME version 1 cells. (Clients are already
+      sending these, because of a consensus parameter telling them to do
+      so: this change only affects what clients would do if the
+      consensus didn't contain a recommendation.) Closes ticket 33623.
+
+  o Minor features (diagnostic, backport from 0.4.3.3-alpha):
+    - Improve assertions and add some memory-poisoning code to try to
+      track down possible causes of a rare crash (32564) in the EWMA
+      code. Closes ticket 33290.
+
+  o Minor features (testing, backport from 0.4.3.4-rc):
+    - The unit tests now support a "TOR_SKIP_TESTCASES" environment
+      variable to specify a list of space-separated test cases that
+      should not be executed. We will use this to disable certain tests
+      that are failing on Appveyor because of mismatched OpenSSL
+      libraries. Part of ticket 33643.
+
+  o Minor bugfix (CI, Windows, backport from 0.4.4.2-alpha):
+    - Use the correct 64-bit printf format when compiling with MINGW on
+      Appveyor. Fixes bug 40026; bugfix on 0.3.5.5-alpha.
+
+  o Minor bugfix (relay, configuration, backport from 0.4.3.3-alpha):
+    - Warn if the ContactInfo field is not set, and tell the relay
+      operator that not having a ContactInfo field set might cause their
+      relay to get rejected in the future. Fixes bug 33361; bugfix
+      on 0.1.1.10-alpha.
+
+  o Minor bugfixes (client performance, backport from 0.4.4.1-alpha):
+    - Resume use of preemptively-built circuits when UseEntryGuards is set
+      to 0. We accidentally disabled this feature with that config
+      setting, leading to slower load times. Fixes bug 34303; bugfix
+      on 0.3.3.2-alpha.
+
+  o Minor bugfixes (compiler compatibility, backport from 0.4.3.5):
+    - Avoid compiler warnings from Clang 10 related to the use of GCC-
+      style "/* falls through */" comments. Both Clang and GCC allow
+      __attribute__((fallthrough)) instead, so that's what we're using
+      now. Fixes bug 34078; bugfix on 0.3.1.3-alpha.
+    - Fix compilation warnings with GCC 10.0.1. Fixes bug 34077; bugfix
+      on 0.4.0.3-alpha.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.4.2-alpha):
+    - Fix a compiler warning on platforms with 32-bit time_t values.
+      Fixes bug 40028; bugfix on 0.3.2.8-rc.
+
+  o Minor bugfixes (controller protocol, backport from 0.4.3.2-alpha):
+    - When receiving "ACTIVE" or "DORMANT" signals on the control port,
+      report them as SIGNAL events. Previously we would log a bug
+      warning. Fixes bug 33104; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (embedded Tor, backport from 0.4.3.1-alpha):
+    - When starting Tor any time after the first time in a process,
+      register the thread in which it is running as the main thread.
+      Previously, we only did this on Windows, which could lead to bugs
+      like 23081 on non-Windows platforms. Fixes bug 32884; bugfix
+      on 0.3.3.1-alpha.
+
+  o Minor bugfixes (key portability, backport from 0.4.3.4-rc):
+    - When reading PEM-encoded key data, tolerate CRLF line-endings even
+      if we are not running on Windows. Previously, non-Windows hosts
+      would reject these line-endings in certain positions, making
+      certain key files hard to move from one host to another. Fixes bug
+      33032; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.3.2-rc):
+    - When logging a bug, do not say "Future instances of this warning
+      will be silenced" unless we are actually going to silence them.
+      Previously we would say this whenever a BUG() check failed in the
+      code. Fixes bug 33095; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.3.4-rc):
+    - Flush stderr, stdout, and file logs during shutdown, if supported
+      by the OS. This change helps make sure that any final logs are
+      recorded. Fixes bug 33087; bugfix on 0.4.1.6.
+
+  o Minor bugfixes (logging, backport from 0.4.4.2-alpha):
+    - Downgrade a noisy log message that could occur naturally when
+      receiving an extrainfo document that we no longer want. Fixes bug
+      16016; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (onion service v3, client, backport from 0.4.3.3-alpha):
+    - Remove a BUG() warning that would cause a stack trace if an onion
+      service descriptor was freed while we were waiting for a
+      rendezvous circuit to complete. Fixes bug 28992; bugfix
+      on 0.3.2.1-alpha.
+
+  o Testing (CI, backport from 0.4.3.4-rc):
+    - In our Appveyor Windows CI, copy required DLLs to test and app
+      directories, before running tor's tests. This ensures that tor.exe
+      and test*.exe use the correct version of each DLL. This fix is not
+      required, but we hope it will avoid DLL search issues in future.
+      Fixes bug 33673; bugfix on 0.3.4.2-alpha.
+    - On Appveyor, skip the crypto/openssl_version test, which is
+      failing because of a mismatched library installation. Fix
+      for 33643.
+
+
+Changes in version 0.4.3.6 - 2020-07-09
+  Tor 0.4.3.6 backports several bugfixes from later releases, including
+  some affecting usability.
+
+  This release also fixes TROVE-2020-001, a medium-severity denial of
+  service vulnerability affecting all versions of Tor when compiled with
+  the NSS encryption library. (This is not the default configuration.)
+  Using this vulnerability, an attacker could cause an affected Tor
+  instance to crash remotely. This issue is also tracked as CVE-2020-
+  15572. Anybody running a version of Tor built with the NSS library
+  should upgrade to 0.3.5.11, 0.4.2.8, 0.4.3.6, or 0.4.4.2-alpha
+  or later.
+
+  o Major bugfixes (NSS, security, backport from 0.4.4.2-alpha):
+    - Fix a crash due to an out-of-bound memory access when Tor is
+      compiled with NSS support. Fixes bug 33119; bugfix on
+      0.3.5.1-alpha. This issue is also tracked as TROVE-2020-001
+      and CVE-2020-15572.
+
+  o Minor bugfix (CI, Windows, backport from 0.4.4.2-alpha):
+    - Use the correct 64-bit printf format when compiling with MINGW on
+      Appveyor. Fixes bug 40026; bugfix on 0.3.5.5-alpha.
+
+  o Minor bugfixes (client performance, backport from 0.4.4.1-alpha):
+    - Resume use of preemptively-built circuits when UseEntryGuards is set
+      to 0. We accidentally disabled this feature with that config
+      setting, leading to slower load times. Fixes bug 34303; bugfix
+      on 0.3.3.2-alpha.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.4.2-alpha):
+    - Fix a compiler warning on platforms with 32-bit time_t values.
+      Fixes bug 40028; bugfix on 0.3.2.8-rc.
+
+  o Minor bugfixes (linux seccomp sandbox, nss, backport from 0.4.4.1-alpha):
+    - Fix a startup crash when tor is compiled with --enable-nss and
+      sandbox support is enabled. Fixes bug 34130; bugfix on
+      0.3.5.1-alpha. Patch by Daniel Pinto.
+
+  o Minor bugfixes (logging, backport from 0.4.4.2-alpha):
+    - Downgrade a noisy log message that could occur naturally when
+      receiving an extrainfo document that we no longer want. Fixes bug
+      16016; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (manual page, backport from 0.4.4.1-alpha):
+    - Update the man page to reflect that MinUptimeHidServDirectoryV2
+      defaults to 96 hours. Fixes bug 34299; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (onion service v3, backport from 0.4.4.1-alpha):
+    - Prevent an assert() that would occur when cleaning the client
+      descriptor cache, and attempting to close circuits for a non-
+      decrypted descriptor (lacking client authorization). Fixes bug
+      33458; bugfix on 0.4.2.1-alpha.
+
+  o Minor bugfixes (portability, backport from 0.4.4.1-alpha):
+    - Fix a portability error in the configure script, where we were
+      using "==" instead of "=". Fixes bug 34233; bugfix on 0.4.3.5.
+
+  o Minor bugfixes (relays, backport from 0.4.4.1-alpha):
+    - Stop advertising incorrect IPv6 ORPorts in relay and bridge
+      descriptors, when the IPv6 port was configured as "auto". Fixes
+      bug 32588; bugfix on 0.2.3.9-alpha.
+
+  o Documentation (backport from 0.4.4.1-alpha):
+    - Fix several doxygen warnings related to imbalanced groups. Closes
+      ticket 34255.
+
+
 Changes in version 0.4.3.5 - 2020-05-15
   Tor 0.4.3.5 is the first stable release in the 0.4.3.x series. This
   series adds support for building without relay code enabled, and
