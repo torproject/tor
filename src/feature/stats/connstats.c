@@ -8,8 +8,12 @@
  * @file connstats.c
  * @brief Count bidirectional vs one-way connections.
  *
- * Connection statistics, used by relays to count connections, and track
- * one-way and bidirectional connections.
+ * Connection statistics, use to track one-way and bidirectional connections.
+ *
+ * Note that this code counts concurrent connections in each
+ * BIDI_INTERVAL-second interval, not total connections.  It can tell you what
+ * fraction of connections are bidirectional at each time, not necessarily
+ * what number are bidirectional.
  **/
 
 #include "orconfig.h"
@@ -28,16 +32,16 @@ conn_stats_init(time_t now)
   start_of_conn_stats_interval = now;
 }
 
-/* Count connections that we read and wrote less than these many bytes
- * from/to as below threshold. */
+/** Count connections on which we read and wrote less than this many bytes
+ * as "below threshold." */
 #define BIDI_THRESHOLD 20480
 
-/* Count connections that we read or wrote at least this factor as many
+/** Count connections that we read or wrote at least this factor as many
  * bytes from/to than we wrote or read to/from as mostly reading or
  * writing. */
 #define BIDI_FACTOR 10
 
-/* Interval length in seconds for considering read and written bytes for
+/** Interval length in seconds for considering read and written bytes for
  * connection stats. */
 #define BIDI_INTERVAL 10
 
@@ -75,13 +79,14 @@ typedef struct bidi_map_entry_t {
 static HT_HEAD(bidimap, bidi_map_entry_t) bidi_map =
      HT_INITIALIZER();
 
+/** Hashtable helper: return true if @a a and @a b have the same key. */
 static int
 bidi_map_ent_eq(const bidi_map_entry_t *a, const bidi_map_entry_t *b)
 {
   return a->conn_id == b->conn_id;
 }
 
-/* DOCDOC bidi_map_ent_hash */
+/** Hashtable helper: compute a digest for the key of @a entry. */
 static unsigned
 bidi_map_ent_hash(const bidi_map_entry_t *entry)
 {
