@@ -280,7 +280,7 @@ bwhist_bandwidth_assess,(void))
  * It returns the number of bytes written.
  */
 static size_t
-rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
+bwhist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
 {
   char *cp = buf;
   int i, n;
@@ -367,7 +367,7 @@ bwhist_get_bandwidth_lines(void)
         break;
     }
     tor_assert(b);
-    slen = rep_hist_fill_bandwidth_history(tmp, MAX_HIST_VALUE_LEN, b);
+    slen = bwhist_fill_bandwidth_history(tmp, MAX_HIST_VALUE_LEN, b);
     /* If we don't have anything to write, skip to the next entry. */
     if (slen == 0)
       continue;
@@ -386,7 +386,7 @@ bwhist_get_bandwidth_lines(void)
 /** Write a single bw_array_t into the Values, Ends, Interval, and Maximum
  * entries of an or_state_t. Done before writing out a new state file. */
 static void
-rep_hist_update_bwhist_state_section(or_state_t *state,
+bwhist_update_bwhist_state_section(or_state_t *state,
                                      const bw_array_t *b,
                                      smartlist_t **s_values,
                                      smartlist_t **s_maxima,
@@ -449,7 +449,7 @@ void
 bwhist_update_state(or_state_t *state)
 {
 #define UPDATE(arrname,st) \
-  rep_hist_update_bwhist_state_section(state,\
+  bwhist_update_bwhist_state_section(state,\
                                        (arrname),\
                                        &state->BWHistory ## st ## Values, \
                                        &state->BWHistory ## st ## Maxima, \
@@ -470,7 +470,7 @@ bwhist_update_state(or_state_t *state)
 /** Load a single bw_array_t from its Values, Ends, Maxima, and Interval
  * entries in an or_state_t. Done while reading the state file. */
 static int
-rep_hist_load_bwhist_state_section(bw_array_t *b,
+bwhist_load_bwhist_state_section(bw_array_t *b,
                                    const smartlist_t *s_values,
                                    const smartlist_t *s_maxima,
                                    const time_t s_begins,
@@ -555,7 +555,7 @@ bwhist_load_state(or_state_t *state, char **err)
   tor_assert(dir_read_array && dir_write_array);
 
 #define LOAD(arrname,st)                                                \
-  if (rep_hist_load_bwhist_state_section(                               \
+  if (bwhist_load_bwhist_state_section(                               \
                                 (arrname),                              \
                                 state->BWHistory ## st ## Values,       \
                                 state->BWHistory ## st ## Maxima,       \
