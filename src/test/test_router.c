@@ -226,13 +226,13 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
 
   /* When uptime is less than 24h and bandwidthcapacity does not change
    * Uptime: 10800, last_changed: x, Previous bw: 10000, Current bw: 20001 */
-  MOCK(rep_hist_bandwidth_assess, mock_rep_hist_bandwidth_assess);
+  MOCK(bwhist_bandwidth_assess, mock_rep_hist_bandwidth_assess);
   setup_full_capture_of_logs(LOG_INFO);
   check_descriptor_bandwidth_changed(time(NULL) + 6*60*60 + 1);
   expect_log_msg_containing(
      "Measured bandwidth has changed; rebuilding descriptor.");
   UNMOCK(get_uptime);
-  UNMOCK(rep_hist_bandwidth_assess);
+  UNMOCK(bwhist_bandwidth_assess);
   teardown_capture_of_logs();
 
   /* When uptime is more than 24h */

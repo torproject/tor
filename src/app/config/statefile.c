@@ -324,7 +324,7 @@ or_state_set(or_state_t *new_state)
     tor_free(err);
     ret = -1;
   }
-  if (rep_hist_load_state(global_state, &err)<0) {
+  if (bwhist_load_state(global_state, &err)<0) {
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
     tor_free(err);
     ret = -1;
@@ -523,7 +523,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   (void) subsystems_flush_state(get_state_mgr(), global_state);
   entry_guards_update_state(global_state);
-  rep_hist_update_state(global_state);
+  bwhist_update_state(global_state);
   circuit_build_times_update_state(get_circuit_build_times(), global_state);
 
   if (accounting_is_enabled(get_options()))

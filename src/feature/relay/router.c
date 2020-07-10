@@ -2099,7 +2099,7 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   ri->bandwidthburst = relay_get_effective_bwburst(options);
 
   /* Report bandwidth, unless we're hibernating or shutting down */
-  ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
+  ri->bandwidthcapacity = hibernating ? 0 : bwhist_bandwidth_assess();
 
   if (dns_seems_to_be_broken() || has_dns_init_failed()) {
     /* DNS is screwed up; don't claim to be an exit. */
@@ -2545,7 +2545,7 @@ check_descriptor_bandwidth_changed(time_t now)
 
   /* Consider ourselves to have zero bandwidth if we're hibernating or
    * shutting down. */
-  cur = hibernating ? 0 : rep_hist_bandwidth_assess();
+  cur = hibernating ? 0 : bwhist_bandwidth_assess();
 
   if ((prev != cur && (!prev || !cur)) ||
       cur > (prev * BANDWIDTH_CHANGE_FACTOR) ||
@@ -3209,7 +3209,7 @@ extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     /* Bandwidth usage stats don't have their own option */
     {
-      contents = rep_hist_get_bandwidth_lines();
+      contents = bwhist_get_bandwidth_lines();
       smartlist_add(chunks, contents);
     }
     /* geoip hashes aren't useful unless we are publishing other stats */

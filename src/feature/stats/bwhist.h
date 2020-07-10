@@ -15,16 +15,16 @@
 void bwhist_init(void);
 void bwhist_free_all(void);
 
-void rep_hist_note_bytes_read(uint64_t num_bytes, time_t when);
-void rep_hist_note_bytes_written(uint64_t num_bytes, time_t when);
-void rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when);
-void rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when);
+void bwhist_note_bytes_read(uint64_t num_bytes, time_t when);
+void bwhist_note_bytes_written(uint64_t num_bytes, time_t when);
+void bwhist_note_dir_bytes_read(uint64_t num_bytes, time_t when);
+void bwhist_note_dir_bytes_written(uint64_t num_bytes, time_t when);
 
-MOCK_DECL(int, rep_hist_bandwidth_assess, (void));
-char *rep_hist_get_bandwidth_lines(void);
+MOCK_DECL(int, bwhist_bandwidth_assess, (void));
+char *bwhist_get_bandwidth_lines(void);
 struct or_state_t;
-void rep_hist_update_state(struct or_state_t *state);
-int rep_hist_load_state(struct or_state_t *state, char **err);
+void bwhist_update_state(struct or_state_t *state);
+int bwhist_load_state(struct or_state_t *state, char **err);
 
 #ifdef BWHIST_PRIVATE
 typedef struct bw_array_t bw_array_t;

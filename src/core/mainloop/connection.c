@@ -3345,9 +3345,9 @@ record_num_bytes_transferred_impl(connection_t *conn,
   /* Count bytes of answering direct and tunneled directory requests */
   if (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER) {
     if (num_read > 0)
-      rep_hist_note_dir_bytes_read(num_read, now);
+      bwhist_note_dir_bytes_read(num_read, now);
     if (num_written > 0)
-      rep_hist_note_dir_bytes_written(num_written, now);
+      bwhist_note_dir_bytes_written(num_written, now);
   }
 
   /* Linked connections and internal IPs aren't counted for statistics or
@@ -3367,10 +3367,10 @@ record_num_bytes_transferred_impl(connection_t *conn,
                                 num_written, now);
 
   if (num_read > 0) {
-    rep_hist_note_bytes_read(num_read, now);
+    bwhist_note_bytes_read(num_read, now);
   }
   if (num_written > 0) {
-    rep_hist_note_bytes_written(num_written, now);
+    bwhist_note_bytes_written(num_written, now);
   }
   if (conn->type == CONN_TYPE_EXIT)
     rep_hist_note_exit_bytes(conn->port, num_written, num_read);

@@ -197,7 +197,7 @@ bwhist_init(void)
  * earlier than the latest <b>when</b> you've heard of.
  */
 void
-rep_hist_note_bytes_written(uint64_t num_bytes, time_t when)
+bwhist_note_bytes_written(uint64_t num_bytes, time_t when)
 {
 /* Maybe a circular array for recent seconds, and step to a new point
  * every time a new second shows up. Or simpler is to just to have
@@ -205,35 +205,35 @@ rep_hist_note_bytes_written(uint64_t num_bytes, time_t when)
  */
 /* When a new second has rolled over, compute the sum of the bytes we've
  * seen over when-1 to when-1-NUM_SECS_ROLLING_MEASURE, and stick it
- * somewhere. See rep_hist_bandwidth_assess() below.
+ * somewhere. See bwhist_bandwidth_assess() below.
  */
   add_obs(write_array, when, num_bytes);
 }
 
 /** Remember that we wrote <b>num_bytes</b> bytes in second <b>when</b>.
- * (like rep_hist_note_bytes_written() above)
+ * (like bwhist_note_bytes_written() above)
  */
 void
-rep_hist_note_bytes_read(uint64_t num_bytes, time_t when)
+bwhist_note_bytes_read(uint64_t num_bytes, time_t when)
 {
 /* if we're smart, we can make this func and the one above share code */
   add_obs(read_array, when, num_bytes);
 }
 
 /** Remember that we wrote <b>num_bytes</b> directory bytes in second
- * <b>when</b>. (like rep_hist_note_bytes_written() above)
+ * <b>when</b>. (like bwhist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when)
+bwhist_note_dir_bytes_written(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_write_array, when, num_bytes);
 }
 
 /** Remember that we read <b>num_bytes</b> directory bytes in second
- * <b>when</b>. (like rep_hist_note_bytes_written() above)
+ * <b>when</b>. (like bwhist_note_bytes_written() above)
  */
 void
-rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when)
+bwhist_note_dir_bytes_read(uint64_t num_bytes, time_t when)
 {
   add_obs(dir_read_array, when, num_bytes);
 }
@@ -262,7 +262,7 @@ find_largest_max(bw_array_t *b)
  * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
  */
 MOCK_IMPL(int,
-rep_hist_bandwidth_assess,(void))
+bwhist_bandwidth_assess,(void))
 {
   uint64_t w,r;
   r = find_largest_max(read_array);
@@ -329,7 +329,7 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
  * descriptor.
  */
 char *
-rep_hist_get_bandwidth_lines(void)
+bwhist_get_bandwidth_lines(void)
 {
   char *buf, *cp;
   char t[ISO_TIME_LEN+1];
@@ -446,7 +446,7 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
 /** Update <b>state</b> with the newest bandwidth history. Done before
  * writing out a new state file. */
 void
-rep_hist_update_state(or_state_t *state)
+bwhist_update_state(or_state_t *state)
 {
 #define UPDATE(arrname,st) \
   rep_hist_update_bwhist_state_section(state,\
@@ -546,7 +546,7 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
 
 /** Set bandwidth history from the state file we just loaded. */
 int
-rep_hist_load_state(or_state_t *state, char **err)
+bwhist_load_state(or_state_t *state, char **err)
 {
   int all_ok = 1;
 
