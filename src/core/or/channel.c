@@ -2849,7 +2849,7 @@ channel_get_canonical_remote_descr,(channel_t *chan))
  * doesn't let us do this.
  */
 MOCK_IMPL(int,
-channel_get_addr_if_possible,(channel_t *chan, tor_addr_t *addr_out))
+channel_get_addr_if_possible,(const channel_t *chan, tor_addr_t *addr_out))
 {
   tor_assert(chan);
   tor_assert(addr_out);

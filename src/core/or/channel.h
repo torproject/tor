@@ -335,7 +335,7 @@ struct channel_t {
    * provided tor_addr_t *, and return 1 if successful or 0 if no address
    * available.
    */
-  int (*get_remote_addr)(channel_t *, tor_addr_t *);
+  int (*get_remote_addr)(const channel_t *, tor_addr_t *);
   int (*get_transport_name)(channel_t *chan, char **transport_out);
 
 #define GRD_FLAG_ORIGINAL 1
@@ -723,7 +723,7 @@ MOCK_DECL(void, channel_dump_statistics, (channel_t *chan, int severity));
 void channel_dump_transport_statistics(channel_t *chan, int severity);
 const char * channel_get_actual_remote_descr(channel_t *chan);
 const char * channel_get_actual_remote_address(channel_t *chan);
-MOCK_DECL(int, channel_get_addr_if_possible, (channel_t *chan,
+MOCK_DECL(int, channel_get_addr_if_possible, (const channel_t *chan,
                                               tor_addr_t *addr_out));
 MOCK_DECL(const char *, channel_get_canonical_remote_descr,(channel_t *chan));
 int channel_has_queued_writes(channel_t *chan);

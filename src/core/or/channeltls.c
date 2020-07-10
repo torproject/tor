@@ -104,7 +104,8 @@ static const char * channel_tls_describe_transport_method(channel_t *chan);
 static void channel_tls_free_method(channel_t *chan);
 static double channel_tls_get_overhead_estimate_method(channel_t *chan);
 static int
-channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out);
+channel_tls_get_remote_addr_method(const channel_t *chan,
+                                   tor_addr_t *addr_out);
 static int
 channel_tls_get_transport_name_method(channel_t *chan, char **transport_out);
 static const char *
@@ -515,10 +516,10 @@ channel_tls_get_overhead_estimate_method(channel_t *chan)
  * succeeds for this transport).
  */
 static int
-channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out)
+channel_tls_get_remote_addr_method(const channel_t *chan, tor_addr_t *addr_out)
 {
   int rv = 0;
-  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+  const channel_tls_t *tlschan = BASE_CHAN_TO_TLS((channel_t*) chan);
 
   tor_assert(tlschan);
   tor_assert(addr_out);

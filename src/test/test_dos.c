@@ -108,7 +108,7 @@ test_dos_conn_creation(void *arg)
 
 /** Helper mock: Place a fake IP addr for this channel in <b>addr_out</b> */
 static int
-mock_channel_get_addr_if_possible(channel_t *chan, tor_addr_t *addr_out)
+mock_channel_get_addr_if_possible(const channel_t *chan, tor_addr_t *addr_out)
 {
   (void)chan;
   tt_int_op(AF_INET,OP_EQ, tor_addr_parse(addr_out, "18.0.0.1"));
