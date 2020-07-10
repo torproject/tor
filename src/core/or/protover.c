@@ -393,6 +393,11 @@ protocol_list_supports_protocol_or_later(const char *list,
 const char *
 protover_get_supported_protocols(void)
 {
+  /* WARNING!
+   *
+   * Remember to edit the SUPPORTED_PROTOCOLS list in protover.rs if you
+   * are editing this list.
+   */
   return
     "Cons=1-2 "
     "Desc=1-2 "
