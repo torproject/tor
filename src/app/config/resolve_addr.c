@@ -85,7 +85,7 @@ resolved_addr_get_suggested(int family, tor_addr_t *addr_out)
 void
 resolved_addr_set_suggested(const tor_addr_t *addr)
 {
-  if (BUG(tor_addr_family(addr) != AF_INET ||
+  if (BUG(tor_addr_family(addr) != AF_INET &&
           tor_addr_family(addr) != AF_INET6)) {
     return;
   }
