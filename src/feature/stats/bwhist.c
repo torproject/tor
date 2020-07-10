@@ -324,6 +324,29 @@ bwhist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
   return cp-buf;
 }
 
+/** Encode a single bandwidth history line into <b>buf</b>. */
+static void
+bwhist_get_one_bandwidth_line(buf_t *buf, const char *desc,
+                              const bw_array_t *b)
+{
+  /* [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
+  /* The n,n,n part above. Largest representation of a uint64_t is 20 chars
+   * long, plus the comma. */
+#define MAX_HIST_VALUE_LEN (21*NUM_TOTALS)
+
+  char tmp[MAX_HIST_VALUE_LEN];
+  char end[ISO_TIME_LEN+1];
+
+  size_t slen = bwhist_fill_bandwidth_history(tmp, MAX_HIST_VALUE_LEN, b);
+  /* If we don't have anything to write, skip to the next entry. */
+  if (slen == 0)
+    return;
+
+  format_iso_time(end, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
+  buf_add_printf(buf, "%s %s (%d s) %s\n",
+                 desc, end, NUM_SECS_BW_SUM_INTERVAL, tmp);
+}
+
 /** Allocate and return lines for representing this server's bandwidth
  * history in its descriptor. We publish these lines in our extra-info
  * descriptor.
@@ -331,56 +354,16 @@ bwhist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
 char *
 bwhist_get_bandwidth_lines(void)
 {
-  char *buf, *cp;
-  char t[ISO_TIME_LEN+1];
-  int r;
-  bw_array_t *b = NULL;
-  const char *desc = NULL;
-  size_t len;
+  buf_t *buf = buf_new();
 
-  /* [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
-/* The n,n,n part above. Largest representation of a uint64_t is 20 chars
- * long, plus the comma. */
-#define MAX_HIST_VALUE_LEN (21*NUM_TOTALS)
-  len = (67+MAX_HIST_VALUE_LEN)*4;
-  buf = tor_malloc_zero(len);
-  cp = buf;
-  for (r=0;r<4;++r) {
-    char tmp[MAX_HIST_VALUE_LEN];
-    size_t slen;
-    switch (r) {
-      case 0:
-        b = write_array;
-        desc = "write-history";
-        break;
-      case 1:
-        b = read_array;
-        desc = "read-history";
-        break;
-      case 2:
-        b = dir_write_array;
-        desc = "dirreq-write-history";
-        break;
-      case 3:
-        b = dir_read_array;
-        desc = "dirreq-read-history";
-        break;
-    }
-    tor_assert(b);
-    slen = bwhist_fill_bandwidth_history(tmp, MAX_HIST_VALUE_LEN, b);
-    /* If we don't have anything to write, skip to the next entry. */
-    if (slen == 0)
-      continue;
-    format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    tor_snprintf(cp, len-(cp-buf), "%s %s (%d s) ",
-                 desc, t, NUM_SECS_BW_SUM_INTERVAL);
-    cp += strlen(cp);
-    strlcat(cp, tmp, len-(cp-buf));
-    cp += slen;
-    strlcat(cp, "\n", len-(cp-buf));
-    ++cp;
-  }
-  return buf;
+  bwhist_get_one_bandwidth_line(buf, "write-history", write_array);
+  bwhist_get_one_bandwidth_line(buf, "read-history", read_array);
+  bwhist_get_one_bandwidth_line(buf, "dirreq-write-history", dir_write_array);
+  bwhist_get_one_bandwidth_line(buf, "dirreq-read-history", dir_read_array);
+
+  char *result = buf_extract(buf, NULL);
+  buf_free(buf);
+  return result;
 }
 
 /** Write a single bw_array_t into the Values, Ends, Interval, and Maximum
