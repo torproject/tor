@@ -14,7 +14,7 @@
 
 void conn_stats_init(time_t now);
 void conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
-                                 size_t num_written, time_t when);
+                                   size_t num_written, time_t when);
 void conn_stats_reset(time_t now);
 char *conn_stats_format(time_t now);
 time_t conn_stats_save(time_t now);

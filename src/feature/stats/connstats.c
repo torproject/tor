@@ -48,22 +48,28 @@ conn_stats_init(time_t now)
 /** Start of next BIDI_INTERVAL second interval. */
 static time_t bidi_next_interval = 0;
 
-/** Number of connections that we read and wrote less than BIDI_THRESHOLD
- * bytes from/to in BIDI_INTERVAL seconds. */
-static uint32_t below_threshold = 0;
+/** A single grouped set of connection type counts. */
+typedef struct conn_counts_t {
+  /** Number of connections that we read and wrote less than BIDI_THRESHOLD
+   * bytes from/to in BIDI_INTERVAL seconds. */
+  uint32_t below_threshold;
 
-/** Number of connections that we read at least BIDI_FACTOR times more
- * bytes from than we wrote to in BIDI_INTERVAL seconds. */
-static uint32_t mostly_read = 0;
+  /** Number of connections that we read at least BIDI_FACTOR times more
+   * bytes from than we wrote to in BIDI_INTERVAL seconds. */
+  uint32_t mostly_read;
 
-/** Number of connections that we wrote at least BIDI_FACTOR times more
- * bytes to than we read from in BIDI_INTERVAL seconds. */
-static uint32_t mostly_written = 0;
+  /** Number of connections that we wrote at least BIDI_FACTOR times more
+   * bytes to than we read from in BIDI_INTERVAL seconds. */
+  uint32_t mostly_written;
 
-/** Number of connections that we read and wrote at least BIDI_THRESHOLD
- * bytes from/to, but not BIDI_FACTOR times more in either direction in
- * BIDI_INTERVAL seconds. */
-static uint32_t both_read_and_written = 0;
+  /** Number of connections that we read and wrote at least BIDI_THRESHOLD
+   * bytes from/to, but not BIDI_FACTOR times more in either direction in
+   * BIDI_INTERVAL seconds. */
+  uint32_t both_read_and_written;
+} conn_counts_t ;
+
+/** A collection of connection counts, over all OR connections. */
+static conn_counts_t counts;
 
 /** Entry in a map from connection ID to the number of read and written
  * bytes on this connection in a BIDI_INTERVAL second interval. */
@@ -116,10 +122,7 @@ void
 conn_stats_reset(time_t now)
 {
   start_of_conn_stats_interval = now;
-  below_threshold = 0;
-  mostly_read = 0;
-  mostly_written = 0;
-  both_read_and_written = 0;
+  memset(&counts, 0, sizeof(counts));
   conn_stats_free_all();
 }
 
@@ -147,16 +150,17 @@ conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
   /* Sum up last period's statistics */
   if (when >= bidi_next_interval) {
     bidi_map_entry_t **ptr, **next, *ent;
+    conn_counts_t *cnt = &counts;
     for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
       ent = *ptr;
       if (ent->read + ent->written < BIDI_THRESHOLD)
-        below_threshold++;
+        cnt->below_threshold++;
       else if (ent->read >= ent->written * BIDI_FACTOR)
-        mostly_read++;
+        cnt->mostly_read++;
       else if (ent->written >= ent->read * BIDI_FACTOR)
-        mostly_written++;
+        cnt->mostly_written++;
       else
-        both_read_and_written++;
+        cnt->both_read_and_written++;
       next = HT_NEXT_RMV(bidimap, &bidi_map, ptr);
       tor_free(ent);
     }
@@ -164,8 +168,8 @@ conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
       bidi_next_interval += BIDI_INTERVAL;
     log_info(LD_GENERAL, "%d below threshold, %d mostly read, "
              "%d mostly written, %d both read and written.",
-             below_threshold, mostly_read, mostly_written,
-             both_read_and_written);
+             cnt->below_threshold, cnt->mostly_read, cnt->mostly_written,
+             cnt->both_read_and_written);
   }
   /* Add this connection's bytes. */
   if (num_read > 0 || num_written > 0) {
@@ -202,10 +206,10 @@ conn_stats_format(time_t now)
   tor_asprintf(&result, "conn-bi-direct %s (%d s) %d,%d,%d,%d\n",
                written,
                (unsigned) (now - start_of_conn_stats_interval),
-               below_threshold,
-               mostly_read,
-               mostly_written,
-               both_read_and_written);
+               counts.below_threshold,
+               counts.mostly_read,
+               counts.mostly_written,
+               counts.both_read_and_written);
   return result;
 }
 
