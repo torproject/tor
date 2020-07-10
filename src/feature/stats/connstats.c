@@ -70,6 +70,8 @@ typedef struct conn_counts_t {
 
 /** A collection of connection counts, over all OR connections. */
 static conn_counts_t counts;
+/** A collection of connection counts, over IPv6 OR connections only. */
+static conn_counts_t counts_ipv6;
 
 /** Entry in a map from connection ID to the number of read and written
  * bytes on this connection in a BIDI_INTERVAL second interval. */
@@ -78,6 +80,7 @@ typedef struct bidi_map_entry_t {
   uint64_t conn_id; /**< Connection ID */
   size_t read; /**< Number of read bytes */
   size_t written; /**< Number of written bytes */
+  bool is_ipv6; /**< True if this is an IPv6 connection */
 } bidi_map_entry_t;
 
 /** Map of OR connections together with the number of read and written
@@ -123,6 +126,7 @@ conn_stats_reset(time_t now)
 {
   start_of_conn_stats_interval = now;
   memset(&counts, 0, sizeof(counts));
+  memset(&counts_ipv6, 0, sizeof(counts_ipv6));
   conn_stats_free_all();
 }
 
@@ -159,17 +163,18 @@ static void
 collect_period_statistics(void)
 {
   bidi_map_entry_t **ptr, **next, *ent;
-  conn_counts_t *cnt = &counts;
   for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
     ent = *ptr;
-    add_entry_to_count(cnt, ent);
+    add_entry_to_count(&counts, ent);
+    if (ent->is_ipv6)
+      add_entry_to_count(&counts_ipv6, ent);
     next = HT_NEXT_RMV(bidimap, &bidi_map, ptr);
     tor_free(ent);
   }
   log_info(LD_GENERAL, "%d below threshold, %d mostly read, "
            "%d mostly written, %d both read and written.",
-           cnt->below_threshold, cnt->mostly_read, cnt->mostly_written,
-           cnt->both_read_and_written);
+           counts.below_threshold, counts.mostly_read, counts.mostly_written,
+           counts.both_read_and_written);
 }
 
 /** We read <b>num_read</b> bytes and wrote <b>num_written</b> from/to OR
@@ -178,7 +183,8 @@ collect_period_statistics(void)
  * for this connection. */
 void
 conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
-                            size_t num_written, time_t when)
+                              size_t num_written, time_t when,
+                              bool is_ipv6)
 {
   if (!start_of_conn_stats_interval)
     return;
@@ -199,11 +205,13 @@ conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
     if (entry) {
       entry->written += num_written;
       entry->read += num_read;
+      entry->is_ipv6 |= is_ipv6;
     } else {
       entry = tor_malloc_zero(sizeof(bidi_map_entry_t));
       entry->conn_id = conn_id;
       entry->written = num_written;
       entry->read = num_read;
+      entry->is_ipv6 = is_ipv6;
       HT_INSERT(bidimap, &bidi_map, entry);
     }
   }
@@ -215,21 +223,30 @@ conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
 char *
 conn_stats_format(time_t now)
 {
-  char *result, written[ISO_TIME_LEN+1];
+  char *result, written_at[ISO_TIME_LEN+1];
 
   if (!start_of_conn_stats_interval)
     return NULL; /* Not initialized. */
 
   tor_assert(now >= start_of_conn_stats_interval);
 
-  format_iso_time(written, now);
-  tor_asprintf(&result, "conn-bi-direct %s (%d s) %d,%d,%d,%d\n",
-               written,
+  format_iso_time(written_at, now);
+  tor_asprintf(&result,
+               "conn-bi-direct %s (%d s) %d,%d,%d,%d\n"
+               "ipv6-conn-bi-direct %s (%d s) %d,%d,%d,%d\n",
+               written_at,
                (unsigned) (now - start_of_conn_stats_interval),
                counts.below_threshold,
                counts.mostly_read,
                counts.mostly_written,
-               counts.both_read_and_written);
+               counts.both_read_and_written,
+               written_at,
+               (unsigned) (now - start_of_conn_stats_interval),
+               counts_ipv6.below_threshold,
+               counts_ipv6.mostly_read,
+               counts_ipv6.mostly_written,
+               counts_ipv6.both_read_and_written);
+
   return result;
 }
 

@@ -3363,11 +3363,11 @@ record_num_bytes_transferred_impl(connection_t *conn,
   if (!connection_is_rate_limited(conn))
     return;
 
+  const bool is_ipv6 = (conn->socket_family == AF_INET6);
   if (conn->type == CONN_TYPE_OR)
     conn_stats_note_or_conn_bytes(conn->global_identifier, num_read,
-                                num_written, now);
+                                  num_written, now, is_ipv6);
 
-  const bool is_ipv6 = (conn->socket_family == AF_INET6);
   if (num_read > 0) {
     bwhist_note_bytes_read(num_read, now, is_ipv6);
   }
