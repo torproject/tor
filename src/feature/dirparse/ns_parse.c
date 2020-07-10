@@ -1354,8 +1354,8 @@ networkstatus_parse_vote_from_string(const char *s,
         goto err;
       }
       if (ns->type != NS_TYPE_CONSENSUS) {
-        if (authority_cert_is_blacklisted(ns->cert)) {
-          log_warn(LD_DIR, "Rejecting vote signature made with blacklisted "
+        if (authority_cert_is_denylisted(ns->cert)) {
+          log_warn(LD_DIR, "Rejecting vote signature made with denylisted "
                    "signing key %s",
                    hex_str(ns->cert->signing_key_digest, DIGEST_LEN));
           goto err;

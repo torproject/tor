@@ -745,7 +745,7 @@ static const char *BAD_SIGNING_KEYS[] = {
  * which, because of the old openssl heartbleed vulnerability, should
  * never be trusted. */
 int
-authority_cert_is_blacklisted(const authority_cert_t *cert)
+authority_cert_is_denylisted(const authority_cert_t *cert)
 {
   char hex_digest[HEX_DIGEST_LEN+1];
   int i;

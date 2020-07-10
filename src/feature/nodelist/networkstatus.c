@@ -471,8 +471,8 @@ networkstatus_check_document_signature(const networkstatus_t *consensus,
                  DIGEST_LEN))
     return -1;
 
-  if (authority_cert_is_blacklisted(cert)) {
-    /* We implement blacklisting for authority signing keys by treating
+  if (authority_cert_is_denylisted(cert)) {
+    /* We implement denylisting for authority signing keys by treating
      * all their signatures as always bad. That way we don't get into
      * crazy loops of dropping and re-fetching signatures. */
     log_warn(LD_DIR, "Ignoring a consensus signature made with deprecated"
