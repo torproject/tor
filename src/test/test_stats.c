@@ -112,36 +112,36 @@ test_stats(void *arg)
 
   /* Continue with testing connection statistics; we shouldn't collect
    * conn stats without initializing them. */
-  rep_hist_note_or_conn_bytes(1, 20, 400, now);
-  s = rep_hist_format_conn_stats(now + 86400);
+  conn_stats_note_or_conn_bytes(1, 20, 400, now);
+  s = conn_stats_format(now + 86400);
   tt_ptr_op(s, OP_EQ, NULL);
 
   /* Initialize stats, note bytes, and generate history string. */
-  rep_hist_conn_stats_init(now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now + 5);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
-  s = rep_hist_format_conn_stats(now + 86400);
+  conn_stats_init(now);
+  conn_stats_note_or_conn_bytes(1, 30000, 400000, now);
+  conn_stats_note_or_conn_bytes(1, 30000, 400000, now + 5);
+  conn_stats_note_or_conn_bytes(2, 400000, 30000, now + 10);
+  conn_stats_note_or_conn_bytes(2, 400000, 30000, now + 15);
+  s = conn_stats_format(now + 86400);
   tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,1,0\n",OP_EQ, s);
   tor_free(s);
 
   /* Stop collecting stats, add some bytes, and ensure we don't generate
    * a history string. */
-  rep_hist_conn_stats_term();
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
-  s = rep_hist_format_conn_stats(now + 86400);
+  conn_stats_terminate();
+  conn_stats_note_or_conn_bytes(2, 400000, 30000, now + 15);
+  s = conn_stats_format(now + 86400);
   tt_ptr_op(s, OP_EQ, NULL);
 
   /* Re-start stats, add some bytes, reset stats, and see what history we
    * get when observing no bytes at all. */
-  rep_hist_conn_stats_init(now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now);
-  rep_hist_note_or_conn_bytes(1, 30000, 400000, now + 5);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
-  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
-  rep_hist_reset_conn_stats(now);
-  s = rep_hist_format_conn_stats(now + 86400);
+  conn_stats_init(now);
+  conn_stats_note_or_conn_bytes(1, 30000, 400000, now);
+  conn_stats_note_or_conn_bytes(1, 30000, 400000, now + 5);
+  conn_stats_note_or_conn_bytes(2, 400000, 30000, now + 10);
+  conn_stats_note_or_conn_bytes(2, 400000, 30000, now + 15);
+  conn_stats_reset(now);
+  s = conn_stats_format(now + 86400);
   tt_str_op("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,0,0\n",OP_EQ, s);
   tor_free(s);
 

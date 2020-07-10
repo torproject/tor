@@ -2141,7 +2141,7 @@ rep_hist_free_all(void)
   tor_free(exit_bytes_written);
   tor_free(exit_streams);
   predicted_ports_free_all();
-  bidi_map_free_all();
+  conn_stats_free_all();
 
   if (circuits_for_buffer_stats) {
     SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *, s,

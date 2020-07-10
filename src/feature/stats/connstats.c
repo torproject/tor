@@ -23,7 +23,7 @@ static time_t start_of_conn_stats_interval;
 
 /** Initialize connection stats. */
 void
-rep_hist_conn_stats_init(time_t now)
+conn_stats_init(time_t now)
 {
   start_of_conn_stats_interval = now;
 }
@@ -95,7 +95,7 @@ HT_GENERATE2(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
 
 /** Release all storage held in connstats.c */
 void
-bidi_map_free_all(void)
+conn_stats_free_all(void)
 {
   bidi_map_entry_t **ptr, **next, *ent;
   for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
@@ -108,22 +108,22 @@ bidi_map_free_all(void)
 
 /** Reset counters for conn statistics. */
 void
-rep_hist_reset_conn_stats(time_t now)
+conn_stats_reset(time_t now)
 {
   start_of_conn_stats_interval = now;
   below_threshold = 0;
   mostly_read = 0;
   mostly_written = 0;
   both_read_and_written = 0;
-  bidi_map_free_all();
+  conn_stats_free_all();
 }
 
 /** Stop collecting connection stats in a way that we can re-start doing
- * so in rep_hist_conn_stats_init(). */
+ * so in conn_stats_init(). */
 void
-rep_hist_conn_stats_term(void)
+conn_stats_terminate(void)
 {
-  rep_hist_reset_conn_stats(0);
+  conn_stats_reset(0);
 }
 
 /** We read <b>num_read</b> bytes and wrote <b>num_written</b> from/to OR
@@ -131,7 +131,7 @@ rep_hist_conn_stats_term(void)
  * observation in a new interval, sum up the last observations. Add bytes
  * for this connection. */
 void
-rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
+conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
                             size_t num_written, time_t when)
 {
   if (!start_of_conn_stats_interval)
@@ -184,7 +184,7 @@ rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
  * until <b>now</b>, or NULL if we're not collecting conn stats. Caller must
  * ensure start_of_conn_stats_interval is in the past. */
 char *
-rep_hist_format_conn_stats(time_t now)
+conn_stats_format(time_t now)
 {
   char *result, written[ISO_TIME_LEN+1];
 
@@ -209,7 +209,7 @@ rep_hist_format_conn_stats(time_t now)
  * overwriting an existing file) and reset counters.  Return when we would
  * next want to write conn stats or 0 if we never want to write. */
 time_t
-rep_hist_conn_stats_write(time_t now)
+conn_stats_save(time_t now)
 {
   char *str = NULL;
 
@@ -219,10 +219,10 @@ rep_hist_conn_stats_write(time_t now)
     goto done; /* Not ready to write */
 
   /* Generate history string. */
-  str = rep_hist_format_conn_stats(now);
+  str = conn_stats_format(now);
 
   /* Reset counters. */
-  rep_hist_reset_conn_stats(now);
+  conn_stats_reset(now);
 
   /* Try to write to disk. */
   if (!check_or_create_data_subdir("stats")) {

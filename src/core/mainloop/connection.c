@@ -3364,7 +3364,7 @@ record_num_bytes_transferred_impl(connection_t *conn,
     return;
 
   if (conn->type == CONN_TYPE_OR)
-    rep_hist_note_or_conn_bytes(conn->global_identifier, num_read,
+    conn_stats_note_or_conn_bytes(conn->global_identifier, num_read,
                                 num_written, now);
 
   const bool is_ipv6 = (conn->socket_family == AF_INET6);
