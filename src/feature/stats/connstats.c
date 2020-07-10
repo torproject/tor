@@ -232,8 +232,10 @@ conn_stats_format(time_t now)
 
   format_iso_time(written_at, now);
   tor_asprintf(&result,
-               "conn-bi-direct %s (%d s) %d,%d,%d,%d\n"
-               "ipv6-conn-bi-direct %s (%d s) %d,%d,%d,%d\n",
+               "conn-bi-direct %s (%d s) "
+                    "%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n"
+               "ipv6-conn-bi-direct %s (%d s) "
+                    "%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n",
                written_at,
                (unsigned) (now - start_of_conn_stats_interval),
                counts.below_threshold,
