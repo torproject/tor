@@ -1,0 +1,5 @@
+  o Major feature (tracing):
+    - Add a tracing library with USDT and LTTng-UST support. Few tracepoints
+      were added in the circuit subsystem. More will come incrementally. This
+      feature is compiled out by default. It needs to be enabled at configure
+      time. See documentation in doc/HACKING/Tracing.md. Closes ticket 32910.
