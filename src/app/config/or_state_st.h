@@ -65,6 +65,14 @@ struct or_state_t {
   int         BWHistoryWriteInterval;
   struct smartlist_t *BWHistoryWriteValues;
   struct smartlist_t *BWHistoryWriteMaxima;
+  time_t      BWHistoryIPv6ReadEnds;
+  int         BWHistoryIPv6ReadInterval;
+  struct smartlist_t *BWHistoryIPv6ReadValues;
+  struct smartlist_t *BWHistoryIPv6ReadMaxima;
+  time_t      BWHistoryIPv6WriteEnds;
+  int         BWHistoryIPv6WriteInterval;
+  struct smartlist_t *BWHistoryIPv6WriteValues;
+  struct smartlist_t *BWHistoryIPv6WriteMaxima;
   time_t      BWHistoryDirReadEnds;
   int         BWHistoryDirReadInterval;
   struct smartlist_t *BWHistoryDirReadValues;

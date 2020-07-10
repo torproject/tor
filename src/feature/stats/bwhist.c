@@ -162,10 +162,14 @@ bw_array_free_(bw_array_t *b)
   tor_free(b);
 }
 
-/** Recent history of bandwidth observations for read operations. */
+/** Recent history of bandwidth observations for (all) read operations. */
 static bw_array_t *read_array = NULL;
-/** Recent history of bandwidth observations for write operations. */
+/** Recent history of bandwidth observations for IPv6 read operations. */
+static bw_array_t *read_array_ipv6 = NULL;
+/** Recent history of bandwidth observations for (all) write operations. */
 STATIC bw_array_t *write_array = NULL;
+/** Recent history of bandwidth observations for IPv6 write operations. */
+static bw_array_t *write_array_ipv6 = NULL;
 /** Recent history of bandwidth observations for read operations for the
     directory protocol. */
 static bw_array_t *dir_read_array = NULL;
@@ -179,12 +183,16 @@ void
 bwhist_init(void)
 {
   bw_array_free(read_array);
+  bw_array_free(read_array_ipv6);
   bw_array_free(write_array);
+  bw_array_free(write_array_ipv6);
   bw_array_free(dir_read_array);
   bw_array_free(dir_write_array);
 
   read_array = bw_array_new();
+  read_array_ipv6 = bw_array_new();
   write_array = bw_array_new();
+  write_array_ipv6 = bw_array_new();
   dir_read_array = bw_array_new();
   dir_write_array = bw_array_new();
 }
@@ -358,6 +366,8 @@ bwhist_get_bandwidth_lines(void)
 
   bwhist_get_one_bandwidth_line(buf, "write-history", write_array);
   bwhist_get_one_bandwidth_line(buf, "read-history", read_array);
+  bwhist_get_one_bandwidth_line(buf, "ipv6-write-history", write_array_ipv6);
+  bwhist_get_one_bandwidth_line(buf, "ipv6-read-history", read_array_ipv6);
   bwhist_get_one_bandwidth_line(buf, "dirreq-write-history", dir_write_array);
   bwhist_get_one_bandwidth_line(buf, "dirreq-read-history", dir_read_array);
 
@@ -441,6 +451,8 @@ bwhist_update_state(or_state_t *state)
 
   UPDATE(write_array, Write);
   UPDATE(read_array, Read);
+  UPDATE(write_array_ipv6, IPv6Write);
+  UPDATE(read_array_ipv6, IPv6Read);
   UPDATE(dir_write_array, DirWrite);
   UPDATE(dir_read_array, DirRead);
 
@@ -535,6 +547,7 @@ bwhist_load_state(or_state_t *state, char **err)
 
   /* Assert they already have been malloced */
   tor_assert(read_array && write_array);
+  tor_assert(read_array_ipv6 && write_array_ipv6);
   tor_assert(dir_read_array && dir_write_array);
 
 #define LOAD(arrname,st)                                                \
@@ -548,6 +561,8 @@ bwhist_load_state(or_state_t *state, char **err)
 
   LOAD(write_array, Write);
   LOAD(read_array, Read);
+  LOAD(write_array_ipv6, IPv6Write);
+  LOAD(read_array_ipv6, IPv6Read);
   LOAD(dir_write_array, DirWrite);
   LOAD(dir_read_array, DirRead);
 
@@ -565,7 +580,9 @@ void
 bwhist_free_all(void)
 {
   bw_array_free(read_array);
+  bw_array_free(read_array_ipv6);
   bw_array_free(write_array);
+  bw_array_free(write_array_ipv6);
   bw_array_free(dir_read_array);
   bw_array_free(dir_write_array);
 }
