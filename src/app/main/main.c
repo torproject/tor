@@ -53,6 +53,7 @@
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/bwhist.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
 #include "lib/buf/buffers.h"
@@ -549,6 +550,7 @@ tor_init(int argc, char *argv[])
 
   /* Initialize the history structures. */
   rep_hist_init();
+  bwhist_init();
   /* Initialize the service cache. */
   rend_cache_init();
   addressmap_init(); /* Init the client dns cache. Do it always, since it's

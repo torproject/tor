@@ -14,18 +14,9 @@
 
 void rep_hist_init(void);
 void rep_hist_dump_stats(time_t now, int severity);
-void rep_hist_note_bytes_read(uint64_t num_bytes, time_t when);
-void rep_hist_note_bytes_written(uint64_t num_bytes, time_t when);
 
 void rep_hist_make_router_pessimal(const char *id, time_t when);
 
-void rep_hist_note_dir_bytes_read(uint64_t num_bytes, time_t when);
-void rep_hist_note_dir_bytes_written(uint64_t num_bytes, time_t when);
-
-MOCK_DECL(int, rep_hist_bandwidth_assess, (void));
-char *rep_hist_get_bandwidth_lines(void);
-void rep_hist_update_state(or_state_t *state);
-int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);
 
 void rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
@@ -98,15 +89,7 @@ extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
-extern struct bw_array_t *write_array;
 #endif
-
-#ifdef REPHIST_PRIVATE
-typedef struct bw_array_t bw_array_t;
-STATIC uint64_t find_largest_max(bw_array_t *b);
-STATIC void commit_max(bw_array_t *b);
-STATIC void advance_obs(bw_array_t *b);
-#endif /* defined(REPHIST_PRIVATE) */
 
 /**
  * Represents the type of a cell for padding accounting

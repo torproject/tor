@@ -40,7 +40,7 @@
 #include "feature/control/control_events.h"
 #include "feature/client/entrynodes.h"
 #include "feature/hibernate/hibernate.h"
-#include "feature/stats/rephist.h"
+#include "feature/stats/bwhist.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "lib/sandbox/sandbox.h"

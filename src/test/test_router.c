@@ -24,7 +24,7 @@
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerstatus_st.h"
 #include "feature/relay/router.h"
-#include "feature/stats/rephist.h"
+#include "feature/stats/bwhist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/encoding/confline.h"
