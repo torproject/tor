@@ -418,6 +418,16 @@ tor_tls_new(tor_socket_t sock, int is_server)
     return NULL;
   }
 
+  /* even if though the socket is already nonblocking, we need to tell NSS
+   * about the fact, so that it knows what to do when it says EAGAIN. */
+  PRSocketOptionData data;
+  data.option = PR_SockOpt_Nonblocking;
+  data.value.non_blocking = 1;
+  if (PR_SetSocketOption(ssl, &data) != PR_SUCCESS) {
+    PR_Close(ssl);
+    return NULL;
+  }
+
   tor_tls_t *tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->magic = TOR_TLS_MAGIC;
   tls->context = ctx;

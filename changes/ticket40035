@@ -1,0 +1,5 @@
+  o Major bugfixes (NSS):
+    - When running with NSS enabled, make sure that NSS knows to expect
+      nonblocking sockets. Previously, we set our TCP sockets as blocking,
+      but did not tell NSS about the fact, which in turn could lead to
+      unexpected blocking behavior. Fixes bug 40035; bugfix on 0.3.5.1-alpha.
