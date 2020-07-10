@@ -64,8 +64,9 @@ relay_address_new_suggestion(const tor_addr_t *suggested_addr,
   tor_assert(peer_addr);
   tor_assert(identity_digest);
 
-  /* This should never be called on a non Tor relay. */
-  if (BUG(!server_mode(options))) {
+  /* Non server should just ignore this suggestion. Clients don't need to
+   * learn their address let alone cache it. */
+  if (!server_mode(options)) {
     return;
   }
 
