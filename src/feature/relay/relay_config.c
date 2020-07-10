@@ -36,6 +36,7 @@
 #include "feature/nodelist/nickname.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
 
 #include "feature/dirauth/authmode.h"

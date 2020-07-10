@@ -39,6 +39,7 @@
 #include "test/test.h"
 #include "core/mainloop/mainloop.h"
 #include "lib/memarea/memarea.h"
+#include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
 #include "app/config/statefile.h"
 

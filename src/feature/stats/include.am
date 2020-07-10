@@ -2,6 +2,7 @@
 # ADD_C_FILE: INSERT SOURCES HERE.
 LIBTOR_APP_A_SOURCES += 			\
 	src/feature/stats/bwhist.c		\
+	src/feature/stats/connstats.c		\
 	src/feature/stats/geoip_stats.c		\
 	src/feature/stats/rephist.c		\
 	src/feature/stats/predict_ports.c
@@ -9,6 +10,7 @@ LIBTOR_APP_A_SOURCES += 			\
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\
 	src/feature/stats/bwhist.h			\
+	src/feature/stats/connstats.h			\
 	src/feature/stats/geoip_stats.h			\
 	src/feature/stats/rephist.h			\
 	src/feature/stats/predict_ports.h

@@ -105,6 +105,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
 #include "feature/stats/bwhist.h"
 #include "lib/crypt_ops/crypto_util.h"
