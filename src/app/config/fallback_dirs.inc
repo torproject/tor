@@ -3,7 +3,7 @@
 /* timestamp=20190625114911 */
 /* timestamp0=20190625114911 */
 /* timestamp1=20190628085927 */
-/* source=whitelist */
+/* source=allowlist */
 /* ===== */
 /* 0: Whitelist excluded 1550 of 1711 candidates. */
 /* 1: Whitelist excluded 1601 of 1765 candidates. */

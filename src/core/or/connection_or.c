@@ -1160,7 +1160,7 @@ static time_t or_connect_failure_map_next_cleanup_ts = 0;
  * port.
  *
  * We need to identify a connection failure with these three values because we
- * want to avoid to wrongfully blacklist a relay if someone is trying to
+ * want to avoid to wrongfully block a relay if someone is trying to
  * extend to a known identity digest but with the wrong IP/port. For instance,
  * it can happen if a relay changed its port but the client still has an old
  * descriptor with the old port. We want to stop connecting to that

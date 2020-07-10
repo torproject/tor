@@ -1576,12 +1576,12 @@ guard_create_exit_restriction(const uint8_t *exit_id)
 }
 
 /** If we have fewer than this many possible usable guards, don't set
- * MD-availability-based restrictions: we might blacklist all of them. */
+ * MD-availability-based restrictions: we might denylist all of them. */
 #define MIN_GUARDS_FOR_MD_RESTRICTION 10
 
 /** Return true if we should set md dirserver restrictions. We might not want
  *  to set those if our guard options are too restricted, since we don't want
- *  to blacklist all of them. */
+ *  to denylist all of them. */
 static int
 should_set_md_dirserver_restriction(void)
 {
