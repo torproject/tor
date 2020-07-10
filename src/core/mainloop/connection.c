@@ -105,6 +105,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
 #include "feature/stats/bwhist.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -3362,11 +3363,11 @@ record_num_bytes_transferred_impl(connection_t *conn,
   if (!connection_is_rate_limited(conn))
     return;
 
-  if (conn->type == CONN_TYPE_OR)
-    rep_hist_note_or_conn_bytes(conn->global_identifier, num_read,
-                                num_written, now);
-
   const bool is_ipv6 = (conn->socket_family == AF_INET6);
+  if (conn->type == CONN_TYPE_OR)
+    conn_stats_note_or_conn_bytes(conn->global_identifier, num_read,
+                                  num_written, now, is_ipv6);
+
   if (num_read > 0) {
     bwhist_note_bytes_read(num_read, now, is_ipv6);
   }

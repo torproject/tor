@@ -36,6 +36,7 @@
 #include "feature/nodelist/nickname.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
 
 #include "feature/dirauth/authmode.h"
@@ -1307,7 +1308,7 @@ options_act_relay_stats(const or_options_t *old_options,
     }
     if ((!old_options || !old_options->ConnDirectionStatistics) &&
         options->ConnDirectionStatistics) {
-      rep_hist_conn_stats_init(now);
+      conn_stats_init(now);
     }
     if ((!old_options || !old_options->HiddenServiceStatistics) &&
         options->HiddenServiceStatistics) {
@@ -1337,7 +1338,7 @@ options_act_relay_stats(const or_options_t *old_options,
     rep_hist_exit_stats_term();
   if (old_options && old_options->ConnDirectionStatistics &&
       !options->ConnDirectionStatistics)
-    rep_hist_conn_stats_term();
+    conn_stats_terminate();
 
   return 0;
 }
