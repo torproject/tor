@@ -134,6 +134,44 @@ conn_stats_terminate(void)
   conn_stats_reset(0);
 }
 
+/**
+ * Record a single entry @a ent in the counts structure @cnt.
+ */
+static void
+add_entry_to_count(conn_counts_t *cnt, const bidi_map_entry_t *ent)
+{
+  if (ent->read + ent->written < BIDI_THRESHOLD)
+    cnt->below_threshold++;
+  else if (ent->read >= ent->written * BIDI_FACTOR)
+    cnt->mostly_read++;
+  else if (ent->written >= ent->read * BIDI_FACTOR)
+    cnt->mostly_written++;
+  else
+    cnt->both_read_and_written++;
+}
+
+/**
+ * Count all the connection information we've received during the current
+ * period in 'bidimap', and store that information in the appropriate count
+ * structures.
+ **/
+static void
+collect_period_statistics(void)
+{
+  bidi_map_entry_t **ptr, **next, *ent;
+  conn_counts_t *cnt = &counts;
+  for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
+    ent = *ptr;
+    add_entry_to_count(cnt, ent);
+    next = HT_NEXT_RMV(bidimap, &bidi_map, ptr);
+    tor_free(ent);
+  }
+  log_info(LD_GENERAL, "%d below threshold, %d mostly read, "
+           "%d mostly written, %d both read and written.",
+           cnt->below_threshold, cnt->mostly_read, cnt->mostly_written,
+           cnt->both_read_and_written);
+}
+
 /** We read <b>num_read</b> bytes and wrote <b>num_written</b> from/to OR
  * connection <b>conn_id</b> in second <b>when</b>. If this is the first
  * observation in a new interval, sum up the last observations. Add bytes
@@ -149,27 +187,9 @@ conn_stats_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
     bidi_next_interval = when + BIDI_INTERVAL;
   /* Sum up last period's statistics */
   if (when >= bidi_next_interval) {
-    bidi_map_entry_t **ptr, **next, *ent;
-    conn_counts_t *cnt = &counts;
-    for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
-      ent = *ptr;
-      if (ent->read + ent->written < BIDI_THRESHOLD)
-        cnt->below_threshold++;
-      else if (ent->read >= ent->written * BIDI_FACTOR)
-        cnt->mostly_read++;
-      else if (ent->written >= ent->read * BIDI_FACTOR)
-        cnt->mostly_written++;
-      else
-        cnt->both_read_and_written++;
-      next = HT_NEXT_RMV(bidimap, &bidi_map, ptr);
-      tor_free(ent);
-    }
+    collect_period_statistics();
     while (when >= bidi_next_interval)
       bidi_next_interval += BIDI_INTERVAL;
-    log_info(LD_GENERAL, "%d below threshold, %d mostly read, "
-             "%d mostly written, %d both read and written.",
-             cnt->below_threshold, cnt->mostly_read, cnt->mostly_written,
-             cnt->both_read_and_written);
   }
   /* Add this connection's bytes. */
   if (num_read > 0 || num_written > 0) {
