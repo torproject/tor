@@ -1,0 +1,4 @@
+  o Minor features (statistics, ipv6):
+    - Relays now publish IPv6-specific counts of single-direction
+      versus bidirectional relay connections.
+      Closes ticket 33264.
