@@ -205,7 +205,7 @@ bwhist_init(void)
  * earlier than the latest <b>when</b> you've heard of.
  */
 void
-bwhist_note_bytes_written(uint64_t num_bytes, time_t when)
+bwhist_note_bytes_written(uint64_t num_bytes, time_t when, bool ipv6)
 {
 /* Maybe a circular array for recent seconds, and step to a new point
  * every time a new second shows up. Or simpler is to just to have
@@ -216,16 +216,20 @@ bwhist_note_bytes_written(uint64_t num_bytes, time_t when)
  * somewhere. See bwhist_bandwidth_assess() below.
  */
   add_obs(write_array, when, num_bytes);
+  if (ipv6)
+    add_obs(write_array_ipv6, when, num_bytes);
 }
 
 /** Remember that we wrote <b>num_bytes</b> bytes in second <b>when</b>.
  * (like bwhist_note_bytes_written() above)
  */
 void
-bwhist_note_bytes_read(uint64_t num_bytes, time_t when)
+bwhist_note_bytes_read(uint64_t num_bytes, time_t when, bool ipv6)
 {
 /* if we're smart, we can make this func and the one above share code */
   add_obs(read_array, when, num_bytes);
+  if (ipv6)
+    add_obs(read_array_ipv6, when, num_bytes);
 }
 
 /** Remember that we wrote <b>num_bytes</b> directory bytes in second

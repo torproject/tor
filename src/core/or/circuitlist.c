@@ -2167,6 +2167,12 @@ circuit_synchronize_written_or_bandwidth(const circuit_t *c,
   else
     cell_size = CELL_MAX_NETWORK_SIZE;
 
+  /* If we know the channel, find out if it's IPv6. */
+  tor_addr_t remote_addr;
+  bool is_ipv6 = chan &&
+    channel_get_addr_if_possible(chan, &remote_addr) &&
+    tor_addr_family(&remote_addr) == AF_INET6;
+
   /* The missing written bytes are the cell counts times their cell
    * size plus TLS per cell overhead */
   written_sync = cells*(cell_size+TLS_PER_CELL_OVERHEAD);
@@ -2174,7 +2180,7 @@ circuit_synchronize_written_or_bandwidth(const circuit_t *c,
   /* Report the missing bytes as written, to avoid asymmetry.
    * We must use time() for consistency with rephist, even though on
    * some very old rare platforms, approx_time() may be faster. */
-  bwhist_note_bytes_written(written_sync, time(NULL));
+  bwhist_note_bytes_written(written_sync, time(NULL), is_ipv6);
 }
 
 /** Mark <b>circ</b> to be closed next time we call

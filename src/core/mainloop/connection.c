@@ -3366,11 +3366,12 @@ record_num_bytes_transferred_impl(connection_t *conn,
     rep_hist_note_or_conn_bytes(conn->global_identifier, num_read,
                                 num_written, now);
 
+  const bool is_ipv6 = (conn->socket_family == AF_INET6);
   if (num_read > 0) {
-    bwhist_note_bytes_read(num_read, now);
+    bwhist_note_bytes_read(num_read, now, is_ipv6);
   }
   if (num_written > 0) {
-    bwhist_note_bytes_written(num_written, now);
+    bwhist_note_bytes_written(num_written, now, is_ipv6);
   }
   if (conn->type == CONN_TYPE_EXIT)
     rep_hist_note_exit_bytes(conn->port, num_written, num_read);

@@ -15,8 +15,8 @@
 void bwhist_init(void);
 void bwhist_free_all(void);
 
-void bwhist_note_bytes_read(uint64_t num_bytes, time_t when);
-void bwhist_note_bytes_written(uint64_t num_bytes, time_t when);
+void bwhist_note_bytes_read(uint64_t num_bytes, time_t when, bool ipv6);
+void bwhist_note_bytes_written(uint64_t num_bytes, time_t when, bool ipv6);
 void bwhist_note_dir_bytes_read(uint64_t num_bytes, time_t when);
 void bwhist_note_dir_bytes_written(uint64_t num_bytes, time_t when);
 
