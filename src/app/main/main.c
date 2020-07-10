@@ -60,6 +60,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/net/resolve.h"
+#include "lib/trace/trace.h"
 
 #include "lib/process/waitpid.h"
 #include "lib/pubsub/pubsub_build.h"
@@ -603,6 +604,9 @@ tor_init(int argc, char *argv[])
 #ifdef HAVE_RUST
   rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
+
+  /* Warn _if_ the tracing subsystem is built in. */
+  tracing_log_warning();
 
   int init_rv = options_init_from_torrc(argc,argv);
   if (init_rv < 0) {

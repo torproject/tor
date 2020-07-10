@@ -39,6 +39,7 @@
 #include "core/or/connection_edge.h"
 #include "core/or/extendinfo.h"
 #include "core/or/policies.h"
+#include "core/or/trace_probes_circuit.h"
 #include "feature/client/addressmap.h"
 #include "feature/client/bridges.h"
 #include "feature/client/circpathbias.h"
@@ -63,6 +64,7 @@
 #include "feature/stats/predict_ports.h"
 #include "lib/math/fp.h"
 #include "lib/time/tvdiff.h"
+#include "lib/trace/events.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "feature/dircommon/dir_connection_st.h"
@@ -838,6 +840,7 @@ circuit_expire_building(void)
                  -1);
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
+    tor_trace(TR_SUBSYS(circuit), TR_EV(timeout), TO_ORIGIN_CIRCUIT(victim));
     if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
       circuit_mark_for_close(victim, END_CIRC_REASON_MEASUREMENT_EXPIRED);
     else
@@ -1501,8 +1504,11 @@ circuit_expire_old_circuits_clientside(void)
                 circ->purpose);
       /* Don't do this magic for testing circuits. Their death is governed
        * by circuit_expire_building */
-      if (circ->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
+      if (circ->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING) {
+        tor_trace(TR_SUBSYS(circuit), TR_EV(idle_timeout),
+                  TO_ORIGIN_CIRCUIT(circ));
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+      }
     } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
       if (timercmp(&circ->timestamp_began, &cutoff, OP_LT)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
@@ -1521,6 +1527,8 @@ circuit_expire_old_circuits_clientside(void)
                     " that has been unused for %ld msec.",
                    TO_ORIGIN_CIRCUIT(circ)->global_identifier,
                    tv_mdiff(&circ->timestamp_began, &now));
+          tor_trace(TR_SUBSYS(circuit), TR_EV(idle_timeout),
+                    TO_ORIGIN_CIRCUIT(circ));
           circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
           /* Server-side rend joined circuits can end up really old, because
@@ -1683,6 +1691,7 @@ circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 void
 circuit_has_opened(origin_circuit_t *circ)
 {
+  tor_trace(TR_SUBSYS(circuit), TR_EV(opened), circ);
   circuit_event_status(circ, CIRC_EVENT_BUILT, 0);
 
   /* Remember that this circuit has finished building. Now if we start
@@ -2204,6 +2213,8 @@ circuit_launch_by_extend_info(uint8_t purpose,
           tor_fragile_assert();
           return NULL;
       }
+
+      tor_trace(TR_SUBSYS(circuit), TR_EV(cannibalized), circ);
       return circ;
     }
   }
@@ -3135,6 +3146,8 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
 
   old_purpose = circ->purpose;
   circ->purpose = new_purpose;
+  tor_trace(TR_SUBSYS(circuit), TR_EV(change_purpose), circ, old_purpose,
+            new_purpose);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_purpose_changed(TO_ORIGIN_CIRCUIT(circ),

@@ -96,3 +96,10 @@ noinst_HEADERS +=					\
 	src/core/or/tor_version_st.h			\
 	src/core/or/var_cell_st.h			\
 	src/core/or/versions.h
+
+if USE_TRACING_INSTRUMENTATION_LTTNG
+LIBTOR_APP_A_SOURCES += \
+	src/core/or/trace_probes_circuit.c
+noinst_HEADERS += \
+	src/core/or/trace_probes_circuit.h
+endif
