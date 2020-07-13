@@ -1554,9 +1554,9 @@ client_dir_fetch_unexpected(dir_connection_t *dir_conn, const char *reason,
 
   log_warn(LD_REND, "Fetching v3 hidden service descriptor failed: "
                     "http status %d (%s) response unexpected from HSDir "
-                    "server '%s:%d'. Retrying at another directory.",
-           status_code, escaped(reason), TO_CONN(dir_conn)->address,
-           TO_CONN(dir_conn)->port);
+                    "server %s'. Retrying at another directory.",
+           status_code, escaped(reason),
+           connection_describe_peer(TO_CONN(dir_conn)));
   /* Fire control port FAILED event. */
   hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
                                "UNEXPECTED");

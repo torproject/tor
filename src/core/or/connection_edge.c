@@ -424,9 +424,7 @@ warn_if_hs_unreachable(const edge_connection_t *conn, uint8_t reason)
     char *m;
     if ((m = rate_limit_log(&warn_limit, approx_time()))) {
       log_warn(LD_EDGE, "Onion service connection to %s failed (%s)",
-               (conn->base_.socket_family == AF_UNIX) ?
-               safe_str(conn->base_.address) :
-               safe_str(fmt_addrport(&conn->base_.addr, conn->base_.port)),
+               connection_describe_peer(TO_CONN(conn)),
                stream_end_reason_to_string(reason));
       tor_free(m);
     }
@@ -922,9 +920,8 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   conn = TO_CONN(edge_conn);
   tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
 
-  log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
-           escaped_safe_str(conn->address), conn->port,
-           safe_str(fmt_and_decorate_addr(&conn->addr)));
+  log_info(LD_EXIT,"%s established.",
+           connection_describe(conn));
 
   rep_hist_note_exit_stream_opened(conn->port);
 
@@ -3840,8 +3837,8 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
     return -1;
   }
   if (ret < 0) {
-    log_info(LD_REND, "Didn't find rendezvous service (addr%s, port %d)",
-             fmt_addr(&TO_CONN(conn)->addr), TO_CONN(conn)->port);
+    log_info(LD_REND, "Didn't find rendezvous service at %s",
+             connection_describe_peer(TO_CONN(conn)));
     /* Send back reason DONE because we want to make hidden service port
      * scanning harder thus instead of returning that the exit policy
      * didn't match, which makes it obvious that the port is closed,
@@ -4192,8 +4189,8 @@ connection_exit_connect(edge_connection_t *edge_conn)
                              &why_failed_exit_policy)) {
     if (BUG(!why_failed_exit_policy))
       why_failed_exit_policy = "";
-    log_info(LD_EXIT,"%s:%d failed exit policy%s. Closing.",
-             escaped_safe_str_client(conn->address), conn->port,
+    log_info(LD_EXIT,"%s failed exit policy%s. Closing.",
+             connection_describe(conn),
              why_failed_exit_policy);
     connection_edge_end(edge_conn, END_STREAM_REASON_EXITPOLICY);
     circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);

@@ -1519,7 +1519,7 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
     log_fn(LOG_WARN, LD_OR,
            "Negotiated link with non-2 protocol after doing a v2 TLS "
            "handshake with %s. Closing connection.",
-           fmt_addr(&chan->conn->base_.addr));
+           connection_describe_peer(TO_CONN(chan->conn)));
     connection_or_close_for_error(chan->conn, 0);
     return;
   }
@@ -1531,10 +1531,9 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
 
   if (chan->conn->link_proto == 2) {
     log_info(LD_OR,
-             "Negotiated version %d with %s:%d; sending NETINFO.",
+             "Negotiated version %d on %s; sending NETINFO.",
              highest_supported_version,
-             safe_str_client(chan->conn->base_.address),
-             chan->conn->base_.port);
+             connection_describe(TO_CONN(chan->conn)));
 
     if (connection_or_send_netinfo(chan->conn) < 0) {
       connection_or_close_for_error(chan->conn, 0);
@@ -1554,10 +1553,9 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
     tor_assert(chan->conn->link_proto >= 3);
 
     log_info(LD_OR,
-             "Negotiated version %d with %s:%d; %s%s%s%s%s",
+             "Negotiated version %d with on %s; %s%s%s%s%s",
              highest_supported_version,
-             safe_str_client(chan->conn->base_.address),
-             chan->conn->base_.port,
+             connection_describe(TO_CONN(chan->conn)),
              send_any ? "Sending cells:" : "Waiting for CERTS cell",
              send_versions ? " VERSIONS" : "",
              send_certs ? " CERTS" : "",
@@ -1950,18 +1948,16 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   if (connection_or_set_state_open(chan->conn) < 0) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Got good NETINFO cell from %s:%d; but "
+           "Got good NETINFO cell on %s; but "
            "was unable to make the OR connection become open.",
-           safe_str_client(chan->conn->base_.address),
-           chan->conn->base_.port);
+           connection_describe(TO_CONN(chan->conn)));
     connection_or_close_for_error(chan->conn, 0);
   } else {
     log_info(LD_OR,
-             "Got good NETINFO cell from %s:%d; OR connection is now "
+             "Got good NETINFO cell on %s; OR connection is now "
              "open, using protocol version %d. Its ID digest is %s. "
              "Our address is apparently %s.",
-             safe_str_client(chan->conn->base_.address),
-             chan->conn->base_.port,
+             connection_describe(TO_CONN(chan->conn)),
              (int)(chan->conn->link_proto),
              hex_str(identity_digest, DIGEST_LEN),
              tor_addr_is_null(&my_apparent_addr) ?
@@ -2046,9 +2042,9 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 #define ERR(s)                                                  \
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
-           "Received a bad CERTS cell from %s:%d: %s",          \
-           safe_str(chan->conn->base_.address),                 \
-           chan->conn->base_.port, (s));                        \
+           "Received a bad CERTS cell on %s: %s",               \
+           connection_describe(TO_CONN(chan->conn)),            \
+           (s));                                                \
     connection_or_close_for_error(chan->conn, 0);               \
     goto err;                                                   \
   } while (0)
@@ -2096,9 +2092,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
         tor_x509_cert_t *x509_cert = tor_x509_cert_decode(cert_body, cert_len);
         if (!x509_cert) {
           log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-                 "Received undecodable certificate in CERTS cell from %s:%d",
-                 safe_str(chan->conn->base_.address),
-               chan->conn->base_.port);
+                 "Received undecodable certificate in CERTS cell on %s",
+                 connection_describe(TO_CONN(chan->conn)));
         } else {
           if (x509_certs[cert_type]) {
             tor_x509_cert_free(x509_cert);
@@ -2114,9 +2109,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
         if (!ed_cert) {
           log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                  "Received undecodable Ed certificate "
-                 "in CERTS cell from %s:%d",
-                 safe_str(chan->conn->base_.address),
-               chan->conn->base_.port);
+                 "in CERTS cell on %s",
+                 connection_describe(TO_CONN(chan->conn)));
         } else {
           if (ed_certs[cert_type]) {
             tor_cert_free(ed_cert);
@@ -2226,9 +2220,9 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
       ERR("Problem setting or checking peer id");
 
     log_info(LD_HANDSHAKE,
-             "Got some good certificates from %s:%d: Authenticated it with "
+             "Got some good certificates on %s: Authenticated it with "
              "RSA%s",
-             safe_str(chan->conn->base_.address), chan->conn->base_.port,
+             connection_describe(TO_CONN(chan->conn)),
              checked_ed_id ? " and Ed25519" : "");
 
     if (!public_server_mode(get_options())) {
@@ -2240,11 +2234,10 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   } else {
     /* We can't call it authenticated till we see an AUTHENTICATE cell. */
     log_info(LD_OR,
-             "Got some good RSA%s certificates from %s:%d. "
+             "Got some good RSA%s certificates on %s. "
              "Waiting for AUTHENTICATE.",
              checked_ed_id ? " and Ed25519" : "",
-             safe_str(chan->conn->base_.address),
-             chan->conn->base_.port);
+             connection_describe(TO_CONN(chan->conn)));
     /* XXXX check more stuff? */
   }
 
@@ -2293,9 +2286,9 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
 #define ERR(s)                                                  \
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
-           "Received a bad AUTH_CHALLENGE cell from %s:%d: %s", \
-           safe_str(chan->conn->base_.address),                 \
-           chan->conn->base_.port, (s));                        \
+           "Received a bad AUTH_CHALLENGE cell on %s: %s",      \
+           connection_describe(TO_CONN(chan->conn)),            \
+           (s));                                                \
     connection_or_close_for_error(chan->conn, 0);               \
     goto done;                                                  \
   } while (0)
@@ -2340,10 +2333,9 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
 
   if (use_type >= 0) {
     log_info(LD_OR,
-             "Got an AUTH_CHALLENGE cell from %s:%d: Sending "
+             "Got an AUTH_CHALLENGE cell on %s: Sending "
              "authentication type %d",
-             safe_str(chan->conn->base_.address),
-             chan->conn->base_.port,
+             connection_describe(TO_CONN(chan->conn)),
              use_type);
 
     if (connection_or_send_authenticate_cell(chan->conn, use_type) < 0) {
@@ -2354,10 +2346,9 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
     }
   } else {
     log_info(LD_OR,
-             "Got an AUTH_CHALLENGE cell from %s:%d, but we don't "
+             "Got an AUTH_CHALLENGE cell on %s, but we don't "
              "know any of its authentication types. Not authenticating.",
-             safe_str(chan->conn->base_.address),
-             chan->conn->base_.port);
+             connection_describe(TO_CONN(chan->conn)));
   }
 
   if (connection_or_send_netinfo(chan->conn) < 0) {
@@ -2397,9 +2388,9 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 #define ERR(s)                                                  \
   do {                                                          \
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
-           "Received a bad AUTHENTICATE cell from %s:%d: %s",   \
-           safe_str(chan->conn->base_.address),                 \
-           chan->conn->base_.port, (s));                        \
+           "Received a bad AUTHENTICATE cell on %s: %s",        \
+           connection_describe(TO_CONN(chan->conn)),            \
+           (s));                                                \
     connection_or_close_for_error(chan->conn, 0);               \
     var_cell_free(expected_cell);                               \
     return;                                                     \
@@ -2560,9 +2551,9 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
     crypto_pk_free(identity_rcvd);
 
     log_debug(LD_HANDSHAKE,
-              "Calling connection_or_init_conn_from_address for %s "
+              "Calling connection_or_init_conn_from_address on %s "
               " from %s, with%s ed25519 id.",
-              safe_str(chan->conn->base_.address),
+              connection_describe(TO_CONN(chan->conn)),
               __func__,
               ed_identity_received ? "" : "out");
 
@@ -2575,10 +2566,9 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
                   0);
 
     log_debug(LD_HANDSHAKE,
-             "Got an AUTHENTICATE cell from %s:%d, type %d: Looks good.",
-             safe_str(chan->conn->base_.address),
-             chan->conn->base_.port,
-             authtype);
+             "Got an AUTHENTICATE cell on %s, type %d: Looks good.",
+              connection_describe(TO_CONN(chan->conn)),
+              authtype);
   }
 
   var_cell_free(expected_cell);

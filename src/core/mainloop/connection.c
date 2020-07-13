@@ -1698,13 +1698,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
    */
   connection_check_oos(get_n_open_sockets(), 0);
 
-  if (conn->socket_family == AF_UNIX) {
-    log_notice(LD_NET, "Opened %s on %s",
-               conn_type_to_string(type), conn->address);
-  } else {
-    log_notice(LD_NET, "Opened %s on %s",
-               conn_type_to_string(type), fmt_addrport(&addr, gotPort));
-  }
+  log_notice(LD_NET, "Opened %s", connection_describe(conn));
+
   return conn;
 
  err:
@@ -2757,8 +2752,8 @@ connection_read_https_proxy_response(connection_t *conn)
   if (parse_http_response(headers, &status_code, &date_header,
                           NULL, &reason) < 0) {
     log_warn(LD_NET,
-             "Unparseable headers from proxy (connecting to '%s'). Closing.",
-             conn->address);
+             "Unparseable headers from proxy (%s). Closing.",
+             connection_describe(conn));
     tor_free(headers);
     return -1;
   }
@@ -2767,8 +2762,8 @@ connection_read_https_proxy_response(connection_t *conn)
 
   if (status_code == 200) {
     log_info(LD_NET,
-             "HTTPS connect to '%s' successful! (200 %s) Starting TLS.",
-             conn->address, escaped(reason));
+             "HTTPS connect for %s successful! (200 %s) Starting TLS.",
+             connection_describe(conn), escaped(reason));
     tor_free(reason);
     return 1;
   }
@@ -2984,16 +2979,16 @@ connection_read_proxy_handshake(connection_t *conn)
 
   if (ret < 0) {
     if (reason) {
-      log_warn(LD_NET, "Proxy Client: unable to connect to %s:%d (%s)",
-                conn->address, conn->port, escaped(reason));
+      log_warn(LD_NET, "Proxy Client: unable to connect %s (%s)",
+               connection_describe(conn), escaped(reason));
       tor_free(reason);
     } else {
-      log_warn(LD_NET, "Proxy Client: unable to connect to %s:%d",
-                conn->address, conn->port);
+      log_warn(LD_NET, "Proxy Client: unable to connect %s",
+               connection_describe(conn));
     }
   } else if (ret == 1) {
-    log_info(LD_NET, "Proxy Client: connection to %s:%d successful",
-              conn->address, conn->port);
+    log_info(LD_NET, "Proxy Client: %s successful",
+             connection_describe(conn));
   }
 
   return ret;
@@ -3184,8 +3179,8 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
     connection_t *old_conn = r->old_conn;
 
     if (skip) {
-      log_debug(LD_NET, "Skipping creating new listener for %s:%d",
-                old_conn->address, old_conn->port);
+      log_debug(LD_NET, "Skipping creating new listener for %s",
+                connection_describe(old_conn));
       continue;
     }
 
@@ -3201,10 +3196,11 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
 
     smartlist_add(new_conns, new_conn);
 
-    log_notice(LD_NET, "Closed no-longer-configured %s on %s:%d "
-                       "(replaced by %s:%d)",
-               conn_type_to_string(old_conn->type), old_conn->address,
-               old_conn->port, new_conn->address, new_conn->port);
+    char *old_desc = tor_strdup(connection_describe(old_conn));
+    log_notice(LD_NET, "Closed no-longer-configured %s "
+                       "(replaced by %s)",
+               old_desc, connection_describe(new_conn));
+    tor_free(old_desc);
   } SMARTLIST_FOREACH_END(r);
 #endif /* defined(ENABLE_LISTENER_REBIND) */
 
@@ -4012,17 +4008,14 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     switch (result) {
       case TOR_TLS_CLOSE:
       case TOR_TLS_ERROR_IO:
-        log_debug(LD_NET,"TLS connection closed %son read. Closing. "
-                 "(Nickname %s, address %s)",
-                 result == TOR_TLS_CLOSE ? "cleanly " : "",
-                 or_conn->nickname ? or_conn->nickname : "not set",
-                 conn->address);
+        log_debug(LD_NET,"TLS %s closed %son read. Closing.",
+                  connection_describe(conn),
+                  result == TOR_TLS_CLOSE ? "cleanly " : "");
         return result;
       CASE_TOR_TLS_ERROR_ANY_NONIO:
-        log_debug(LD_NET,"tls error [%s]. breaking (nickname %s, address %s).",
+        log_debug(LD_NET,"tls error [%s] from %s. Breaking.",
                  tor_tls_err_to_string(result),
-                 or_conn->nickname ? or_conn->nickname : "not set",
-                 conn->address);
+                  connection_describe(conn));
         return result;
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
@@ -4875,7 +4868,7 @@ any_other_active_or_conns(const or_connection_t *this_conn)
   connection_t *conn = connection_get_another_active_or_conn(this_conn);
   if (conn != NULL) {
     log_debug(LD_DIR, "%s: Found an OR connection: %s",
-              __func__, conn->address);
+              __func__, connection_describe(conn));
     return 1;
   }
 

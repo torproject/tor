@@ -151,9 +151,9 @@ connection_or_set_identity_digest(or_connection_t *conn,
   if (conn->chan)
     chan = TLS_CHAN_TO_BASE(conn->chan);
 
-  log_info(LD_HANDSHAKE, "Set identity digest for %p (%s): %s %s.",
+  log_info(LD_HANDSHAKE, "Set identity digest for %s at %p: %s %s.",
+           connection_describe(TO_CONN(conn)),
            conn,
-           escaped_safe_str(conn->base_.address),
            hex_str(rsa_digest, DIGEST_LEN),
            ed25519_fmt(ed_id));
   log_info(LD_HANDSHAKE, "   (Previously: %s %s)",
@@ -575,11 +575,9 @@ connection_or_process_inbuf(or_connection_t *conn)
    * 100% true. */
   if (buf_datalen(conn->base_.inbuf) > MAX_OR_INBUF_WHEN_NONOPEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_NET, "Accumulated too much data (%d bytes) "
-           "on nonopen OR connection %s %s:%u in state %s; closing.",
+           "on non-open %s; closing.",
            (int)buf_datalen(conn->base_.inbuf),
-           connection_or_nonopen_was_started_here(conn) ? "to" : "from",
-           conn->base_.address, conn->base_.port,
-           conn_state_to_string(conn->base_.type, conn->base_.state));
+           connection_describe(TO_CONN(conn)));
     connection_or_close_for_error(conn, 0);
     ret = -1;
   }
@@ -691,8 +689,8 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   conn = TO_CONN(or_conn);
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
-  log_debug(LD_HANDSHAKE,"OR connect() to router at %s:%u finished.",
-            conn->address,conn->port);
+  log_debug(LD_HANDSHAKE,"connect finished for %s",
+            connection_describe(conn));
 
   if (proxy_type != PROXY_NONE) {
     /* start proxy handshake */
@@ -1010,9 +1008,10 @@ connection_or_single_set_badness_(time_t now,
       or_conn->base_.timestamp_created + TIME_BEFORE_OR_CONN_IS_TOO_OLD
         < now) {
     log_info(LD_OR,
-             "Marking OR conn to %s:%d as too old for new circuits "
+             "Marking %s as too old for new circuits "
              "(fd "TOR_SOCKET_T_FORMAT", %d secs old).",
-             or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+             connection_describe(TO_CONN(or_conn)),
+             or_conn->base_.s,
              (int)(now - or_conn->base_.timestamp_created));
     connection_or_mark_bad_for_new_circs(or_conn);
   }
@@ -1077,10 +1076,11 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
       /* We have at least one open canonical connection to this router,
        * and this one is open but not canonical.  Mark it bad. */
       log_info(LD_OR,
-               "Marking OR conn to %s:%d as unsuitable for new circuits: "
+               "Marking %s unsuitable for new circuits: "
                "(fd "TOR_SOCKET_T_FORMAT", %d secs old).  It is not "
                "canonical, and we have another connection to that OR that is.",
-               or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+               connection_describe(TO_CONN(or_conn)),
+               or_conn->base_.s,
                (int)(now - or_conn->base_.timestamp_created));
       connection_or_mark_bad_for_new_circs(or_conn);
       continue;
@@ -1121,22 +1121,24 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
       /* This isn't the best conn, _and_ the best conn is better than it */
       if (best->is_canonical) {
         log_info(LD_OR,
-                 "Marking OR conn to %s:%d as unsuitable for new circuits: "
+                 "Marking %s as unsuitable for new circuits: "
                  "(fd "TOR_SOCKET_T_FORMAT", %d secs old). "
                  "We have a better canonical one "
                  "(fd "TOR_SOCKET_T_FORMAT"; %d secs old).",
-                 or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+                 connection_describe(TO_CONN(or_conn)),
+                 or_conn->base_.s,
                  (int)(now - or_conn->base_.timestamp_created),
                  best->base_.s, (int)(now - best->base_.timestamp_created));
         connection_or_mark_bad_for_new_circs(or_conn);
       } else if (!tor_addr_compare(&or_conn->real_addr,
                                    &best->real_addr, CMP_EXACT)) {
         log_info(LD_OR,
-                 "Marking OR conn to %s:%d as unsuitable for new circuits: "
+                 "Marking %s unsuitable for new circuits: "
                  "(fd "TOR_SOCKET_T_FORMAT", %d secs old).  We have a better "
                  "one with the "
                  "same address (fd "TOR_SOCKET_T_FORMAT"; %d secs old).",
-                 or_conn->base_.address, or_conn->base_.port, or_conn->base_.s,
+                 connection_describe(TO_CONN(or_conn)),
+                 or_conn->base_.s,
                  (int)(now - or_conn->base_.timestamp_created),
                  best->base_.s, (int)(now - best->base_.timestamp_created));
         connection_or_mark_bad_for_new_circs(or_conn);
@@ -1464,10 +1466,9 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
    * that is we haven't had a failure earlier. This is to avoid to try to
    * constantly connect to relays that we think are not reachable. */
   if (!should_connect_to_relay(conn)) {
-    log_info(LD_GENERAL, "Can't connect to identity %s at %s:%u because we "
+    log_info(LD_GENERAL, "Can't connect to %s because we "
                          "failed earlier. Refusing.",
-             hex_str(id_digest, DIGEST_LEN), fmt_addr(&TO_CONN(conn)->addr),
-             TO_CONN(conn)->port);
+             connection_describe_peer(TO_CONN(conn)));
     connection_free_(TO_CONN(conn));
     return NULL;
   }
@@ -1507,7 +1508,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
                "transport proxy supporting '%s'. This can happen if you "
                "haven't provided a ClientTransportPlugin line, or if "
                "your pluggable transport proxy stopped running.",
-               fmt_addrport(&TO_CONN(conn)->addr, TO_CONN(conn)->port),
+               connection_describe_peer(TO_CONN(conn)),
                transport_name, transport_name);
 
       control_event_bootstrap_prob_or(
@@ -1516,9 +1517,9 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
                                 conn);
 
     } else {
-      log_warn(LD_GENERAL, "Tried to connect to '%s' through a proxy, but "
+      log_warn(LD_GENERAL, "Tried to connect to %s through a proxy, but "
                "the proxy address could not be found.",
-               fmt_addrport(&TO_CONN(conn)->addr, TO_CONN(conn)->port));
+               connection_describe_peer(TO_CONN(conn)));
     }
 
     connection_free_(TO_CONN(conn));
@@ -1891,9 +1892,9 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
   const int expected_ed_key =
     ! ed25519_public_key_is_zero(&chan->ed25519_identity);
 
-  log_info(LD_HANDSHAKE, "learned peer id for %p (%s): %s, %s",
+  log_info(LD_HANDSHAKE, "learned peer id for %s at %p: %s, %s",
+           connection_describe(TO_CONN(conn)),
            conn,
-           safe_str_client(conn->base_.address),
            hex_str((const char*)rsa_peer_id, DIGEST_LEN),
            ed25519_fmt(ed_peer_id));
 
@@ -1907,9 +1908,9 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     conn->nickname[0] = '$';
     base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
                   conn->identity_digest, DIGEST_LEN);
-    log_info(LD_HANDSHAKE, "Connected to router %s at %s:%d without knowing "
-                    "its key. Hoping for the best.",
-                    conn->nickname, conn->base_.address, conn->base_.port);
+    log_info(LD_HANDSHAKE, "Connected to router at %s without knowing "
+             "its key. Hoping for the best.",
+             connection_describe_peer(TO_CONN(conn)));
     /* if it's a bridge and we didn't know its identity fingerprint, now
      * we do -- remember it for future attempts. */
     learned_router_identity(&conn->base_.addr, conn->base_.port,
@@ -1983,9 +1984,9 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     }
 
     log_fn(severity, LD_HANDSHAKE,
-           "Tried connecting to router at %s:%d, but RSA + ed25519 identity "
+           "Tried connecting to router at %s, but RSA + ed25519 identity "
            "keys were not as expected: wanted %s + %s but got %s + %s.%s",
-           conn->base_.address, conn->base_.port,
+           connection_describe_peer(TO_CONN(conn)),
            expected_rsa, expected_ed, seen_rsa, seen_ed, extra_log);
 
     /* Tell the new guard API about the channel failure */
@@ -2057,11 +2058,10 @@ connection_tls_finish_handshake(or_connection_t *conn)
 
   tor_assert(!started_here);
 
-  log_debug(LD_HANDSHAKE,"%s tls handshake on %p with %s done, using "
+  log_debug(LD_HANDSHAKE,"%s tls handshake on %s done, using "
             "ciphersuite %s. verifying.",
             started_here?"outgoing":"incoming",
-            conn,
-            safe_str_client(conn->base_.address),
+            connection_describe_peer(TO_CONN(conn)),
             tor_tls_get_ciphersuite_name(conn->tls));
 
   if (connection_or_check_valid_tls_handshake(conn, started_here,

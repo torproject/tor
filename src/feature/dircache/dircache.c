@@ -1614,7 +1614,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
 
   if (!public_server_mode(options)) {
     log_info(LD_DIR, "Rejected dir post request from %s "
-             "since we're not a public relay.", conn->base_.address);
+             "since we're not a public relay.",
+             connection_describe_peer(TO_CONN(conn)));
     write_short_http_response(conn, 503, "Not acting as a public relay");
     goto done;
   }
@@ -1630,7 +1631,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
     if (rend_cache_store_v2_desc_as_dir(body) < 0) {
       log_warn(LD_REND, "Rejected v2 rend descriptor (body size %d) from %s.",
-               (int)body_len, conn->base_.address);
+               (int)body_len,
+               connection_describe_peer(TO_CONN(conn)));
       write_short_http_response(conn, 400,
                              "Invalid v2 service descriptor rejected");
     } else {
@@ -1686,7 +1688,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
       log_info(LD_DIRSERV,
                "Rejected router descriptor or extra-info from %s "
                "(\"%s\").",
-               conn->base_.address, msg);
+               connection_describe_peer(TO_CONN(conn)),
+               msg);
       write_short_http_response(conn, 400, msg);
     }
     goto done;
@@ -1701,7 +1704,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     } else {
       tor_assert(msg);
       log_warn(LD_DIRSERV, "Rejected vote from %s (\"%s\").",
-               conn->base_.address, msg);
+               connection_describe_peer(TO_CONN(conn)),
+               msg);
       write_short_http_response(conn, status, msg);
     }
     goto done;
@@ -1714,7 +1718,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
       write_short_http_response(conn, 200, msg?msg:"Signatures stored");
     } else {
       log_warn(LD_DIR, "Unable to store signatures posted by %s: %s",
-               conn->base_.address, msg?msg:"???");
+               connection_describe_peer(TO_CONN(conn)),
+               msg?msg:"???");
       write_short_http_response(conn, 400,
                                 msg?msg:"Unable to store signatures");
     }
@@ -1775,8 +1780,8 @@ directory_handle_command(dir_connection_t *conn)
                               &body, &body_len, MAX_DIR_UL_SIZE, 0)) {
     case -1: /* overflow */
       log_warn(LD_DIRSERV,
-               "Request too large from address '%s' to DirPort. Closing.",
-               safe_str(conn->base_.address));
+               "Request too large from %s to DirPort. Closing.",
+               connection_describe_peer(TO_CONN(conn)));
       return -1;
     case 0:
       log_debug(LD_DIRSERV,"command not all here yet.");
