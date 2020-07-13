@@ -7,7 +7,6 @@
  */
 #define DIRVOTE_PRIVATE
 
-#include "tinytest.h"
 #include "core/or/or.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/nodelist/dirlist.h"
@@ -15,7 +14,8 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/signed_descriptor_st.h"
-#include "tinytest_macros.h"
+
+#include "test/test.h"
 
 /**
  * This struct holds the various informations that are needed for router
@@ -194,7 +194,7 @@ test_dirvote_compare_routerinfo_usefulness(void *arg)
   tt_assert(a > 0);
   tor_free(fifth);
 
-end:
+done:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
@@ -243,7 +243,7 @@ test_dirvote_compare_routerinfo_by_ipv4(void *arg)
   a = compare_routerinfo_by_ipv4((const void **)&first,
                                  (const void **)&second);
   tt_assert(a == 1);
-end:
+done:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
@@ -290,7 +290,7 @@ test_dirvote_compare_routerinfo_by_ipv6(void *arg)
   a = compare_routerinfo_by_ipv6((const void **)&first,
                                  (const void **)&second);
   tt_assert(a == 1);
-end:
+done:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
@@ -381,7 +381,7 @@ test_dirvote_get_sybil_by_ip_version_ipv4(void *arg)
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
 
-end:
+done:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
@@ -448,7 +448,7 @@ test_dirvote_get_sybil_by_ip_version_ipv6(void *arg)
   digestmap_set(true_sybil_routers, hhhh_digest, hhhh_digest);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
-end:
+done:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
@@ -557,7 +557,7 @@ test_dirvote_get_all_possible_sybil(void *arg)
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
 
-end:
+done:
   UNMOCK(router_digest_is_trusted_dir_type);
   UNMOCK(node_get_by_id);
   UNMOCK(dirserv_get_bandwidth_for_router_kb);
@@ -569,7 +569,7 @@ end:
 }
 #define NODE(name, flags)                           \
   {                                                 \
-#    name, test_dirvote_##name, (flags), NULL, NULL \
+     #name, test_dirvote_##name, (flags), NULL, NULL \
   }
 
 struct testcase_t dirvote_tests[] = {
