@@ -455,9 +455,9 @@ connection_dir_process_inbuf(dir_connection_t *conn)
 
   if (connection_get_inbuf_len(TO_CONN(conn)) > max_size) {
     log_warn(LD_HTTP,
-             "Too much data received from directory connection (%s): "
+             "Too much data received from %s: "
              "denial of service attempt, or you need to upgrade?",
-             conn->base_.address);
+             connection_describe(TO_CONN(conn)));
     connection_mark_for_close(TO_CONN(conn));
     return -1;
   }
@@ -540,8 +540,8 @@ connection_dir_finished_connecting(dir_connection_t *conn)
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
   tor_assert(conn->base_.state == DIR_CONN_STATE_CONNECTING);
 
-  log_debug(LD_HTTP,"Dir connection to router %s:%u established.",
-            conn->base_.address,conn->base_.port);
+  log_debug(LD_HTTP,"Dir connection to %s established.",
+            connection_describe_peer(TO_CONN(conn)));
 
   /* start flushing conn */
   conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;

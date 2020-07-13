@@ -338,15 +338,11 @@ dumpstats(int severity)
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
     int i = conn_sl_idx;
     tor_log(severity, LD_GENERAL,
-        "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
-        i, (int)conn->s, conn->type, conn_type_to_string(conn->type),
-        conn->state, conn_state_to_string(conn->type, conn->state),
+        "Conn %d (socket %d) is a %s, created %d secs ago",
+        i, (int)conn->s,
+        connection_describe(conn),
         (int)(now - conn->timestamp_created));
     if (!connection_is_listener(conn)) {
-      tor_log(severity,LD_GENERAL,
-          "Conn %d is to %s:%d.", i,
-          safe_str_client(conn->address),
-          conn->port);
       tor_log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
           i,
