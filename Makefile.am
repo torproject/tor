@@ -271,8 +271,7 @@ check-local:					\
 	check-spaces				\
 	check-changes				\
 	check-includes				\
-	shellcheck				\
-	check-cocci
+	shellcheck
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
