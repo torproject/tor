@@ -109,6 +109,39 @@ struct connection_t {
 
   int socket_family; /**< Address family of this connection's socket.  Usually
                       * AF_INET, but it can also be AF_UNIX, or AF_INET6 */
+  /**
+   * IP address on the internet of this connection's peer, usually.
+   *
+   * This address may come from several sources.  If this is an outbound
+   * connection, it is the address we are trying to connect to--either
+   * directly through `s`, or via a proxy.  (If we used a proxy, then
+   * `getpeername(s)` will not give this address.)
+   *
+   * For incoming connections, this field is the address we got from
+   * getpeername() or accept(), as updated by any proxy that we
+   * are using (for example, an ExtORPort proxy).
+   *
+   * For listeners, this is the address we are trying to bind to.
+   *
+   * If this connection is using a unix socket, then this address is a null
+   * address, and the real address is in the `address` field.
+   *
+   * If this connection represents a request made somewhere other than via
+   * TCP (for example, a UDP dns request, or a controller resolve request),
+   * then this address is the address that originated the request.
+   *
+   * TECHNICAL DEBT:
+   *
+   * There are a few places in the code that modify this address,
+   * or use it in other ways that we don't currently like.  Please don't add
+   * any more!
+   *
+   * The misuses of this field include:
+   *    * Setting it to the canonical address of a relay on an OR connection.
+   *    * Setting it on linked connections, possibly.
+   *    * Updating it based on the Forwarded-For header-- Forwarded-For is
+   *      set by a proxy, but not a local trusted troxy.
+   **/
   tor_addr_t addr; /**< IP that socket "s" is directly connected to;
                     * may be the IP address for a proxy or pluggable transport,
                     * see "address" for the address of the final destination.
@@ -122,12 +155,19 @@ struct connection_t {
                               * marked.) */
   const char *marked_for_close_file; /**< For debugging: in which file were
                                       * we marked for close? */
-  char *address; /**< FQDN (or IP) and port of the final destination for this
-                  * connection; this is always the remote address, it is
-                  * passed to a proxy or pluggable transport if one in use.
-                  * See "addr" and "port" for the address that socket "s" is
-                  * directly connected to.
-                  * strdup into this, because free_connection() frees it. */
+  /**
+   * String address of the peer of this connection.
+   *
+   * TECHNICAL DEBT:
+   *
+   * This field serves many purposes, and they're not all pretty.  In addition
+   * to describing the peer we're connected to, it can also hold:
+   *
+   *    * An address we're trying to resolve (as an exit).
+   *    * A unix address we're trying to bind to (as a listener).
+   *    * A canonical address for an OR connection.
+   **/
+  char *address;
   /** Another connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
 

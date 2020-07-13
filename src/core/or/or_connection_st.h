@@ -49,10 +49,18 @@ struct or_connection_t {
   /* Channel using this connection */
   channel_tls_t *chan;
 
-  tor_addr_t real_addr; /**< The actual address that this connection came from
-                       * or went to.  The <b>addr</b> field is prone to
-                       * getting overridden by the address from the router
-                       * descriptor matching <b>identity_digest</b>. */
+  /**
+   * The actual address (as modified by any proxies) that this connection
+   * came from or went to.  (See connection_t.addr for caveats.)
+   *
+   * TECHNICAL DEBT:
+   *
+   * This field shouldn't really exist.  We need it because our code
+   * overwrites conenction_t.addr with the "canonical address" of the OR we
+   * are talking to, taken from the descriptor of the authenticated OR.
+   * That's a bad choice.
+   **/
+  tor_addr_t real_addr;
 
   /** Should this connection be used for extending circuits to the server
    * matching the <b>identity_digest</b> field?  Set to true if we're pretty
