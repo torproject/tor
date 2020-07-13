@@ -22,7 +22,7 @@ and any high-quality guide to C for information on programming.)
 
 I'm also going to assume that you know a little bit about how to use
 Git, or that you're able to follow one of the several excellent guides
-at [git-scm](http://git-scm.org) to learn.
+at [git-scm](https://git-scm.org) to learn.
 
 Most Tor developers develop using some Unix-based system, such as GNU/Linux,
 BSD, or macOS.  It's okay to develop on Windows if you want, but you're

@@ -43,7 +43,7 @@ is
 [The Little Book of Rust Macros](https://danielkeep.github.io/tlborm/book/index.html).
 
 For learning more about FFI and Rust, see Jake Goulding's
-[Rust FFI Omnibus](http://jakegoulding.com/rust-ffi-omnibus/).
+[Rust FFI Omnibus](https://jakegoulding.com/rust-ffi-omnibus/).
 
 ## Compiling Tor with Rust enabled
 

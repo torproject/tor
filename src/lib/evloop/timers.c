@@ -11,7 +11,7 @@
  * The main advantage of tor_timer_t over using libevent's timers is that
  * they're way more efficient if we need to have thousands or millions of
  * them.  For more information, see
- *   http://www.25thandclement.com/~william/projects/timeout.c.html
+ *   https://www.25thandclement.com/~william/projects/timeout.c.html
  *
  * Periodic timers are available in the backend, but I've turned them off.
  * We can turn them back on if needed.

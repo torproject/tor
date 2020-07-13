@@ -603,7 +603,7 @@ nt_service_install(int argc, char **argv)
       /* Genericity is apparently _so_ last year in Redmond, where some
        * accounts are accounts that you can look up, and some accounts
        * are magic and undetectable via the security subsystem. See
-       * http://msdn2.microsoft.com/en-us/library/ms684188.aspx
+       * https://msdn2.microsoft.com/en-us/library/ms684188.aspx
        */
       printf("Running on a Post-Win2K OS, so we'll assume that the "
              "LocalService account exists.\n");

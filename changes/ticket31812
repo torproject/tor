@@ -1,0 +1,4 @@
+  o Documentation:
+    - Replace most http:// URLs in our code and documentation with https://
+      URLs.  (We have left unchanged the code in src/ext/, and the text in
+      LICENSE.)  Closes ticket 31812. Patch from Jeremy Rand.
