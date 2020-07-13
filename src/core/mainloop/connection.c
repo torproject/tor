@@ -461,8 +461,15 @@ connection_describe_peer_internal(const connection_t *conn,
     }
   }
 
-  if (scrub) {
-    address = safe_str(address);
+  char portbuf[7];
+  portbuf[0]=0;
+  if (scrub && get_options()->SafeLogging_ != SAFELOG_SCRUB_NONE) {
+    address = "[scrubbed]";
+  } else {
+    /* Only set the port if we're not scrubbing the address. */
+    if (conn->port != 0) {
+      tor_snprintf(portbuf, sizeof(portbuf), ":%d", conn->port);
+    }
   }
 
   const char *sp = include_preposition ? " " : "";
@@ -470,7 +477,7 @@ connection_describe_peer_internal(const connection_t *conn,
     prep = "";
 
   tor_snprintf(peer_buf, sizeof(peer_buf),
-               "%s%s%s%s", prep, sp, address, extra_buf);
+               "%s%s%s%s%s", prep, sp, address, portbuf, extra_buf);
   return peer_buf;
 }
 
