@@ -893,7 +893,7 @@ test_uniform_interval(void *arg)
  *
  *  NIST/SEMATECH e-Handbook of Statistical Methods, Section
  *  1.3.6.7.4 `Critical Values of the Chi-Square Distribution',
- *  <http://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm>,
+ *  <https://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm>,
  *  retrieved 2018-10-28.
  */
 

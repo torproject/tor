@@ -25,7 +25,7 @@ have a reasonably recent clang and libfuzzer installed.  At that point, you
 just build with --enable-expensive-hardening and --enable-libfuzzer.  That
 will produce a set of binaries in src/test/fuzz/lf-fuzz-* .  These programs
 take as input a series of directories full of fuzzing examples.  For more
-information on libfuzzer, see http://llvm.org/docs/LibFuzzer.html
+information on libfuzzer, see https://llvm.org/docs/LibFuzzer.html
 
 Third, there's Google's OSS-Fuzz infrastructure, which expects to get all of
 its.  For more on this, see https://github.com/google/oss-fuzz and the
@@ -72,7 +72,7 @@ and then not actually use it.
 
 Read afl/docs/notes_for_asan.txt for more details.
 
-  Download recidivm from http://jwilk.net/software/recidivm
+  Download recidivm from https://jwilk.net/software/recidivm
   Download the signature
   Check the signature
   tar xvzf recidivm*.tar.gz

@@ -85,7 +85,7 @@ tor_set_max_memlock(void)
 {
   /* Future consideration for Windows is probably SetProcessWorkingSetSize
    * This is similar to setting the memory rlimit of RLIMIT_MEMLOCK
-   * http://msdn.microsoft.com/en-us/library/ms686234(VS.85).aspx
+   * https://msdn.microsoft.com/en-us/library/ms686234(VS.85).aspx
    */
 
   struct rlimit limit;
@@ -128,7 +128,7 @@ tor_mlockall(void)
    * Future consideration for Windows may be VirtualLock
    * VirtualLock appears to implement mlock() but not mlockall()
    *
-   * http://msdn.microsoft.com/en-us/library/aa366895(VS.85).aspx
+   * https://msdn.microsoft.com/en-us/library/aa366895(VS.85).aspx
    */
 
 #ifdef HAVE_UNIX_MLOCKALL
@@ -190,7 +190,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
 
   /* Define some maximum connections values for systems where we cannot
    * automatically determine a limit. Re Cygwin, see
-   * http://archives.seul.org/or/talk/Aug-2006/msg00210.html
+   * https://archives.seul.org/or/talk/Aug-2006/msg00210.html
    * For an iPhone, 9999 should work. For Windows and all other unknown
    * systems we use 15000 as the default. */
 #ifndef HAVE_GETRLIMIT
