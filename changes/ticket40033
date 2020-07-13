@@ -1,4 +1,0 @@
-  o Major bugfix (code):
-    - Rename blacklist and whitelist in an attempt to reduce harmful connotation
-      in our codebase. It is renamed to denylist and allowlist. Fixes bug 40033;
-      bugfix on 0.0.1-alpha.
