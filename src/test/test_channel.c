@@ -1549,8 +1549,8 @@ test_channel_listener(void *arg)
     orcon->real_addr = addr; \
   STMT_END;
 
-#define TEST_MATCHES_ADDR(chan, addr, rv, exp) STMT_BEGIN \
-    rv = channel_matches_target_addr_for_extend(chan, &addr); \
+#define TEST_MATCHES_ADDR(chan, addr4, addr6, rv, exp) STMT_BEGIN       \
+     rv = channel_matches_target_addr_for_extend(chan, addr4, addr6);   \
     tt_int_op(rv, OP_EQ, exp); \
   STMT_END;
 
@@ -1571,18 +1571,18 @@ test_channel_matches_target_addr_for_extend(void *arg)
   /* Test for IPv4 addresses. */
   addr.family = AF_INET;
   TEST_SETUP_MATCHES_ADDR(orcon, addr, "1.2.3.4", rv);
-  TEST_MATCHES_ADDR(chan, addr, rv, 1);
+  TEST_MATCHES_ADDR(chan, &addr, NULL, rv, 1);
 
   tor_inet_pton(addr.family, "2.5.3.4", &addr.addr);
-  TEST_MATCHES_ADDR(chan, addr, rv, 0);
+  TEST_MATCHES_ADDR(chan, &addr, NULL, rv, 0);
 
   /* Test for IPv6 addresses. */
   addr.family = AF_INET6;
   TEST_SETUP_MATCHES_ADDR(orcon, addr, "3:4:7:1:9:8:09:10", rv);
-  TEST_MATCHES_ADDR(chan, addr, rv, 1);
+  TEST_MATCHES_ADDR(chan, NULL, &addr, rv, 1);
 
   tor_inet_pton(addr.family, "::", &addr.addr);
-  TEST_MATCHES_ADDR(chan, addr, rv, 0);
+  TEST_MATCHES_ADDR(chan, NULL, &addr, rv, 0);
 
  done:
   circuitmux_clear_policy(chan->cmux);

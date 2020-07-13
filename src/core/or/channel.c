@@ -83,13 +83,6 @@
 
 #include "core/or/cell_queue_st.h"
 
-/* Static function prototypes */
-
-static bool channel_matches_target_addr_for_extend(
-                                          channel_t *chan,
-                                          const tor_addr_t *target_ipv4_addr,
-                                          const tor_addr_t *target_ipv6_addr);
-
 /* Global lists of channels */
 
 /* All channel_t instances */
@@ -3317,7 +3310,7 @@ channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info)
  * This function calls into the lower layer and asks if this channel thinks
  * it matches the target addresses for circuit extension purposes.
  */
-static bool
+STATIC bool
 channel_matches_target_addr_for_extend(channel_t *chan,
                                        const tor_addr_t *target_ipv4_addr,
                                        const tor_addr_t *target_ipv6_addr)
