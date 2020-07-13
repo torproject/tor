@@ -164,6 +164,58 @@ router_new_address_suggestion(const char *suggestion,
   }
 }
 
+/** Find our address to be published in our descriptor. Three places are
+ * looked at:
+ *
+ *    1. Resolved cache. Populated by find_my_address() during the relay
+ *       periodic event that attempts to learn if our address has changed.
+ *
+ *    2. If cache_only is false, attempt to find the address using the
+ *       relay_find_addr.h interface.
+ *
+ *    3. Finally, if all fails, use the suggested address cache which is
+ *       populated by the NETINFO cell values.
+ *
+ * Return true on success and addr_out contains the address to use for the
+ * given family. On failure to find the address, false is returned and
+ * addr_out is set to an AF_UNSPEC address. */
+bool
+relay_find_addr_to_publish(const or_options_t *options, int family,
+                           bool cache_only, tor_addr_t *addr_out)
+{
+  tor_assert(options);
+  tor_assert(addr_out);
+
+  tor_addr_make_unspec(addr_out);
+
+  /* First, check our resolved address cache. It should contain the address
+   * we've discovered from the periodic relay event. */
+  resolved_addr_get_last(family, addr_out);
+  if (!tor_addr_is_null(addr_out)) {
+    goto found;
+  }
+
+  /* Second, attempt to find our address. The following can do a DNS resolve
+   * thus only do it when the no cache only flag is flipped. */
+  if (!cache_only) {
+    if (find_my_address(options, family, LOG_INFO, addr_out, NULL, NULL)) {
+      goto found;
+    }
+  }
+
+  /* Third, consider address from our suggestion cache. */
+  resolved_addr_get_suggested(family, addr_out);
+  if (!tor_addr_is_null(addr_out)) {
+    goto found;
+  }
+
+  /* No publishable address was found. */
+  return false;
+
+ found:
+  return true;
+}
+
 /** Make a current best guess at our address, either because
  * it's configured in torrc, or because we've learned it from
  * dirserver headers. Place the answer in *<b>addr</b> and return

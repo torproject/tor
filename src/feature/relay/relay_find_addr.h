@@ -19,6 +19,9 @@ void relay_address_new_suggestion(const tor_addr_t *suggested_addr,
                                   const tor_addr_t *peer_addr,
                                   const char *identity_digest);
 
+bool relay_find_addr_to_publish(const or_options_t *options, int family,
+                                bool cache_only, tor_addr_t *addr_out);
+
 #ifdef RELAY_FIND_ADDR_PRIVATE
 
 #endif /* RELAY_FIND_ADDR_PRIVATE */
