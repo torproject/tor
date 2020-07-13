@@ -274,8 +274,7 @@ check-local:					\
 	check-changes				\
 	check-includes				\
 	check-best-practices			\
-	shellcheck				\
-	check-cocci
+	shellcheck
 
 # test-network requires a copy of Chutney in $CHUTNEY_PATH.
 # Chutney can be cloned from https://git.torproject.org/chutney.git .
