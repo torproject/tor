@@ -1,6 +1,7 @@
+// When modifying, don't forget to update the defaults
+// for 'TestingTorNetwork' in 'doc/tor.1.txt'
 { "DirAllowPrivateAddresses", "1" },
 { "EnforceDistinctSubnets", "0" },
-{ "AssumeReachable", "1" },
 { "AuthDirMaxServersPerAddr", "0" },
 { "ClientBootstrapConsensusAuthorityDownloadInitialDelay", "0" },
 { "ClientBootstrapConsensusFallbackDownloadInitialDelay", "0" },

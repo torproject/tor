@@ -16,6 +16,7 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/or/extendinfo.h"
 #include "core/or/relay.h"
 #include "feature/client/circpathbias.h"
 #include "feature/dirclient/dirclient.h"
@@ -890,10 +891,18 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
   if (dst->replay_cache_rend_cookie != NULL) {
     replaycache_free(dst->replay_cache_rend_cookie);
   }
+
   dst->replay_cache_rend_cookie = src->replay_cache_rend_cookie;
+  src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
+
   dst->next_rotation_time = src->next_rotation_time;
 
-  src->replay_cache_rend_cookie = NULL; /* steal pointer reference */
+  if (src->ob_subcreds) {
+    dst->ob_subcreds = src->ob_subcreds;
+    dst->n_ob_subcreds =  src->n_ob_subcreds;
+
+    src->ob_subcreds = NULL; /* steal pointer reference */
+  }
 }
 
 /** Register services that are in the staging list. Once this function returns,
@@ -2838,7 +2847,7 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
   /* Let's avoid doing that if tor is configured to not publish. */
   if (!get_options()->PublishHidServDescriptors) {
     log_info(LD_REND, "Service %s not publishing descriptor. "
-                      "PublishHidServDescriptors is set to 1.",
+                      "PublishHidServDescriptors is set to 0.",
              safe_str_client(service->onion_address));
     goto end;
   }
@@ -2865,6 +2874,9 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
                                           hsdir->hsdir_index.store_first;
     char *blinded_pubkey_log_str =
       tor_strdup(hex_str((char*)&desc->blinded_kp.pubkey.pubkey, 32));
+    /* This log message is used by Chutney as part of its bootstrap
+     * detection mechanism. Please don't change without first checking
+     * Chutney. */
     log_info(LD_REND, "Service %s %s descriptor of revision %" PRIu64
                       " initiated upload request to %s with index %s (%s)",
              safe_str_client(service->onion_address),
@@ -3107,7 +3119,7 @@ log_cant_upload_desc(const hs_service_t *service,
    * control that value in the code flow but will be apparent during
    * development if a reason is added but LOG_DESC_UPLOAD_REASON_NUM_ is not
    * updated. */
-  if (BUG(reason > LOG_DESC_UPLOAD_REASON_MAX || reason < 0)) {
+  if (BUG(reason > LOG_DESC_UPLOAD_REASON_MAX)) {
     return;
   }
 
@@ -4095,6 +4107,50 @@ hs_service_load_all_keys(void)
   return -1;
 }
 
+/** Log the status of introduction points for all version 3 onion services
+ * at log severity <b>severity</b>.
+ */
+void
+hs_service_dump_stats(int severity)
+{
+  origin_circuit_t *circ;
+
+  FOR_EACH_SERVICE_BEGIN(hs) {
+
+    tor_log(severity, LD_GENERAL, "Service configured in %s:",
+            service_escaped_dir(hs));
+    FOR_EACH_DESCRIPTOR_BEGIN(hs, desc) {
+
+      DIGEST256MAP_FOREACH(desc->intro_points.map, key,
+                           hs_service_intro_point_t *, ip) {
+        const node_t *intro_node;
+        const char *nickname;
+
+        intro_node = get_node_from_intro_point(ip);
+        if (!intro_node) {
+          tor_log(severity, LD_GENERAL, "  Couldn't find intro point, "
+                  "skipping");
+          continue;
+        }
+        nickname = node_get_nickname(intro_node);
+        if (!nickname) {
+          continue;
+        }
+
+        circ = hs_circ_service_get_intro_circ(ip);
+        if (!circ) {
+          tor_log(severity, LD_GENERAL, "  Intro point at %s: no circuit",
+                  nickname);
+          continue;
+        }
+        tor_log(severity, LD_GENERAL, "  Intro point %s: circuit is %s",
+                nickname, circuit_state_to_string(circ->base_.state));
+      } DIGEST256MAP_FOREACH_END;
+
+    } FOR_EACH_DESCRIPTOR_END;
+  } FOR_EACH_SERVICE_END;
+}
+
 /** Put all service object in the given service list. After this, the caller
  * looses ownership of every elements in the list and responsible to free the
  * list pointer. */
@@ -4154,8 +4210,8 @@ hs_service_free_(hs_service_t *service)
   }
 
   /* Free onionbalance subcredentials (if any) */
-  if (service->ob_subcreds) {
-    tor_free(service->ob_subcreds);
+  if (service->state.ob_subcreds) {
+    tor_free(service->state.ob_subcreds);
   }
 
   /* Wipe service keys. */
@@ -4210,6 +4266,7 @@ hs_service_free_all(void)
 {
   rend_service_free_all();
   service_free_all();
+  hs_config_free_all();
 }
 
 #ifdef TOR_UNIT_TESTS

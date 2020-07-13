@@ -621,7 +621,7 @@ get_estimated_address_per_node, (void))
  * and grab microdescriptors into nodes as appropriate.
  */
 void
-nodelist_set_consensus(networkstatus_t *ns)
+nodelist_set_consensus(const networkstatus_t *ns)
 {
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v3(options);
@@ -952,7 +952,7 @@ nodelist_assert_ok(void)
 /** Ensure that the nodelist has been created with the most recent consensus.
  *  If that's not the case, make it so.  */
 void
-nodelist_ensure_freshness(networkstatus_t *ns)
+nodelist_ensure_freshness(const networkstatus_t *ns)
 {
   tor_assert(ns);
 
@@ -1074,8 +1074,8 @@ node_get_by_nickname,(const char *nickname, unsigned flags))
 
 /** Return the Ed25519 identity key for the provided node, or NULL if it
  * doesn't have one. */
-const ed25519_public_key_t *
-node_get_ed25519_id(const node_t *node)
+MOCK_IMPL(const ed25519_public_key_t *,
+node_get_ed25519_id,(const node_t *node))
 {
   const ed25519_public_key_t *ri_pk = NULL;
   const ed25519_public_key_t *md_pk = NULL;
@@ -1133,7 +1133,7 @@ node_ed25519_id_matches(const node_t *node, const ed25519_public_key_t *id)
 /** Dummy object that should be unreturnable.  Used to ensure that
  * node_get_protover_summary_flags() always returns non-NULL. */
 static const protover_summary_flags_t zero_protover_flags = {
-  0,0,0,0,0,0,0,0,0
+  0,0,0,0,0,0,0,0,0,0,0,0
 };
 
 /** Return the protover_summary_flags for a given node. */
@@ -1158,9 +1158,9 @@ node_get_protover_summary_flags(const node_t *node)
  * by ed25519 ID during the link handshake.  If <b>compatible_with_us</b>,
  * it needs to be using a link authentication method that we understand.
  * If not, any plausible link authentication method will do. */
-int
-node_supports_ed25519_link_authentication(const node_t *node,
-                                          int compatible_with_us)
+MOCK_IMPL(bool,
+node_supports_ed25519_link_authentication,(const node_t *node,
+                                           bool compatible_with_us))
 {
   if (! node_get_ed25519_id(node))
     return 0;
@@ -1175,7 +1175,7 @@ node_supports_ed25519_link_authentication(const node_t *node,
 
 /** Return true iff <b>node</b> supports the hidden service directory version
  * 3 protocol (proposal 224). */
-int
+bool
 node_supports_v3_hsdir(const node_t *node)
 {
   tor_assert(node);
@@ -1185,7 +1185,7 @@ node_supports_v3_hsdir(const node_t *node)
 
 /** Return true iff <b>node</b> supports ed25519 authentication as an hidden
  * service introduction point.*/
-int
+bool
 node_supports_ed25519_hs_intro(const node_t *node)
 {
   tor_assert(node);
@@ -1193,20 +1193,9 @@ node_supports_ed25519_hs_intro(const node_t *node)
   return node_get_protover_summary_flags(node)->supports_ed25519_hs_intro;
 }
 
-/** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
- * extenstion. */
-int
-node_supports_establish_intro_dos_extension(const node_t *node)
-{
-  tor_assert(node);
-
-  return node_get_protover_summary_flags(node)->
-                           supports_establish_intro_dos_extension;
-}
-
-/** Return true iff <b>node</b> supports to be a rendezvous point for hidden
+/** Return true iff <b>node</b> can be a rendezvous point for hidden
  * service version 3 (HSRend=2). */
-int
+bool
 node_supports_v3_rendezvous_point(const node_t *node)
 {
   tor_assert(node);
@@ -1217,6 +1206,67 @@ node_supports_v3_rendezvous_point(const node_t *node)
   }
 
   return node_get_protover_summary_flags(node)->supports_v3_rendezvous_point;
+}
+
+/** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
+ * extenstion. */
+bool
+node_supports_establish_intro_dos_extension(const node_t *node)
+{
+  tor_assert(node);
+
+  return node_get_protover_summary_flags(node)->
+                           supports_establish_intro_dos_extension;
+}
+
+/** Return true iff <b>node</b> can initiate IPv6 extends (Relay=3).
+ *
+ * This check should only be performed by client path selection code.
+ *
+ * Extending relays should check their own IPv6 support using
+ * router_can_extend_over_ipv6(). Like other extends, they should not verify
+ * the link specifiers in the extend cell against the consensus, because it
+ * may be out of date. */
+bool
+node_supports_initiating_ipv6_extends(const node_t *node)
+{
+  tor_assert(node);
+
+  /* Relays can't initiate an IPv6 extend, unless they have an IPv6 ORPort. */
+  if (!node_has_ipv6_orport(node)) {
+    return 0;
+  }
+
+  /* Initiating relays also need to support the relevant protocol version. */
+  return
+    node_get_protover_summary_flags(node)->supports_initiating_ipv6_extends;
+}
+
+/** Return true iff <b>node</b> can accept IPv6 extends (Relay=2 or Relay=3)
+ * from other relays. If <b>need_canonical_ipv6_conn</b> is true, also check
+ * if the relay supports canonical IPv6 connections (Relay=3 only).
+ *
+ * This check should only be performed by client path selection code.
+ */
+bool
+node_supports_accepting_ipv6_extends(const node_t *node,
+                                            bool need_canonical_ipv6_conn)
+{
+  tor_assert(node);
+
+  /* Relays can't accept an IPv6 extend, unless they have an IPv6 ORPort. */
+  if (!node_has_ipv6_orport(node)) {
+    return 0;
+  }
+
+  /* Accepting relays also need to support the relevant protocol version. */
+  if (need_canonical_ipv6_conn) {
+    return
+      node_get_protover_summary_flags(node)->supports_canonical_ipv6_conns;
+  } else {
+    return
+      node_get_protover_summary_flags(node)->supports_accepting_ipv6_extends;
+  }
 }
 
 /** Return the RSA ID key's SHA1 digest for the provided node. */
@@ -1984,7 +2034,7 @@ nodelist_refresh_countries(void)
 /** Return true iff router1 and router2 have similar enough network addresses
  * that we should treat them as being in the same family */
 int
-addrs_in_same_network_family(const tor_addr_t *a1,
+router_addrs_in_same_network(const tor_addr_t *a1,
                              const tor_addr_t *a2)
 {
   if (tor_addr_is_null(a1) || tor_addr_is_null(a2))
@@ -2100,8 +2150,8 @@ nodes_in_same_family(const node_t *node1, const node_t *node2)
     node_get_pref_ipv6_orport(node1, &ap6_1);
     node_get_pref_ipv6_orport(node2, &ap6_2);
 
-    if (addrs_in_same_network_family(&a1, &a2) ||
-        addrs_in_same_network_family(&ap6_1.addr, &ap6_2.addr))
+    if (router_addrs_in_same_network(&a1, &a2) ||
+        router_addrs_in_same_network(&ap6_1.addr, &ap6_2.addr))
       return 1;
   }
 
@@ -2159,8 +2209,8 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
       tor_addr_port_t ap6;
       node_get_addr(node2, &a);
       node_get_pref_ipv6_orport(node2, &ap6);
-      if (addrs_in_same_network_family(&a, &node_addr) ||
-          addrs_in_same_network_family(&ap6.addr, &node_ap6.addr))
+      if (router_addrs_in_same_network(&a, &node_addr) ||
+          router_addrs_in_same_network(&ap6.addr, &node_ap6.addr))
         smartlist_add(sl, (void*)node2);
     } SMARTLIST_FOREACH_END(node2);
   }

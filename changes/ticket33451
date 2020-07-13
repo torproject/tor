@@ -1,3 +1,0 @@
-  o Minor features (developer tools):
-    - Add a script ("git-install-tools.sh") to install git hooks and helper
-      scripts.  Closes ticket 33451.

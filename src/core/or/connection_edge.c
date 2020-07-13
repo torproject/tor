@@ -70,6 +70,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/extendinfo.h"
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
@@ -307,7 +308,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
         note_user_activity(approx_time());
       }
 
-      /* falls through. */
+      FALLTHROUGH;
     case EXIT_CONN_STATE_OPEN:
       if (connection_edge_package_raw_inbuf(conn, package_partial, NULL) < 0) {
         /* (We already sent an end cell if possible) */
@@ -332,7 +333,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       }
       /* Fall through if the connection is on a circuit without optimistic
        * data support. */
-      /* Falls through. */
+      FALLTHROUGH;
     case EXIT_CONN_STATE_CONNECTING:
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
@@ -781,7 +782,7 @@ connection_edge_flushed_some(edge_connection_t *conn)
         note_user_activity(approx_time());
       }
 
-      /* falls through. */
+      FALLTHROUGH;
     case EXIT_CONN_STATE_OPEN:
       sendme_connection_edge_consider_sending(conn);
       break;
@@ -1444,8 +1445,8 @@ connection_ap_fail_onehop(const char *failed_digest,
         continue;
       }
       if (tor_addr_parse(&addr, entry_conn->socks_request->address)<0 ||
-          !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
-          build_state->chosen_exit->port != entry_conn->socks_request->port)
+          !extend_info_has_orport(build_state->chosen_exit, &addr,
+                                  entry_conn->socks_request->port))
         continue;
     }
     log_info(LD_APP, "Closing one-hop stream to '%s/%s' because the OR conn "
@@ -1658,9 +1659,14 @@ parse_extended_hostname(char *address, hostname_type_t *type_out)
  failed:
   /* otherwise, return to previous state and return 0 */
   *s = '.';
+  const bool is_onion = (*type_out == ONION_V2_HOSTNAME) ||
+    (*type_out == ONION_V3_HOSTNAME);
   log_warn(LD_APP, "Invalid %shostname %s; rejecting",
-      (*type_out == (ONION_V2_HOSTNAME || ONION_V3_HOSTNAME) ? "onion " : ""),
-      safe_str_client(address));
+           is_onion ? "onion " : "",
+           safe_str_client(address));
+  if (*type_out == ONION_V3_HOSTNAME) {
+      *type_out = BAD_HOSTNAME;
+  }
   return false;
 }
 
@@ -2137,7 +2143,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   if (!parse_extended_hostname(socks->address, &addresstype)) {
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
-    if (addresstype == ONION_V3_HOSTNAME) {
+    if (addresstype == BAD_HOSTNAME) {
       conn->socks_request->socks_extended_error_code = SOCKS5_HS_BAD_ADDRESS;
     }
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
@@ -3457,8 +3463,9 @@ tell_controller_about_resolved_result(entry_connection_t *conn,
   expires = time(NULL) + ttl;
   if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {
     char *cp = tor_dup_ip(ntohl(get_uint32(answer)));
-    control_event_address_mapped(conn->socks_request->address,
-                                 cp, expires, NULL, 0);
+    if (cp)
+      control_event_address_mapped(conn->socks_request->address,
+                                   cp, expires, NULL, 0);
     tor_free(cp);
   } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256) {
     char *cp = tor_strndup(answer, answer_len);
@@ -3531,7 +3538,7 @@ connection_ap_handshake_socks_resolved,(entry_connection_t *conn,
       }
     } else if (answer_type == RESOLVED_TYPE_IPV6 && answer_len == 16) {
       tor_addr_t a;
-      tor_addr_from_ipv6_bytes(&a, (char*)answer);
+      tor_addr_from_ipv6_bytes(&a, answer);
       if (! tor_addr_is_null(&a)) {
         client_dns_set_addressmap(conn,
                                   conn->socks_request->address, &a,

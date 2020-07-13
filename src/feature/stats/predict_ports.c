@@ -270,10 +270,10 @@ rep_hist_circbuilding_dormant(time_t now)
 
   /* see if we'll still need to build testing circuits */
   if (server_mode(options) &&
-      (!check_whether_orport_reachable(options) ||
+      (!router_all_orports_seem_reachable(options) ||
        !circuit_enough_testing_circs()))
     return 0;
-  if (!check_whether_dirport_reachable(options))
+  if (!router_dirport_seems_reachable(options))
     return 0;
 
   return 1;

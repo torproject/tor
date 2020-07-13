@@ -44,6 +44,7 @@
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
+#include "feature/relay/relay_find_addr.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/rend/rendcache.h"
@@ -1367,7 +1368,7 @@ directory_initiate_request,(directory_request_t *request))
       case 1:
         /* start flushing conn */
         conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
-        /* fall through */
+        FALLTHROUGH;
       case 0:
         /* queue the command on the outbuf */
         directory_send_command(conn, 1, request);
@@ -1984,7 +1985,7 @@ dirclient_dump_total_dls(void)
   for (int bootstrapped = 0; bootstrapped < 2; ++bootstrapped) {
     bool first_time = true;
     for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
-      uint64_t n = total_dl[i][0];
+      uint64_t n = total_dl[i][bootstrapped];
       if (n == 0)
         continue;
       if (options->SafeLogging_ != SAFELOG_SCRUB_NONE &&

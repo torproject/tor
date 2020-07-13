@@ -60,6 +60,7 @@ dirauth_set_options(void *arg)
 
 const struct subsys_fns_t sys_dirauth = {
   .name = "dirauth",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = DIRAUTH_SUBSYS_LEVEL,
   .initialize = subsys_dirauth_initialize,

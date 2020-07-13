@@ -1,3 +1,0 @@
-  o Minor bugfixes (logs):
-    - Remove surprising empty line in info-level log about circuit build
-      timeout. Fixes bug 33531; bugfix on 0.3.3.1-alpha.

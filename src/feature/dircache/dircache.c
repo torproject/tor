@@ -13,6 +13,7 @@
 #include "core/or/or.h"
 
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/mainloop/connection.h"
 #include "core/or/relay.h"
 #include "feature/dirauth/dirvote.h"
@@ -141,7 +142,7 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
   if (type) {
     buf_add_printf(buf, "Content-Type: %s\r\n", type);
   }
-  if (!is_local_addr(&conn->base_.addr)) {
+  if (!is_local_to_resolve_addr(&conn->base_.addr)) {
     /* Don't report the source address for a nearby/private connection.
      * Otherwise we tend to mis-report in cases where incoming ports are
      * being forwarded to a Tor server running behind the firewall. */

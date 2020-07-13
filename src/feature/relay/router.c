@@ -8,6 +8,7 @@
 
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "app/config/statefile.h"
 #include "app/main/main.h"
 #include "core/mainloop/connection.h"
@@ -36,12 +37,14 @@
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/relay_config.h"
+#include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
+#include "feature/stats/bwhist.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_format.h"
@@ -748,8 +751,8 @@ v3_authority_check_key_expiry(void)
 }
 
 /** Get the lifetime of an onion key in days. This value is defined by the
- * network consesus parameter "onion-key-rotation-days". Always returns a value
- * between <b>MIN_ONION_KEY_LIFETIME_DAYS</b> and
+ * network consensus parameter "onion-key-rotation-days". Always returns a
+ * value between <b>MIN_ONION_KEY_LIFETIME_DAYS</b> and
  * <b>MAX_ONION_KEY_LIFETIME_DAYS</b>.
  */
 static int
@@ -763,7 +766,7 @@ get_onion_key_rotation_days_(void)
 }
 
 /** Get the current lifetime of an onion key in seconds. This value is defined
- * by the network consesus parameter "onion-key-rotation-days", but the value
+ * by the network consensus parameter "onion-key-rotation-days", but the value
  * is converted to seconds.
  */
 int
@@ -773,7 +776,7 @@ get_onion_key_lifetime(void)
 }
 
 /** Get the grace period of an onion key in seconds. This value is defined by
- * the network consesus parameter "onion-key-grace-period-days", but the value
+ * the network consensus parameter "onion-key-grace-period-days", but the value
  * is converted to seconds.
  */
 int
@@ -829,30 +832,37 @@ router_initialize_tls_context(void)
  * -1 if Tor should die,
  */
 STATIC int
-router_write_fingerprint(int hashed)
+router_write_fingerprint(int hashed, int ed25519_identity)
 {
   char *keydir = NULL, *cp = NULL;
   const char *fname = hashed ? "hashed-fingerprint" :
-                               "fingerprint";
+                      (ed25519_identity ? "fingerprint-ed25519" :
+                                          "fingerprint");
   char fingerprint[FINGERPRINT_LEN+1];
   const or_options_t *options = get_options();
   char *fingerprint_line = NULL;
   int result = -1;
 
   keydir = get_datadir_fname(fname);
-  log_info(LD_GENERAL,"Dumping %sfingerprint to \"%s\"...",
-           hashed ? "hashed " : "", keydir);
-  if (!hashed) {
-    if (crypto_pk_get_fingerprint(get_server_identity_key(),
-                                  fingerprint, 0) < 0) {
-      log_err(LD_GENERAL,"Error computing fingerprint");
-      goto done;
-    }
-  } else {
-    if (crypto_pk_get_hashed_fingerprint(get_server_identity_key(),
-                                         fingerprint) < 0) {
-      log_err(LD_GENERAL,"Error computing hashed fingerprint");
-      goto done;
+  log_info(LD_GENERAL,"Dumping %s%s to \"%s\"...", hashed ? "hashed " : "",
+           ed25519_identity ? "ed25519 identity" : "fingerprint", keydir);
+
+  if (ed25519_identity) { /* ed25519 identity */
+    digest256_to_base64(fingerprint, (const char *)
+                                     get_master_identity_key()->pubkey);
+  } else { /* RSA identity */
+    if (!hashed) {
+      if (crypto_pk_get_fingerprint(get_server_identity_key(),
+                                    fingerprint, 0) < 0) {
+        log_err(LD_GENERAL,"Error computing fingerprint");
+        goto done;
+      }
+    } else {
+      if (crypto_pk_get_hashed_fingerprint(get_server_identity_key(),
+                                           fingerprint) < 0) {
+        log_err(LD_GENERAL,"Error computing hashed fingerprint");
+        goto done;
+      }
     }
   }
 
@@ -863,15 +873,17 @@ router_write_fingerprint(int hashed)
   cp = read_file_to_str(keydir, RFTS_IGNORE_MISSING, NULL);
   if (!cp || strcmp(cp, fingerprint_line)) {
     if (write_str_to_file(keydir, fingerprint_line, 0)) {
-      log_err(LD_FS, "Error writing %sfingerprint line to file",
-              hashed ? "hashed " : "");
+      log_err(LD_FS, "Error writing %s%s line to file",
+              hashed ? "hashed " : "",
+              ed25519_identity ? "ed25519 identity" : "fingerprint");
       goto done;
     }
   }
 
-  log_notice(LD_GENERAL, "Your Tor %s identity key fingerprint is '%s %s'",
-             hashed ? "bridge's hashed" : "server's", options->Nickname,
-             fingerprint);
+  log_notice(LD_GENERAL, "Your Tor %s identity key %s fingerprint is '%s %s'",
+             hashed ? "bridge's hashed" : "server's",
+             ed25519_identity ? "ed25519" : "",
+             options->Nickname, fingerprint);
 
   result = 0;
  done:
@@ -1107,13 +1119,18 @@ init_keys(void)
     }
   }
 
-  /* 5. Dump fingerprint and possibly hashed fingerprint to files. */
-  if (router_write_fingerprint(0)) {
+  /* 5. Dump fingerprint, ed25519 identity and possibly hashed fingerprint
+   * to files. */
+  if (router_write_fingerprint(0, 0)) {
     log_err(LD_FS, "Error writing fingerprint to file");
     return -1;
   }
-  if (!public_server_mode(options) && router_write_fingerprint(1)) {
+  if (!public_server_mode(options) && router_write_fingerprint(1, 0)) {
     log_err(LD_FS, "Error writing hashed fingerprint to file");
+    return -1;
+  }
+  if (router_write_fingerprint(0, 1)) {
+    log_err(LD_FS, "Error writing ed25519 identity to file");
     return -1;
   }
 
@@ -1132,10 +1149,12 @@ init_keys(void)
 
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
+    tor_addr_port_t ipv6_orport;
+    router_get_advertised_ipv6_or_ap(options, &ipv6_orport);
     ds = trusted_dir_server_new(options->Nickname, NULL,
                                 router_get_advertised_dir_port(options, 0),
                                 router_get_advertised_or_port(options),
-                                NULL,
+                                &ipv6_orport,
                                 digest,
                                 v3_digest,
                                 type, 0.0);
@@ -1333,6 +1352,17 @@ should_refuse_unknown_exits(const or_options_t *options)
   }
 }
 
+/**
+ * If true, then we will publish our descriptor even if our own IPv4 ORPort
+ * seems to be unreachable.
+ **/
+static bool publish_even_when_ipv4_orport_unreachable = false;
+/**
+ * If true, then we will publish our descriptor even if our own IPv6 ORPort
+ * seems to be unreachable.
+ **/
+static bool publish_even_when_ipv6_orport_unreachable = false;
+
 /** Decide if we're a publishable server. We are a publishable server if:
  * - We don't have the ClientOnly option set
  * and
@@ -1361,14 +1391,24 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  if (!check_whether_orport_reachable(options))
-    return 0;
+  if (!router_orport_seems_reachable(options, AF_INET)) {
+    // We have an ipv4 orport, and it doesn't seem reachable.
+    if (!publish_even_when_ipv4_orport_unreachable) {
+      return 0;
+    }
+  }
+  if (!router_orport_seems_reachable(options, AF_INET6)) {
+    // We have an ipv6 orport, and it doesn't seem reachable.
+    if (!publish_even_when_ipv6_orport_unreachable) {
+      return 0;
+    }
+  }
   if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL) {
     /* All set: there are no exits in the consensus (maybe this is a tiny
      * test network), so we can't check our DirPort reachability. */
     return 1;
   } else {
-    return check_whether_dirport_reachable(options);
+    return router_dirport_seems_reachable(options);
   }
 }
 
@@ -1444,6 +1484,83 @@ router_get_advertised_or_port_by_af(const or_options_t *options,
                                                       family);
 
   return port;
+}
+
+/** As router_get_advertised_or_port(), but returns the IPv6 address and
+ *  port in ipv6_ap_out, which must not be NULL. Returns a null address and
+ * zero port, if no ORPort is found. */
+void
+router_get_advertised_ipv6_or_ap(const or_options_t *options,
+                                 tor_addr_port_t *ipv6_ap_out)
+{
+  /* Bug in calling function, we can't return a sensible result, and it
+   * shouldn't use the NULL pointer once we return. */
+  tor_assert(ipv6_ap_out);
+
+  /* If there is no valid IPv6 ORPort, return a null address and port. */
+  tor_addr_make_null(&ipv6_ap_out->addr, AF_INET6);
+  ipv6_ap_out->port = 0;
+
+  const tor_addr_t *addr = get_first_advertised_addr_by_type_af(
+                                                      CONN_TYPE_OR_LISTENER,
+                                                      AF_INET6);
+  const uint16_t port = router_get_advertised_or_port_by_af(
+                                                      options,
+                                                      AF_INET6);
+
+  if (!addr || port == 0) {
+    log_debug(LD_CONFIG, "There is no advertised IPv6 ORPort.");
+    return;
+  }
+
+  /* If the relay is configured using the default authorities, disallow
+   * internal IPs. Otherwise, allow them. For IPv4 ORPorts and DirPorts,
+   * this check is done in resolve_my_address(). See #33681. */
+  const int default_auth = using_default_dir_authorities(options);
+  if (tor_addr_is_internal(addr, 0) && default_auth) {
+    log_warn(LD_CONFIG,
+             "Unable to use configured IPv6 ORPort \"%s\" in a "
+             "descriptor. Skipping it. "
+             "Try specifying a globally reachable address explicitly.",
+             fmt_addrport(addr, port));
+    return;
+  }
+
+  tor_addr_copy(&ipv6_ap_out->addr, addr);
+  ipv6_ap_out->port = port;
+}
+
+/** Returns true if this router has an advertised IPv6 ORPort. */
+bool
+router_has_advertised_ipv6_orport(const or_options_t *options)
+{
+  tor_addr_port_t ipv6_ap;
+  router_get_advertised_ipv6_or_ap(options, &ipv6_ap);
+  return tor_addr_port_is_valid_ap(&ipv6_ap, 0);
+}
+
+/** Returns true if this router can extend over IPv6.
+ *
+ * This check should only be performed by relay extend code.
+ *
+ * Clients should check if relays can initiate and accept IPv6 extends using
+ * node_supports_initiating_ipv6_extends() and
+ * node_supports_accepting_ipv6_extends().
+ *
+ * As with other extends, relays should assume the client has already
+ * performed the relevant checks for the next hop. (Otherwise, relays that
+ * have just added IPv6 ORPorts won't be able to self-test those ORPorts.)
+ *
+ * Accepting relays don't need to perform any IPv6-specific checks before
+ * accepting a connection, because having an IPv6 ORPort implies support for
+ * the relevant protocol version.
+ */
+MOCK_IMPL(bool,
+router_can_extend_over_ipv6,(const or_options_t *options))
+{
+  /* We might add some extra checks here, such as ExtendAllowIPv6Addresses
+  * from ticket 33818. */
+  return router_has_advertised_ipv6_orport(options);
 }
 
 /** Return the port that we should advertise as our DirPort;
@@ -1701,41 +1818,6 @@ router_get_descriptor_gen_reason(void)
   return desc_gen_reason;
 }
 
-static int router_guess_address_from_dir_headers(uint32_t *guess);
-
-/** Make a current best guess at our address, either because
- * it's configured in torrc, or because we've learned it from
- * dirserver headers. Place the answer in *<b>addr</b> and return
- * 0 on success, else return -1 if we have no guess.
- *
- * If <b>cache_only</b> is true, just return any cached answers, and
- * don't try to get any new answers.
- */
-MOCK_IMPL(int,
-router_pick_published_address,(const or_options_t *options, uint32_t *addr,
-                               int cache_only))
-{
-  /* First, check the cached output from resolve_my_address(). */
-  *addr = get_last_resolved_addr();
-  if (*addr)
-    return 0;
-
-  /* Second, consider doing a resolve attempt right here. */
-  if (!cache_only) {
-    if (resolve_my_address(LOG_INFO, options, addr, NULL, NULL) >= 0) {
-      log_info(LD_CONFIG,"Success: chose address '%s'.", fmt_addr32(*addr));
-      return 0;
-    }
-  }
-
-  /* Third, check the cached output from router_new_address_suggestion(). */
-  if (router_guess_address_from_dir_headers(addr) >= 0)
-    return 0;
-
-  /* We have no useful cached answers. Return failure. */
-  return -1;
-}
-
 /* Like router_check_descriptor_address_consistency, but specifically for the
  * ORPort or DirPort.
  * listener_type is either CONN_TYPE_OR_LISTENER or CONN_TYPE_DIR_LISTENER. */
@@ -1990,34 +2072,11 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
                sizeof(curve25519_public_key_t));
 
   /* For now, at most one IPv6 or-address is being advertised. */
-  {
-    const port_cfg_t *ipv6_orport = NULL;
-    SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
-      if (p->type == CONN_TYPE_OR_LISTENER &&
-          ! p->server_cfg.no_advertise &&
-          ! p->server_cfg.bind_ipv4_only &&
-          tor_addr_family(&p->addr) == AF_INET6) {
-        /* Like IPv4, if the relay is configured using the default
-         * authorities, disallow internal IPs. Otherwise, allow them. */
-        const int default_auth = using_default_dir_authorities(options);
-        if (! tor_addr_is_internal(&p->addr, 0) || ! default_auth) {
-          ipv6_orport = p;
-          break;
-        } else {
-          char addrbuf[TOR_ADDR_BUF_LEN];
-          log_warn(LD_CONFIG,
-                   "Unable to use configured IPv6 address \"%s\" in a "
-                   "descriptor. Skipping it. "
-                   "Try specifying a globally reachable address explicitly.",
-                   tor_addr_to_str(addrbuf, &p->addr, sizeof(addrbuf), 1));
-        }
-      }
-    } SMARTLIST_FOREACH_END(p);
-    if (ipv6_orport) {
-      tor_addr_copy(&ri->ipv6_addr, &ipv6_orport->addr);
-      ri->ipv6_orport = ipv6_orport->port;
-    }
-  }
+  tor_addr_port_t ipv6_orport;
+  router_get_advertised_ipv6_or_ap(options, &ipv6_orport);
+  /* If there is no valid IPv6 ORPort, the address and port are null. */
+  tor_addr_copy(&ri->ipv6_addr, &ipv6_orport.addr);
+  ri->ipv6_orport = ipv6_orport.port;
 
   ri->identity_pkey = crypto_pk_dup_key(get_server_identity_key());
   if (BUG(crypto_pk_get_digest(ri->identity_pkey,
@@ -2040,7 +2099,7 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   ri->bandwidthburst = relay_get_effective_bwburst(options);
 
   /* Report bandwidth, unless we're hibernating or shutting down */
-  ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
+  ri->bandwidthcapacity = hibernating ? 0 : bwhist_bandwidth_assess();
 
   if (dns_seems_to_be_broken() || has_dns_init_failed()) {
     /* DNS is screwed up; don't claim to be an exit. */
@@ -2367,6 +2426,24 @@ router_rebuild_descriptor(int force)
   return 0;
 }
 
+/** Called when we have a new set of consensus parameters. */
+void
+router_new_consensus_params(const networkstatus_t *ns)
+{
+  const int32_t DEFAULT_ASSUME_REACHABLE = 0;
+  const int32_t DEFAULT_ASSUME_REACHABLE_IPV6 = 0;
+  int ar, ar6;
+  ar = networkstatus_get_param(ns,
+                               "assume-reachable",
+                               DEFAULT_ASSUME_REACHABLE, 0, 1);
+  ar6 = networkstatus_get_param(ns,
+                                "assume-reachable-ipv6",
+                                DEFAULT_ASSUME_REACHABLE_IPV6, 0, 1);
+
+  publish_even_when_ipv4_orport_unreachable = ar;
+  publish_even_when_ipv6_orport_unreachable = ar || ar6;
+}
+
 /** If our router descriptor ever goes this long without being regenerated
  * because something changed, we force an immediate regenerate-and-upload. */
 #define FORCE_REGENERATE_DESCRIPTOR_INTERVAL (18*60*60)
@@ -2468,7 +2545,7 @@ check_descriptor_bandwidth_changed(time_t now)
 
   /* Consider ourselves to have zero bandwidth if we're hibernating or
    * shutting down. */
-  cur = hibernating ? 0 : rep_hist_bandwidth_assess();
+  cur = hibernating ? 0 : bwhist_bandwidth_assess();
 
   if ((prev != cur && (!prev || !cur)) ||
       cur > (prev * BANDWIDTH_CHANGE_FACTOR) ||
@@ -2484,7 +2561,7 @@ check_descriptor_bandwidth_changed(time_t now)
 
 /** Note at log level severity that our best guess of address has changed from
  * <b>prev</b> to <b>cur</b>. */
-static void
+void
 log_addr_has_changed(int severity,
                      const tor_addr_t *prev,
                      const tor_addr_t *cur,
@@ -2519,6 +2596,7 @@ void
 check_descriptor_ipaddress_changed(time_t now)
 {
   uint32_t prev, cur;
+  tor_addr_t addr;
   const or_options_t *options = get_options();
   const char *method = NULL;
   char *hostname = NULL;
@@ -2531,10 +2609,12 @@ check_descriptor_ipaddress_changed(time_t now)
 
   /* XXXX ipv6 */
   prev = my_ri->addr;
-  if (resolve_my_address(LOG_INFO, options, &cur, &method, &hostname) < 0) {
+  if (!find_my_address(options, AF_INET, LOG_INFO, &addr, &method,
+                       &hostname)) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }
+  cur = tor_addr_to_ipv4h(&addr);
 
   if (prev != cur) {
     char *source;
@@ -2554,86 +2634,6 @@ check_descriptor_ipaddress_changed(time_t now)
   }
 
   tor_free(hostname);
-}
-
-/** The most recently guessed value of our IP address, based on directory
- * headers. */
-static tor_addr_t last_guessed_ip = TOR_ADDR_NULL;
-
-/** A directory server <b>d_conn</b> told us our IP address is
- * <b>suggestion</b>.
- * If this address is different from the one we think we are now, and
- * if our computer doesn't actually know its IP address, then switch. */
-void
-router_new_address_suggestion(const char *suggestion,
-                              const dir_connection_t *d_conn)
-{
-  tor_addr_t addr;
-  uint32_t cur = 0;             /* Current IPv4 address.  */
-  const or_options_t *options = get_options();
-
-  /* first, learn what the IP address actually is */
-  if (tor_addr_parse(&addr, suggestion) == -1) {
-    log_debug(LD_DIR, "Malformed X-Your-Address-Is header %s. Ignoring.",
-              escaped(suggestion));
-    return;
-  }
-
-  log_debug(LD_DIR, "Got X-Your-Address-Is: %s.", suggestion);
-
-  if (!server_mode(options)) {
-    tor_addr_copy(&last_guessed_ip, &addr);
-    return;
-  }
-
-  /* XXXX ipv6 */
-  cur = get_last_resolved_addr();
-  if (cur ||
-      resolve_my_address(LOG_INFO, options, &cur, NULL, NULL) >= 0) {
-    /* We're all set -- we already know our address. Great. */
-    tor_addr_from_ipv4h(&last_guessed_ip, cur); /* store it in case we
-                                                   need it later */
-    return;
-  }
-  if (tor_addr_is_internal(&addr, 0)) {
-    /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
-    return;
-  }
-  if (tor_addr_eq(&d_conn->base_.addr, &addr)) {
-    /* Don't believe anybody who says our IP is their IP. */
-    log_debug(LD_DIR, "A directory server told us our IP address is %s, "
-              "but they are just reporting their own IP address. Ignoring.",
-              suggestion);
-    return;
-  }
-
-  /* Okay.  We can't resolve our own address, and X-Your-Address-Is is giving
-   * us an answer different from what we had the last time we managed to
-   * resolve it. */
-  if (!tor_addr_eq(&last_guessed_ip, &addr)) {
-    control_event_server_status(LOG_NOTICE,
-                                "EXTERNAL_ADDRESS ADDRESS=%s METHOD=DIRSERV",
-                                suggestion);
-    log_addr_has_changed(LOG_NOTICE, &last_guessed_ip, &addr,
-                         d_conn->base_.address);
-    ip_address_changed(0);
-    tor_addr_copy(&last_guessed_ip, &addr); /* router_rebuild_descriptor()
-                                               will fetch it */
-  }
-}
-
-/** We failed to resolve our address locally, but we'd like to build
- * a descriptor and publish / test reachability. If we have a guess
- * about our address based on directory headers, answer it and return
- * 0; else return -1. */
-static int
-router_guess_address_from_dir_headers(uint32_t *guess)
-{
-  if (!tor_addr_is_null(&last_guessed_ip)) {
-    *guess = tor_addr_to_ipv4h(&last_guessed_ip);
-    return 0;
-  }
-  return -1;
 }
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
@@ -2858,6 +2858,9 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   address = tor_dup_ip(router->addr);
+  if (!address)
+    goto err;
+
   chunks = smartlist_new();
 
   /* Generate the easy portion of the router descriptor. */
@@ -3206,7 +3209,7 @@ extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     /* Bandwidth usage stats don't have their own option */
     {
-      contents = rep_hist_get_bandwidth_lines();
+      contents = bwhist_get_bandwidth_lines();
       smartlist_add(chunks, contents);
     }
     /* geoip hashes aren't useful unless we are publishing other stats */

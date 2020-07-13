@@ -85,13 +85,19 @@ pem_decode(uint8_t *dest, size_t destlen, const char *src, size_t srclen,
   src = eat_whitespace_eos(src, eos);
 
   char *tag = NULL;
-  tor_asprintf(&tag, "-----BEGIN %s-----\n", objtype);
+  tor_asprintf(&tag, "-----BEGIN %s-----", objtype);
   if ((size_t)(eos-src) < strlen(tag) || fast_memneq(src, tag, strlen(tag))) {
     tor_free(tag);
     return -1;
   }
   src += strlen(tag);
   tor_free(tag);
+  /* At this point we insist on spaces (including CR), then an LF. */
+  src = eat_whitespace_eos_no_nl(src, eos);
+  if (src == eos || *src != '\n') {
+    /* Extra junk at end of line: this isn't valid. */
+    return -1;
+  }
 
   // NOTE lack of trailing \n.  We do not enforce its presence.
   tor_asprintf(&tag, "\n-----END %s-----", objtype);

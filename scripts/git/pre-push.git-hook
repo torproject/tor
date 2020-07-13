@@ -83,6 +83,7 @@ do
                                    src/tools/*.[ch] \
                           )"
 
+            export TOR_EXTRA_PRE_COMMIT_CHECKS=1
             # We want word splitting here, because file names are space
             # separated
             # shellcheck disable=SC2086

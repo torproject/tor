@@ -1,0 +1,4 @@
+  o Major bugfixes (NSS):
+    - Fix out-of-bound memory access in `tor_tls_cert_matches_key()` when Tor is
+      compiled with NSS support. Fixes bug 33119; bugfix on 0.3.5.1-alpha. This
+      issue is also tracked as TROVE-2020-001.

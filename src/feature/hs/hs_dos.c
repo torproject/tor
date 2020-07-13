@@ -196,7 +196,9 @@ hs_dos_can_send_intro2(or_circuit_t *s_intro_circ)
     goto allow;
   }
 
-  /* Fallthrough is to disallow since this means the bucket has reached 0. */
+  /* If we reach this point, then it means the bucket has reached zero, and
+     we're going to disallow. */
+
  disallow:
   /* Increment stats counter, we are rejecting the INTRO2 cell. */
   intro2_rejected_count++;

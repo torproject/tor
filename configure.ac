@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2019, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_PREREQ([2.63])
-AC_INIT([tor],[0.4.4.0-alpha-dev])
+AC_INIT([tor],[0.4.5.0-alpha-dev])
 AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -16,7 +16,7 @@ configure_flags="$*"
 # version number changes.  Tor uses it to make sure that it
 # only shuts down for missing "required protocols" when those protocols
 # are listed as required by a consensus after this date.
-AC_DEFINE(APPROX_RELEASE_DATE, ["2020-02-11"], # for 0.4.4.0-alpha-dev
+AC_DEFINE(APPROX_RELEASE_DATE, ["2020-06-09"], # for 0.4.5.0-alpha-dev
           [Approximate date when this software was released. (Updated when the version changes.)])
 
 # "foreign" means we don't follow GNU package layout standards
@@ -256,15 +256,69 @@ AC_ARG_ENABLE(seccomp,
 AC_ARG_ENABLE(libscrypt,
      AS_HELP_STRING(--disable-libscrypt, [do not attempt to use libscrypt]))
 
-dnl Enable event tracing which are transformed to debug log statement.
-AC_ARG_ENABLE(event-tracing-debug,
-     AS_HELP_STRING(--enable-event-tracing-debug, [build with event tracing to debug log]))
-AM_CONDITIONAL([USE_EVENT_TRACING_DEBUG], [test "x$enable_event_tracing_debug" = "xyes"])
+dnl --- Tracing Options. ---
 
-if test x$enable_event_tracing_debug = xyes; then
-  AC_DEFINE([USE_EVENT_TRACING_DEBUG], [1], [Tracing framework to log debug])
-  AC_DEFINE([TOR_EVENT_TRACING_ENABLED], [1], [Compile the event tracing instrumentation])
+TOR_TRACE_LIBS=
+
+dnl LTTng instrumentation option.
+AC_ARG_ENABLE(tracing-instrumentation-lttng,
+              AS_HELP_STRING([--enable-tracing-instrumentation-lttng],
+                             [build with LTTng-UST instrumentation]))
+AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_LTTNG],
+               [test "x$enable_tracing_instrumentation_lttng" = "xyes"])
+
+if test "x$enable_tracing_instrumentation_lttng" = "xyes"; then
+  AC_CHECK_HEADERS([lttng/tracepoint.h], [],
+                   [AC_MSG_ERROR([LTTng instrumentation headers not found.
+                                  On Debian, apt install liblttng-ust-dev"])], [])
+  AC_DEFINE([USE_TRACING_INSTRUMENTATION_LTTNG], [1], [Using LTTng instrumentation])
+  TOR_TRACE_LIBS="-llttng-ust -ldl"
+  have_tracing=1
 fi
+
+dnl USDT instrumentation option.
+AC_ARG_ENABLE(tracing-instrumentation-usdt,
+              AS_HELP_STRING([--enable-tracing-instrumentation-usdt],
+                             [build with tracing USDT instrumentation]))
+AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_USDT],
+               [test "x$enable_tracing_instrumentation_usdt" = "xyes"])
+
+if test "x$enable_tracing_instrumentation_usdt" = "xyes"; then
+  AC_CHECK_HEADERS([sys/sdt.h], [],
+                   [AC_MSG_ERROR([USDT instrumentation requires sys/sdt.h header.
+                                  On Debian, apt install systemtap-sdt-dev])], [])
+  dnl LTTng generates USDT probes if the UST library was built with
+  dnl --with-sdt. There is unfortunately no way to check that so we always
+  dnl build the USDT probes even though LTTng instrumentation was requested.
+  AC_DEFINE([USE_TRACING_INSTRUMENTATION_USDT], [1], [Using USDT instrumentation])
+  have_tracing=1
+fi
+
+dnl Tracepoints event to debug logs.
+AC_ARG_ENABLE(tracing-instrumentation-log-debug,
+     AS_HELP_STRING([--enable-tracing-instrumentation-log-debug],
+                    [build with tracing event to debug log]),
+     AC_DEFINE([USE_TRACING_INSTRUMENTATION_LOG_DEBUG], [1],
+               [Tracepoints to log debug]), [])
+AM_CONDITIONAL([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
+               [test "x$enable_tracing_instrumentation_log_debug" = "xyes"])
+if test "x$enable_tracing_instrumentation_log_debug" = "xyes"; then
+  have_tracing=1
+fi
+
+dnl Define that tracing is supported if any instrumentation is used.
+AM_COND_IF([USE_TRACING_INSTRUMENTATION_LOG_DEBUG],
+           AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+AM_COND_IF([USE_TRACING_INSTRUMENTATION_USDT],
+           AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+AM_COND_IF([USE_TRACING_INSTRUMENTATION_LTTNG],
+           AC_DEFINE([HAVE_TRACING], [1], [Compiled with tracing support]))
+AM_CONDITIONAL([USE_TRACING], [test "x$have_tracing" = x1 ])
+
+dnl Finally, define the trace libs.
+AC_SUBST([TOR_TRACE_LIBS])
+
+dnl -- End Tracing Options. --
 
 dnl Enable Android only features.
 AC_ARG_ENABLE(android,
@@ -432,6 +486,22 @@ AC_CACHE_CHECK([for working C99 designated initializers],
 
 if test "$tor_cv_c_c99_designated_init" != "yes"; then
   AC_MSG_ERROR([Your compiler doesn't support c99 designated initializers. This is required as of Tor 0.2.6.x])
+fi
+
+saved_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror"
+AC_CACHE_CHECK([for __attribute__((fallthrough))],
+      tor_cv_c_attr_fallthrough,
+      [AC_COMPILE_IFELSE(
+         [AC_LANG_PROGRAM([extern int x; void fn(void) ;],
+	       [[ switch (x) { case 1: fn(); __attribute__((fallthrough));
+                               case 2: fn(); break; } ]])],
+	 [tor_cv_c_attr_fallthrough=yes],
+	 [tor_cv_c_attr_fallthrough=no] )])
+CFLAGS="$saved_CFLAGS"
+
+if test "$tor_cv_c_attr_fallthrough" = "yes"; then
+  AC_DEFINE(HAVE_ATTR_FALLTHROUGH, [1], [defined if we have the fallthrough attribute.])
 fi
 
 TORUSER=_tor
@@ -663,12 +733,10 @@ AC_CHECK_FUNCS(
 	getdelim \
 	getifaddrs \
 	getline \
-	getpass \
 	getrlimit \
 	gettimeofday \
 	gmtime_r \
 	gnu_get_libc_version \
-	htonll \
 	inet_aton \
 	ioctl \
 	issetugid \
@@ -1026,7 +1094,6 @@ dnl to them.
 AC_CHECK_FUNCS([ \
 		ERR_load_KDF_strings \
 		EVP_PBE_scrypt \
-		EVP_sha3_256 \
 		SSL_CIPHER_find \
 		SSL_CTX_set1_groups_list \
 		SSL_CTX_set_security_level \
@@ -1553,8 +1620,6 @@ AC_CHECK_HEADERS([errno.h \
 		  mach/vm_inherit.h \
 		  machine/limits.h \
 		  malloc.h \
-		  malloc/malloc.h \
-		  malloc_np.h \
 		  netdb.h \
 		  netinet/in.h \
 		  netinet/in6.h \
@@ -1575,7 +1640,6 @@ AC_CHECK_HEADERS([errno.h \
 		  sys/statvfs.h \
 		  sys/syscall.h \
 		  sys/sysctl.h \
-		  sys/syslimits.h \
 		  sys/time.h \
 		  sys/types.h \
 		  sys/un.h \
@@ -2673,7 +2737,7 @@ PPRINT_SUBTITLE([Modules])
 
 m4_foreach_w([mname], MODULES,
   [
-    test "xenable_module_mname" != "xno" && value=1 || value=0
+    AM_COND_IF(m4_join([], [BUILD_MODULE_], m4_toupper([]mname[])), value=1, value=0)
     PPRINT_PROP_BOOL([mname (--disable-module-mname)], $value)
   ]
 )
@@ -2707,6 +2771,18 @@ PPRINT_PROP_BOOL([libFuzzer support (--enable-libfuzzer)], $value)
 
 test "x$enable_oss_fuzz" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([OSS-Fuzz support (--enable-oss-fuzz)], $value)
+
+AS_ECHO
+PPRINT_SUBTITLE([Tracing (--enable-tracing-instrumentation-<type>)])
+
+test "x$enable_tracing_instrumentation_log_debug" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([Tracepoints to log_debug() (log-debug)], $value)
+
+test "x$enable_tracing_instrumentation_usdt" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([USDT Instrumentation (usdt)], $value)
+
+test "x$enable_tracing_instrumentation_lttng" = "xyes" && value=1 || value=0
+PPRINT_PROP_BOOL([LTTng Instrumentation (lttng)], $value)
 
 AS_ECHO
 PPRINT_SUBTITLE([Install Directories])

@@ -19,7 +19,6 @@
  **/
 #include "core/or/or.h"
 #include "core/or/channel.h"
-#include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/connection_or.h"
 #include "app/config/config.h"
@@ -27,6 +26,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "core/or/onion.h"
+#include "feature/relay/circuitbuild_relay.h"
 #include "feature/relay/onion_queue.h"
 #include "feature/stats/rephist.h"
 #include "feature/relay/router.h"

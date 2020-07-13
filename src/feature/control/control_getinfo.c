@@ -44,12 +44,14 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
+#include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/rend/rendcache.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/rephist.h"
 #include "lib/version/torversion.h"
 #include "lib/encoding/kvline.h"
 
@@ -136,6 +138,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       return -1;
     }
     *answer = tor_dup_ip(addr);
+    tor_assert_nonfatal(*answer);
   } else if (!strcmp(question, "traffic/read")) {
     tor_asprintf(answer, "%"PRIu64, (get_bytes_read()));
   } else if (!strcmp(question, "traffic/written")) {
@@ -1276,15 +1279,18 @@ getinfo_helper_events(control_connection_t *control_conn,
       *answer = tor_strdup(directories_have_accepted_server_descriptor()
                            ? "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded/or")) {
-      *answer = tor_strdup(check_whether_orport_reachable(options) ?
-                            "1" : "0");
+      *answer = tor_strdup(
+                    router_all_orports_seem_reachable(options) ?
+                    "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded/dir")) {
-      *answer = tor_strdup(check_whether_dirport_reachable(options) ?
-                            "1" : "0");
+      *answer = tor_strdup(
+                    router_dirport_seems_reachable(options) ?
+                    "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded")) {
-      tor_asprintf(answer, "OR=%d DIR=%d",
-                   check_whether_orport_reachable(options) ? 1 : 0,
-                   check_whether_dirport_reachable(options) ? 1 : 0);
+      tor_asprintf(
+          answer, "OR=%d DIR=%d",
+          router_all_orports_seem_reachable(options) ? 1 : 0,
+          router_dirport_seems_reachable(options) ? 1 : 0);
     } else if (!strcmp(question, "status/bootstrap-phase")) {
       *answer = control_event_boot_last_msg();
     } else if (!strcmpstart(question, "status/version/")) {
@@ -1331,8 +1337,22 @@ getinfo_helper_events(control_connection_t *control_conn,
       }
       routerinfo_t *r;
       extrainfo_t *e;
-      if (router_build_fresh_descriptor(&r, &e) < 0) {
-        *errmsg = "Error generating descriptor";
+      int result;
+      if ((result = router_build_fresh_descriptor(&r, &e)) < 0) {
+        switch (result) {
+          case TOR_ROUTERINFO_ERROR_NO_EXT_ADDR:
+            *errmsg = "Cannot get relay address while generating descriptor";
+            break;
+          case TOR_ROUTERINFO_ERROR_DIGEST_FAILED:
+            *errmsg = "Key digest failed";
+            break;
+          case TOR_ROUTERINFO_ERROR_CANNOT_GENERATE:
+            *errmsg = "Cannot generate router descriptor";
+            break;
+          default:
+            *errmsg = "Error generating descriptor";
+            break;
+        }
         return -1;
       }
       size_t size = r->cache_info.signed_descriptor_len + 1;
@@ -1417,6 +1437,39 @@ getinfo_helper_liveness(control_connection_t *control_conn,
       *answer = tor_strdup("down");
     }
   }
+
+  return 0;
+}
+
+/** Implementation helper for GETINFO: answers queries about circuit onion
+ * handshake rephist values */
+STATIC int
+getinfo_helper_rephist(control_connection_t *control_conn,
+                       const char *question, char **answer,
+                       const char **errmsg)
+{
+  (void) control_conn;
+  (void) errmsg;
+  int result;
+
+  if (!strcmp(question, "stats/ntor/assigned")) {
+    result =
+      rep_hist_get_circuit_handshake_assigned(ONION_HANDSHAKE_TYPE_NTOR);
+  } else if (!strcmp(question, "stats/ntor/requested")) {
+    result =
+      rep_hist_get_circuit_handshake_requested(ONION_HANDSHAKE_TYPE_NTOR);
+  } else if (!strcmp(question, "stats/tap/assigned")) {
+    result =
+      rep_hist_get_circuit_handshake_assigned(ONION_HANDSHAKE_TYPE_TAP);
+  } else if (!strcmp(question, "stats/tap/requested")) {
+    result =
+      rep_hist_get_circuit_handshake_requested(ONION_HANDSHAKE_TYPE_TAP);
+  } else {
+    *errmsg = "Unrecognized handshake type";
+    return -1;
+  }
+
+  tor_asprintf(answer, "%d", result);
 
   return 0;
 }
@@ -1645,6 +1698,16 @@ static const getinfo_item_t getinfo_items[] = {
        "Onion services detached from the control connection."),
   ITEM("sr/current", sr, "Get current shared random value."),
   ITEM("sr/previous", sr, "Get previous shared random value."),
+  PREFIX("stats/ntor/", rephist, "NTor circuit handshake stats."),
+  ITEM("stats/ntor/assigned", rephist,
+       "Assigned NTor circuit handshake stats."),
+  ITEM("stats/ntor/requested", rephist,
+       "Requested NTor circuit handshake stats."),
+  PREFIX("stats/tap/", rephist, "TAP circuit handshake stats."),
+  ITEM("stats/tap/assigned", rephist,
+       "Assigned TAP circuit handshake stats."),
+  ITEM("stats/tap/requested", rephist,
+       "Requested TAP circuit handshake stats."),
   { NULL, NULL, NULL, 0 }
 };
 

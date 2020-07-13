@@ -18,7 +18,8 @@
  * tortls.c) which it uses as its TLS stream.  It is responsible for
  * sending and receiving cells over that TLS.
  *
- * This module also implements the client side of the v3 Tor link handshake,
+ * This module also implements the client side of the v3 (and greater) Tor
+ * link handshake.
  **/
 #include "core/or/or.h"
 #include "feature/client/bridges.h"
@@ -660,6 +661,7 @@ connection_or_finished_flushing(or_connection_t *conn)
         }
         break;
       }
+      break;
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING_V2:
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
@@ -743,10 +745,16 @@ connection_or_about_to_close(or_connection_t *or_conn)
         int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
         connection_or_event_status(or_conn, OR_CONN_EVENT_FAILED,
                                    reason);
-        if (!authdir_mode_tests_reachability(options))
-          control_event_bootstrap_prob_or(
-                orconn_end_reason_to_control_string(reason),
-                reason, or_conn);
+        if (!authdir_mode_tests_reachability(options)) {
+          const char *warning = NULL;
+          if (reason == END_OR_CONN_REASON_TLS_ERROR && or_conn->tls) {
+            warning = tor_tls_get_last_error_msg(or_conn->tls);
+          }
+          if (warning == NULL) {
+            warning = orconn_end_reason_to_control_string(reason);
+          }
+          control_event_bootstrap_prob_or(warning, reason, or_conn);
+        }
       }
     }
   } else if (conn->hold_open_until_flushed) {
@@ -901,12 +909,21 @@ connection_or_check_canonicity(or_connection_t *conn, int started_here)
   }
 
   if (r) {
-    tor_addr_port_t node_ap;
-    node_get_pref_orport(r, &node_ap);
-    /* XXXX proposal 186 is making this more complex.  For now, a conn
-       is canonical when it uses the _preferred_ address. */
-    if (tor_addr_eq(&conn->base_.addr, &node_ap.addr))
+    tor_addr_port_t node_ipv4_ap;
+    tor_addr_port_t node_ipv6_ap;
+    node_get_prim_orport(r, &node_ipv4_ap);
+    node_get_pref_ipv6_orport(r, &node_ipv6_ap);
+    if (tor_addr_eq(&conn->base_.addr, &node_ipv4_ap.addr) ||
+        tor_addr_eq(&conn->base_.addr, &node_ipv6_ap.addr)) {
       connection_or_set_canonical(conn, 1);
+    }
+    /* Choose the correct canonical address and port. */
+    tor_addr_port_t *node_ap;
+    if (tor_addr_family(&conn->base_.addr) == AF_INET) {
+      node_ap = &node_ipv4_ap;
+    } else {
+      node_ap = &node_ipv6_ap;
+    }
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by
@@ -918,13 +935,14 @@ connection_or_check_canonicity(or_connection_t *conn, int started_here)
        * right IP address and port 56244, that wouldn't be as helpful. now we
        * log the "right" port too, so we know if it's moria1 or moria2.
        */
-      tor_addr_copy(&conn->base_.addr, &node_ap.addr);
-      conn->base_.port = node_ap.port;
+      /* See #33898 for a ticket that resolves this technical debt. */
+      tor_addr_copy(&conn->base_.addr, &node_ap->addr);
+      conn->base_.port = node_ap->port;
     }
     tor_free(conn->nickname);
     conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->base_.address);
-    conn->base_.address = tor_addr_to_str_dup(&node_ap.addr);
+    conn->base_.address = tor_addr_to_str_dup(&node_ap->addr);
   } else {
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
@@ -1680,7 +1698,8 @@ connection_tls_continue_handshake(or_connection_t *conn)
 
   switch (result) {
     CASE_TOR_TLS_ERROR_ANY:
-    log_info(LD_OR,"tls error [%s]. breaking connection.",
+      conn->tls_error = result;
+      log_info(LD_OR,"tls error [%s]. breaking connection.",
              tor_tls_err_to_string(result));
       return -1;
     case TOR_TLS_DONE:
@@ -1712,6 +1731,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
       log_debug(LD_OR,"wanted read");
       return 0;
     case TOR_TLS_CLOSE:
+      conn->tls_error = result;
       log_info(LD_OR,"tls closed. breaking connection.");
       return -1;
   }

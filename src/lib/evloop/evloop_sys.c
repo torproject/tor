@@ -41,6 +41,7 @@ subsys_evloop_shutdown(void)
 
 const struct subsys_fns_t sys_evloop = {
   .name = "evloop",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   .level = -20,
   .initialize = subsys_evloop_initialize,

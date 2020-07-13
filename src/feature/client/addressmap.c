@@ -902,7 +902,7 @@ get_random_virtual_addr(const virtual_addr_conf_t *conf, tor_addr_t *addr_out)
   }
 
   if (ipv6)
-    tor_addr_from_ipv6_bytes(addr_out, (char*) bytes);
+    tor_addr_from_ipv6_bytes(addr_out, bytes);
   else
     tor_addr_from_ipv4n(addr_out, get_uint32(bytes));
 

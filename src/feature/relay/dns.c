@@ -530,9 +530,9 @@ send_resolved_cell,(edge_connection_t *conn, uint8_t answer_type,
         break;
       } else {
         answer_type = RESOLVED_TYPE_ERROR;
-        /* fall through. */
+        /* We let this fall through and treat it as an error. */
       }
-      /* Falls through. */
+      FALLTHROUGH;
     case RESOLVED_TYPE_ERROR_TRANSIENT:
     case RESOLVED_TYPE_ERROR:
       {
@@ -1591,12 +1591,17 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
     } else if (type == DNS_IPv6_AAAA && count) {
       char answer_buf[TOR_ADDR_BUF_LEN];
       char *escaped_address;
+      const char *ip_str;
       struct in6_addr *addrs = addresses;
       tor_addr_from_in6(&addr, &addrs[0]);
-      tor_inet_ntop(AF_INET6, &addrs[0], answer_buf, sizeof(answer_buf));
+      ip_str = tor_inet_ntop(AF_INET6, &addrs[0], answer_buf,
+                             sizeof(answer_buf));
       escaped_address = esc_for_log(string_address);
 
-      if (answer_is_wildcarded(answer_buf)) {
+      if (BUG(ip_str == NULL)) {
+        log_warn(LD_EXIT, "tor_inet_ntop() failed!");
+        result = DNS_ERR_NOTEXIST;
+      } else if (answer_is_wildcarded(answer_buf)) {
         log_debug(LD_EXIT, "eventdns said that %s resolves to ISP-hijacked "
                   "address %s; treating as a failure.",
                   safe_str(escaped_address),
@@ -1863,6 +1868,7 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
                               void *addresses, void *arg)
 {
   (void)ttl;
+  const char *ip_str;
   ++n_wildcard_requests;
   if (result == DNS_ERR_NONE && count) {
     char *string_address = arg;
@@ -1872,16 +1878,22 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
       for (i = 0; i < count; ++i) {
         char answer_buf[INET_NTOA_BUF_LEN+1];
         struct in_addr in;
+        int ntoa_res;
         in.s_addr = addrs[i];
-        tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
-        wildcard_increment_answer(answer_buf);
+        ntoa_res = tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
+        tor_assert_nonfatal(ntoa_res >= 0);
+        if (ntoa_res > 0)
+          wildcard_increment_answer(answer_buf);
       }
     } else if (type == DNS_IPv6_AAAA) {
       const struct in6_addr *addrs = addresses;
       for (i = 0; i < count; ++i) {
         char answer_buf[TOR_ADDR_BUF_LEN+1];
-        tor_inet_ntop(AF_INET6, &addrs[i], answer_buf, sizeof(answer_buf));
-        wildcard_increment_answer(answer_buf);
+        ip_str = tor_inet_ntop(AF_INET6, &addrs[i], answer_buf,
+                               sizeof(answer_buf));
+        tor_assert_nonfatal(ip_str);
+        if (ip_str)
+          wildcard_increment_answer(answer_buf);
       }
     }
 

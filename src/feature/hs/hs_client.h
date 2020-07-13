@@ -45,7 +45,7 @@ typedef enum {
   REGISTER_SUCCESS_AND_DECRYPTED,
   /* We failed to register these credentials, because of a bad HS address. */
   REGISTER_FAIL_BAD_ADDRESS,
-  /* We failed to register these credentials, because of a bad HS address. */
+  /* We failed to store these credentials in a persistent file on disk. */
   REGISTER_FAIL_PERMANENT_STORAGE,
 } hs_client_register_auth_status_t;
 
@@ -110,6 +110,7 @@ int hs_client_send_introduce1(origin_circuit_t *intro_circ,
                               origin_circuit_t *rend_circ);
 
 void hs_client_circuit_has_opened(origin_circuit_t *circ);
+void hs_client_circuit_cleanup_on_close(const circuit_t *circ);
 void hs_client_circuit_cleanup_on_free(const circuit_t *circ);
 
 int hs_client_receive_rendezvous_acked(origin_circuit_t *circ,

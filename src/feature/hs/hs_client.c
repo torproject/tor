@@ -16,6 +16,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
+#include "core/or/extendinfo.h"
 #include "core/or/reasons.h"
 #include "feature/client/circpathbias.h"
 #include "feature/dirclient/dirclient.h"
@@ -704,8 +705,11 @@ send_introduce1(origin_circuit_t *intro_circ,
 }
 
 /** Using the introduction circuit circ, setup the authentication key of the
- * intro point this circuit has extended to. */
-static void
+ * intro point this circuit has extended to.
+ *
+ * Return 0 if everything went well, otherwise return -1 in the case of errors.
+ */
+static int
 setup_intro_circ_auth_key(origin_circuit_t *circ)
 {
   const hs_descriptor_t *desc;
@@ -719,27 +723,28 @@ setup_intro_circ_auth_key(origin_circuit_t *circ)
      * and the client descriptor cache that gets purged (NEWNYM) or the
      * cleaned up because it expired. Mark the circuit for close so a new
      * descriptor fetch can occur. */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-    goto end;
+    goto err;
   }
 
   /* We will go over every intro point and try to find which one is linked to
    * that circuit. Those lists are small so it's not that expensive. */
   ip = find_desc_intro_point_by_legacy_id(
                        circ->build_state->chosen_exit->identity_digest, desc);
-  if (ip) {
-    /* We got it, copy its authentication key to the identifier. */
-    ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
-                        &ip->auth_key_cert->signed_key);
-    goto end;
+  if (!ip) {
+    /* Reaching this point means we didn't find any intro point for this
+     * circuit which is not supposed to happen. */
+    log_info(LD_REND,"Could not match opened intro circuit with intro point.");
+    goto err;
   }
 
-  /* Reaching this point means we didn't find any intro point for this circuit
-   * which is not supposed to happen. */
-  tor_assert_nonfatal_unreached();
+  /* We got it, copy its authentication key to the identifier. */
+  ed25519_pubkey_copy(&circ->hs_ident->intro_auth_pk,
+                      &ip->auth_key_cert->signed_key);
+  return 0;
 
- end:
-  return;
+ err:
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+  return -1;
 }
 
 /** Called when an introduction circuit has opened. */
@@ -754,7 +759,9 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
   /* This is an introduction circuit so we'll attach the correct
    * authentication key to the circuit identifier so it can be identified
    * properly later on. */
-  setup_intro_circ_auth_key(circ);
+  if (setup_intro_circ_auth_key(circ) < 0) {
+    return;
+  }
 
   connection_ap_attach_pending(1);
 }
@@ -961,6 +968,87 @@ client_get_random_intro(const ed25519_public_key_t *service_pk)
   return ei;
 }
 
+/** Return true iff all intro points for the given service have timed out. */
+static bool
+intro_points_all_timed_out(const ed25519_public_key_t *service_pk)
+{
+  bool ret = false;
+
+  tor_assert(service_pk);
+
+  const hs_descriptor_t *desc = hs_cache_lookup_as_client(service_pk);
+  if (BUG(!desc)) {
+    /* We can't introduce without a descriptor so ending up here means somehow
+     * between the introduction failure and this, the cache entry was removed
+     * which shouldn't be possible in theory. */
+    goto end;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
+                          const hs_desc_intro_point_t *, ip) {
+    const hs_cache_intro_state_t *state =
+      hs_cache_client_intro_state_find(service_pk,
+                                       &ip->auth_key_cert->signed_key);
+    if (!state || !state->timed_out) {
+      /* No state or if this intro point has not timed out, we are done since
+       * clearly not all of them have timed out. */
+      goto end;
+    }
+  } SMARTLIST_FOREACH_END(ip);
+
+  /* Exiting the loop here means that all intro points we've looked at have
+   * timed out. Note that we can _not_ have a descriptor without intro points
+   * in the client cache. */
+  ret = true;
+
+ end:
+  return ret;
+}
+
+/** Called when a rendezvous circuit has timed out. Every stream attached to
+ * the circuit will get set with the SOCKS5_HS_REND_FAILED (0xF3) extended
+ * error code so if the connection to the rendezvous point ends up not
+ * working, this code could be sent back as a reason. */
+static void
+socks_mark_rend_circuit_timed_out(const origin_circuit_t *rend_circ)
+{
+  tor_assert(rend_circ);
+
+  /* For each entry connection attached to this rendezvous circuit, report
+   * the error. */
+  for (edge_connection_t *edge = rend_circ->p_streams; edge;
+       edge = edge->next_stream) {
+     entry_connection_t *entry = EDGE_TO_ENTRY_CONN(edge);
+     if (entry->socks_request) {
+       entry->socks_request->socks_extended_error_code =
+         SOCKS5_HS_REND_FAILED;
+     }
+  }
+}
+
+/** Called when introduction has failed meaning there is no more usable
+ * introduction points to be used (either NACKed or failed) for the given
+ * entry connection.
+ *
+ * This function only reports back the SOCKS5_HS_INTRO_FAILED (0xF2) code or
+ * SOCKS5_HS_INTRO_TIMEDOUT (0xF7) if all intros have timed out. The caller
+ * has to make sure to close the entry connections. */
+static void
+socks_mark_introduction_failed(entry_connection_t *conn,
+                                 const ed25519_public_key_t *identity_pk)
+{
+  socks5_reply_status_t code = SOCKS5_HS_INTRO_FAILED;
+
+  tor_assert(conn);
+  tor_assert(conn->socks_request);
+  tor_assert(identity_pk);
+
+  if (intro_points_all_timed_out(identity_pk)) {
+    code = SOCKS5_HS_INTRO_TIMEDOUT;
+  }
+  conn->socks_request->socks_extended_error_code = code;
+}
+
 /** For this introduction circuit, we'll look at if we have any usable
  * introduction point left for this service. If so, we'll use the circuit to
  * re-extend to a new intro point. Else, we'll close the circuit and its
@@ -978,8 +1066,10 @@ close_or_reextend_intro_circ(origin_circuit_t *intro_circ)
   tor_assert(intro_circ);
 
   desc = hs_cache_lookup_as_client(&intro_circ->hs_ident->identity_pk);
-  if (BUG(desc == NULL)) {
-    /* We can't continue without a descriptor. */
+  if (desc == NULL) {
+    /* We can't continue without a descriptor. This is possible if the cache
+     * was cleaned up between the intro point established and the reception of
+     * the introduce ack. */
     goto close;
   }
   /* We still have the descriptor, great! Let's try to see if we can
@@ -1313,6 +1403,10 @@ client_desc_has_arrived(const smartlist_t *entry_conns)
     if (!hs_client_any_intro_points_usable(identity_pk, desc)) {
       log_info(LD_REND, "Hidden service descriptor is unusable. "
                         "Closing streams.");
+      /* Report the extended socks error code that we were unable to introduce
+       * to the service. */
+      socks_mark_introduction_failed(entry_conn, identity_pk);
+
       connection_mark_unattached_ap(entry_conn,
                                     END_STREAM_REASON_RESOLVEFAILED);
       /* We are unable to use the descriptor so remove the directory request
@@ -1350,7 +1444,7 @@ client_desc_missing_bad_client_auth(const smartlist_t *entry_conns,
       /* We should not be called with another type of status. Recover by
        * sending a generic error. */
       tor_assert_nonfatal_unreached();
-      code = HS_DESC_DECODE_GENERIC_ERROR;
+      code = SOCKS5_GENERAL_ERROR;
     }
     entry_conn->socks_request->socks_extended_error_code = code;
     connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_MISC);
@@ -1762,6 +1856,37 @@ get_hs_client_auths_map(void)
 /* ========== */
 
 /** Called when a circuit was just cleaned up. This is done right before the
+ * circuit is marked for close. */
+void
+hs_client_circuit_cleanup_on_close(const circuit_t *circ)
+{
+  bool has_timed_out;
+
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  has_timed_out =
+    (circ->marked_for_close_orig_reason == END_CIRC_REASON_TIMEOUT);
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+  case CIRCUIT_PURPOSE_C_REND_READY:
+  case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
+  case CIRCUIT_PURPOSE_C_REND_JOINED:
+    /* Report extended SOCKS error code when a rendezvous circuit times out.
+     * This MUST be done on_close() because it is possible the entry
+     * connection would get closed before the circuit is freed and thus
+     * would fail to report the error code. */
+    if (has_timed_out) {
+      socks_mark_rend_circuit_timed_out(CONST_TO_ORIGIN_CIRCUIT(circ));
+    }
+    break;
+  default:
+    break;
+  }
+}
+
+/** Called when a circuit was just cleaned up. This is done right before the
  * circuit is freed. */
 void
 hs_client_circuit_cleanup_on_free(const circuit_t *circ)
@@ -2132,6 +2257,13 @@ parse_auth_file_content(const char *client_key_str)
                       "can't be decoded: %s", seckey_b32);
     goto err;
   }
+
+  if (fast_mem_is_zero((const char*)auth->enc_seckey.secret_key,
+                       sizeof(auth->enc_seckey.secret_key))) {
+    log_warn(LD_REND, "Client authorization private key can't be all-zeroes");
+    goto err;
+  }
+
   strncpy(auth->onion_address, onion_address, HS_SERVICE_ADDR_LEN_BASE32);
 
   /* We are reading this from the disk, so set the permanent flag anyway. */

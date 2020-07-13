@@ -117,6 +117,10 @@
 
 #endif /* defined(__i386__) || ... */
 
+#ifdef M_SYSCALL
+#define SYSCALL_NAME_DEBUGGING
+#endif
+
 /**Determines if at least one sandbox is active.*/
 static int sandbox_active = 0;
 /** Holds the parameter list configuration for the sandbox.*/
@@ -166,6 +170,7 @@ static int filter_nopar_gen[] = {
 #ifdef __NR_fstat64
     SCMP_SYS(fstat64),
 #endif
+    SCMP_SYS(fsync),
     SCMP_SYS(futex),
     SCMP_SYS(getdents),
     SCMP_SYS(getdents64),
@@ -265,10 +270,18 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(listen),
     SCMP_SYS(connect),
     SCMP_SYS(getsockname),
+#ifdef ENABLE_NSS
+#ifdef __NR_getpeername
+    SCMP_SYS(getpeername),
+#endif
+#endif
     SCMP_SYS(recvmsg),
     SCMP_SYS(recvfrom),
     SCMP_SYS(sendto),
     SCMP_SYS(unlink),
+#ifdef __NR_unlinkat
+    SCMP_SYS(unlinkat),
+#endif
     SCMP_SYS(poll)
 };
 
@@ -647,6 +660,15 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
         return rc;
     }
   }
+
+#ifdef ENABLE_NSS
+  rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
+    SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
+    SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM),
+    SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
+  if (rc)
+    return rc;
+#endif
 
   rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
       SCMP_CMP(0, SCMP_CMP_EQ, PF_UNIX),
@@ -1530,8 +1552,10 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   return (rc < 0 ? -rc : rc);
 }
 
+#ifdef SYSCALL_NAME_DEBUGGING
 #include "lib/sandbox/linux_syscalls.inc"
 
+/** Return a string containing the name of a given syscall (if we know it) */
 static const char *
 get_syscall_name(int syscall_num)
 {
@@ -1549,6 +1573,28 @@ get_syscall_name(int syscall_num)
   }
 }
 
+/** Return the syscall number from a ucontext_t that we got in a signal
+ * handler (if we know how to do that). */
+static int
+get_syscall_from_ucontext(const ucontext_t *ctx)
+{
+  return (int) ctx->uc_mcontext.M_SYSCALL;
+}
+#else
+static const char *
+get_syscall_name(int syscall_num)
+{
+  (void) syscall_num;
+  return "unknown";
+}
+static int
+get_syscall_from_ucontext(const ucontext_t *ctx)
+{
+  (void) ctx;
+  return -1;
+}
+#endif
+
 #ifdef USE_BACKTRACE
 #define MAX_DEPTH 256
 static void *syscall_cb_buf[MAX_DEPTH];
@@ -1564,7 +1610,6 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 {
   ucontext_t *ctx = (ucontext_t *) (void_context);
   const char *syscall_name;
-  int syscall;
 #ifdef USE_BACKTRACE
   size_t depth;
   int n_fds, i;
@@ -1579,7 +1624,7 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
   if (!ctx)
     return;
 
-  syscall = (int) ctx->uc_mcontext.M_SYSCALL;
+  int syscall = get_syscall_from_ucontext(ctx);
 
 #ifdef USE_BACKTRACE
   depth = backtrace(syscall_cb_buf, MAX_DEPTH);

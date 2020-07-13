@@ -95,4 +95,3 @@ was spend on the call.
   Start Tor the normal way via Orbot and collect the logs from your computer using
 
       $ adb logcat
-

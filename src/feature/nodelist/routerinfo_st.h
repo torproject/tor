@@ -26,9 +26,6 @@ struct routerinfo_t {
   uint16_t dir_port; /**< Port for HTTP directory connections. */
 
   /** A router's IPv6 address, if it has one. */
-  /* XXXXX187 Actually these should probably be part of a list of addresses,
-   * not just a special case.  Use abstractions to access these; don't do it
-   * directly. */
   tor_addr_t ipv6_addr;
   uint16_t ipv6_orport;
 

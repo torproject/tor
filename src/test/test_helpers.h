@@ -40,5 +40,10 @@ int helper_cleanup_pubsub(const struct testcase_t *, void *);
 
 extern const struct testcase_setup_t helper_pubsub_setup;
 
+origin_circuit_t *new_test_origin_circuit(bool has_opened,
+                                          struct timeval circ_start_time,
+                                          int path_len,
+                                          extend_info_t **ei_list);
+
 #endif /* !defined(TOR_TEST_HELPERS_H) */
 

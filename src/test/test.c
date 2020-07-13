@@ -1,5 +1,5 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
- * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+->a * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2020, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
@@ -44,6 +44,7 @@
 #include "lib/compress/compress.h"
 #include "app/config/config.h"
 #include "core/or/connection_edge.h"
+#include "core/or/extendinfo.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendparse.h"
@@ -564,7 +565,8 @@ test_rend_fns(void *arg)
   for (i = 0; i < 3; i++) {
     rend_intro_point_t *intro = tor_malloc_zero(sizeof(rend_intro_point_t));
     crypto_pk_t *okey = pk_generate(2 + i);
-    intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
+    intro->extend_info =
+      extend_info_new(NULL, NULL, NULL, NULL, NULL, NULL, 0);
     intro->extend_info->onion_key = okey;
     crypto_pk_get_digest(intro->extend_info->onion_key,
                          intro->extend_info->identity_digest);
@@ -573,9 +575,12 @@ test_rend_fns(void *arg)
     base16_encode(intro->extend_info->nickname + 1,
                   sizeof(intro->extend_info->nickname) - 1,
                   intro->extend_info->identity_digest, DIGEST_LEN);
+    tor_addr_t addr;
+    uint16_t port;
     /* Does not cover all IP addresses. */
-    tor_addr_from_ipv4h(&intro->extend_info->addr, crypto_rand_int(65536));
-    intro->extend_info->port = 1 + crypto_rand_int(65535);
+    tor_addr_from_ipv4h(&addr, crypto_rand_int(65536) + 1);
+    port = 1 + crypto_rand_int(65535);
+    extend_info_add_orport(intro->extend_info, &addr, port);
     intro->intro_key = crypto_pk_dup_key(pk2);
     smartlist_add(generated->intro_nodes, intro);
   }
@@ -613,8 +618,12 @@ test_rend_fns(void *arg)
     tt_mem_op(gen_info->identity_digest,OP_EQ, par_info->identity_digest,
                DIGEST_LEN);
     tt_str_op(gen_info->nickname,OP_EQ, par_info->nickname);
-    tt_assert(tor_addr_eq(&gen_info->addr, &par_info->addr));
-    tt_int_op(gen_info->port,OP_EQ, par_info->port);
+    const tor_addr_port_t *a1, *a2;
+    a1 = extend_info_get_orport(gen_info, AF_INET);
+    a2 = extend_info_get_orport(par_info, AF_INET);
+    tt_assert(a1 && a2);
+    tt_assert(tor_addr_eq(&a1->addr, &a2->addr));
+    tt_int_op(a2->port,OP_EQ, a2->port);
   }
 
   rend_service_descriptor_free(parsed);

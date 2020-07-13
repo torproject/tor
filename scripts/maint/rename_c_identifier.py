@@ -44,7 +44,8 @@ def is_c_file(fn):
        False
     """
     fn = os.path.split(fn)[1]
-    if fn.startswith("."):
+    # Avoid editor temporary files
+    if fn.startswith(".") or fn.startswith("#"):
         return False
     ext = os.path.splitext(fn)[1]
     return ext in {".c", ".h", ".i", ".inc"}
@@ -238,7 +239,7 @@ def main(argv):
         print("I require an even number of identifiers.", file=sys.stderr)
         return 1
 
-    if any_uncommitted_changes():
+    if args.commit and any_uncommitted_changes():
         print("Uncommitted changes found. Not running.", file=sys.stderr)
         return 1
 

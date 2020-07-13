@@ -173,11 +173,21 @@ typedef struct circpad_machine_conditions_t {
 
   /** Only apply the machine *if* the circuit's state matches any of
    *  the bits set in this bitmask. */
-  circpad_circuit_state_t state_mask;
+  circpad_circuit_state_t apply_state_mask;
 
   /** Only apply a machine *if* the circuit's purpose matches one
    *  of the bits set in this bitmask */
-  circpad_purpose_mask_t purpose_mask;
+  circpad_purpose_mask_t apply_purpose_mask;
+
+  /** Keep a machine if any of the circuits's state machine's match
+   *  the bits set in this bitmask, but don't apply new machines if
+   *  they match this mask. */
+  circpad_circuit_state_t keep_state_mask;
+
+  /** Keep a machine if any of the circuits's state machine's match
+   *  the bits set in this bitmask, but don't apply new machines if
+   *  they match this mask. */
+  circpad_purpose_mask_t keep_purpose_mask;
 
 } circpad_machine_conditions_t;
 
@@ -565,6 +575,13 @@ typedef struct circpad_machine_runtime_t {
   /** What state is this machine in? */
   circpad_statenum_t current_state;
 
+  /** Machine counter, for shutdown sync.
+   *
+   *  Set from circuit_t.padding_machine_ctr, which is incremented each
+   *  padding machine instantiation.
+   */
+  uint32_t machine_ctr;
+
   /**
    * True if we have scheduled a timer for padding.
    *
@@ -726,11 +743,13 @@ signed_error_t circpad_handle_padding_negotiated(struct circuit_t *circ,
 signed_error_t circpad_negotiate_padding(struct origin_circuit_t *circ,
                           circpad_machine_num_t machine,
                           uint8_t target_hopnum,
-                          uint8_t command);
+                          uint8_t command,
+                          uint32_t machine_ctr);
 bool circpad_padding_negotiated(struct circuit_t *circ,
                            circpad_machine_num_t machine,
                            uint8_t command,
-                           uint8_t response);
+                           uint8_t response,
+                           uint32_t machine_ctr);
 
 circpad_purpose_mask_t circpad_circ_purpose_to_mask(uint8_t circ_purpose);
 

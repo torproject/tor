@@ -1,0 +1,4 @@
+  o Minor feature (relay, address discovery):
+    - If Address is not found in torrc, attempt to learn our address with the
+      configured ORPort address if any. Closes ticket 33236.
+

@@ -1,0 +1,4 @@
+  o Minor features (statistics, ipv6):
+    - Relays now publish their IPv6 read and write statistics over time,
+      if statistics are enabled.
+      Closes ticket 33263.

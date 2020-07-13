@@ -35,6 +35,9 @@
 #define ED25519_FN(fn)         ED25519_FN2(fn,ED25519_SUFFIX)
 
 #include "orconfig.h"
+
+#include "lib/cc/compat_compiler.h"
+
 #include "ed25519-donna.h"
 #include "ed25519_donna_tor.h"
 #include "ed25519-randombytes.h"
@@ -366,4 +369,3 @@ ed25519_donna_scalarmult_with_group_order(unsigned char *out,
 }
 
 #include "test-internals.c"
-

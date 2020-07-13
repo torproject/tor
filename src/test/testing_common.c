@@ -18,6 +18,7 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/bwhist.h"
 #include "feature/stats/rephist.h"
 #include "lib/err/backtrace.h"
 #include "test/test.h"
@@ -333,6 +334,7 @@ main(int c, const char **v)
     return 1;
   }
   rep_hist_init();
+  bwhist_init();
   setup_directory();
   initialize_mainloop_events();
   options_init(options);

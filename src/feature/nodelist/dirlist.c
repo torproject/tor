@@ -27,6 +27,7 @@
 #include "core/or/or.h"
 
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/or/policies.h"
 #include "feature/control/control_events.h"
 #include "feature/dirauth/authmode.h"
@@ -249,6 +250,34 @@ MOCK_IMPL(int, router_digest_is_trusted_dir_type,
   return 0;
 }
 
+/** Return true iff the given address matches a trusted directory that matches
+ * at least one bit of type.
+ *
+ * If type is NO_DIRINFO or ALL_DIRINFO, any authority is matched. */
+bool
+router_addr_is_trusted_dir_type(const tor_addr_t *addr, dirinfo_type_t type)
+{
+  int family = tor_addr_family(addr);
+
+  if (!trusted_dir_servers) {
+    return false;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, dir_server_t *, ent) {
+    /* Ignore entries that don't match the given type. */
+    if (type != NO_DIRINFO && (type & ent->type) == 0) {
+      continue;
+    }
+    /* Match IPv4 or IPv6 address. */
+    if ((family == AF_INET && tor_addr_eq_ipv4h(addr, ent->addr)) ||
+        (family == AF_INET6 && tor_addr_eq(addr, &ent->ipv6_addr))) {
+      return true;
+    }
+  } SMARTLIST_FOREACH_END(ent);
+
+  return false;
+}
+
 /** Create a directory server at <b>address</b>:<b>port</b>, with OR identity
  * key <b>digest</b> which has DIGEST_LEN bytes.  If <b>address</b> is NULL,
  * add ourself.  If <b>is_authority</b>, this is a directory authority.  Return
@@ -293,7 +322,7 @@ dir_server_new(int is_authority,
   ent->is_authority = is_authority;
   ent->type = type;
   ent->weight = weight;
-  if (addrport_ipv6) {
+  if (addrport_ipv6 && tor_addr_port_is_valid_ap(addrport_ipv6, 0)) {
     if (tor_addr_family(&addrport_ipv6->addr) != AF_INET6) {
       log_warn(LD_BUG, "Hey, I got a non-ipv6 addr as addrport_ipv6.");
       tor_addr_make_unspec(&ent->ipv6_addr);
@@ -342,22 +371,25 @@ trusted_dir_server_new(const char *nickname, const char *address,
                        const char *digest, const char *v3_auth_digest,
                        dirinfo_type_t type, double weight)
 {
-  uint32_t a;
   tor_addr_t addr;
   char *hostname=NULL;
   dir_server_t *result;
 
   if (!address) { /* The address is us; we should guess. */
-    if (resolve_my_address(LOG_WARN, get_options(),
-                           &a, NULL, &hostname) < 0) {
+    if (!find_my_address(get_options(), AF_INET, LOG_WARN, &addr,
+                         NULL, &hostname)) {
       log_warn(LD_CONFIG,
                "Couldn't find a suitable address when adding ourself as a "
                "trusted directory server.");
       return NULL;
     }
     if (!hostname)
-      hostname = tor_dup_ip(a);
+      hostname = tor_addr_to_str_dup(&addr);
+
+    if (!hostname)
+      return NULL;
   } else {
+    uint32_t a;
     if (tor_lookup_hostname(address, &a)) {
       log_warn(LD_CONFIG,
                "Unable to lookup address for directory server at '%s'",
@@ -365,8 +397,8 @@ trusted_dir_server_new(const char *nickname, const char *address,
       return NULL;
     }
     hostname = tor_strdup(address);
+    tor_addr_from_ipv4h(&addr, a);
   }
-  tor_addr_from_ipv4h(&addr, a);
 
   result = dir_server_new(1, nickname, &addr, hostname,
                           dir_port, or_port,

@@ -1,9 +1,9 @@
-# Modules in Tor #
+# Modules in Tor
 
 This document describes the build system and coding standards when writing a
 module in Tor.
 
-## What is a module? ##
+## What is a module?
 
 In the context of the tor code base, a module is a subsystem that we can
 selectively enable or disable, at `configure` time.
@@ -27,7 +27,7 @@ because you would actually want to run one without the other.)
 To disable a module, pass `--disable-module-{dirauth,relay}` at configure
 time. All modules are currently enabled by default.
 
-## Build System ##
+## Build System
 
 The changes to the build system are pretty straightforward.
 
@@ -55,7 +55,7 @@ Finally, your module will automatically be included in the
 `TOR_MODULES_ALL_ENABLED` variable which is used to build the unit tests.
 They always build everything in order to test everything.
 
-## Coding ##
+## Coding
 
 As mentioned above, a module should be isolated in its own directories,
 suffixed with the name of the module, in `src/*/`.

@@ -1,0 +1,3 @@
+  o Minor bugfix (CI, Windows):
+    - Don't use stdio 64 bit printf format when compiling with MINGW on
+      Appveyor. Fixes bug 40026; bugfix on 0.3.5.5-alpha.

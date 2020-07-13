@@ -50,8 +50,15 @@ parse_private_key_from_control_port(const char *client_privkey_str,
 
   if (base64_decode((char*)privkey->secret_key, sizeof(privkey->secret_key),
                     key_blob,
-                   strlen(key_blob)) != sizeof(privkey->secret_key)) {
+                    strlen(key_blob)) != sizeof(privkey->secret_key)) {
     control_printf_endreply(conn, 512, "Failed to decode x25519 private key");
+    goto err;
+  }
+
+  if (fast_mem_is_zero((const char*)privkey->secret_key,
+                       sizeof(privkey->secret_key))) {
+    control_printf_endreply(conn, 553,
+                            "Invalid private key \"%s\"", key_blob);
     goto err;
   }
 
@@ -284,7 +291,8 @@ handle_control_onion_client_auth_view(control_connection_t *conn,
   if (argc >= 1) {
     hsaddress = smartlist_get(args->args, 0);
     if (!hs_address_is_valid(hsaddress)) {
-      control_printf_endreply(conn, 512, "Invalid v3 addr \"%s\"", hsaddress);
+      control_printf_endreply(conn, 512, "Invalid v3 address \"%s\"",
+                              hsaddress);
       goto err;
     }
   }

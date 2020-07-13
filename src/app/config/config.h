@@ -42,6 +42,8 @@ const char *escaped_safe_str(const char *address);
 void init_protocol_warning_severity_level(void);
 int get_protocol_warning_severity_level(void);
 
+#define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())
+
 /** An error from options_trial_assign() or options_init_from_string(). */
 typedef enum setopt_err_t {
   SETOPT_OK = 0,
@@ -53,17 +55,10 @@ typedef enum setopt_err_t {
 setopt_err_t options_trial_assign(struct config_line_t *list, unsigned flags,
                                   char **msg);
 
-uint32_t get_last_resolved_addr(void);
-void reset_last_resolved_addr(void);
-int resolve_my_address(int warn_severity, const or_options_t *options,
-                       uint32_t *addr_out,
-                       const char **method_out, char **hostname_out);
-MOCK_DECL(int, is_local_addr, (const tor_addr_t *addr));
 void options_init(or_options_t *options);
 
 #define OPTIONS_DUMP_MINIMAL 1
-#define OPTIONS_DUMP_DEFAULTS 2
-#define OPTIONS_DUMP_ALL 3
+#define OPTIONS_DUMP_ALL 2
 char *options_dump(const or_options_t *options, int how_to_dump);
 int options_init_from_torrc(int argc, char **argv);
 setopt_err_t options_init_from_string(const char *cf_defaults, const char *cf,
@@ -318,6 +313,10 @@ int options_validate(const or_options_t *old_options,
                      or_options_t *options,
                      char **msg);
 #endif
+
+STATIC int parse_ports(or_options_t *options, int validate_only,
+                       char **msg, int *n_ports_out,
+                       int *world_writable_control_socket);
 
 #endif /* defined(CONFIG_PRIVATE) */
 

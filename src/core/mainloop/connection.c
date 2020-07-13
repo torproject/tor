@@ -67,6 +67,7 @@
  */
 #define CHANNEL_OBJECT_PRIVATE
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
 #include "core/mainloop/netstatus.h"
@@ -104,7 +105,9 @@
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
+#include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
+#include "feature/stats/bwhist.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/geoip/geoip.h"
 
@@ -1514,10 +1517,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
   }
 
+  /* Force IPv4 and IPv6 traffic on for non-SOCKSPorts.
+   * Forcing options on isn't a good idea, see #32994 and #33607. */
   if (type != CONN_TYPE_AP_LISTENER) {
     lis_conn->entry_cfg.ipv4_traffic = 1;
     lis_conn->entry_cfg.ipv6_traffic = 1;
-    lis_conn->entry_cfg.prefer_ipv6 = 1;
   }
 
   if (connection_add(conn) < 0) { /* no space, forget it */
@@ -3342,9 +3346,9 @@ record_num_bytes_transferred_impl(connection_t *conn,
   /* Count bytes of answering direct and tunneled directory requests */
   if (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER) {
     if (num_read > 0)
-      rep_hist_note_dir_bytes_read(num_read, now);
+      bwhist_note_dir_bytes_read(num_read, now);
     if (num_written > 0)
-      rep_hist_note_dir_bytes_written(num_written, now);
+      bwhist_note_dir_bytes_written(num_written, now);
   }
 
   /* Linked connections and internal IPs aren't counted for statistics or
@@ -3359,15 +3363,16 @@ record_num_bytes_transferred_impl(connection_t *conn,
   if (!connection_is_rate_limited(conn))
     return;
 
+  const bool is_ipv6 = (conn->socket_family == AF_INET6);
   if (conn->type == CONN_TYPE_OR)
-    rep_hist_note_or_conn_bytes(conn->global_identifier, num_read,
-                                num_written, now);
+    conn_stats_note_or_conn_bytes(conn->global_identifier, num_read,
+                                  num_written, now, is_ipv6);
 
   if (num_read > 0) {
-    rep_hist_note_bytes_read(num_read, now);
+    bwhist_note_bytes_read(num_read, now, is_ipv6);
   }
   if (num_written > 0) {
-    rep_hist_note_bytes_written(num_written, now);
+    bwhist_note_bytes_written(num_written, now, is_ipv6);
   }
   if (conn->type == CONN_TYPE_EXIT)
     rep_hist_note_exit_bytes(conn->port, num_written, num_read);
@@ -3813,6 +3818,12 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
     at_most = connection_bucket_read_limit(conn, approx_time());
   }
 
+  /* Do not allow inbuf to grow past BUF_MAX_LEN. */
+  const ssize_t maximum = BUF_MAX_LEN - buf_datalen(conn->inbuf);
+  if (at_most > maximum) {
+    at_most = maximum;
+  }
+
   slack_in_buf = buf_slack(conn->inbuf);
  again:
   if ((size_t)at_most > slack_in_buf && slack_in_buf >= 1024) {
@@ -4197,6 +4208,7 @@ connection_handle_write_impl(connection_t *conn, int force)
     switch (result) {
       CASE_TOR_TLS_ERROR_ANY:
       case TOR_TLS_CLOSE:
+        or_conn->tls_error = result;
         log_info(LD_NET, result != TOR_TLS_CLOSE ?
                  "tls error. breaking.":"TLS connection closed on flush");
         /* Don't flush; connection is dead. */
@@ -4862,7 +4874,7 @@ client_check_address_changed(tor_socket_t sock)
     smartlist_clear(outgoing_addrs);
     smartlist_add(outgoing_addrs, tor_memdup(&out_addr, sizeof(tor_addr_t)));
     /* We'll need to resolve ourselves again. */
-    reset_last_resolved_addr();
+    resolved_addr_reset_last(AF_INET);
     /* Okay, now change our keys. */
     ip_address_changed(1);
   }

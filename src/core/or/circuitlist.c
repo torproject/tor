@@ -64,6 +64,8 @@
 #include "core/or/circuitstats.h"
 #include "core/or/circuitpadding.h"
 #include "core/or/crypt_path.h"
+#include "core/or/extendinfo.h"
+#include "core/or/trace_probes_circuit.h"
 #include "core/mainloop/connection.h"
 #include "app/config/config.h"
 #include "core/or/connection_edge.h"
@@ -89,6 +91,7 @@
 #include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/bwhist.h"
 #include "feature/stats/rephist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
@@ -564,6 +567,8 @@ circuit_set_state(circuit_t *circ, uint8_t state)
   }
   if (state == CIRCUIT_STATE_GUARD_WAIT || state == CIRCUIT_STATE_OPEN)
     tor_assert(!circ->n_chan_create_cell);
+
+  tor_trace(TR_SUBSYS(circuit), TR_EV(change_state), circ, circ->state, state);
   circ->state = state;
   if (CIRCUIT_IS_ORIGIN(circ))
     circuit_state_publish(circ);
@@ -846,7 +851,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
              "Unrecognized circuit purpose: %d",
              (int)purpose);
       tor_fragile_assert();
-      /* fall through */
+      FALLTHROUGH;
 
     case CIRCUIT_PURPOSE_OR:
     case CIRCUIT_PURPOSE_C_GENERAL:
@@ -1078,6 +1083,7 @@ origin_circuit_new(void)
               prediction_time_remaining);
   }
 
+  tor_trace(TR_SUBSYS(circuit), TR_EV(new_origin), circ);
   return circ;
 }
 
@@ -1100,6 +1106,7 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
 
   init_circuit_base(TO_CIRCUIT(circ));
 
+  tor_trace(TR_SUBSYS(circuit), TR_EV(new_or), circ);
   return circ;
 }
 
@@ -1251,6 +1258,10 @@ circuit_free_(circuit_t *circ)
 
   /* Clear all dangling handle references. */
   circuit_handles_clear(circ);
+
+  /* Tracepoint. Data within the circuit object is recorded so do this before
+   * the actual memory free. */
+  tor_trace(TR_SUBSYS(circuit), TR_EV(free), circ);
 
   if (should_free) {
     memwipe(mem, 0xAA, memlen); /* poison memory */
@@ -1943,8 +1954,8 @@ circuit_find_to_cannibalize(uint8_t purpose_to_produce, extend_info_t *info,
       }
 
       /* Ignore any circuits for which we can't use the Guard. It is possible
-       * that the Guard was removed from the samepled set after the circuit
-       * was created so avoid using it. */
+       * that the Guard was removed from the sampled set after the circuit
+       * was created, so avoid using it. */
       if (!entry_guard_could_succeed(circ->guard_state)) {
         goto next;
       }
@@ -2165,6 +2176,12 @@ circuit_synchronize_written_or_bandwidth(const circuit_t *c,
   else
     cell_size = CELL_MAX_NETWORK_SIZE;
 
+  /* If we know the channel, find out if it's IPv6. */
+  tor_addr_t remote_addr;
+  bool is_ipv6 = chan &&
+    channel_get_addr_if_possible(chan, &remote_addr) &&
+    tor_addr_family(&remote_addr) == AF_INET6;
+
   /* The missing written bytes are the cell counts times their cell
    * size plus TLS per cell overhead */
   written_sync = cells*(cell_size+TLS_PER_CELL_OVERHEAD);
@@ -2172,7 +2189,7 @@ circuit_synchronize_written_or_bandwidth(const circuit_t *c,
   /* Report the missing bytes as written, to avoid asymmetry.
    * We must use time() for consistency with rephist, even though on
    * some very old rare platforms, approx_time() may be faster. */
-  rep_hist_note_bytes_written(written_sync, time(NULL));
+  bwhist_note_bytes_written(written_sync, time(NULL), is_ipv6);
 }
 
 /** Mark <b>circ</b> to be closed next time we call
@@ -2274,6 +2291,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
            CIRCUIT_IS_ORIGIN(circ) ?
               TO_ORIGIN_CIRCUIT(circ)->global_identifier : 0,
            file, line, orig_reason, reason);
+  tor_trace(TR_SUBSYS(circuit), TR_EV(mark_for_close), circ);
 }
 
 /** Called immediately before freeing a marked circuit <b>circ</b> from

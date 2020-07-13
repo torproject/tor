@@ -291,7 +291,7 @@ class ChangeLog(object):
             self.curgraf.append(line)
 
         else:
-            assert "This" is "unreachable"  # noqa: F632
+            assert False  # This should be unreachable.
 
     def lint_head(self, line, head):
         m = re.match(r'^ *o ([^\(]+)((?:\([^\)]+\))?):', head)

@@ -56,6 +56,7 @@
 #define HS_DESCRIPTOR_PRIVATE
 
 #include "core/or/or.h"
+#include "app/config/config.h"
 #include "trunnel/ed25519_cert.h" /* Trunnel interface. */
 #include "feature/hs/hs_descriptor.h"
 #include "core/or/circuitbuild.h"
@@ -1283,11 +1284,20 @@ cert_is_valid(tor_cert_t *cert, uint8_t type, const char *log_obj_type)
     log_warn(LD_REND, "Signing key is NOT included for %s.", log_obj_type);
     goto err;
   }
+
   /* The following will not only check if the signature matches but also the
    * expiration date and overall validity. */
   if (tor_cert_checksig(cert, &cert->signing_key, approx_time()) < 0) {
-    log_warn(LD_REND, "Invalid signature for %s: %s", log_obj_type,
-             tor_cert_describe_signature_status(cert));
+    if (cert->cert_expired) {
+      char expiration_str[ISO_TIME_LEN+1];
+      format_iso_time(expiration_str, cert->valid_until);
+      log_fn(LOG_PROTOCOL_WARN, LD_REND, "Invalid signature for %s: %s (%s)",
+             log_obj_type, tor_cert_describe_signature_status(cert),
+             expiration_str);
+    } else {
+      log_warn(LD_REND, "Invalid signature for %s: %s",
+               log_obj_type, tor_cert_describe_signature_status(cert));
+    }
     goto err;
   }
 
@@ -1419,10 +1429,14 @@ decrypt_descriptor_cookie(const hs_descriptor_t *desc,
   tor_assert(!fast_mem_is_zero(
         (char *) &desc->superencrypted_data.auth_ephemeral_pubkey,
         sizeof(desc->superencrypted_data.auth_ephemeral_pubkey)));
-  tor_assert(!fast_mem_is_zero((char *) client_auth_sk,
-                              sizeof(*client_auth_sk)));
   tor_assert(!fast_mem_is_zero((char *) desc->subcredential.subcred,
                                DIGEST256_LEN));
+
+  /* Catch potential code-flow cases of an unitialized private key sneaking
+   * into this function. */
+  if (BUG(fast_mem_is_zero((char *)client_auth_sk, sizeof(*client_auth_sk)))) {
+    goto done;
+  }
 
   /* Get the KEYS component to derive the CLIENT-ID and COOKIE-KEY. */
   keystream_length =

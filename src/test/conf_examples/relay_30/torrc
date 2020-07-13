@@ -1,0 +1,3 @@
+# Relay tests
+# default (IPv4) ORPort auto
+ORPort auto

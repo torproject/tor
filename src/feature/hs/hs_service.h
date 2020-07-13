@@ -279,6 +279,14 @@ typedef struct hs_service_state_t {
   /** When is the next time we should rotate our descriptors. This is has to be
    * done at the start time of the next SRV protocol run. */
   time_t next_rotation_time;
+
+  /* If this is an onionbalance instance, this is an array of subcredentials
+   * that should be used when decrypting an INTRO2 cell. If this is not an
+   * onionbalance instance, this is NULL.
+   * See [ONIONBALANCE] section in rend-spec-v3.txt for more details . */
+  hs_subcredential_t *ob_subcreds;
+  /* Number of OB subcredentials */
+  size_t n_ob_subcreds;
 } hs_service_state_t;
 
 /** Representation of a service running on this tor instance. */
@@ -304,14 +312,6 @@ typedef struct hs_service_t {
   hs_service_descriptor_t *desc_current;
   /** Next descriptor. */
   hs_service_descriptor_t *desc_next;
-
-  /* If this is an onionbalance instance, this is an array of subcredentials
-   * that should be used when decrypting an INTRO2 cell. If this is not an
-   * onionbalance instance, this is NULL.
-   * See [ONIONBALANCE] section in rend-spec-v3.txt for more details . */
-  hs_subcredential_t *ob_subcreds;
-  /* Number of OB subcredentials */
-  size_t n_ob_subcreds;
 } hs_service_t;
 
 /** For the service global hash map, we define a specific type for it which
@@ -372,6 +372,8 @@ void hs_service_upload_desc_to_dir(const char *encoded_desc,
 
 hs_circuit_id_protocol_t
 hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
+
+void hs_service_dump_stats(int severity);
 
 #ifdef HS_SERVICE_PRIVATE
 

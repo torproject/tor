@@ -14,6 +14,7 @@
 #include "core/mainloop/connection.h"
 #include "core/or/connection_or.h"
 #include "app/config/config.h"
+#include "app/config/resolve_addr.h"
 /* For init/free stuff */
 #include "core/or/scheduler.h"
 #include "lib/tls/tortls.h"
@@ -37,13 +38,13 @@ static or_connection_t * tlschan_connection_or_connect_mock(
     const char *digest,
     const ed25519_public_key_t *ed_id,
     channel_tls_t *tlschan);
-static int tlschan_is_local_addr_mock(const tor_addr_t *addr);
+static bool tlschan_resolved_addr_is_local_mock(const tor_addr_t *addr);
 
 /* Fake close method */
 static void tlschan_fake_close_method(channel_t *chan);
 
 /* Flags controlling behavior of channeltls unit test mocks */
-static int tlschan_local = 0;
+static bool tlschan_local = false;
 static const buf_t * tlschan_buf_datalen_mock_target = NULL;
 static size_t tlschan_buf_datalen_mock_size = 0;
 
@@ -66,9 +67,9 @@ test_channeltls_create(void *arg)
   test_addr.addr.in_addr.s_addr = htonl(0x01020304);
 
   /* For this test we always want the address to be treated as non-local */
-  tlschan_local = 0;
-  /* Install is_local_addr() mock */
-  MOCK(is_local_addr, tlschan_is_local_addr_mock);
+  tlschan_local = false;
+  /* Install is_local_to_resolve_addr() mock */
+  MOCK(is_local_to_resolve_addr, tlschan_resolved_addr_is_local_mock);
 
   /* Install mock for connection_or_connect() */
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
@@ -91,7 +92,7 @@ test_channeltls_create(void *arg)
   }
 
   UNMOCK(connection_or_connect);
-  UNMOCK(is_local_addr);
+  UNMOCK(is_local_to_resolve_addr);
 
   return;
 }
@@ -115,9 +116,9 @@ test_channeltls_num_bytes_queued(void *arg)
   test_addr.addr.in_addr.s_addr = htonl(0x01020304);
 
   /* For this test we always want the address to be treated as non-local */
-  tlschan_local = 0;
-  /* Install is_local_addr() mock */
-  MOCK(is_local_addr, tlschan_is_local_addr_mock);
+  tlschan_local = false;
+  /* Install is_local_to_resolve_addr() mock */
+  MOCK(is_local_to_resolve_addr, tlschan_resolved_addr_is_local_mock);
 
   /* Install mock for connection_or_connect() */
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
@@ -177,7 +178,7 @@ test_channeltls_num_bytes_queued(void *arg)
   }
 
   UNMOCK(connection_or_connect);
-  UNMOCK(is_local_addr);
+  UNMOCK(is_local_to_resolve_addr);
 
   return;
 }
@@ -200,9 +201,9 @@ test_channeltls_overhead_estimate(void *arg)
   test_addr.addr.in_addr.s_addr = htonl(0x01020304);
 
   /* For this test we always want the address to be treated as non-local */
-  tlschan_local = 0;
-  /* Install is_local_addr() mock */
-  MOCK(is_local_addr, tlschan_is_local_addr_mock);
+  tlschan_local = false;
+  /* Install is_local_to_resolve_addr() mock */
+  MOCK(is_local_to_resolve_addr, tlschan_resolved_addr_is_local_mock);
 
   /* Install mock for connection_or_connect() */
   MOCK(connection_or_connect, tlschan_connection_or_connect_mock);
@@ -251,7 +252,7 @@ test_channeltls_overhead_estimate(void *arg)
   }
 
   UNMOCK(connection_or_connect);
-  UNMOCK(is_local_addr);
+  UNMOCK(is_local_to_resolve_addr);
 
   return;
 }
@@ -320,8 +321,8 @@ tlschan_fake_close_method(channel_t *chan)
   return;
 }
 
-static int
-tlschan_is_local_addr_mock(const tor_addr_t *addr)
+static bool
+tlschan_resolved_addr_is_local_mock(const tor_addr_t *addr)
 {
   tt_ptr_op(addr, OP_NE, NULL);
 

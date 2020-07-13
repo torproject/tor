@@ -587,9 +587,8 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
       strlcpy(req->address, hostname, sizeof(req->address));
     } break;
     case 4: {
-      const char *ipv6 =
-        (const char *)socks5_client_request_getarray_dest_addr_ipv6(
-          trunnel_req);
+      const uint8_t *ipv6 =
+          socks5_client_request_getarray_dest_addr_ipv6(trunnel_req);
       tor_addr_from_ipv6_bytes(&destaddr, ipv6);
 
       tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
@@ -861,7 +860,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       case SOCKS_RESULT_TRUNCATED:
         if (datalen == n_pullup)
           return 0;
-        /* FALLTHRU */
+        FALLTHROUGH;
       case SOCKS_RESULT_MORE_EXPECTED:
         res = 0;
         break;
@@ -967,7 +966,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       strlcpy((char*)req->reply, SOCKS_PROXY_IS_NOT_AN_HTTP_PROXY_MSG,
               MAX_SOCKS_REPLY_LEN);
       req->replylen = strlen((char*)req->reply)+1;
-      /* fall through */
+      FALLTHROUGH;
     default: /* version is not socks4 or socks5 */
       log_warn(LD_APP,
                "Socks version %d not recognized. (This port is not an "
@@ -1072,7 +1071,10 @@ parse_socks_client(const uint8_t *data, size_t datalen,
           log_info(LD_NET, "SOCKS 5 client: need authentication.");
           *drain_out = -1;
           return 2;
-        /* fall through */
+        default:
+          /* This wasn't supposed to be exhaustive; there are other
+           * authentication methods too. */
+          ;
       }
 
       *reason = tor_strdup("server doesn't support any of our available "

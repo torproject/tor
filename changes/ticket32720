@@ -1,4 +1,0 @@
-  o Minor features (directory):
-    - Remember the number of bytes we have downloaded for each directory
-      purpose while bootstrapping, and while fully bootstrapped. Log this
-      information as part of the heartbeat message. Closes ticket 32720.

@@ -44,6 +44,13 @@ CONF_VAR(AuthDirSharedRandomness, BOOL, 0, "1")
 /* NOTE: remove this option someday. */
 CONF_VAR(AuthDirTestEd25519LinkKeys, BOOL, 0, "1")
 
+/**
+ * Bool (default 1): As an authority, should we launch tests for
+ * reachability, and use those results to vote on "Running"?  If 0,
+ * we assume that every relay is Runnning.
+ **/
+CONF_VAR(AuthDirTestReachability, BOOL, 0, "1")
+
 /** Authority only: key=value pairs that we add to our networkstatus
  * consensus vote on the 'params' line. */
 CONF_VAR(ConsensusParams, STRING, 0, NULL)

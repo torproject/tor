@@ -32,6 +32,8 @@ noinst_HEADERS +=					\
 	src/feature/hs/hs_ident.h			\
 	src/feature/hs/hs_intropoint.h			\
 	src/feature/hs/hs_ob.h				\
+	src/feature/hs/hs_opts_st.h			\
+	src/feature/hs/hs_options.inc			\
 	src/feature/hs/hs_service.h			\
 	src/feature/hs/hs_stats.h			\
 	src/feature/hs/hsdir_index_st.h

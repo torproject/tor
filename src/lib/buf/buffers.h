@@ -29,6 +29,9 @@ void buf_free_(buf_t *buf);
 void buf_clear(buf_t *buf);
 buf_t *buf_copy(const buf_t *buf);
 
+/** Maximum bytes in a buffer, inclusive. */
+#define BUF_MAX_LEN (INT_MAX - 1)
+
 MOCK_DECL(size_t, buf_datalen, (const buf_t *buf));
 size_t buf_allocation(const buf_t *buf);
 size_t buf_slack(const buf_t *buf);

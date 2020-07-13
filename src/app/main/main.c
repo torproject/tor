@@ -53,12 +53,14 @@
 #include "feature/rend/rendcache.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/bwhist.h"
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
 #include "lib/buf/buffers.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/net/resolve.h"
+#include "lib/trace/trace.h"
 
 #include "lib/process/waitpid.h"
 #include "lib/pubsub/pubsub_build.h"
@@ -294,6 +296,19 @@ process_signal(int sig)
   }
 }
 
+#ifdef _WIN32
+/** Activate SIGINT on reciving a control signal in console */
+static BOOL WINAPI
+process_win32_console_ctrl(DWORD ctrl_type)
+{
+  /* Ignore type of the ctrl signal */
+  (void) ctrl_type;
+
+  activate_signal(SIGINT);
+  return TRUE;
+}
+#endif
+
 /**
  * Write current memory usage information to the log.
  */
@@ -414,6 +429,7 @@ dumpstats(int severity)
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
+  hs_service_dump_stats(severity);
 }
 
 #ifdef _WIN32
@@ -496,6 +512,13 @@ handle_signals(void)
                       &signal_handlers[i].signal_value);
     }
   }
+
+#ifdef _WIN32
+    /* Windows lacks traditional POSIX signals but WinAPI provides a function
+     * to handle control signals like Ctrl+C in the console, we can use this to
+     * simulate the SIGINT signal */
+    if (enabled) SetConsoleCtrlHandler(process_win32_console_ctrl, TRUE);
+#endif
 }
 
 /* Cause the signal handler for signal_num to be called in the event loop. */
@@ -528,6 +551,7 @@ tor_init(int argc, char *argv[])
 
   /* Initialize the history structures. */
   rep_hist_init();
+  bwhist_init();
   /* Initialize the service cache. */
   rend_cache_init();
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
@@ -580,6 +604,9 @@ tor_init(int argc, char *argv[])
 #ifdef HAVE_RUST
   rust_log_welcome_string();
 #endif /* defined(HAVE_RUST) */
+
+  /* Warn _if_ the tracing subsystem is built in. */
+  tracing_log_warning();
 
   int init_rv = options_init_from_torrc(argc,argv);
   if (init_rv < 0) {
@@ -754,12 +781,14 @@ do_dump_config(void)
   if (!strcmp(arg, "short")) {
     how = OPTIONS_DUMP_MINIMAL;
   } else if (!strcmp(arg, "non-builtin")) {
-    how = OPTIONS_DUMP_DEFAULTS;
+    // Deprecated since 0.4.5.1-alpha.
+    fprintf(stderr, "'non-builtin' is deprecated; use 'short' instead.\n");
+    how = OPTIONS_DUMP_MINIMAL;
   } else if (!strcmp(arg, "full")) {
     how = OPTIONS_DUMP_ALL;
   } else {
     fprintf(stderr, "No valid argument to --dump-config found!\n");
-    fprintf(stderr, "Please select 'short', 'non-builtin', or 'full'.\n");
+    fprintf(stderr, "Please select 'short' or 'full'.\n");
 
     return -1;
   }
@@ -774,8 +803,7 @@ do_dump_config(void)
 static void
 init_addrinfo(void)
 {
-  if (! server_mode(get_options()) ||
-      (get_options()->Address && strlen(get_options()->Address) > 0)) {
+  if (! server_mode(get_options()) || get_options()->Address) {
     /* We don't need to seed our own hostname, because we won't be calling
      * resolve_my_address on it.
      */
@@ -1033,12 +1061,14 @@ sandbox_init_filter(void)
 
     OPEN_DATADIR("approved-routers");
     OPEN_DATADIR_SUFFIX("fingerprint", ".tmp");
+    OPEN_DATADIR_SUFFIX("fingerprint-ed25519", ".tmp");
     OPEN_DATADIR_SUFFIX("hashed-fingerprint", ".tmp");
     OPEN_DATADIR_SUFFIX("router-stability", ".tmp");
 
     OPEN("/etc/resolv.conf");
 
     RENAME_SUFFIX("fingerprint", ".tmp");
+    RENAME_SUFFIX("fingerprint-ed25519", ".tmp");
     RENAME_KEYDIR_SUFFIX("secret_onion_key_ntor", ".tmp");
 
     RENAME_KEYDIR_SUFFIX("secret_id_key", ".tmp");

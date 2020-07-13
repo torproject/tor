@@ -220,7 +220,8 @@ struct curve25519_public_key_t;
 #define END_OR_CONN_REASON_IO_ERROR       7 /* read/write error */
 #define END_OR_CONN_REASON_RESOURCE_LIMIT 8 /* sockets, buffers, etc */
 #define END_OR_CONN_REASON_PT_MISSING     9 /* PT failed or not available */
-#define END_OR_CONN_REASON_MISC           10
+#define END_OR_CONN_REASON_TLS_ERROR      10 /* Problem in TLS protocol */
+#define END_OR_CONN_REASON_MISC           11
 
 /* Reasons why we (or a remote OR) might close a stream. See tor-spec.txt for
  * documentation of these.  The values must match. */
@@ -815,6 +816,18 @@ typedef struct protover_summary_flags_t {
    * accept EXTEND2 cells. This requires Relay=2. */
   unsigned int supports_extend2_cells:1;
 
+  /** True iff this router has a version or protocol list that allows it to
+   * accept IPv6 connections. This requires Relay=2 or Relay=3. */
+  unsigned int supports_accepting_ipv6_extends:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * initiate IPv6 connections. This requires Relay=3. */
+  unsigned int supports_initiating_ipv6_extends:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * consider IPv6 connections canonical. This requires Relay=3. */
+  unsigned int supports_canonical_ipv6_conns:1;
+
   /** True iff this router has a protocol list that allows it to negotiate
    * ed25519 identity keys on a link handshake with us. This
    * requires LinkAuth=3. */
@@ -830,6 +843,10 @@ typedef struct protover_summary_flags_t {
    * the v3 protocol detailed in proposal 224. This requires HSIntro=4. */
   unsigned int supports_ed25519_hs_intro : 1;
 
+  /** True iff this router has a protocol list that allows it to support the
+   * ESTABLISH_INTRO DoS cell extension. Requires HSIntro=5. */
+  unsigned int supports_establish_intro_dos_extension : 1;
+
   /** True iff this router has a protocol list that allows it to be an hidden
    * service directory supporting version 3 as seen in proposal 224. This
    * requires HSDir=2. */
@@ -841,12 +858,9 @@ typedef struct protover_summary_flags_t {
   unsigned int supports_v3_rendezvous_point: 1;
 
   /** True iff this router has a protocol list that allows clients to
-   * negotiate hs circuit setup padding. Requires Padding>=2. */
+   * negotiate hs circuit setup padding. Requires Padding=2. */
   unsigned int supports_hs_setup_padding : 1;
 
-  /** True iff this router has a protocol list that allows it to support the
-   * ESTABLISH_INTRO DoS cell extension. Requires HSIntro>=5. */
-  unsigned int supports_establish_intro_dos_extension : 1;
 } protover_summary_flags_t;
 
 typedef struct routerinfo_t routerinfo_t;
@@ -994,8 +1008,6 @@ typedef struct routerset_t routerset_t;
 #define CFG_AUTO_PORT 0xc4005e
 
 typedef struct or_options_t or_options_t;
-
-#define LOG_PROTOCOL_WARN (get_protocol_warning_severity_level())
 
 typedef struct or_state_t or_state_t;
 

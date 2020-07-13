@@ -26,6 +26,7 @@ static const config_format_t dirauth_options_stub_fmt = {
 
 const struct subsys_fns_t sys_dirauth = {
   .name = "dirauth",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = false,
   .level = DIRAUTH_SUBSYS_LEVEL,
 

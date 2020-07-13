@@ -42,6 +42,11 @@ typedef struct subsys_fns_t {
   const char *name;
 
   /**
+   * The file in which the subsystem object is declared. Used for debugging.
+   **/
+  const char *location;
+
+  /**
    * Whether this subsystem is supported -- that is, whether it is compiled
    * into Tor.  For most subsystems, this should be true.
    **/
@@ -186,6 +191,14 @@ typedef struct subsys_fns_t {
    **/
   int (*flush_state)(void *);
 } subsys_fns_t;
+
+#ifndef COCCI
+/**
+ * Macro to declare a subsystem's location.
+ **/
+#define SUBSYS_DECLARE_LOCATION() \
+  .location = __FILE__
+#endif /* !defined(COCCI) */
 
 /**
  * Lowest allowed subsystem level.

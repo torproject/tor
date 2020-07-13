@@ -223,6 +223,8 @@ void control_event_hs_descriptor_content(const char *onion_address,
                                          const char *desc_id,
                                          const char *hsdir_fp,
                                          const char *content);
+void cbt_control_event_buildtimeout_set(const circuit_build_times_t *cbt,
+                                        buildtimeout_set_event_t type);
 
 void control_events_free_all(void);
 

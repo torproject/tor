@@ -97,11 +97,10 @@ The following options in this section are only recognized on the
 [[opt-verify-config]] **`--verify-config`**::
     Verify whether the configuration file is valid.
 
-[[opt-dump-config]] **`--dump-config`** **`short`**|**`full`**|**`non-builtin`**::
-    Write a complete list of Tor's configured options to standard output.
+[[opt-dump-config]] **`--dump-config`** **`short`**|**`full`**::
+    Write a list of Tor's configured options to standard output.
     When the `short` flag is selected, only write the options that
-    are different from their default values.  When `non-builtin` is selected,
-    write options that are not zero or the empty string.
+    are different from their default values
     When `full` is selected, write every option.
 
 [[opt-serviceinstall]] **`--service install`** [**`--options`** __command-line options__]::
@@ -186,6 +185,13 @@ The following options in this section are only recognized on the
     ISO-8601 format.  For example, the output sent to stdout will be
     of the form: "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
 
+[[opt-dbg]] **--dbg-**...::
+    Tor may support other options beginning with the string "dbg". These
+    are intended for use by developers to debug and test Tor. They are
+    not supported or guaranteed to be stable, and you should probably
+    not use them.
+
+
 [[conf-format]]
 == THE CONFIGURATION FILE FORMAT
 
@@ -204,6 +210,8 @@ file will be parsed as if they were written where the %include option is. If
 the path is a folder, all files on that folder will be parsed following lexical
 order. Files starting with a dot are ignored. Files on subfolders are ignored.
 The %include option can be used recursively.
+New configuration files or directories cannot be added to already running Tor
+instance if **Sandbox** is enabled.
 
 By default, an option on the command line overrides an option found in the
 configuration file, and an option in a configuration file overrides one in
@@ -525,9 +533,9 @@ forward slash (/) in the configuration file and on the command line.
 
 [[ExtendByEd25519ID]] **ExtendByEd25519ID** **0**|**1**|**auto**::
     If this option is set to 1, we always try to include a relay's Ed25519 ID
-    when telling the proceeding relay in a circuit to extend to it.
+    when telling the preceding relay in a circuit to extend to it.
     If this option is set to 0, we never include Ed25519 IDs when extending
-    circuits.  If the option is set to "default", we obey a
+    circuits.  If the option is set to "auto", we obey a
     parameter in the consensus document. (Default: auto)
 
 [[ExtORPort]] **ExtORPort** ['address'**:**]{empty}__port__|**auto**::
@@ -847,6 +855,10 @@ forward slash (/) in the configuration file and on the command line.
     Tor must remain in client or server mode (some changes to **ClientOnly**
     and **ORPort** are not allowed). Currently, if **Sandbox** is 1,
     **ControlPort** command "GETINFO address" will not work. +
+     +
+    When using %include in the tor configuration files, reloading the tor
+    configuration is not supported after adding new configuration files or
+    directories. +
      +
     (Default: 0)
 
@@ -1479,16 +1491,14 @@ The following options are useful only for clients (that is, if
     Other recognized __flags__ for a SocksPort are:
     **NoIPv4Traffic**;;
         Tell exits to not connect to IPv4 addresses in response to SOCKS
-        requests on this connection. (Allowing IPv4 is the default.)
-    **NoIPv6Traffic**;;
-        Tell exits to not connect to IPv6 addresses in response to SOCKS
-        requests on this connection. This option is only relevant when SOCKS5
-        is in use, because SOCKS4 can't handle IPv6.  (Allowing IPv6 is the
-        default.)
-    **NoPreferIPv6**;;
+        requests on this connection.
+    **IPv6Traffic**;;
+        Tell exits to allow IPv6 addresses in response to SOCKS requests on
+        this connection, so long as SOCKS5 is in use.  (SOCKS4 can't handle
+        IPv6.)
+    **PreferIPv6**;;
         Tells exits that, if a host has both an IPv4 and an IPv6 address,
-        we would prefer to connect to it via IPv4. (IPv6 is the default in
-        recent versions of Tor.)
+        we would prefer to connect to it via IPv6. (IPv4 is the default.)
     **NoDNSRequest**;;
         Do not ask exits to resolve DNS addresses in SOCKS5 requests. Tor will
         connect to IPv4 addresses, IPv6 addresses (if IPv6Traffic is set) and
@@ -1556,15 +1566,13 @@ The following options are useful only for clients (that is, if
 
           X'F2' Onion Service Introduction Failed
 
-            Client failed to introduce to the service meaning the descriptor
-            was found but the service is not connected anymore to the
-            introduction point. The service has likely changed its descriptor
-            or is not running. (v3 only)
+            All introduction attempts failed either due to a combination of
+            NACK by the intro point or time out. (v3 only)
 
           X'F3' Onion Service Rendezvous Failed
 
-            Client failed to rendezvous with the service which means that the
-            client is unable to finalize the connection. (v3 only)
+            Every rendezvous circuit has timed out and thus the client is
+            unable to rendezvous with the service. (v3 only)
 
           X'F4' Onion Service Missing Client Authorization
 
@@ -1584,6 +1592,11 @@ The following options are useful only for clients (that is, if
             The given .onion address is invalid. In one of these cases this
             error is returned: address checksum doesn't match, ed25519 public
             key is invalid or the encoding is invalid. (v3 only)
+
+          X'F7' Onion Service Introduction Timed Out
+
+            Similar to X'F2' code but in this case, all introduction attempts
+            have failed due to a time out. (v3 only)
 
 // Anchor only for formatting, not visible in the man page.
 [[SocksPortFlagsMisc]]::
@@ -2022,12 +2035,12 @@ different from other Tor clients:
     A list of identity fingerprints and country codes of nodes
     to use for "middle" hops in your normal circuits.
     Normal circuits include all circuits except for direct connections
-    to directory servers. Middle hops are all hops other than exit and entry. +
+    to directory servers. Middle hops are all hops other than exit and entry.
 +
     This is an **experimental** feature that is meant to be used by researchers
     and developers to test new features in the Tor network safely. Using it
-    without care will strongly influence your anonymity. This feature might get
-    removed in the future.
+    without care will strongly influence your anonymity. Other tor features may
+    not work with MiddleNodes. This feature might get removed in the future.
 +
     The HSLayer2Node and HSLayer3Node options override this option for onion
     service circuits, if they are set. The vanguards addon will read this
@@ -2128,9 +2141,12 @@ is non-zero):
 [[AssumeReachable]] **AssumeReachable** **0**|**1**::
     This option is used when bootstrapping a new Tor network. If set to 1,
     don't do self-reachability testing; just upload your server descriptor
-    immediately. If **AuthoritativeDirectory** is also set, this option
-    instructs the dirserver to bypass remote reachability testing too and list
-    all connected servers as running.
+    immediately. (Default: 0)
+
+[[AssumeReachableIPv6]] **AssumeReachableIPv6** **0**|**1**|**auto**::
+    Like **AssumeReachable**, but affects only the relay's own IPv6 ORPort.
+    If this value is set to "auto", then Tor will look at **AssumeReachable**
+    instead. (Default: auto)
 
 [[BridgeRelay]] **BridgeRelay** **0**|**1**::
     Sets the relay to act as a "bridge" with respect to relaying connections
@@ -2990,6 +3006,12 @@ on the public Tor network.
     if there is some major bug in Ed25519 link authentication that causes us
     to label all the relays as not Running.  (Default: 1)
 
+[[AuthDirTestReachability]] **AuthDirTestReachability** **0**|**1**::
+    Authoritative directories only. If set to 1, then we periodically
+    check every relay we know about to see whether it is running.
+    If set to 0, we vote Running for every relay, and don't perform
+    these tests. (Default: 1)
+
 [[BridgePassword]] **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to
     serve all requested bridge information. Used by the (only partially
@@ -3021,8 +3043,8 @@ on the public Tor network.
     unreliable. (Default: 500)
 
 [[MinUptimeHidServDirectoryV2]] **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Minimum uptime of a v2 hidden service directory to be accepted as such by
-    authoritative directories. (Default: 25 hours)
+    Minimum uptime of a relay to be accepted as a hidden service directory
+    by directory authorities. (Default: 96 hours)
 
 [[RecommendedClientVersions]] **RecommendedClientVersions** __STRING__::
     STRING is a comma-separated list of Tor versions currently believed to be
@@ -3045,7 +3067,7 @@ on the public Tor network.
     multiple times: the values from multiple lines are spliced together. When
     this is set then **VersioningAuthoritativeDirectory** should be set too.
 
-[[V3AuthDistDelay]] **V3AuthDistDelay** __N__ **minutes**|**hours**::
+[[V3AuthDistDelay]] **V3AuthDistDelay** __N__ **seconds**|**minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred  delay
     between publishing its consensus and signature and assuming  it has all the
     signatures from all the other authorities. Note that the actual time used
@@ -3066,7 +3088,7 @@ on the public Tor network.
     different identity.  This feature is used to migrate directory authority
     keys in the event of a compromise.  (Default: 0)
 
-[[V3AuthVoteDelay]] **V3AuthVoteDelay** __N__ **minutes**|**hours**::
+[[V3AuthVoteDelay]] **V3AuthVoteDelay** __N__ **seconds**|**minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred delay
     between publishing its vote and assuming it has all the votes from all the
     other authorities. Note that the actual time used is not the server's
@@ -3341,12 +3363,9 @@ The following options are used for running a testing Tor network.
     running.
     (Default: 0) +
 
-       ServerDNSAllowBrokenConfig 1
        DirAllowPrivateAddresses 1
        EnforceDistinctSubnets 0
-       AssumeReachable 1
        AuthDirMaxServersPerAddr 0
-       AuthDirMaxServersPerAuthAddr 0
        ClientBootstrapConsensusAuthorityDownloadInitialDelay 0
        ClientBootstrapConsensusFallbackDownloadInitialDelay 0
        ClientBootstrapConsensusAuthorityOnlyDownloadInitialDelay 0
@@ -3358,11 +3377,11 @@ The following options are used for running a testing Tor network.
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
        V3AuthDistDelay 20 seconds
-       MinUptimeHidServDirectoryV2 0 seconds
-       TestingV3AuthInitialVotingInterval 5 minutes
+       TestingV3AuthInitialVotingInterval 150 seconds
        TestingV3AuthInitialVoteDelay 20 seconds
        TestingV3AuthInitialDistDelay 20 seconds
        TestingAuthDirTimeToLearnReachability 0 minutes
+       MinUptimeHidServDirectoryV2 0 minutes
        TestingServerDownloadInitialDelay 0
        TestingClientDownloadInitialDelay 0
        TestingServerConsensusDownloadInitialDelay 0
@@ -3373,8 +3392,9 @@ The following options are used for running a testing Tor network.
        TestingDirConnectionMaxStall 30 seconds
        TestingEnableConnBwEvent 1
        TestingEnableCellStatsEvent 1
+       RendPostPeriod 2 minutes
 
-[[TestingAuthDirTimeToLearnReachability]] **TestingAuthDirTimeToLearnReachability** __N__ **minutes**|**hours**::
+[[TestingAuthDirTimeToLearnReachability]] **TestingAuthDirTimeToLearnReachability** __N__ **seconds**|**minutes**|**hours**::
     After starting as an authority, do not make claims about whether routers
     are Running until this much time has passed. Changing this requires
     that **TestingTorNetwork** is set.  (Default: 30 minutes)
@@ -3504,17 +3524,17 @@ The following options are used for running a testing Tor network.
     we replace it and issue a new key?
     (Default: 3 hours for link and auth; 1 day for signing.)
 
-[[TestingV3AuthInitialDistDelay]] **TestingV3AuthInitialDistDelay** __N__ **minutes**|**hours**::
+[[TestingV3AuthInitialDistDelay]] **TestingV3AuthInitialDistDelay** __N__ **seconds**|**minutes**|**hours**::
     Like V3AuthDistDelay, but for initial voting interval before
     the first consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 5 minutes)
 
-[[TestingV3AuthInitialVoteDelay]] **TestingV3AuthInitialVoteDelay** __N__ **minutes**|**hours**::
+[[TestingV3AuthInitialVoteDelay]] **TestingV3AuthInitialVoteDelay** __N__ **seconds**|**minutes**|**hours**::
     Like V3AuthVoteDelay, but for initial voting interval before
     the first consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 5 minutes)
 
-[[TestingV3AuthInitialVotingInterval]] **TestingV3AuthInitialVotingInterval** __N__ **minutes**|**hours**::
+[[TestingV3AuthInitialVotingInterval]] **TestingV3AuthInitialVotingInterval** __N__ **seconds**|**minutes**|**hours**::
     Like V3AuthVotingInterval, but for initial voting interval before the first
     consensus has been created. Changing this requires that
     **TestingTorNetwork** is set. (Default: 30 minutes)
@@ -3715,14 +3735,15 @@ __DataDirectory__/**`hashed-fingerprint`**::
     identity key. (That is, the hash of the hash of the identity key.)
 
 __DataDirectory__/**`approved-routers`**::
-    Only used by authoritative directory servers. This file lists the status
-    and a fingerprint/pubkey. Each line lists a status and a fingerprint
-    separated by whitespace. See your **fingerprint** file in the
-    __DataDirectory__ for an example fingerprint line. If the status is
-    **!reject** then descriptors from the given identity (fingerprint/pubkey)
-    are rejected by this server. If it is **!invalid** then descriptors are
-    accepted but marked in the directory as not valid, that is, not
-    recommended.
+    Only used by authoritative directory servers. Each line lists a status and
+    an identity, separated by whitespace. Identities can be hex-encoded RSA
+    fingerprints, or base-64 encoded ed25519 public keys. See the
+    **fingerprint** file in a tor relay's __DataDirectory__ for an example
+    fingerprint line. If the status is **!reject**, then descriptors from the
+    given identity are rejected by this server. If it is **!invalid** then
+    descriptors are accepted, but marked in the directory as not valid, that
+    is, not recommended. In either case, the corresponding relays are not
+    included in the consensus.
 
 __DataDirectory__/**`v3-status-votes`**::
     Only for v3 authoritative directory servers. This file contains status

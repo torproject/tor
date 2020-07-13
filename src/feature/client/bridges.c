@@ -259,12 +259,26 @@ addr_is_a_configured_bridge(const tor_addr_t *addr,
 /** If we have a bridge configured whose digest matches
  * <b>ei->identity_digest</b>, or a bridge with no known digest whose address
  * matches <b>ei->addr</b>:<b>ei->port</b>, return 1.  Else return 0.
- * If <b>ei->onion_key</b> is NULL, check for address/port matches only. */
+ * If <b>ei->onion_key</b> is NULL, check for address/port matches only.
+ *
+ * Note that if the extend_info_t contains multiple addresses, we return true
+ * only if _every_ address is a bridge.
+ */
 int
 extend_info_is_a_configured_bridge(const extend_info_t *ei)
 {
   const char *digest = ei->onion_key ? ei->identity_digest : NULL;
-  return addr_is_a_configured_bridge(&ei->addr, ei->port, digest);
+  const tor_addr_port_t *ap1 = NULL, *ap2 = NULL;
+  if (! tor_addr_is_null(&ei->orports[0].addr))
+    ap1 = &ei->orports[0];
+  if (! tor_addr_is_null(&ei->orports[1].addr))
+    ap2 = &ei->orports[1];
+  IF_BUG_ONCE(ap1 == NULL) {
+    return 0;
+  }
+  return addr_is_a_configured_bridge(&ap1->addr, ap1->port, digest) &&
+    (ap2 == NULL ||
+     addr_is_a_configured_bridge(&ap2->addr, ap2->port, digest));
 }
 
 /** Wrapper around get_configured_bridge_by_addr_port_digest() to look

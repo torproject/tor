@@ -16,6 +16,7 @@
 
 #include "feature/dirclient/dirclient_modes.h"
 #include "feature/dircache/dirserv.h"
+#include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/stats/predict_ports.h"

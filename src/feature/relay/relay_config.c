@@ -29,7 +29,6 @@
 #include "core/mainloop/connection.h"
 #include "core/mainloop/cpuworker.h"
 #include "core/mainloop/mainloop.h"
-#include "core/or/circuitbuild.h"
 #include "core/or/connection_or.h"
 #include "core/or/port_cfg_st.h"
 
@@ -37,6 +36,7 @@
 #include "feature/nodelist/nickname.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
+#include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"
 
 #include "feature/dirauth/authmode.h"
@@ -44,6 +44,7 @@
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/relay/dns.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/selftest.h"
 
 /** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
@@ -1029,7 +1030,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
 
   YES_IF_CHANGED_STRING(DataDirectory);
   YES_IF_CHANGED_STRING(Nickname);
-  YES_IF_CHANGED_STRING(Address);
+  YES_IF_CHANGED_LINELIST(Address);
   YES_IF_CHANGED_LINELIST(ExitPolicy);
   YES_IF_CHANGED_BOOL(ExitRelay);
   YES_IF_CHANGED_BOOL(ExitPolicyRejectPrivate);
@@ -1114,8 +1115,6 @@ options_act_relay(const or_options_t *old_options)
 
       if (server_mode_turned_on) {
         ip_address_changed(0);
-        if (have_completed_a_circuit() || !any_predicted_circuits(time(NULL)))
-          inform_testing_reachability();
       }
       cpuworkers_rotate_keyinfo();
     }
@@ -1309,7 +1308,7 @@ options_act_relay_stats(const or_options_t *old_options,
     }
     if ((!old_options || !old_options->ConnDirectionStatistics) &&
         options->ConnDirectionStatistics) {
-      rep_hist_conn_stats_init(now);
+      conn_stats_init(now);
     }
     if ((!old_options || !old_options->HiddenServiceStatistics) &&
         options->HiddenServiceStatistics) {
@@ -1339,7 +1338,7 @@ options_act_relay_stats(const or_options_t *old_options,
     rep_hist_exit_stats_term();
   if (old_options && old_options->ConnDirectionStatistics &&
       !options->ConnDirectionStatistics)
-    rep_hist_conn_stats_term();
+    conn_stats_terminate();
 
   return 0;
 }

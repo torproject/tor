@@ -146,7 +146,7 @@ if [[ $INSTALL_HOOKS = 1 ]]; then
        note "Installing hooks"
        for fn in "$SCRIPTS_DIR"/*.git-hook; do
            name=$(basename "$fn")
-           $RUN install --backup "$fn" "${HOOKS_DIR}/${name%.git-hook}"
+           $RUN install -b "$fn" "${HOOKS_DIR}/${name%.git-hook}"
        done
 fi
 
@@ -163,7 +163,7 @@ if [[ $INSTALL_TOOLS = 1 ]]; then
 
     note "Copying scripts"
     for tool in "${TOOL_NAMES[@]}"; do
-        $RUN install --backup "${SCRIPTS_DIR}/git-${tool}.sh" "${TOR_DEVTOOLS_DIR}/"
+        $RUN install -b "${SCRIPTS_DIR}/git-${tool}.sh" "${TOR_DEVTOOLS_DIR}/"
     done
 fi
 

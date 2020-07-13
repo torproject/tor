@@ -40,6 +40,10 @@ function usage()
   echo "       (current: $GITHUB_PULL)"
   echo "   TOR_GITHUB_PUSH: the tor-github remote push URL"
   echo "       (current: $GITHUB_PUSH)"
+  echo "   TOR_GITLAB_PULL: the tor-gitlab remote pull URL"
+  echo "       (current: $GITLAB_PULL)"
+  echo "   TOR_GITLAB_PUSH: the tor-gitlab remote push URL"
+  echo "       (current: $GITLAB_PUSH)"
   echo "   TOR_EXTRA_CLONE_ARGS: extra arguments to git clone"
   echo "       (current: $TOR_EXTRA_CLONE_ARGS)"
   echo "   TOR_EXTRA_REMOTE_NAME: the name of an extra remote"
@@ -82,6 +86,10 @@ fi
 # GitHub repositories
 GITHUB_PULL=${TOR_GITHUB_PULL:-"https://github.com/torproject/tor.git"}
 GITHUB_PUSH=${TOR_GITHUB_PUSH:-"No_Pushing_To_GitHub"}
+
+# GitLab repositories
+GITLAB_PULL=${TOR_GITLAB_PULL:-"https://gitlab.torproject.org/tpo/core/tor.git"}
+GITLAB_PUSH=${TOR_GITLAB_PUSH:-"No_Pushing_To_GitLab"}
 
 ##########################
 # Git branches to manage #
@@ -343,6 +351,20 @@ function set_tor_github_pr_fetch_config
     "refs/pull.*pr"
 }
 
+# Set up the tor-github PR config, so tor-gitlab/mr/NNNN points to GitHub
+# MR NNNN. In some repositories, "/head" is optional.
+function set_tor_gitlab_mr_fetch_config
+{
+  # standard branches
+  replace_fetch_config tor-gitlab \
+    "+refs/heads/*:refs/remotes/tor-gitlab/*" \
+    "refs/heads"
+  # MRs
+  replace_fetch_config tor-gitlab \
+    "+refs/merge-requests/*/head:refs/remotes/tor-gitlab/mr/*" \
+    "refs/merge-requests.*mr"
+}
+
 # Add a new worktree for branch at path.
 # If the directory already exists: fail if $USE_EXISTING is 0, otherwise skip.
 function add_worktree
@@ -470,6 +492,15 @@ set_remote_push "tor-github" "$GITHUB_PUSH"
 set_tor_github_pr_fetch_config
 # Now fetch them all
 fetch_remote "tor-github"
+
+# GitLab remote
+printf "%s Seting up remote %s\\n" "$MARKER" "${BYEL}tor-gitlab${CNRM}"
+add_remote "tor-gitlab" "$GITLAB_PULL"
+set_remote_push "tor-gitlab" "$GITLAB_PUSH"
+# Add custom fetch for MRs
+set_tor_gitlab_mr_fetch_config
+# Now fetch them all
+fetch_remote "tor-gitlab"
 
 # Extra remote
 if [ "$TOR_EXTRA_REMOTE_NAME" ]; then

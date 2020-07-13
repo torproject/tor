@@ -59,6 +59,8 @@ ALLOWED_PATTERNS = [
     re.compile(r'^micro-revision.i$'),
 ]
 
+TOPDIR = "src"
+
 def pattern_is_normal(s):
     for p in ALLOWED_PATTERNS:
         if p.match(s):
@@ -136,6 +138,29 @@ class Rules(object):
 
         return allowed
 
+
+def normalize_srcdir(fname):
+    """given the name of a source directory or file, return its name
+        relative to `src` in a unix-like format.
+    """
+    orig = fname
+    dirname, dirfile = os.path.split(fname)
+    if re.match(r'.*\.[ch]$', dirfile):
+        fname = dirname
+
+    # Now we have a directory.
+    dirname, result = os.path.split(fname)
+    for _ in range(100):
+        # prevent excess looping in case I missed a tricky case
+        dirname, dirpart = os.path.split(dirname)
+        if dirpart == 'src' or dirname == "":
+            #print(orig,"=>",result)
+            return result
+        result = "{}/{}".format(dirpart,result)
+
+    print("No progress!")
+    assert False
+
 include_rules_cache = {}
 
 def load_include_rules(fname):
@@ -172,6 +197,27 @@ def remove_self_edges(graph):
 
     for k in list(graph):
         graph[k] = [ d for d in graph[k] if d != k ]
+
+def closure(graph):
+    """Takes a directed graph in as an adjacency mapping (a mapping from
+       node to a list of the nodes to which it connects), and completes
+       its closure.
+    """
+    graph = graph.copy()
+    changed = False
+    for k in graph.keys():
+        graph[k] = set(graph[k])
+    while True:
+        for k in graph.keys():
+            sz = len(graph[k])
+            for v in list(graph[k]):
+                graph[k].update(graph.get(v, []))
+            if sz != len(graph[k]):
+                changed = True
+
+        if not changed:
+            return graph
+        changed = False
 
 def toposort(graph, limit=100):
     """Takes a directed graph in as an adjacency mapping (a mapping from
@@ -233,8 +279,38 @@ def walk_c_files(topdir="src"):
                     for err in consider_include_rules(fullpath, f):
                         yield err
 
+def open_or_stdin(fname):
+    if fname == '-':
+        return sys.stdin
+    else:
+        return open(fname)
+
+def check_subsys_file(fname, uses_dirs):
+    if not uses_dirs:
+        # We're doing a distcheck build, or for some other reason there are
+        # no .may_include files.
+        print("SKIPPING")
+        return False
+
+    uses_dirs = { normalize_srcdir(k) : { normalize_srcdir(d) for d in v }
+                  for (k,v) in uses_dirs.items() }
+    uses_closure = closure(uses_dirs)
+    ok = True
+    previous_subsystems = []
+
+    with open_or_stdin(fname) as f:
+        for line in f:
+            _, name, fname = line.split()
+            fname = normalize_srcdir(fname)
+            for prev in previous_subsystems:
+                if fname in uses_closure[prev]:
+                    print("INVERSION: {} uses {}".format(prev,fname))
+                    ok = False
+            previous_subsystems.append(fname)
+    return not ok
+
 def run_check_includes(topdir, list_unused=False, log_sorted_levels=False,
-                       list_advisories=False):
+                       list_advisories=False, check_subsystem_order=None):
     trouble = False
 
     for err in walk_c_files(topdir):
@@ -259,6 +335,11 @@ def run_check_includes(topdir, list_unused=False, log_sorted_levels=False,
         uses_dirs[rules.incpath] = rules.getAllowedDirectories()
 
     remove_self_edges(uses_dirs)
+
+    if check_subsystem_order:
+        if check_subsys_file(check_subsystem_order, uses_dirs):
+            sys.exit(1)
+
     all_levels = toposort(uses_dirs)
 
     if log_sorted_levels:
@@ -282,14 +363,19 @@ def main(argv):
                         help="List unused lines in .may_include files.")
     parser.add_argument("--list-advisories", action="store_true",
                         help="List advisories as well as forbidden includes")
+    parser.add_argument("--check-subsystem-order", action="store",
+                        help="Check a list of subsystems for ordering")
     parser.add_argument("topdir", default="src", nargs="?",
                         help="Top-level directory for the tor source")
     args = parser.parse_args(argv[1:])
 
+    global TOPDIR
+    TOPDIR = args.topdir
     run_check_includes(topdir=args.topdir,
                        log_sorted_levels=args.toposort,
                        list_unused=args.list_unused,
-                       list_advisories=args.list_advisories)
+                       list_advisories=args.list_advisories,
+                       check_subsystem_order=args.check_subsystem_order)
 
 if __name__ == '__main__':
     main(sys.argv)

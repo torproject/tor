@@ -335,7 +335,7 @@ struct channel_t {
    * provided tor_addr_t *, and return 1 if successful or 0 if no address
    * available.
    */
-  int (*get_remote_addr)(channel_t *, tor_addr_t *);
+  int (*get_remote_addr)(const channel_t *, tor_addr_t *);
   int (*get_transport_name)(channel_t *chan, char **transport_out);
 
 #define GRD_FLAG_ORIGINAL 1
@@ -658,11 +658,13 @@ channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
                             const char *rsa_id_digest,
                             const struct ed25519_public_key_t *ed_id);
 
-channel_t * channel_get_for_extend(const char *rsa_id_digest,
+MOCK_DECL(channel_t *, channel_get_for_extend,(
+                                   const char *rsa_id_digest,
                                    const struct ed25519_public_key_t *ed_id,
-                                   const tor_addr_t *target_addr,
+                                   const tor_addr_t *target_ipv4_addr,
+                                   const tor_addr_t *target_ipv6_addr,
                                    const char **msg_out,
-                                   int *launch_out);
+                                   int *launch_out));
 
 /* Ask which of two channels is better for circuit-extension purposes */
 int channel_is_better(channel_t *a, channel_t *b);
@@ -721,9 +723,9 @@ MOCK_DECL(void, channel_dump_statistics, (channel_t *chan, int severity));
 void channel_dump_transport_statistics(channel_t *chan, int severity);
 const char * channel_get_actual_remote_descr(channel_t *chan);
 const char * channel_get_actual_remote_address(channel_t *chan);
-MOCK_DECL(int, channel_get_addr_if_possible, (channel_t *chan,
+MOCK_DECL(int, channel_get_addr_if_possible, (const channel_t *chan,
                                               tor_addr_t *addr_out));
-const char * channel_get_canonical_remote_descr(channel_t *chan);
+MOCK_DECL(const char *, channel_get_canonical_remote_descr,(channel_t *chan));
 int channel_has_queued_writes(channel_t *chan);
 int channel_is_bad_for_new_circs(channel_t *chan);
 void channel_mark_bad_for_new_circs(channel_t *chan);
@@ -736,8 +738,6 @@ int channel_is_outgoing(channel_t *chan);
 void channel_mark_client(channel_t *chan);
 void channel_clear_client(channel_t *chan);
 int channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info);
-int channel_matches_target_addr_for_extend(channel_t *chan,
-                                           const tor_addr_t *target);
 unsigned int channel_num_circuits(channel_t *chan);
 MOCK_DECL(void,channel_set_circid_type,(channel_t *chan,
                                         crypto_pk_t *identity_rcvd,

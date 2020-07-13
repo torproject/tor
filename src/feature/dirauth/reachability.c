@@ -105,6 +105,8 @@ dirserv_should_launch_reachability_test(const routerinfo_t *ri,
 {
   if (!authdir_mode_handles_descs(get_options(), ri->purpose))
     return 0;
+  if (! dirauth_get_options()->AuthDirTestReachability)
+    return 0;
   if (!ri_old) {
     /* New router: Launch an immediate reachability test, so we will have an
      * opinion soon in case we're generating a consensus soon */
@@ -189,6 +191,9 @@ dirserv_test_reachability(time_t now)
    * the testing, and directory authorities are easy to upgrade. Let's
    * wait til 0.2.0. -RD */
 //  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  if (! dirauth_get_options()->AuthDirTestReachability)
+    return;
+
   routerlist_t *rl = router_get_routerlist();
   static char ctr = 0;
   int bridge_auth = authdir_mode_bridge(get_options());

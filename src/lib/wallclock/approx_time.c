@@ -59,6 +59,7 @@ subsys_wallclock_initialize(void)
  **/
 const subsys_fns_t sys_wallclock = {
   .name = "wallclock",
+  SUBSYS_DECLARE_LOCATION(),
   .supported = true,
   /* Approximate time is a diagnostic feature, we want it to init right after
    * low-level error handling. */

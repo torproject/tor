@@ -90,7 +90,7 @@ static int consensus_nf_pad_single_onion;
  * for every single connection, every second.
  */
 void
-channelpadding_new_consensus_params(networkstatus_t *ns)
+channelpadding_new_consensus_params(const networkstatus_t *ns)
 {
 #define DFLT_NETFLOW_INACTIVE_KEEPALIVE_LOW 1500
 #define DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH 9500

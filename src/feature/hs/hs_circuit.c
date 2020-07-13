@@ -16,6 +16,7 @@
 #include "core/or/policies.h"
 #include "core/or/relay.h"
 #include "core/or/crypt_path.h"
+#include "core/or/extendinfo.h"
 #include "feature/client/circpathbias.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
@@ -622,6 +623,20 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
 }
 
 /** Helper: cleanup function for client circuit. This is for every HS version.
+ * It is called from hs_circ_cleanup_on_close() entry point. */
+static void
+cleanup_on_close_client_circ(circuit_t *circ)
+{
+  tor_assert(circ);
+
+  if (circuit_is_hs_v3(circ)) {
+    hs_client_circuit_cleanup_on_close(circ);
+  }
+  /* It is possible the circuit has an HS purpose but no identifier (rend_data
+   * or hs_ident). Thus possible that this passes through. */
+}
+
+/** Helper: cleanup function for client circuit. This is for every HS version.
  * It is called from hs_circ_cleanup_on_free() entry point. */
 static void
 cleanup_on_free_client_circ(circuit_t *circ)
@@ -634,7 +649,7 @@ cleanup_on_free_client_circ(circuit_t *circ)
     hs_client_circuit_cleanup_on_free(circ);
   }
   /* It is possible the circuit has an HS purpose but no identifier (rend_data
-   * or hs_ident). Thus possible that this passess through. */
+   * or hs_ident). Thus possible that this passes through. */
 }
 
 /* ========== */
@@ -984,13 +999,13 @@ get_subcredential_for_handling_intro2_cell(const hs_service_t *service,
 
   /* This should not happen since we should have made onionbalance
    * subcredentials when we created our descriptors. */
-  if (BUG(!service->ob_subcreds)) {
+  if (BUG(!service->state.ob_subcreds)) {
     return -1;
   }
 
   /* We are an onionbalance instance: */
-  data->n_subcredentials = service->n_ob_subcreds;
-  data->subcredentials = service->ob_subcreds;
+  data->n_subcredentials = service->state.n_ob_subcreds;
+  data->subcredentials = service->state.ob_subcreds;
 
   return 0;
 }
@@ -1292,6 +1307,10 @@ void
 hs_circ_cleanup_on_close(circuit_t *circ)
 {
   tor_assert(circ);
+
+  if (circuit_purpose_is_hs_client(circ->purpose)) {
+    cleanup_on_close_client_circ(circ);
+  }
 
   /* On close, we simply remove it from the circuit map. It can not be used
    * anymore. We keep this code path fast and lean. */
