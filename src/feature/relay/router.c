@@ -2057,9 +2057,9 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
   ri->nickname = tor_strdup(options->Nickname);
-  ri->addr = addr;
-  ri->or_port = router_get_advertised_or_port(options);
-  ri->dir_port = router_get_advertised_dir_port(options, 0);
+  tor_addr_from_ipv4h(&ri->ipv4_addr, addr);
+  ri->ipv4_orport = router_get_advertised_or_port(options);
+  ri->ipv4_dirport = router_get_advertised_dir_port(options, 0);
   ri->supports_tunnelled_dir_requests =
     directory_permits_begindir_requests(options);
   ri->cache_info.published_on = time(NULL);
@@ -2105,7 +2105,8 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
     /* DNS is screwed up; don't claim to be an exit. */
     policies_exit_policy_append_reject_star(&ri->exit_policy);
   } else {
-    policies_parse_exit_policy_from_options(options,ri->addr,&ri->ipv6_addr,
+    policies_parse_exit_policy_from_options(options, &ri->ipv4_addr,
+                                            &ri->ipv6_addr,
                                             &ri->exit_policy);
   }
   ri->policy_is_reject_star =
@@ -2608,7 +2609,7 @@ check_descriptor_ipaddress_changed(time_t now)
     return;
 
   /* XXXX ipv6 */
-  prev = my_ri->addr;
+  prev = tor_addr_to_ipv4h(&my_ri->ipv4_addr);
   if (!find_my_address(options, AF_INET, LOG_INFO, &addr, &method,
                        &hostname)) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
@@ -2857,7 +2858,7 @@ router_dump_router_to_string(routerinfo_t *router,
     proto_line = tor_strdup("");
   }
 
-  address = tor_dup_ip(router->addr);
+  address = tor_addr_to_str_dup(&router->ipv4_addr);
   if (!address)
     goto err;
 
@@ -2881,8 +2882,8 @@ router_dump_router_to_string(routerinfo_t *router,
                     "%s%s%s",
     router->nickname,
     address,
-    router->or_port,
-    router_should_advertise_dirport(options, router->dir_port),
+    router->ipv4_orport,
+    router_should_advertise_dirport(options, router->ipv4_dirport),
     ed_cert_line ? ed_cert_line : "",
     extra_or_address ? extra_or_address : "",
     router->platform,

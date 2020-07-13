@@ -42,10 +42,10 @@ setup_cfg(flag_vote_test_cfg_t *c)
   c->ri.cache_info.published_on = c->now - 100;
   c->expected.published_on = c->now - 100;
 
-  c->ri.addr = 0x7f010105;
-  c->expected.addr = 0x7f010105;
-  c->ri.or_port = 9090;
-  c->expected.or_port = 9090;
+  tor_addr_from_ipv4h(&c->ri.ipv4_addr, 0x7f010105);
+  tor_addr_from_ipv4h(&c->expected.ipv4_addr, 0x7f010105);
+  c->ri.ipv4_orport = 9090;
+  c->expected.ipv4_orport = 9090;
 
   tor_addr_make_null(&c->ri.ipv6_addr, AF_INET6);
   tor_addr_make_null(&c->expected.ipv6_addr, AF_INET6);
@@ -69,9 +69,9 @@ check_result(flag_vote_test_cfg_t *c)
 
   // identity_digest and descriptor_digest are not set here.
 
-  tt_uint_op(rs.addr, OP_EQ, c->expected.addr);
-  tt_uint_op(rs.or_port, OP_EQ, c->expected.or_port);
-  tt_uint_op(rs.dir_port, OP_EQ, c->expected.dir_port);
+  tt_assert(tor_addr_eq(&rs.ipv4_addr, &c->expected.ipv4_addr));
+  tt_uint_op(rs.ipv4_orport, OP_EQ, c->expected.ipv4_orport);
+  tt_uint_op(rs.ipv4_dirport, OP_EQ, c->expected.ipv4_dirport);
 
   tt_assert(tor_addr_eq(&rs.ipv6_addr, &c->expected.ipv6_addr));
   tt_uint_op(rs.ipv6_orport, OP_EQ, c->expected.ipv6_orport);

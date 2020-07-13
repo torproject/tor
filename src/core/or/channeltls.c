@@ -1863,7 +1863,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   if (my_addr_type == NETINFO_ADDR_TYPE_IPV4 && my_addr_len == 4) {
     if (!get_options()->BridgeRelay && me &&
-        tor_addr_eq_ipv4h(&my_apparent_addr, me->addr)) {
+        tor_addr_eq(&my_apparent_addr, &me->ipv4_addr)) {
       TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
     }
   } else if (my_addr_type == NETINFO_ADDR_TYPE_IPV6 &&
@@ -1917,7 +1917,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
              safe_str(hex_str(identity_digest, DIGEST_LEN)),
              safe_str(tor_addr_is_null(&my_apparent_addr) ?
              "<none>" : fmt_and_decorate_addr(&my_apparent_addr)),
-             safe_str(fmt_addr32(me->addr)));
+             safe_str(fmt_addr(&me->ipv4_addr)));
   }
 
   /* Act on apparent skew. */

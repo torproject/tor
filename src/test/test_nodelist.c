@@ -104,7 +104,7 @@ test_nodelist_node_is_dir(void *arg)
   tt_assert(node_is_dir(&node));
 
   rs.is_v2_dir = 0;
-  rs.dir_port = 1;
+  rs.ipv4_dirport = 1;
   tt_assert(! node_is_dir(&node));
 
   node.rs = NULL;
@@ -113,7 +113,7 @@ test_nodelist_node_is_dir(void *arg)
   ri.supports_tunnelled_dir_requests = 1;
   tt_assert(node_is_dir(&node));
   ri.supports_tunnelled_dir_requests = 0;
-  ri.dir_port = 1;
+  ri.ipv4_dirport = 1;
   tt_assert(! node_is_dir(&node));
 
  done:
@@ -685,7 +685,7 @@ test_nodelist_format_node_description(void *arg)
                                mock_digest,
                                NULL,
                                NULL,
-                               0);
+                               NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
@@ -694,7 +694,7 @@ test_nodelist_format_node_description(void *arg)
                                mock_digest,
                                mock_nickname,
                                NULL,
-                               0);
+                               NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~""TestOR7890123456789");
@@ -704,7 +704,7 @@ test_nodelist_format_node_description(void *arg)
                                mock_digest,
                                mock_nickname,
                                &mock_null_ip,
-                               0);
+                               NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789");
@@ -714,7 +714,7 @@ test_nodelist_format_node_description(void *arg)
                                mock_digest,
                                NULL,
                                &mock_ipv4,
-                               0);
+                               NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA at 111.222.233.244");
@@ -723,7 +723,7 @@ test_nodelist_format_node_description(void *arg)
                                mock_digest,
                                mock_nickname,
                                &mock_ipv6,
-                               0);
+                               NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
@@ -733,7 +733,7 @@ test_nodelist_format_node_description(void *arg)
                                mock_digest,
                                mock_nickname,
                                &mock_ipv6,
-                               tor_addr_to_ipv4h(&mock_ipv4));
+                               &mock_ipv4);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
@@ -761,7 +761,6 @@ static void
 test_nodelist_router_describe(void *arg)
 {
   char mock_nickname[MAX_NICKNAME_LEN+1];
-  tor_addr_t mock_ipv4;
   routerinfo_t mock_ri_ipv4;
   routerinfo_t mock_ri_ipv6;
   routerinfo_t mock_ri_dual;
@@ -772,7 +771,6 @@ test_nodelist_router_describe(void *arg)
 
   /* Clear variables */
   memset(mock_nickname, 0, sizeof(mock_nickname));
-  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
   memset(&mock_ri_ipv4, 0, sizeof(mock_ri_ipv4));
   memset(&mock_ri_ipv6, 0, sizeof(mock_ri_ipv6));
   memset(&mock_ri_dual, 0, sizeof(mock_ri_dual));
@@ -784,8 +782,7 @@ test_nodelist_router_describe(void *arg)
          sizeof(mock_ri_dual.cache_info.identity_digest));
   strlcpy(mock_nickname, "TestOR7890123456789", sizeof(mock_nickname));
   mock_ri_dual.nickname = mock_nickname;
-  tor_addr_parse(&mock_ipv4, "111.222.233.244");
-  mock_ri_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_ri_dual.ipv4_addr, "111.222.233.244");
   tor_addr_parse(&mock_ri_dual.ipv6_addr,
                  "[1111:2222:3333:4444:5555:6666:7777:8888]");
 
@@ -796,7 +793,7 @@ test_nodelist_router_describe(void *arg)
   memcpy(&mock_ri_ipv6, &mock_ri_dual, sizeof(mock_ri_ipv6));
   /* Clear the unnecessary addresses */
   memset(&mock_ri_ipv4.ipv6_addr, 0, sizeof(mock_ri_ipv4.ipv6_addr));
-  mock_ri_ipv6.addr = 0;
+  tor_addr_make_unspec(&mock_ri_ipv6.ipv4_addr);
 
   /* We don't test the no-nickname and no-IP cases, because they're covered by
    * format_node_description(), and we don't expect to see them in Tor code. */
@@ -863,7 +860,6 @@ static void
 test_nodelist_node_describe(void *arg)
 {
   char mock_nickname[MAX_NICKNAME_LEN+1];
-  tor_addr_t mock_ipv4;
 
   const char *rv = NULL;
 
@@ -874,7 +870,6 @@ test_nodelist_node_describe(void *arg)
 
   /* Clear variables */
   memset(mock_nickname, 0, sizeof(mock_nickname));
-  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
   memset(&mock_ri_dual, 0, sizeof(mock_ri_dual));
 
   /* Set up the dual-stack routerinfo */
@@ -884,8 +879,7 @@ test_nodelist_node_describe(void *arg)
          sizeof(mock_ri_dual.cache_info.identity_digest));
   strlcpy(mock_nickname, "TestOR7890123456789", sizeof(mock_nickname));
   mock_ri_dual.nickname = mock_nickname;
-  tor_addr_parse(&mock_ipv4, "111.222.233.244");
-  mock_ri_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_ri_dual.ipv4_addr, "111.222.233.244");
   tor_addr_parse(&mock_ri_dual.ipv6_addr,
                  "[1111:2222:3333:4444:5555:6666:7777:8888]");
 
@@ -894,7 +888,6 @@ test_nodelist_node_describe(void *arg)
   routerstatus_t mock_rs_dual;
 
   /* Clear variables */
-  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
   memset(&mock_rs_ipv4, 0, sizeof(mock_rs_ipv4));
   memset(&mock_rs_dual, 0, sizeof(mock_rs_dual));
 
@@ -905,8 +898,7 @@ test_nodelist_node_describe(void *arg)
          sizeof(mock_rs_dual.identity_digest));
   strlcpy(mock_rs_dual.nickname, "Bbb",
           sizeof(mock_rs_dual.nickname));
-  tor_addr_parse(&mock_ipv4, "2.2.2.2");
-  mock_rs_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_rs_dual.ipv4_addr, "2.2.2.2");
   tor_addr_parse(&mock_rs_dual.ipv6_addr,
                  "[bbbb::bbbb]");
 
@@ -1070,7 +1062,6 @@ test_nodelist_node_describe(void *arg)
 static void
 test_nodelist_routerstatus_describe(void *arg)
 {
-  tor_addr_t mock_ipv4;
   routerstatus_t mock_rs_ipv4;
   routerstatus_t mock_rs_ipv6;
   routerstatus_t mock_rs_dual;
@@ -1080,7 +1071,6 @@ test_nodelist_routerstatus_describe(void *arg)
   (void) arg;
 
   /* Clear variables */
-  memset(&mock_ipv4, 0, sizeof(mock_ipv4));
   memset(&mock_rs_ipv4, 0, sizeof(mock_rs_ipv4));
   memset(&mock_rs_ipv6, 0, sizeof(mock_rs_ipv6));
   memset(&mock_rs_dual, 0, sizeof(mock_rs_dual));
@@ -1092,8 +1082,7 @@ test_nodelist_routerstatus_describe(void *arg)
          sizeof(mock_rs_dual.identity_digest));
   strlcpy(mock_rs_dual.nickname, "TestOR7890123456789",
           sizeof(mock_rs_dual.nickname));
-  tor_addr_parse(&mock_ipv4, "111.222.233.244");
-  mock_rs_dual.addr = tor_addr_to_ipv4h(&mock_ipv4);
+  tor_addr_parse(&mock_rs_dual.ipv4_addr, "111.222.233.244");
   tor_addr_parse(&mock_rs_dual.ipv6_addr,
                  "[1111:2222:3333:4444:5555:6666:7777:8888]");
 
@@ -1102,7 +1091,7 @@ test_nodelist_routerstatus_describe(void *arg)
   memcpy(&mock_rs_ipv6, &mock_rs_dual, sizeof(mock_rs_ipv6));
   /* Clear the unnecessary addresses */
   memset(&mock_rs_ipv4.ipv6_addr, 0, sizeof(mock_rs_ipv4.ipv6_addr));
-  mock_rs_ipv6.addr = 0;
+  tor_addr_make_unspec(&mock_rs_ipv6.ipv4_addr);
 
   /* We don't test the no-nickname and no-IP cases, because they're covered by
    * format_node_description(), and we don't expect to see them in Tor code. */
@@ -1259,8 +1248,8 @@ test_nodelist_routerstatus_has_visibly_changed(void *arg)
   strlcpy(rs_orig.nickname, "friendly", sizeof(rs_orig.nickname));
   memcpy(rs_orig.identity_digest, "abcdefghijklmnopqrst", 20);
   memcpy(rs_orig.descriptor_digest, "abcdefghijklmnopqrst", 20);
-  rs_orig.addr = 0x7f000001;
-  rs_orig.or_port = 3;
+  tor_addr_from_ipv4h(&rs_orig.ipv4_addr, 0x7f000001);
+  rs_orig.ipv4_orport = 3;
   rs_orig.published_on = time(NULL);
   rs_orig.has_bandwidth = 1;
   rs_orig.bandwidth_kb = 20;
@@ -1301,7 +1290,7 @@ test_nodelist_routerstatus_has_visibly_changed(void *arg)
   COPY();
   ASSERT_SAME();
 
-  rs.addr = 0x7f000002;
+  tor_addr_from_ipv4h(&rs.ipv4_addr, 0x7f000002);
   ASSERT_CHANGED();
 
   strlcpy(rs.descriptor_digest, "hello world", sizeof(rs.descriptor_digest));
@@ -1313,10 +1302,10 @@ test_nodelist_routerstatus_has_visibly_changed(void *arg)
   rs.published_on += 3600;
   ASSERT_CHANGED();
 
-  rs.or_port = 55;
+  rs.ipv4_orport = 55;
   ASSERT_CHANGED();
 
-  rs.dir_port = 9999;
+  rs.ipv4_dirport = 9999;
   ASSERT_CHANGED();
 
   tor_addr_parse(&rs.ipv6_addr, "1234::56");

@@ -454,38 +454,29 @@ node_add_to_address_set(const node_t *node)
    * to add them all than to compare them all for equality. */
 
   if (node->rs) {
-    if (node->rs->addr)
-      nodelist_add_addr4_to_address_set(node->rs->addr);
+    if (!tor_addr_is_null(&node->rs->ipv4_addr))
+      nodelist_add_addr_to_address_set(&node->rs->ipv4_addr);
     if (!tor_addr_is_null(&node->rs->ipv6_addr))
-      nodelist_add_addr6_to_address_set(&node->rs->ipv6_addr);
+      nodelist_add_addr_to_address_set(&node->rs->ipv6_addr);
   }
   if (node->ri) {
-    if (node->ri->addr)
-      nodelist_add_addr4_to_address_set(node->ri->addr);
+    if (!tor_addr_is_null(&node->ri->ipv4_addr))
+      nodelist_add_addr_to_address_set(&node->ri->ipv4_addr);
     if (!tor_addr_is_null(&node->ri->ipv6_addr))
-      nodelist_add_addr6_to_address_set(&node->ri->ipv6_addr);
+      nodelist_add_addr_to_address_set(&node->ri->ipv6_addr);
   }
   if (node->md) {
     if (!tor_addr_is_null(&node->md->ipv6_addr))
-      nodelist_add_addr6_to_address_set(&node->md->ipv6_addr);
+      nodelist_add_addr_to_address_set(&node->md->ipv6_addr);
   }
 }
 
-/** Add the given v4 address into the nodelist address set. */
+/** Add the given address into the nodelist address set. */
 void
-nodelist_add_addr4_to_address_set(const uint32_t addr)
+nodelist_add_addr_to_address_set(const tor_addr_t *addr)
 {
-  if (!the_nodelist || !the_nodelist->node_addrs || addr == 0) {
-    return;
-  }
-  address_set_add_ipv4h(the_nodelist->node_addrs, addr);
-}
-
-/** Add the given v6 address into the nodelist address set. */
-void
-nodelist_add_addr6_to_address_set(const tor_addr_t *addr)
-{
-  if (BUG(!addr) || tor_addr_is_null(addr) || tor_addr_is_v4(addr) ||
+  if (BUG(!addr) || tor_addr_is_null(addr) ||
+      (!tor_addr_is_v4(addr) && !tor_addr_is_v6(addr)) ||
       !the_nodelist || !the_nodelist->node_addrs) {
     return;
   }
@@ -1541,32 +1532,14 @@ node_exit_policy_is_exact(const node_t *node, sa_family_t family)
  * "addr" is an IPv4 host-order address and port_field is a uint16_t.
  * r is typically a routerinfo_t or routerstatus_t.
  */
-#define SL_ADD_NEW_IPV4_AP(r, port_field, sl, valid) \
-  STMT_BEGIN \
-    if (tor_addr_port_is_valid_ipv4h((r)->addr, (r)->port_field, 0)) { \
-      valid = 1; \
-      tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t)); \
-      tor_addr_from_ipv4h(&ap->addr, (r)->addr); \
-      ap->port = (r)->port_field; \
-      smartlist_add((sl), ap); \
-    } \
-  STMT_END
-
-/* Check if the "addr" and port_field fields from r are a valid non-listening
- * address/port. If so, set valid to true and add a newly allocated
- * tor_addr_port_t containing "addr" and port_field to sl.
- * "addr" is a tor_addr_t and port_field is a uint16_t.
- * r is typically a routerinfo_t or routerstatus_t.
- */
-#define SL_ADD_NEW_IPV6_AP(r, port_field, sl, valid) \
-  STMT_BEGIN \
-    if (tor_addr_port_is_valid(&(r)->ipv6_addr, (r)->port_field, 0)) { \
-      valid = 1; \
-      tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t)); \
-      tor_addr_copy(&ap->addr, &(r)->ipv6_addr); \
-      ap->port = (r)->port_field; \
-      smartlist_add((sl), ap); \
-    } \
+#define SL_ADD_NEW_AP(r, addr_field, port_field, sl, valid)             \
+  STMT_BEGIN                                                            \
+    if (tor_addr_port_is_valid(&(r)->addr_field, (r)->port_field, 0)) { \
+      valid = 1;                                                        \
+      tor_addr_port_t *ap = tor_addr_port_new(&(r)->addr_field,         \
+                                              (r)->port_field);         \
+      smartlist_add((sl), ap);                                          \
+    }                                                                   \
   STMT_END
 
 /** Return list of tor_addr_port_t with all OR ports (in the sense IP
@@ -1585,33 +1558,32 @@ node_get_all_orports(const node_t *node)
 
   /* Find a valid IPv4 address and port */
   if (node->ri != NULL) {
-    SL_ADD_NEW_IPV4_AP(node->ri, or_port, sl, valid);
+    SL_ADD_NEW_AP(node->ri, ipv4_addr, ipv4_orport, sl, valid);
   }
 
   /* If we didn't find a valid address/port in the ri, try the rs */
   if (!valid && node->rs != NULL) {
-    SL_ADD_NEW_IPV4_AP(node->rs, or_port, sl, valid);
+    SL_ADD_NEW_AP(node->rs, ipv4_addr, ipv4_orport, sl, valid);
   }
 
   /* Find a valid IPv6 address and port */
   valid = 0;
   if (node->ri != NULL) {
-    SL_ADD_NEW_IPV6_AP(node->ri, ipv6_orport, sl, valid);
+    SL_ADD_NEW_AP(node->ri, ipv6_addr, ipv6_orport, sl, valid);
   }
 
   if (!valid && node->rs != NULL) {
-    SL_ADD_NEW_IPV6_AP(node->rs, ipv6_orport, sl, valid);
+    SL_ADD_NEW_AP(node->rs, ipv6_addr, ipv6_orport, sl, valid);
   }
 
   if (!valid && node->md != NULL) {
-    SL_ADD_NEW_IPV6_AP(node->md, ipv6_orport, sl, valid);
+    SL_ADD_NEW_AP(node->md, ipv6_addr, ipv6_orport, sl, valid);
   }
 
   return sl;
 }
 
-#undef SL_ADD_NEW_IPV4_AP
-#undef SL_ADD_NEW_IPV6_AP
+#undef SL_ADD_NEW_AP
 
 /** Wrapper around node_get_prim_orport for backward
     compatibility.  */
@@ -1623,21 +1595,20 @@ node_get_addr(const node_t *node, tor_addr_t *addr_out)
   tor_addr_copy(addr_out, &ap.addr);
 }
 
-/** Return the host-order IPv4 address for <b>node</b>, or 0 if it doesn't
- * seem to have one.  */
-uint32_t
-node_get_prim_addr_ipv4h(const node_t *node)
+/** Return the IPv4 address for <b>node</b>, or NULL if none found. */
+static const tor_addr_t *
+node_get_prim_addr_ipv4(const node_t *node)
 {
   /* Don't check the ORPort or DirPort, as this function isn't port-specific,
    * and the node might have a valid IPv4 address, yet have a zero
    * ORPort or DirPort.
    */
-  if (node->ri && tor_addr_is_valid_ipv4h(node->ri->addr, 0)) {
-    return node->ri->addr;
-  } else if (node->rs && tor_addr_is_valid_ipv4h(node->rs->addr, 0)) {
-    return node->rs->addr;
+  if (node->ri && tor_addr_is_valid(&node->ri->ipv4_addr, 0)) {
+    return &node->ri->ipv4_addr;
+  } else if (node->rs && tor_addr_is_valid(&node->rs->ipv4_addr, 0)) {
+    return &node->rs->ipv4_addr;
   }
-  return 0;
+  return NULL;
 }
 
 /** Copy a string representation of an IP address for <b>node</b> into
@@ -1645,12 +1616,10 @@ node_get_prim_addr_ipv4h(const node_t *node)
 void
 node_get_address_string(const node_t *node, char *buf, size_t len)
 {
-  uint32_t ipv4_addr = node_get_prim_addr_ipv4h(node);
+  const tor_addr_t *ipv4_addr = node_get_prim_addr_ipv4(node);
 
-  if (tor_addr_is_valid_ipv4h(ipv4_addr, 0)) {
-    tor_addr_t addr;
-    tor_addr_from_ipv4h(&addr, ipv4_addr);
-    tor_addr_to_str(buf, &addr, len, 0);
+  if (ipv4_addr) {
+    tor_addr_to_str(buf, ipv4_addr, len, 0);
   } else if (len > 0) {
     buf[0] = '\0';
   }
@@ -1757,12 +1726,12 @@ node_ipv6_or_preferred(const node_t *node)
   return 0;
 }
 
-#define RETURN_IPV4_AP(r, port_field, ap_out) \
-  STMT_BEGIN \
-    if (r && tor_addr_port_is_valid_ipv4h((r)->addr, (r)->port_field, 0)) { \
-      tor_addr_from_ipv4h(&(ap_out)->addr, (r)->addr); \
-      (ap_out)->port = (r)->port_field; \
-    } \
+#define RETURN_IPV4_AP(r, port_field, ap_out)                               \
+  STMT_BEGIN                                                                \
+    if (r && tor_addr_port_is_valid(&(r)->ipv4_addr, (r)->port_field, 0)) { \
+      tor_addr_copy(&(ap_out)->addr, &(r)->ipv4_addr);                      \
+      (ap_out)->port = (r)->port_field;                                     \
+    }                                                                       \
   STMT_END
 
 /** Copy the primary (IPv4) OR port (IP address and TCP port) for <b>node</b>
@@ -1781,8 +1750,8 @@ node_get_prim_orport(const node_t *node, tor_addr_port_t *ap_out)
   /* Check ri first, because rewrite_node_address_for_bridge() updates
    * node->ri with the configured bridge address. */
 
-  RETURN_IPV4_AP(node->ri, or_port, ap_out);
-  RETURN_IPV4_AP(node->rs, or_port, ap_out);
+  RETURN_IPV4_AP(node->ri, ipv4_orport, ap_out);
+  RETURN_IPV4_AP(node->rs, ipv4_orport, ap_out);
   /* Microdescriptors only have an IPv6 address */
 }
 
@@ -1882,8 +1851,8 @@ node_get_prim_dirport(const node_t *node, tor_addr_port_t *ap_out)
   /* Check ri first, because rewrite_node_address_for_bridge() updates
    * node->ri with the configured bridge address. */
 
-  RETURN_IPV4_AP(node->ri, dir_port, ap_out);
-  RETURN_IPV4_AP(node->rs, dir_port, ap_out);
+  RETURN_IPV4_AP(node->ri, ipv4_dirport, ap_out);
+  RETURN_IPV4_AP(node->rs, ipv4_dirport, ap_out);
   /* Microdescriptors only have an IPv6 address */
 }
 
@@ -1920,13 +1889,13 @@ node_get_pref_ipv6_dirport(const node_t *node, tor_addr_port_t *ap_out)
 
   /* Assume IPv4 and IPv6 dirports are the same */
   if (node->ri && tor_addr_port_is_valid(&node->ri->ipv6_addr,
-                                         node->ri->dir_port, 0)) {
+                                         node->ri->ipv4_dirport, 0)) {
     tor_addr_copy(&ap_out->addr, &node->ri->ipv6_addr);
-    ap_out->port = node->ri->dir_port;
+    ap_out->port = node->ri->ipv4_dirport;
   } else if (node->rs && tor_addr_port_is_valid(&node->rs->ipv6_addr,
-                                                node->rs->dir_port, 0)) {
+                                                node->rs->ipv4_dirport, 0)) {
     tor_addr_copy(&ap_out->addr, &node->rs->ipv6_addr);
-    ap_out->port = node->rs->dir_port;
+    ap_out->port = node->rs->ipv4_dirport;
   } else {
     tor_addr_make_null(&ap_out->addr, AF_INET6);
     ap_out->port = 0;
@@ -2011,15 +1980,15 @@ node_get_rsa_onion_key(const node_t *node)
 void
 node_set_country(node_t *node)
 {
-  tor_addr_t addr = TOR_ADDR_NULL;
+  const tor_addr_t *ipv4_addr = NULL;
 
   /* XXXXipv6 */
   if (node->rs)
-    tor_addr_from_ipv4h(&addr, node->rs->addr);
+    ipv4_addr = &node->rs->ipv4_addr;
   else if (node->ri)
-    tor_addr_from_ipv4h(&addr, node->ri->addr);
+    ipv4_addr = &node->ri->ipv4_addr;
 
-  node->country = geoip_get_country_by_addr(&addr);
+  node->country = geoip_get_country_by_addr(ipv4_addr);
 }
 
 /** Set the country code of all routers in the routerlist. */
@@ -2250,21 +2219,18 @@ nodelist_add_node_and_family(smartlist_t *sl, const node_t *node)
 const node_t *
 router_find_exact_exit_enclave(const char *address, uint16_t port)
 {/*XXXX MOVE*/
-  uint32_t addr;
   struct in_addr in;
-  tor_addr_t a;
+  tor_addr_t ipv4_addr;
   const or_options_t *options = get_options();
 
   if (!tor_inet_aton(address, &in))
     return NULL; /* it's not an IP already */
-  addr = ntohl(in.s_addr);
-
-  tor_addr_from_ipv4h(&a, addr);
+  tor_addr_from_in(&ipv4_addr, &in);
 
   SMARTLIST_FOREACH(nodelist_get_list(), const node_t *, node, {
-    if (node_get_addr_ipv4h(node) == addr &&
+    if (tor_addr_eq(node_get_prim_addr_ipv4(node), &ipv4_addr) &&
         node->is_running &&
-        compare_tor_addr_to_node_policy(&a, port, node) ==
+        compare_tor_addr_to_node_policy(&ipv4_addr, port, node) ==
           ADDR_POLICY_ACCEPTED &&
         !routerset_contains_node(options->ExcludeExitNodesUnion_, node))
       return node;

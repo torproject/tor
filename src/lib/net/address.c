@@ -764,6 +764,15 @@ tor_addr_is_v4(const tor_addr_t *addr)
   return 0; /* Not IPv4 - unknown family or a full-blood IPv6 address */
 }
 
+/** Determine whether an address <b>addr</b> is an IPv6 (AF_INET6). Return
+ * true if so else false. */
+int
+tor_addr_is_v6(const tor_addr_t *addr)
+{
+  tor_assert(addr);
+  return (tor_addr_family(addr) == AF_INET6);
+}
+
 /** Determine whether an address <b>addr</b> is null, either all zeroes or
  *  belonging to family AF_UNSPEC.
  */

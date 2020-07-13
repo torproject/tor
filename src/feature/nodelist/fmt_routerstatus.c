@@ -53,7 +53,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
   char digest64[BASE64_DIGEST_LEN+1];
   smartlist_t *chunks = smartlist_new();
 
-  const char *ip_str = fmt_addr32(rs->addr);
+  const char *ip_str = fmt_addr(&rs->ipv4_addr);
   if (ip_str[0] == '\0')
     goto err;
 
@@ -62,15 +62,15 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
   digest_to_base64(digest64, rs->descriptor_digest);
 
   smartlist_add_asprintf(chunks,
-                   "r %s %s %s%s%s %s %d %d\n",
+                   "r %s %s %s%s%s %s %" PRIu16 " %" PRIu16 "\n",
                    rs->nickname,
                    identity64,
                    (format==NS_V3_CONSENSUS_MICRODESC)?"":digest64,
                    (format==NS_V3_CONSENSUS_MICRODESC)?"":" ",
                    published,
                    ip_str,
-                   (int)rs->or_port,
-                   (int)rs->dir_port);
+                   rs->ipv4_orport,
+                   rs->ipv4_dirport);
 
   /* TODO: Maybe we want to pass in what we need to build the rest of
    * this here, instead of in the caller. Then we could use the

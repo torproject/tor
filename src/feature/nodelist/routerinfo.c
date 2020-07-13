@@ -29,8 +29,8 @@ router_get_orport(const routerinfo_t *router,
 {
   tor_assert(ap_out != NULL);
   if (family == AF_INET) {
-    tor_addr_from_ipv4h(&ap_out->addr, router->addr);
-    ap_out->port = router->or_port;
+    tor_addr_copy(&ap_out->addr, &router->ipv4_addr);
+    ap_out->port = router->ipv4_orport;
     return 0;
   } else if (family == AF_INET6) {
     /* IPv6 addresses are optional, so check if it is valid. */
@@ -54,8 +54,8 @@ int
 router_has_orport(const routerinfo_t *router, const tor_addr_port_t *orport)
 {
   return
-    (tor_addr_eq_ipv4h(&orport->addr, router->addr) &&
-     orport->port == router->or_port) ||
+    (tor_addr_eq(&orport->addr, &router->ipv4_addr) &&
+     orport->port == router->ipv4_orport) ||
     (tor_addr_eq(&orport->addr, &router->ipv6_addr) &&
      orport->port == router->ipv6_orport);
 }

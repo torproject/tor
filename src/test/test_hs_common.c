@@ -293,7 +293,6 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   routerstatus_t *rs = tor_malloc_zero(sizeof(routerstatus_t));
   routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
   uint8_t identity[DIGEST_LEN];
-  tor_addr_t ipv4_addr;
   node_t *node = NULL;
 
   memset(identity, identity_idx, sizeof(identity));
@@ -302,9 +301,8 @@ helper_add_hsdir_to_networkstatus(networkstatus_t *ns,
   rs->is_hs_dir = is_hsdir;
   rs->pv.supports_v3_hsdir = 1;
   strlcpy(rs->nickname, nickname, sizeof(rs->nickname));
-  tor_addr_parse(&ipv4_addr, "1.2.3.4");
-  ri->addr = tor_addr_to_ipv4h(&ipv4_addr);
-  rs->addr = tor_addr_to_ipv4h(&ipv4_addr);
+  tor_addr_parse(&ri->ipv4_addr, "1.2.3.4");
+  tor_addr_parse(&rs->ipv4_addr, "1.2.3.4");
   ri->nickname = tor_strdup(nickname);
   ri->protocol_list = tor_strdup("HSDir=1-2 LinkAuth=3");
   memcpy(ri->cache_info.identity_digest, identity, DIGEST_LEN);

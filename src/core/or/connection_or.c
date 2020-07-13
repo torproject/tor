@@ -2507,14 +2507,11 @@ connection_or_send_netinfo,(or_connection_t *conn))
    * is an outgoing connection, act like a normal client and omit it. */
   if ((public_server_mode(get_options()) || !conn->is_outgoing) &&
       (me = router_get_my_routerinfo())) {
-    tor_addr_t my_addr;
-    tor_addr_from_ipv4h(&my_addr, me->addr);
-
     uint8_t n_my_addrs = 1 + !tor_addr_is_null(&me->ipv6_addr);
     netinfo_cell_set_n_my_addrs(netinfo_cell, n_my_addrs);
 
     netinfo_cell_add_my_addrs(netinfo_cell,
-                              netinfo_addr_from_tor_addr(&my_addr));
+                              netinfo_addr_from_tor_addr(&me->ipv4_addr));
 
     if (!tor_addr_is_null(&me->ipv6_addr)) {
       netinfo_cell_add_my_addrs(netinfo_cell,
