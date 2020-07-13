@@ -359,6 +359,143 @@ conn_state_to_string(int type, int state)
   return buf;
 }
 
+/**
+ * Helper: describe the peer or address of connection @a conn in a
+ * human-readable manner.
+ *
+ * Returns a pointer to a static buffer; future calls to
+ * connection_describe_peer_internal() will invalidate this buffer.
+ *
+ * If <b>include_preposition</b> is true, include a preposition before the
+ * peer address.
+ *
+ * Nobody should parse the output of this function; it can and will change in
+ * future versions of tor.
+ **/
+static const char *
+connection_describe_peer_internal(const connection_t *conn,
+                                  bool include_preposition)
+{
+  IF_BUG_ONCE(!conn) {
+    return "null peer";
+  }
+
+  static char peer_buf[256];
+  const tor_addr_t *addr = &conn->addr;
+  const char *address = NULL;
+  const char *prep;
+  char extra_buf[128];
+  extra_buf[0] = 0;
+
+  /* First, figure out the preposition to use */
+  switch (conn->type) {
+    CASE_ANY_LISTENER_TYPE:
+      prep = "on";
+      break;
+    case CONN_TYPE_EXIT:
+      prep = "to";
+      break;
+    case CONN_TYPE_CONTROL:
+    case CONN_TYPE_AP:
+    case CONN_TYPE_EXT_OR:
+      prep = "from";
+      break;
+    default:
+      prep = "with";
+      break;
+  }
+
+  /* Now figure out the address. */
+  if (conn->socket_family == AF_UNIX) {
+    /* For unix sockets, we always use the `address` string. */
+    address = conn->address ? conn->address : "unix socket";
+  } else if (conn->type == CONN_TYPE_OR) {
+    /* For OR connections, we have a lot to do. */
+    const or_connection_t *or_conn = TO_OR_CONN((connection_t *)conn);
+    char id_buf[HEX_DIGEST_LEN+1];
+    /* we report 'real_addr' as the address we're talking with */
+    addr = &or_conn->real_addr;
+    /* We report the IDs we're talking to... */
+    if (fast_digest_is_zero(or_conn->identity_digest)) {
+      strlcpy(id_buf, "unknown", sizeof(id_buf));
+    } else {
+      base16_encode(id_buf, sizeof(id_buf),
+                    or_conn->identity_digest, DIGEST_LEN);
+    }
+    tor_snprintf(extra_buf, sizeof(extra_buf),
+                 " ID=%s", id_buf);
+    if (! tor_addr_eq(&or_conn->real_addr, &conn->addr)) {
+      /* We report canonical address, if it's different */
+      char canonical_addr_buf[TOR_ADDR_BUF_LEN];
+      tor_addr_to_str(canonical_addr_buf, &conn->addr,
+                      sizeof(canonical_addr_buf), 1);
+      strlcat(extra_buf, " canonical_addr=", sizeof(extra_buf));
+      strlcat(extra_buf, canonical_addr_buf, sizeof(extra_buf));
+    }
+  } else if (conn->type == CONN_TYPE_EXIT) {
+    if (tor_addr_is_null(&conn->addr)) {
+      address = conn->address;
+      strlcpy(extra_buf, " (DNS lookup pending)", sizeof(extra_buf));
+    }
+  }
+
+  char addr_buf[TOR_ADDR_BUF_LEN];
+  if (address == NULL) {
+    tor_addr_to_str(addr_buf, addr, sizeof(addr_buf), 1);
+    address = addr_buf;
+  }
+
+  const char *sp = include_preposition ? " " : "";
+  if (! include_preposition)
+    prep = "";
+
+  tor_snprintf(peer_buf, sizeof(peer_buf),
+               "%s%s%s%s", prep, sp, address, extra_buf);
+  return peer_buf;
+}
+
+/**
+ * Describe the peer or address of connection @a conn in a
+ * human-readable manner.
+ *
+ * Returns a pointer to a static buffer; future calls to
+ * connection_describe_peer() or connection_describe() will invalidate this
+ * buffer.
+ *
+ * Nobody should parse the output of this function; it can and will change in
+ * future versions of tor.
+ **/
+const char *
+connection_describe_peer(const connection_t *conn)
+{
+  return connection_describe_peer_internal(conn, false);
+}
+
+/**
+ * Describe a connection for logging purposes.
+ *
+ * Returns a pointer to a static buffer; future calls to connection_describe()
+ * will invalidate this buffer.
+ *
+ * Nobody should parse the output of this function; it can and will change in
+ * future versions of tor.
+ **/
+const char *
+connection_describe(const connection_t *conn)
+{
+  IF_BUG_ONCE(!conn) {
+    return "null connection";
+  }
+  static char desc_buf[256];
+  const char *peer = connection_describe_peer_internal(conn, true);
+  tor_snprintf(desc_buf, sizeof(desc_buf),
+               "%s connection (%s) %s",
+               conn_type_to_string(conn->type),
+               conn_state_to_string(conn->type, conn->state),
+               peer);
+  return desc_buf;
+}
+
 /** Allocate and return a new dir_connection_t, initialized as by
  * connection_init(). */
 dir_connection_t *
