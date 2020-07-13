@@ -5,8 +5,8 @@
 /* timestamp1=20190628085927 */
 /* source=allowlist */
 /* ===== */
-/* 0: Whitelist excluded 1550 of 1711 candidates. */
-/* 1: Whitelist excluded 1601 of 1765 candidates. */
+/* 0: Allowlist excluded 1550 of 1711 candidates. */
+/* 1: Allowlist excluded 1601 of 1765 candidates. */
 /* Checked IPv4 DirPorts served a consensus within 15.0s. */
 /*
 0:
