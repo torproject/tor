@@ -273,8 +273,7 @@ check-local:					\
 	check-spaces				\
 	check-changes				\
 	check-includes				\
-	shellcheck				\
-	check-cocci
+	shellcheck
 
 # test-network requires a copy of Chutney in $CHUTNEY_PATH.
 # Chutney can be cloned from https://git.torproject.org/chutney.git .
