@@ -384,6 +384,7 @@ connection_describe_peer_internal(const connection_t *conn,
   const tor_addr_t *addr = &conn->addr;
   const char *address = NULL;
   const char *prep;
+  bool scrub = false;
   char extra_buf[128];
   extra_buf[0] = 0;
 
@@ -418,6 +419,7 @@ connection_describe_peer_internal(const connection_t *conn,
     /* We report the IDs we're talking to... */
     if (fast_digest_is_zero(or_conn->identity_digest)) {
       strlcpy(id_buf, "unknown", sizeof(id_buf));
+      scrub = true; // This could be a client, so scrub it.
     } else {
       base16_encode(id_buf, sizeof(id_buf),
                     or_conn->identity_digest, DIGEST_LEN);
@@ -433,6 +435,7 @@ connection_describe_peer_internal(const connection_t *conn,
       strlcat(extra_buf, canonical_addr_buf, sizeof(extra_buf));
     }
   } else if (conn->type == CONN_TYPE_EXIT) {
+    scrub = true; /* This is a client's request; scrub it with SafeLogging. */
     if (tor_addr_is_null(&conn->addr)) {
       address = conn->address;
       strlcpy(extra_buf, " (DNS lookup pending)", sizeof(extra_buf));
@@ -443,6 +446,10 @@ connection_describe_peer_internal(const connection_t *conn,
   if (address == NULL) {
     tor_addr_to_str(addr_buf, addr, sizeof(addr_buf), 1);
     address = addr_buf;
+  }
+
+  if (scrub) {
+    address = safe_str(address);
   }
 
   const char *sp = include_preposition ? " " : "";
