@@ -1736,8 +1736,8 @@ options_rollback_listener_transaction(listener_transaction_t *xn)
 
   SMARTLIST_FOREACH(xn->new_listeners, connection_t *, conn,
   {
-    log_notice(LD_NET, "Closing partially-constructed %s on %s:%d",
-               conn_type_to_string(conn->type), conn->address, conn->port);
+    log_notice(LD_NET, "Closing partially-constructed %s",
+               connection_describe(conn));
     connection_close_immediate(conn);
     connection_mark_for_close(conn);
   });
