@@ -102,9 +102,9 @@ void fascist_firewall_choose_address_dir_server(const dir_server_t *ds,
 
 int dir_policy_permits_address(const tor_addr_t *addr);
 int socks_policy_permits_address(const tor_addr_t *addr);
-int authdir_policy_permits_address(uint32_t addr, uint16_t port);
-int authdir_policy_valid_address(uint32_t addr, uint16_t port);
-int authdir_policy_badexit_address(uint32_t addr, uint16_t port);
+int authdir_policy_permits_address(const tor_addr_t *addr, uint16_t port);
+int authdir_policy_valid_address(const tor_addr_t *addr, uint16_t port);
+int authdir_policy_badexit_address(const tor_addr_t *addr, uint16_t port);
 
 int validate_addr_policies(const or_options_t *options, char **msg);
 void policy_expand_private(smartlist_t **policy);
@@ -120,7 +120,7 @@ addr_policy_result_t compare_tor_addr_to_node_policy(const tor_addr_t *addr,
 
 int policies_parse_exit_policy_from_options(
                                           const or_options_t *or_options,
-                                          uint32_t local_address,
+                                          const tor_addr_t *ipv4_local_address,
                                           const tor_addr_t *ipv6_local_address,
                                           smartlist_t **result);
 struct config_line_t;

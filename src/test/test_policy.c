@@ -1125,7 +1125,7 @@ test_policy_has_address_helper(const smartlist_t *policy_list,
   return 0;
 }
 
-#define TEST_IPV4_ADDR (0x01020304)
+#define TEST_IPV4_ADDR ("1.2.3.4")
 #define TEST_IPV6_ADDR ("2002::abcd")
 
 /** Run unit tests for rejecting the configured addresses on this exit relay
@@ -1138,7 +1138,7 @@ test_policies_reject_exit_address(void *arg)
   smartlist_t *ipv4_list, *ipv6_list, *both_list, *dupl_list;
   (void)arg;
 
-  tor_addr_from_ipv4h(&ipv4_addr, TEST_IPV4_ADDR);
+  tor_addr_parse(&ipv4_addr, TEST_IPV4_ADDR);
   tor_addr_parse(&ipv6_addr, TEST_IPV6_ADDR);
 
   ipv4_list = smartlist_new();
@@ -1256,7 +1256,7 @@ test_policies_reject_port_address(void *arg)
   test_configured_ports = smartlist_new();
 
   ipv4_port = port_cfg_new(0);
-  tor_addr_from_ipv4h(&ipv4_port->addr, TEST_IPV4_ADDR);
+  tor_addr_parse(&ipv4_port->addr, TEST_IPV4_ADDR);
   smartlist_add(test_configured_ports, ipv4_port);
 
   ipv6_port = port_cfg_new(0);
@@ -1374,7 +1374,7 @@ test_policies_reject_interface_address(void *arg)
   }
 
   /* Now do it all again, but mocked */
-  tor_addr_from_ipv4h(&ipv4_addr, TEST_IPV4_ADDR);
+  tor_addr_parse(&ipv4_addr, TEST_IPV4_ADDR);
   mock_ipv4_addrs = smartlist_new();
   smartlist_add(mock_ipv4_addrs, (void *)&ipv4_addr);
 
@@ -1529,7 +1529,7 @@ mock_router_get_my_routerinfo_with_err(int *err)
 }
 
 #define DEFAULT_POLICY_STRING "reject *:*"
-#define TEST_IPV4_ADDR (0x02040608)
+#define TEST_IPV4_ADDR ("2.4.6.8")
 #define TEST_IPV6_ADDR ("2003::ef01")
 
 static or_options_t mock_options;
@@ -1608,13 +1608,13 @@ test_policies_getinfo_helper_policies(void *arg)
   tt_assert(strlen(answer) == 0 || !strcasecmp(answer, DEFAULT_POLICY_STRING));
   tor_free(answer);
 
-  mock_my_routerinfo.addr = TEST_IPV4_ADDR;
+  tor_addr_parse(&mock_my_routerinfo.ipv4_addr, TEST_IPV4_ADDR);
   tor_addr_parse(&mock_my_routerinfo.ipv6_addr, TEST_IPV6_ADDR);
   append_exit_policy_string(&mock_my_routerinfo.exit_policy, "accept *4:*");
   append_exit_policy_string(&mock_my_routerinfo.exit_policy, "reject *6:*");
 
   mock_options.IPv6Exit = 1;
-  tor_addr_from_ipv4h(
+  tor_addr_parse(
       &mock_options.OutboundBindAddresses[OUTBOUND_ADDR_EXIT][0],
       TEST_IPV4_ADDR);
   tor_addr_parse(
@@ -2243,9 +2243,9 @@ test_policies_fascist_firewall_choose_address(void *arg)
   routerstatus_t fake_rs;
   memset(&fake_rs, 0, sizeof(routerstatus_t));
   /* In a routerstatus, the OR and Dir addresses are the same */
-  fake_rs.addr = tor_addr_to_ipv4h(&ipv4_or_ap.addr);
-  fake_rs.or_port = ipv4_or_ap.port;
-  fake_rs.dir_port = ipv4_dir_ap.port;
+  tor_addr_copy(&fake_rs.ipv4_addr, &ipv4_or_ap.addr);
+  fake_rs.ipv4_orport = ipv4_or_ap.port;
+  fake_rs.ipv4_dirport = ipv4_dir_ap.port;
 
   tor_addr_copy(&fake_rs.ipv6_addr, &ipv6_or_ap.addr);
   fake_rs.ipv6_orport = ipv6_or_ap.port;

@@ -882,10 +882,8 @@ mock_node_get_mutable_by_id(const char *digest)
   test_node.ri = &node_ri;
   memset(test_node.identity, 'c', sizeof(test_node.identity));
 
-  tor_addr_t ipv4_addr;
-  tor_addr_parse(&ipv4_addr, "18.0.0.1");
-  node_ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
-  node_ri.or_port = 1;
+  tor_addr_parse(&node_ri.ipv4_addr, "18.0.0.1");
+  node_ri.ipv4_orport = 1;
 
   return &test_node;
 }

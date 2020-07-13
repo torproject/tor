@@ -225,7 +225,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   smartlist_t *chunks = smartlist_new();
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
-  uint32_t addr;
   char *protocols_lines = NULL;
   char *client_versions_line = NULL, *server_versions_line = NULL;
   char *shared_random_vote_str = NULL;
@@ -236,8 +235,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   tor_assert(v3_ns->type == NS_TYPE_VOTE || v3_ns->type == NS_TYPE_OPINION);
 
   voter = smartlist_get(v3_ns->voters, 0);
-
-  addr = voter->addr;
 
   base16_encode(fingerprint, sizeof(fingerprint),
                 v3_ns->cert->cache_info.identity_digest, DIGEST_LEN);
@@ -322,7 +319,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
       tor_free(digest_algo_b64_digest_bw_file);
     }
 
-    const char *ip_str = fmt_addr32(addr);
+    const char *ip_str = fmt_addr(&voter->ipv4_addr);
 
     if (ip_str[0]) {
       smartlist_add_asprintf(chunks,
@@ -358,7 +355,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                    bw_headers_line ? bw_headers_line : "",
                    bw_file_digest ? bw_file_digest: "",
                    voter->nickname, fingerprint, voter->address,
-                   ip_str, voter->dir_port, voter->or_port,
+                   ip_str, voter->ipv4_dirport, voter->ipv4_orport,
                    voter->contact,
                    shared_random_vote_str ?
                              shared_random_vote_str : "");
@@ -636,9 +633,12 @@ compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
   if ((r = strcmp(b->status.nickname, a->status.nickname)))
     return r;
 
-  CMP_FIELD(unsigned, int, addr);
-  CMP_FIELD(unsigned, int, or_port);
-  CMP_FIELD(unsigned, int, dir_port);
+  if ((r = tor_addr_compare(&a->status.ipv4_addr, &b->status.ipv4_addr,
+                            CMP_EXACT))) {
+    return r;
+  }
+  CMP_FIELD(unsigned, int, ipv4_orport);
+  CMP_FIELD(unsigned, int, ipv4_dirport);
 
   return 0;
 }
@@ -1740,9 +1740,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add_asprintf(chunks,
                    "dir-source %s%s %s %s %s %d %d\n",
                    voter->nickname, e->is_legacy ? "-legacy" : "",
-                   fingerprint, voter->address, fmt_addr32(voter->addr),
-                   voter->dir_port,
-                   voter->or_port);
+                   fingerprint, voter->address, fmt_addr(&voter->ipv4_addr),
+                   voter->ipv4_dirport,
+                   voter->ipv4_orport);
       if (! e->is_legacy) {
         smartlist_add_asprintf(chunks,
                      "contact %s\n"
@@ -2039,10 +2039,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       memcpy(rs_out.identity_digest, current_rsa_id, DIGEST_LEN);
       memcpy(rs_out.descriptor_digest, rs->status.descriptor_digest,
              DIGEST_LEN);
-      rs_out.addr = rs->status.addr;
+      tor_addr_copy(&rs_out.ipv4_addr, &rs->status.ipv4_addr);
       rs_out.published_on = rs->status.published_on;
-      rs_out.dir_port = rs->status.dir_port;
-      rs_out.or_port = rs->status.or_port;
+      rs_out.ipv4_dirport = rs->status.ipv4_dirport;
+      rs_out.ipv4_orport = rs->status.ipv4_orport;
       tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
       rs_out.ipv6_orport = alt_orport.port;
       rs_out.has_bandwidth = 0;
@@ -4222,10 +4222,14 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
 
   /* we return -1 if first should appear before second... that is,
    * if first is a better router. */
+  /* XXX: MUST FOLLOW NEW tor_addr_t INTERFACE. Requires #7193 to be merged
+   * first. */
+#if 0
   if (first->addr < second->addr)
     return -1;
   else if (first->addr > second->addr)
     return 1;
+#endif
 
   /* Potentially, this next bit could cause k n lg n memeq calls.  But in
    * reality, we will almost never get here, since addresses will usually be
@@ -4286,6 +4290,10 @@ get_possible_sybil_list(const smartlist_t *routers)
   smartlist_sort(routers_by_ip, compare_routerinfo_by_ip_and_bw_);
   omit_as_sybil = digestmap_new();
 
+  /* XXX: Fixed once #7193 is merged. */
+  (void) last_addr;
+  (void) addr_count;
+#if 0
   last_addr = 0;
   addr_count = 0;
   SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
@@ -4296,6 +4304,7 @@ get_possible_sybil_list(const smartlist_t *routers)
       digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
     }
   } SMARTLIST_FOREACH_END(ri);
+#endif
 
   smartlist_free(routers_by_ip);
   return omit_as_sybil;
@@ -4722,9 +4731,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
   voter->sigs = smartlist_new();
   voter->address = hostname;
-  voter->addr = tor_addr_to_ipv4h(&addr);
-  voter->dir_port = router_get_advertised_dir_port(options, 0);
-  voter->or_port = router_get_advertised_or_port(options);
+  tor_addr_copy(&voter->ipv4_addr, &addr);
+  voter->ipv4_dirport = router_get_advertised_dir_port(options, 0);
+  voter->ipv4_orport = router_get_advertised_or_port(options);
   voter->contact = tor_strdup(contact);
   if (options->V3AuthUseLegacyKey) {
     authority_cert_t *c = get_my_v3_legacy_cert();

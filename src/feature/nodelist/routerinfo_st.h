@@ -21,9 +21,10 @@ struct routerinfo_t {
   signed_descriptor_t cache_info;
   char *nickname; /**< Human-readable OR name. */
 
-  uint32_t addr; /**< IPv4 address of OR, in host order. */
-  uint16_t or_port; /**< Port for TLS connections. */
-  uint16_t dir_port; /**< Port for HTTP directory connections. */
+  /** A router's IPv4 address. */
+  tor_addr_t ipv4_addr;
+  uint16_t ipv4_orport;
+  uint16_t ipv4_dirport;
 
   /** A router's IPv6 address, if it has one. */
   tor_addr_t ipv6_addr;

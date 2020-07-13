@@ -21,9 +21,9 @@ struct networkstatus_voter_info_t {
    * consensuses, we treat legacy keys as additional signers. */
   char legacy_id_digest[DIGEST_LEN];
   char *address; /**< Address of this voter, in string format. */
-  uint32_t addr; /**< Address of this voter, in IPv4, in host order. */
-  uint16_t dir_port; /**< Directory port of this voter */
-  uint16_t or_port; /**< OR port of this voter */
+  tor_addr_t ipv4_addr;
+  uint16_t ipv4_dirport; /**< Directory port of this voter */
+  uint16_t ipv4_orport; /**< OR port of this voter */
   char *contact; /**< Contact information for this voter. */
   char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
 

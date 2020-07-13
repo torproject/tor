@@ -1545,14 +1545,12 @@ test_build_update_descriptors(void *arg)
 
   /* Now, we'll setup a node_t. */
   {
-    tor_addr_t ipv4_addr;
     curve25519_secret_key_t curve25519_secret_key;
 
     memset(&ri, 0, sizeof(routerinfo_t));
 
-    tor_addr_parse(&ipv4_addr, "127.0.0.1");
-    ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
-    ri.or_port = 1337;
+    tor_addr_parse(&ri.ipv4_addr, "127.0.0.1");
+    ri.ipv4_orport = 1337;
     ri.purpose = ROUTER_PURPOSE_GENERAL;
     /* Ugly yes but we never free the "ri" object so this just makes things
      * easier. */

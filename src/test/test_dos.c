@@ -446,7 +446,7 @@ test_known_relay(void *arg)
   tor_addr_parse(&or_conn.real_addr, "42.42.42.42");
 
   rs = tor_malloc_zero(sizeof(*rs));
-  rs->addr = tor_addr_to_ipv4h(&or_conn.real_addr);
+  tor_addr_copy(&rs->ipv4_addr, &or_conn.real_addr);
   crypto_rand(rs->identity_digest, sizeof(rs->identity_digest));
   smartlist_add(dummy_ns->routerstatus_list, rs);
 

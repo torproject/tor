@@ -654,11 +654,11 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
 
   /* ORPort connections */
   if (indirection == DIRIND_ANONYMOUS) {
-    if (status->addr) {
+    if (!tor_addr_is_null(&status->ipv4_addr)) {
       /* Since we're going to build a 3-hop circuit and ask the 2nd relay
        * to extend to this address, always use the primary (IPv4) OR address */
-      tor_addr_from_ipv4h(&use_or_ap->addr, status->addr);
-      use_or_ap->port = status->or_port;
+      tor_addr_copy(&use_or_ap->addr, &status->ipv4_addr);
+      use_or_ap->port = status->ipv4_orport;
       have_or = 1;
     }
   } else if (indirection == DIRIND_ONEHOP) {
@@ -689,9 +689,9 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
     log_info(LD_BUG, "Rejected all OR and Dir addresses from %s when "
              "launching an outgoing directory connection to: IPv4 %s OR %d "
              "Dir %d IPv6 %s OR %d Dir %d", routerstatus_describe(status),
-             fmt_addr32(status->addr), status->or_port,
-             status->dir_port, fmt_addr(&status->ipv6_addr),
-             status->ipv6_orport, status->dir_port);
+             fmt_addr(&status->ipv4_addr), status->ipv4_orport,
+             status->ipv4_dirport, fmt_addr(&status->ipv6_addr),
+             status->ipv6_orport, status->ipv4_dirport);
     if (!logged_backtrace) {
       log_backtrace(LOG_INFO, LD_BUG, "Addresses came from");
       logged_backtrace = 1;
@@ -713,8 +713,8 @@ directory_conn_is_self_reachability_test(dir_connection_t *conn)
     const routerinfo_t *me = router_get_my_routerinfo();
     if (me &&
         router_digest_is_me(conn->identity_digest) &&
-        tor_addr_eq_ipv4h(&conn->base_.addr, me->addr) && /*XXXX prop 118*/
-        me->dir_port == conn->base_.port)
+        tor_addr_eq(&TO_CONN(conn)->addr, &me->ipv4_addr) &&
+        me->ipv4_dirport == conn->base_.port)
       return 1;
   }
   return 0;

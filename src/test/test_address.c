@@ -1194,16 +1194,14 @@ helper_free_mock_node(node_t *node)
   tor_free(node);
 }
 
-#define NODE_SET_IPV4(node, ipv4_addr, ipv4_port) { \
-    tor_addr_t addr; \
-    tor_addr_parse(&addr, ipv4_addr); \
-    node->ri->addr = tor_addr_to_ipv4h(&addr); \
-    node->ri->or_port = ipv4_port; \
+#define NODE_SET_IPV4(node, ipv4_addr_str, ipv4_port) { \
+    tor_addr_parse(&(node)->ri->ipv4_addr, ipv4_addr_str); \
+    node->ri->ipv4_orport = ipv4_port; \
   }
 
 #define NODE_CLEAR_IPV4(node) { \
-    node->ri->addr = 0; \
-    node->ri->or_port = 0; \
+    tor_addr_make_unspec(&node->ri->ipv4_addr); \
+    node->ri->ipv4_orport = 0; \
   }
 
 #define NODE_SET_IPV6(node, ipv6_addr_str, ipv6_port) { \
@@ -1260,9 +1258,7 @@ mock_get_options(void)
 #define TEST_ROUTER_VALID_ADDRESS_HELPER(ipv4_addr_str, ipv6_addr_str, rv) \
   STMT_BEGIN \
     ri = tor_malloc_zero(sizeof(routerinfo_t)); \
-    tor_addr_t addr; \
-    tor_addr_parse(&addr, (ipv4_addr_str));   \
-    ri->addr = tor_addr_to_ipv4h(&addr); \
+    tor_addr_parse(&ri->ipv4_addr, (ipv4_addr_str));   \
     tor_addr_parse(&ri->ipv6_addr, (ipv6_addr_str)); \
     tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, (rv)); \
     tor_free(ri); \
@@ -1320,7 +1316,7 @@ test_address_dirserv_router_addr_private(void *opt_dir_allow_private)
   /* IPv6 null succeeds, because IPv4 is not internal */
   {
     ri = tor_malloc_zero(sizeof(routerinfo_t));
-    ri->addr = 16777217; /* 1.0.0.1 */
+    tor_addr_parse(&ri->ipv4_addr, "1.0.0.1");
     tt_int_op(dirserv_router_has_valid_address(ri), OP_EQ, 0);
     tor_free(ri);
   }
