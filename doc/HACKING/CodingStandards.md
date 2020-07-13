@@ -118,27 +118,32 @@ instance of the feature (--reverse).
 
 For example, for #30224, we wanted to know when the bridge-distribution-request
 feature was introduced into Tor:
-    $ git log -S bridge-distribution-request --reverse
-    commit ebab521525
-    Author: Roger Dingledine <arma@torproject.org>
-    Date:   Sun Nov 13 02:39:16 2016 -0500
 
-        Add new BridgeDistribution config option
+```console
+$ git log -S bridge-distribution-request --reverse commit ebab521525
+Author: Roger Dingledine <arma@torproject.org>
+Date:   Sun Nov 13 02:39:16 2016 -0500
 
-    $ git describe --contains ebab521525
-    tor-0.3.2.3-alpha~15^2~4
+    Add new BridgeDistribution config option
+
+$ git describe --contains ebab521525
+tor-0.3.2.3-alpha~15^2~4
+```
 
 If you need to know all the Tor versions that contain a commit, use:
-    $ git tag --contains 9f2efd02a1 | sort -V
-    tor-0.2.5.16
-    tor-0.2.8.17
-    tor-0.2.9.14
-    tor-0.2.9.15
-    ...
-    tor-0.3.0.13
-    tor-0.3.1.9
-    tor-0.3.1.10
-    ...
+
+```console
+$ git tag --contains 9f2efd02a1 | sort -V
+tor-0.2.5.16
+tor-0.2.8.17
+tor-0.2.9.14
+tor-0.2.9.15
+...
+tor-0.3.0.13
+tor-0.3.1.9
+tor-0.3.1.10
+...
+```
 
 If at all possible, try to create the changes file in the same commit where
 you are making the change.  Please give it a distinctive name that no other
@@ -438,8 +443,10 @@ use `tor_assert_nonfatal()` in place of `tor_assert()`.  If you'd like to
 write a conditional that incorporates a nonfatal assertion, use the `BUG()`
 macro, as in:
 
-	if (BUG(ptr == NULL))
-		return -1;
+```c
+if (BUG(ptr == NULL))
+	return -1;
+```
 
 ## Allocator conventions
 
@@ -451,33 +458,39 @@ Also, a type named `abc_t` should be freed by a function named `abc_free_()`.
 Don't call this `abc_free_()` function directly -- instead, wrap it in a
 macro called `abc_free()`, using the `FREE_AND_NULL` macro:
 
-    void abc_free_(abc_t *obj);
-    #define abc_free(obj) FREE_AND_NULL(abc_t, abc_free_, (obj))
+```c
+void abc_free_(abc_t *obj);
+#define abc_free(obj) FREE_AND_NULL(abc_t, abc_free_, (obj))
+```
 
 This macro will free the underlying `abc_t` object, and will also set
 the object pointer to NULL.
 
 You should define all `abc_free_()` functions to accept NULL inputs:
 
-    void
-    abc_free_(abc_t *obj)
-    {
-      if (!obj)
-        return;
-      tor_free(obj->name);
-      thing_free(obj->thing);
-      tor_free(obj);
-    }
+```c
+void
+abc_free_(abc_t *obj)
+{
+  if (!obj)
+    return;
+  tor_free(obj->name);
+  thing_free(obj->thing);
+  tor_free(obj);
+}
+```
 
 If you need a free function that takes a `void *` argument (for example,
 to use it as a function callback), define it with a name like
 `abc_free_void()`:
 
-    static void
-    abc_free_void_(void *obj)
-    {
-      abc_free_(obj);
-    }
+```c
+static void
+abc_free_void_(void *obj)
+{
+  abc_free_(obj);
+}
+```
 
 When deallocating, don't say e.g. `if (x) tor_free(x)`. The convention is to
 have deallocators do nothing when NULL pointer is passed.
@@ -488,24 +501,28 @@ Say what functions do as a series of one or more imperative sentences, as
 though you were telling somebody how to be the function.  In other words, DO
 NOT say:
 
-     /** The strtol function parses a number.
-      *
-      * nptr -- the string to parse.  It can include whitespace.
-      * endptr -- a string pointer to hold the first thing that is not part
-      *    of the number, if present.
-      * base -- the numeric base.
-      * returns: the resulting number.
-      */
-     long strtol(const char *nptr, char **nptr, int base);
+```c
+/** The strtol function parses a number.
+ *
+ * nptr -- the string to parse.  It can include whitespace.
+ * endptr -- a string pointer to hold the first thing that is not part
+ *    of the number, if present.
+ * base -- the numeric base.
+ * returns: the resulting number.
+ */
+long strtol(const char *nptr, char **nptr, int base);
+```
 
 Instead, please DO say:
 
-     /** Parse a number in radix <b>base</b> from the string <b>nptr</b>,
-      * and return the result.  Skip all leading whitespace.  If
-      * <b>endptr</b> is not NULL, set *<b>endptr</b> to the first character
-      * after the number parsed.
-      **/
-     long strtol(const char *nptr, char **nptr, int base);
+```c
+/** Parse a number in radix <b>base</b> from the string <b>nptr</b>,
+ * and return the result.  Skip all leading whitespace.  If
+ * <b>endptr</b> is not NULL, set *<b>endptr</b> to the first character
+ * after the number parsed.
+ **/
+long strtol(const char *nptr, char **nptr, int base);
+```
 
 Doxygen comments are the contract in our abstraction-by-contract world: if
 the functions that call your function rely on it doing something, then your

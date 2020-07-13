@@ -107,7 +107,9 @@ covered or uncovered.
 
 To count new or modified uncovered lines in D2, you can run:
 
-    ./scripts/test/cov-diff ${D1} ${D2}" | grep '^+ *\#' | wc -l
+```console
+$ ./scripts/test/cov-diff ${D1} ${D2}" | grep '^+ *\#' | wc -l
+```
 
 ## Marking lines as unreachable by tests
 
@@ -163,28 +165,30 @@ I use the term "unit test" and "regression tests" very sloppily here.
 
 Here's an example of a test function for a simple function in util.c:
 
-    static void
-    test_util_writepid(void *arg)
-    {
-      (void) arg;
+```c
+static void
+test_util_writepid(void *arg)
+{
+    (void) arg;
 
-      char *contents = NULL;
-      const char *fname = get_fname("tmp_pid");
-      unsigned long pid;
-      char c;
+    char *contents = NULL;
+    const char *fname = get_fname("tmp_pid");
+    unsigned long pid;
+    char c;
 
-      write_pidfile(fname);
+    write_pidfile(fname);
 
-      contents = read_file_to_str(fname, 0, NULL);
-      tt_assert(contents);
+    contents = read_file_to_str(fname, 0, NULL);
+    tt_assert(contents);
 
-      int n = sscanf(contents, "%lu\n%c", &pid, &c);
-      tt_int_op(n, OP_EQ, 1);
-      tt_int_op(pid, OP_EQ, getpid());
+    int n = sscanf(contents, "%lu\n%c", &pid, &c);
+    tt_int_op(n, OP_EQ, 1);
+    tt_int_op(pid, OP_EQ, getpid());
 
-    done:
-      tor_free(contents);
-    }
+done:
+    tor_free(contents);
+}
+```
 
 This should look pretty familiar to you if you've read the tinytest
 manual.  One thing to note here is that we use the testing-specific
@@ -214,10 +218,12 @@ macro-protected declaration of the function in the module's header.
 
 For example, `crypto_curve25519.h` contains:
 
-    #ifdef CRYPTO_CURVE25519_PRIVATE
-    STATIC int curve25519_impl(uint8_t *output, const uint8_t *secret,
-                           const uint8_t *basepoint);
-    #endif
+```c
+#ifdef CRYPTO_CURVE25519_PRIVATE
+STATIC int curve25519_impl(uint8_t *output, const uint8_t *secret,
+        const uint8_t *basepoint);
+#endif
+```
 
 The `crypto_curve25519.c` file and the `test_crypto.c` file both define
 `CRYPTO_CURVE25519_PRIVATE`, so they can see this declaration.
@@ -231,28 +237,29 @@ the test _really tests_ the code.
 For example, here is a _bad_ test for the unlink() function (which is
 supposed to remove a file).
 
-    static void
-    test_unlink_badly(void *arg)
-    {
-      (void) arg;
-      int r;
+```c
+static void
+test_unlink_badly(void *arg)
+{
+    (void) arg;
+    int r;
 
-      const char *fname = get_fname("tmpfile");
+    const char *fname = get_fname("tmpfile");
 
-      /* If the file isn't there, unlink returns -1 and sets ENOENT */
-      r = unlink(fname);
-      tt_int_op(n, OP_EQ, -1);
-      tt_int_op(errno, OP_EQ, ENOENT);
+    /* If the file isn't there, unlink returns -1 and sets ENOENT */
+    r = unlink(fname);
+    tt_int_op(n, OP_EQ, -1);
+    tt_int_op(errno, OP_EQ, ENOENT);
 
-      /* If the file DOES exist, unlink returns 0. */
-      write_str_to_file(fname, "hello world", 0);
-      r = unlink(fnme);
-      tt_int_op(r, OP_EQ, 0);
+    /* If the file DOES exist, unlink returns 0. */
+    write_str_to_file(fname, "hello world", 0);
+    r = unlink(fnme);
+    tt_int_op(r, OP_EQ, 0);
 
-    done:
-      tor_free(contents);
-    }
-
+done:
+    tor_free(contents);
+}
+```
 
 This test might get very high coverage on unlink().  So why is it a
 bad test? Because it doesn't check that unlink() *actually removes the
@@ -273,20 +280,25 @@ To write tests for this case, you can replace the underlying functions
 with testing stubs while your unit test is running.  You need to declare
 the underlying function as 'mockable', as follows:
 
-    MOCK_DECL(returntype, functionname, (argument list));
+```c
+MOCK_DECL(returntype, functionname, (argument list));
+```
 
 and then later implement it as:
 
-    MOCK_IMPL(returntype, functionname, (argument list))
-    {
-       /* implementation here */
-    }
+```c
+MOCK_IMPL(returntype, functionname, (argument list))
+{
+    /* implementation here */
+}
+```
 
 For example, if you had a 'connect to remote server' function, you could
 declare it as:
 
-
-    MOCK_DECL(int, connect_to_remote, (const char *name, status_t *status));
+```c
+MOCK_DECL(int, connect_to_remote, (const char *name, status_t *status));
+```
 
 When you declare a function this way, it will be declared as normal in
 regular builds, but when the module is built for testing, it is declared
@@ -295,11 +307,15 @@ as a function pointer initialized to the actual implementation.
 In your tests, if you want to override the function with a temporary
 replacement, you say:
 
-    MOCK(functionname, replacement_function_name);
+```c
+MOCK(functionname, replacement_function_name);
+```
 
 And later, you can restore the original function with:
 
-    UNMOCK(functionname);
+```c
+UNMOCK(functionname);
+```
 
 For more information, see the definitions of this mocking logic in
 `testsupport.h`.
@@ -324,11 +340,13 @@ cases and failure csaes.
 
 For example, consider testing this function:
 
-    /** Remove all elements E from sl such that E==element.  Preserve
-     * the order of any elements before E, but elements after E can be
-     * rearranged.
-     */
-    void smartlist_remove(smartlist_t *sl, const void *element);
+```c
+/** Remove all elements E from sl such that E==element.  Preserve
+ * the order of any elements before E, but elements after E can be
+ * rearranged.
+ */
+void smartlist_remove(smartlist_t *sl, const void *element);
+```
 
 In order to test it well, you should write tests for at least all of the
 following cases.  (These would be black-box tests, since we're only looking
@@ -355,19 +373,21 @@ When you consider edge cases, you might try:
 
 Now let's look at the implementation:
 
-    void
-    smartlist_remove(smartlist_t *sl, const void *element)
-    {
-      int i;
-      if (element == NULL)
+```c
+void
+smartlist_remove(smartlist_t *sl, const void *element)
+{
+    int i;
+    if (element == NULL)
         return;
-      for (i=0; i < sl->num_used; i++)
+    for (i=0; i < sl->num_used; i++)
         if (sl->list[i] == element) {
-          sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
-          i--; /* so we process the new i'th element */
-          sl->list[sl->num_used] = NULL;
+            sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
+            i--; /* so we process the new i'th element */
+            sl->list[sl->num_used] = NULL;
         }
-    }
+}
+```
 
 Based on the implementation, we now see three more edge cases to test:
 

@@ -38,9 +38,9 @@ new Tor release:
 
 3. Run checks that aren't covered above, including:
 
-    * clang scan-build.  (See the script in ./scripts/test/scan_build.sh)
+    * `clang scan-build`.  (See the script in ./scripts/test/scan_build.sh)
 
-    * make test-network and make test-network-all (with
+    * `make test-network` and make `test-network-all` (with
       --enable-fragile-hardening)
 
     * Running Tor yourself and making sure that it actually works for you.
@@ -57,8 +57,7 @@ new Tor release:
    of them and reordering to focus on what users and funders would find
    interesting and understandable.
 
-   To do this, run
-      `./scripts/maint/sortChanges.py changes/* > changelog.in`
+   To do this, run `./scripts/maint/sortChanges.py changes/* > changelog.inx`
    to combine headings and sort the entries.  Copy the changelog.in file
    into the ChangeLog.  Run 'format_changelog.py' (see below) to clean
    up the line breaks.
@@ -164,9 +163,11 @@ new Tor release:
 
 1. Sign the tarball, then sign and push the git tag:
 
-        gpg -ba <the_tarball>
-        git tag -s tor-0.4.x.y-<status>
-        git push origin tag tor-0.4.x.y-<status>
+```console
+$ gpg -ba <the_tarball>
+$ git tag -s tor-0.4.x.y-<status>
+$ git push origin tag tor-0.4.x.y-<status>
+```
 
    (You must do this before you update the website: the website scripts
    rely on finding the version by tag.)

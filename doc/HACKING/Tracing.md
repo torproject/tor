@@ -28,7 +28,7 @@ Tracing is separated in two different concepts. The tracing API and the
 tracing probes.
 
 The API is in `src/lib/trace/` which defines how to call tracepoints in the
-tor code. Every C files should include `src/lib/trace/events.h" if they want
+tor code. Every C files should include `src/lib/trace/events.h` if they want
 to call a tracepoint.
 
 The probes are what actually record the tracepoint data. Because they often
@@ -43,7 +43,9 @@ subsystem and an event name.
 
 A trace event in tor has the following standard format:
 
-	tor_trace(subsystem, event\_name, args...)
+```c
+tor_trace(subsystem, event\_name, args...);
+```
 
 The `subsystem` parameter is the name of the subsytem the trace event is in.
 For example that could be "scheduler" or "vote" or "hs". The idea is to add
@@ -57,7 +59,9 @@ The `args` can be any number of arguments we want to collect.
 
 Here is an example of a possible tracepoint in main():
 
-	tor_trace(main, init_phase, argc)
+```c
+tor_trace(main, init_phase, argc);
+```
 
 The above is a tracepoint in the `main` subsystem with `init\_phase` as the
 event name and the `int argc` is passed to the event as one argument.
@@ -80,7 +84,9 @@ Currently, we have 3 types of possible instrumentation:
   arguments will be passed on because we don't know their type nor the string
   format of the debug log. The output is standardized like this:
 
-    [debug] __FUNC__: Tracepoint <event_name> from subsystem <subsystem> hit.
+```
+[debug] __FUNC__: Tracepoint <event_name> from subsystem <subsystem> hit.
+```
 
 2. USDT
 
@@ -125,12 +131,16 @@ They can all be used together or independently. If one of them is set,
 This is pretty easy. Let's say you want to add a trace event in
 `src/feature/rend/rendcache.c`, you first need to include this file:
 
-	#include "lib/trace/events.h"
+```c
+#include "trace/events.h"
+```
 
 Then, the `tor\_trace()` macro can be used with the specific format detailled
 before in a previous section. As an example:
 
-	tor_trace(hs, store_desc_as_client, desc, desc_id);
+```c
+tor_trace(hs, store_desc_as_client, desc, desc_id);
+```
 
 For `Debug` instrumentation, you have nothing else to do.
 

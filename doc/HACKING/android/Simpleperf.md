@@ -29,7 +29,9 @@ the Android Software Development Kit (SDK) and Native Development Kit
 
 3. Install the Android Package you generated in step 1:
 
+```bash
        $ adb install /path/to/your/app-fullperm-debug.apk
+```
 
 4. Check on your device that the newly installed Orbot actually works
    and behaves in the way you expect it to.
@@ -76,10 +78,12 @@ was spend on the call.
   To access binaries, `torrc` files, and other useful information on
   the device do the following:
 
+```console
       $ adb shell
       (device):/ $ run-as org.torproject.android
       (device):/data/data/org.torproject.android $ ls
       app_bin app_data cache databases files lib shared_prefs
+```
 
   Descriptors, control authentication cookie, state, and other files can be
   found in the `app_data` directory. The `torrc` can be found in the `app_bin/`
@@ -88,10 +92,14 @@ was spend on the call.
 - You can enable logging in Tor via the syslog (or android) log
   mechanism with:
 
+```console
       $ adb shell
       (device):/ $ run-as org.torproject.android
       (device):/data/data/org.torproject.android $ echo -e "\nLog info syslog" >> app_bin/torrc
+```
 
   Start Tor the normal way via Orbot and collect the logs from your computer using
 
+```console
       $ adb logcat
+```

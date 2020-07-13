@@ -37,13 +37,17 @@ Once you've reached this point, here's what you need to know.
      We keep our source under version control in Git.  To get the latest
      version, run:
 
-         git clone https://git.torproject.org/git/tor
+     ```console
+     $ git clone https://git.torproject.org/git/tor
+     ```
 
      This will give you a checkout of the master branch.  If you're
      going to fix a bug that appears in a stable version, check out the
      appropriate "maint" branch, as in:
 
-         git checkout maint-0.4.3
+     ```console
+     $ git checkout maint-0.4.3
+     ```
 
   2. Find your way around the source.
 
