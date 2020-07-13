@@ -116,6 +116,9 @@ const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 int conn_listener_type_supports_af_unix(int type);
 
+const char *connection_describe(const connection_t *conn);
+const char *connection_describe_peer(const connection_t *conn);
+
 struct dir_connection_t *dir_connection_new(int socket_family);
 struct or_connection_t *or_connection_new(int type, int socket_family);
 struct edge_connection_t *edge_connection_new(int type, int socket_family);
