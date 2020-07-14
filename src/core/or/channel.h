@@ -336,13 +336,11 @@ struct channel_t {
   int (*get_remote_addr)(const channel_t *, tor_addr_t *);
   int (*get_transport_name)(channel_t *chan, char **transport_out);
 
-#define GRD_FLAG_ORIGINAL 1
   /**
-   * Get a text description of the remote endpoint; canonicalized if the flag
-   * GRD_FLAG_ORIGINAL is not set, or the one we originally connected
-   * to/received from if it is.
+   * Get a human-readable text description of the remote endpoint, for
+   * logging.
    */
-  const char * (*get_remote_descr)(channel_t *, int);
+  const char * (*describe_peer)(const channel_t *);
   /** Check if the lower layer has queued writes */
   int (*has_queued_writes)(channel_t *);
   /**

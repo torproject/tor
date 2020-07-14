@@ -163,10 +163,9 @@ chan_test_finish_close(channel_t *ch)
 }
 
 static const char *
-chan_test_get_remote_descr(channel_t *ch, int flags)
+chan_test_describe_peer(const channel_t *ch)
 {
   tt_assert(ch);
-  tt_int_op(flags & ~(GRD_FLAG_ORIGINAL), OP_EQ, 0);
 
  done:
   return "Fake channel for unit tests; no real endpoint";
@@ -276,7 +275,7 @@ new_fake_channel(void)
 
   chan->close = chan_test_close;
   chan->num_cells_writeable = chan_test_num_cells_writeable;
-  chan->get_remote_descr = chan_test_get_remote_descr;
+  chan->describe_peer = chan_test_describe_peer;
   chan->get_remote_addr = chan_test_get_remote_addr;
   chan->write_packed_cell = chan_test_write_packed_cell;
   chan->write_var_cell = chan_test_write_var_cell;
