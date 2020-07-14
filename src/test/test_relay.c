@@ -292,12 +292,73 @@ test_suggested_address(void *arg)
   UNMOCK(server_mode);
 }
 
+static void
+test_find_addr_to_publish(void *arg)
+{
+  int family;
+  bool ret;
+  tor_addr_t ipv4_addr, ipv6_addr, cache_addr;
+  or_options_t options;
+
+  (void) arg;
+
+  /* Populate our resolved cache with a valid IPv4 and IPv6. */
+  family = tor_addr_parse(&ipv4_addr, "1.2.3.4");
+  tt_int_op(family, OP_EQ, AF_INET);
+  resolved_addr_set_last(&ipv4_addr, "NA", NULL);
+  resolved_addr_get_last(AF_INET, &cache_addr);
+  tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
+
+  family = tor_addr_parse(&ipv6_addr, "[4242::4242]");
+  tt_int_op(family, OP_EQ, AF_INET6);
+  resolved_addr_set_last(&ipv6_addr, "NA", NULL);
+  resolved_addr_get_last(AF_INET6, &cache_addr);
+  tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
+
+  /* 1. Address located in the resolved cache. */
+  ret = relay_find_addr_to_publish(&options, AF_INET, 1, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
+
+  ret = relay_find_addr_to_publish(&options, AF_INET6, 1, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
+  resolved_addr_reset_last(AF_INET);
+  resolved_addr_reset_last(AF_INET6);
+
+  /* 2. No IP in the resolve cache, go to the suggested cache. We will ignore
+   *    the find_my_address() code path because that is extensively tested in
+   *    another unit tests. */
+  resolved_addr_set_suggested(&ipv4_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET, 1, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
+
+  resolved_addr_set_suggested(&ipv6_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET6, 1, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
+  resolve_addr_reset_suggested(AF_INET);
+  resolve_addr_reset_suggested(AF_INET6);
+
+  /* 3. No IP anywhere. */
+  ret = relay_find_addr_to_publish(&options, AF_INET, 1, &cache_addr);
+  tt_assert(!ret);
+  ret = relay_find_addr_to_publish(&options, AF_INET6, 1, &cache_addr);
+  tt_assert(!ret);
+
+ done:
+  ;
+}
+
 struct testcase_t relay_tests[] = {
   { "append_cell_to_circuit_queue", test_relay_append_cell_to_circuit_queue,
     TT_FORK, NULL, NULL },
   { "close_circ_rephist", test_relay_close_circuit,
     TT_FORK, NULL, NULL },
   { "suggested_address", test_suggested_address,
+    TT_FORK, NULL, NULL },
+  { "find_addr_to_publish", test_find_addr_to_publish,
     TT_FORK, NULL, NULL },
 
   END_OF_TESTCASES
