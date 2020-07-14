@@ -116,7 +116,7 @@ tor_process = subprocess.Popen([tor_path,
 if tor_process == None:
     fail('ERROR: running tor failed')
 
-wait_for_log('Opened Control listener on')
+wait_for_log('Opened Control listener')
 
 try_connecting_to_socksport()
 
