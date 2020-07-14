@@ -245,18 +245,16 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
 
     if (me && !router_dirport_seems_reachable(options)) {
       char *address4 = tor_addr_to_str_dup(&me->ipv4_addr);
-      if (address4) {
-        log_warn(LD_CONFIG,
-                 "Your server (%s:%d) has not managed to confirm that its "
-                 "DirPort is reachable. Relays do not publish descriptors "
-                 "until their ORPort and DirPort are reachable. Please check "
-                 "your firewalls, ports, address, /etc/hosts file, etc.",
-                 address4, me->ipv4_dirport);
-        control_event_server_status(LOG_WARN,
-                                    "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                    address4, me->ipv4_dirport);
-        tor_free(address4);
-      }
+      log_warn(LD_CONFIG,
+               "Your server (%s:%d) has not managed to confirm that its "
+               "DirPort is reachable. Relays do not publish descriptors "
+               "until their ORPort and DirPort are reachable. Please check "
+               "your firewalls, ports, address, /etc/hosts file, etc.",
+               address4, me->ipv4_dirport);
+      control_event_server_status(LOG_WARN,
+                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
+                                  address4, me->ipv4_dirport);
+      tor_free(address4);
     }
   }
 
