@@ -4219,17 +4219,15 @@ compare_routerinfo_by_ip_and_bw_(const void **a, const void **b)
   uint32_t bw_kb_first, bw_kb_second;
   const node_t *node_first, *node_second;
   int first_is_running, second_is_running;
+  uint32_t first_ipv4h = tor_addr_to_ipv4h(&first->ipv4_addr);
+  uint32_t second_ipv4h = tor_addr_to_ipv4h(&second->ipv4_addr);
 
   /* we return -1 if first should appear before second... that is,
    * if first is a better router. */
-  /* XXX: MUST FOLLOW NEW tor_addr_t INTERFACE. Requires #7193 to be merged
-   * first. */
-#if 0
-  if (first->addr < second->addr)
+  if (first_ipv4h < second_ipv4h)
     return -1;
-  else if (first->addr > second->addr)
+  else if (first_ipv4h > second_ipv4h)
     return 1;
-#endif
 
   /* Potentially, this next bit could cause k n lg n memeq calls.  But in
    * reality, we will almost never get here, since addresses will usually be
@@ -4279,7 +4277,7 @@ get_possible_sybil_list(const smartlist_t *routers)
   const dirauth_options_t *options = dirauth_get_options();
   digestmap_t *omit_as_sybil;
   smartlist_t *routers_by_ip = smartlist_new();
-  uint32_t last_addr;
+  tor_addr_t last_addr = TOR_ADDR_NULL;
   int addr_count;
   /* Allow at most this number of Tor servers on a single IP address, ... */
   int max_with_same_addr = options->AuthDirMaxServersPerAddr;
@@ -4290,21 +4288,15 @@ get_possible_sybil_list(const smartlist_t *routers)
   smartlist_sort(routers_by_ip, compare_routerinfo_by_ip_and_bw_);
   omit_as_sybil = digestmap_new();
 
-  /* XXX: Fixed once #7193 is merged. */
-  (void) last_addr;
-  (void) addr_count;
-#if 0
-  last_addr = 0;
   addr_count = 0;
   SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
-    if (last_addr != ri->addr) {
-      last_addr = ri->addr;
+    if (!tor_addr_eq(&last_addr, &ri->ipv4_addr)) {
+      tor_addr_copy(&last_addr, &ri->ipv4_addr);
       addr_count = 1;
     } else if (++addr_count > max_with_same_addr) {
       digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
     }
   } SMARTLIST_FOREACH_END(ri);
-#endif
 
   smartlist_free(routers_by_ip);
   return omit_as_sybil;
