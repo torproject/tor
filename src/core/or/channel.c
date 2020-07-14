@@ -2553,7 +2553,7 @@ channel_dump_statistics, (channel_t *chan, int severity))
   /* Handle remote address and descriptions */
   have_remote_addr = channel_get_addr_if_possible(chan, &remote_addr);
   if (have_remote_addr) {
-    char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
+    char *actual = tor_strdup(channel_describe_peer(chan));
     remote_addr_str = tor_addr_to_str_dup(&remote_addr);
     tor_log(severity, LD_GENERAL,
         " * Channel %"PRIu64 " says its remote address"
@@ -2561,18 +2561,18 @@ channel_dump_statistics, (channel_t *chan, int severity))
         "actual description of \"%s\"",
         (chan->global_identifier),
         safe_str(remote_addr_str),
-        safe_str(channel_get_canonical_remote_descr(chan)),
+        safe_str(channel_describe_peer(chan)),
         safe_str(actual));
     tor_free(remote_addr_str);
     tor_free(actual);
   } else {
-    char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
+    char *actual = tor_strdup(channel_describe_peer(chan));
     tor_log(severity, LD_GENERAL,
         " * Channel %"PRIu64 " does not know its remote "
         "address, but gives a canonical description of \"%s\" and an "
         "actual description of \"%s\"",
         (chan->global_identifier),
-        channel_get_canonical_remote_descr(chan),
+        channel_describe_peer(chan),
         actual);
     tor_free(actual);
   }
@@ -2792,9 +2792,9 @@ channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
  * may invalidate the return value from this function.
  */
 const char *
-channel_get_actual_remote_descr(channel_t *chan)
+channel_describe_peer(channel_t *chan)
 {
-  return channel_get_canonical_remote_descr(chan);
+  return channel_describe_peer(chan);
 }
 
 /**
@@ -2806,7 +2806,7 @@ channel_get_actual_remote_descr(channel_t *chan)
  * Subsequent calls to this function may invalidate its return value.
  */
 MOCK_IMPL(const char *,
-channel_get_canonical_remote_descr,(channel_t *chan))
+channel_describe_peer,(channel_t *chan))
 {
   tor_assert(chan);
   tor_assert(chan->describe_peer);

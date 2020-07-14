@@ -819,7 +819,7 @@ circuit_expire_building(void)
       log_info(LD_CIRC,
                "Abandoning circ %u %s:%u (state %d,%d:%s, purpose %d, "
                "len %d)", TO_ORIGIN_CIRCUIT(victim)->global_identifier,
-               channel_get_canonical_remote_descr(victim->n_chan),
+               channel_describe_peer(victim->n_chan),
                (unsigned)victim->n_circ_id,
                TO_ORIGIN_CIRCUIT(victim)->has_opened,
                victim->state, circuit_state_to_string(victim->state),
@@ -1857,7 +1857,7 @@ circuit_build_failed(origin_circuit_t *circ)
                "from the first hop (%s). I'm going to try to rotate to a "
                "better connection.",
                TO_CIRCUIT(circ)->n_circ_id, circ->global_identifier,
-               channel_get_canonical_remote_descr(n_chan));
+               channel_describe_peer(n_chan));
       n_chan->is_bad_for_new_circs = 1;
     } else {
       log_info(LD_OR,

@@ -632,7 +632,7 @@ circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits)
   tor_assert(chan);
 
   log_debug(LD_CIRC,"chan to %s, status=%d",
-            channel_get_canonical_remote_descr(chan), status);
+            channel_describe_peer(chan), status);
 
   pending_circs = smartlist_new();
   circuit_get_all_pending_on_channel(pending_circs, chan);

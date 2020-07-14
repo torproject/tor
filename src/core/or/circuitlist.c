@@ -619,7 +619,7 @@ circuit_count_pending_on_channel(channel_t *chan)
   cnt = smartlist_len(sl);
   smartlist_free(sl);
   log_debug(LD_CIRC,"or_conn to %s, %d pending circs",
-            channel_get_canonical_remote_descr(chan),
+            channel_describe_peer(chan),
             cnt);
   return cnt;
 }

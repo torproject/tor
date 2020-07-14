@@ -3973,7 +3973,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
          * proxies. */
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "Attempt by %s to open a stream %s. Closing.",
-               safe_str(channel_get_canonical_remote_descr(or_circ->p_chan)),
+               safe_str(channel_describe_peer(or_circ->p_chan)),
                client_chan ? "on first hop of circuit" :
                              "from unknown relay");
         relay_send_end_cell_from_edge(rh.stream_id, circ,

@@ -1874,7 +1874,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   if (me && !TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer &&
       channel_is_canonical(TLS_CHAN_TO_BASE(chan))) {
-    const char *descr = channel_get_actual_remote_descr(
+    const char *descr = channel_describe_peer(
                                                     TLS_CHAN_TO_BASE(chan));
     log_info(LD_OR,
              "We made a connection to a relay at %s (fp=%s) but we think "
