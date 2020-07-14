@@ -61,12 +61,12 @@ int
 mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type)
 {
   (void)type;
-  router_values *status;
-  status = digestmap_get(router_properties, digest);
-  if (!status) {
+  router_values *mock_status;
+  mock_status = digestmap_get(router_properties, digest);
+  if (!mock_status) {
     return -1;
   }
-  return status->is_auth;
+  return mock_status->is_auth;
 }
 
 const node_t *mock_node_get_by_id(const char *identity_digest);
