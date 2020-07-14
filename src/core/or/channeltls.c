@@ -103,9 +103,8 @@ static void channel_tls_close_method(channel_t *chan);
 static const char * channel_tls_describe_transport_method(channel_t *chan);
 static void channel_tls_free_method(channel_t *chan);
 static double channel_tls_get_overhead_estimate_method(channel_t *chan);
-static int
-channel_tls_get_remote_addr_method(const channel_t *chan,
-                                   tor_addr_t *addr_out);
+static int channel_tls_get_remote_addr_method(const channel_t *chan,
+                                              tor_addr_t *addr_out);
 static int
 channel_tls_get_transport_name_method(channel_t *chan, char **transport_out);
 static const char *
@@ -514,22 +513,33 @@ channel_tls_get_overhead_estimate_method(channel_t *chan)
  * This implements the get_remote_addr method for channel_tls_t; copy the
  * remote endpoint of the channel to addr_out and return 1 (always
  * succeeds for this transport).
+ *
+ * Always returns the real address of the peer, not the canonical address.
  */
 static int
-channel_tls_get_remote_addr_method(const channel_t *chan, tor_addr_t *addr_out)
+channel_tls_get_remote_addr_method(const channel_t *chan,
+                                   tor_addr_t *addr_out)
 {
-  int rv = 0;
   const channel_tls_t *tlschan = BASE_CHAN_TO_TLS((channel_t*) chan);
 
   tor_assert(tlschan);
   tor_assert(addr_out);
 
-  if (tlschan->conn) {
-    tor_addr_copy(addr_out, &(tlschan->conn->real_addr));
-    rv = 1;
-  } else tor_addr_make_unspec(addr_out);
+  if (tlschan->conn == NULL) {
+    tor_addr_make_unspec(addr_out);
+    return 0;
+  }
 
-  return rv;
+  if (! tor_addr_is_null(&tlschan->conn->real_addr)) {
+    /* They want the real address, and real_addr is set. */
+    tor_addr_copy(addr_out, &(tlschan->conn->real_addr));
+  } else {
+    /* We'll have to give them the nominal address, which hopefully has
+    * not been overwritten yet. */
+    tor_addr_copy(addr_out, &(tlschan->conn->base_.addr));
+  }
+
+  return 1;
 }
 
 /**

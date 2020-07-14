@@ -329,11 +329,9 @@ struct channel_t {
    */
   double (*get_overhead_estimate)(channel_t *);
   /*
-   * Ask the underlying transport what the remote endpoint address is, in
-   * a tor_addr_t.  This is optional and subclasses may leave this NULL.
-   * If they implement it, they should write the address out to the
-   * provided tor_addr_t *, and return 1 if successful or 0 if no address
-   * available.
+   * Ask the underlying transport what the remote endpoint address is, in a
+   * tor_addr_t.  Write the address out to the provided tor_addr_t *, and
+   * return 1 if successful or 0 if no address available.
    */
   int (*get_remote_addr)(const channel_t *, tor_addr_t *);
   int (*get_transport_name)(channel_t *chan, char **transport_out);

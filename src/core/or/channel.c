@@ -2835,22 +2835,24 @@ channel_get_canonical_remote_descr,(channel_t *chan))
 }
 
 /**
- * Get remote address if possible.
+ * Get the remote address for this channel, if possible.
  *
  * Write the remote address out to a tor_addr_t if the underlying transport
  * supports this operation, and return 1.  Return 0 if the underlying transport
  * doesn't let us do this.
+ *
+ * Always returns the "real" address of the peer -- the one we're connected to
+ * on the internet.
  */
 MOCK_IMPL(int,
-channel_get_addr_if_possible,(const channel_t *chan, tor_addr_t *addr_out))
+channel_get_addr_if_possible,(const channel_t *chan,
+                              tor_addr_t *addr_out))
 {
   tor_assert(chan);
   tor_assert(addr_out);
+  tor_assert(chan->get_remote_addr);
 
-  if (chan->get_remote_addr)
-    return chan->get_remote_addr(chan, addr_out);
-  /* Else no support, method not implemented */
-  else return 0;
+  return chan->get_remote_addr(chan, addr_out);
 }
 
 /**

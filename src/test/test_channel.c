@@ -166,10 +166,18 @@ static const char *
 chan_test_get_remote_descr(channel_t *ch, int flags)
 {
   tt_assert(ch);
-  tt_int_op(flags & ~(GRD_FLAG_ORIGINAL | GRD_FLAG_ADDR_ONLY), OP_EQ, 0);
+  tt_int_op(flags & ~(GRD_FLAG_ORIGINAL), OP_EQ, 0);
 
  done:
   return "Fake channel for unit tests; no real endpoint";
+}
+
+static int
+chan_test_get_remote_addr(const channel_t *ch, tor_addr_t *out)
+{
+  (void)ch;
+  tor_addr_from_ipv4h(out, 0x7f000001);
+  return 1;
 }
 
 static int
@@ -269,6 +277,7 @@ new_fake_channel(void)
   chan->close = chan_test_close;
   chan->num_cells_writeable = chan_test_num_cells_writeable;
   chan->get_remote_descr = chan_test_get_remote_descr;
+  chan->get_remote_addr = chan_test_get_remote_addr;
   chan->write_packed_cell = chan_test_write_packed_cell;
   chan->write_var_cell = chan_test_write_var_cell;
   chan->state = CHANNEL_STATE_OPEN;
