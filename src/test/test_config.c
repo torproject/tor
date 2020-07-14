@@ -2313,7 +2313,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 1);
@@ -2325,7 +2325,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -2337,7 +2337,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -2356,7 +2356,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 1);
@@ -2368,7 +2368,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -2380,7 +2380,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -2392,7 +2392,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 1);
@@ -2404,7 +2404,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -2456,7 +2456,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 1);
@@ -2468,7 +2468,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -2480,7 +2480,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -2499,7 +2499,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 1);
@@ -2511,7 +2511,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -2523,7 +2523,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -2535,7 +2535,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 0);
@@ -2547,7 +2547,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -2599,7 +2599,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -2611,7 +2611,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -2623,7 +2623,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -2642,7 +2642,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -2654,7 +2654,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -2666,7 +2666,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -2678,7 +2678,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 1);
@@ -2690,7 +2690,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -2743,7 +2743,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -2755,7 +2755,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -2767,7 +2767,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -2786,7 +2786,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -2798,7 +2798,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -2810,7 +2810,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -2822,7 +2822,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 0);
@@ -2834,7 +2834,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -2897,7 +2897,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -2909,7 +2909,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -2921,7 +2921,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -2947,7 +2947,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -2959,7 +2959,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -2971,7 +2971,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -2983,7 +2983,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 1);
@@ -2995,7 +2995,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -3053,7 +3053,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3065,7 +3065,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -3077,7 +3077,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -3103,7 +3103,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3115,7 +3115,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 1);
@@ -3127,7 +3127,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -3139,7 +3139,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 0);
@@ -3151,7 +3151,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 1);
@@ -3219,7 +3219,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3231,7 +3231,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3243,7 +3243,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -3270,7 +3270,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3282,7 +3282,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3294,7 +3294,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -3306,7 +3306,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 1);
@@ -3318,7 +3318,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -3379,7 +3379,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3391,7 +3391,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3403,7 +3403,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -3430,7 +3430,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3442,7 +3442,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3454,7 +3454,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 1);
@@ -3466,7 +3466,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 0);
@@ -3478,7 +3478,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -3546,7 +3546,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3558,7 +3558,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3570,7 +3570,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -3597,7 +3597,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3609,7 +3609,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3621,7 +3621,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -3633,7 +3633,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 1);
@@ -3645,7 +3645,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 0);
@@ -3711,7 +3711,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3723,7 +3723,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3735,7 +3735,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -3762,7 +3762,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_D0 +=
-                        (ds->dir_port == 60090 ?
+                        (ds->ipv4_dirport == 60090 ?
                          1 : 0)
                         );
       tt_int_op(found_D0, OP_EQ, 0);
@@ -3774,7 +3774,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_B1 +=
-                        (ds->dir_port == 60091 ?
+                        (ds->ipv4_dirport == 60091 ?
                          1 : 0)
                         );
       tt_int_op(found_B1, OP_EQ, 0);
@@ -3786,7 +3786,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_A2 +=
-                        (ds->dir_port == 60092 ?
+                        (ds->ipv4_dirport == 60092 ?
                          1 : 0)
                         );
       tt_int_op(found_A2, OP_EQ, 0);
@@ -3798,7 +3798,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_non_default_fallback +=
-                        (ds->dir_port == 60093 ?
+                        (ds->ipv4_dirport == 60093 ?
                          1 : 0)
                         );
       tt_int_op(found_non_default_fallback, OP_EQ, 0);
@@ -3810,7 +3810,7 @@ test_config_adding_dir_servers(void *arg)
                         ds,
                         /* increment the found counter if dir_port matches */
                         found_default_fallback +=
-                        (ds->dir_port == 60099 ?
+                        (ds->ipv4_dirport == 60099 ?
                          1 : 0)
                         );
       tt_int_op(found_default_fallback, OP_EQ, 1);
@@ -4051,7 +4051,7 @@ test_config_directory_fetch(void *arg)
   mock_router_my_exit_policy_is_reject_star_result = 1;
 
   mock_advertised_server_mode_result = 1;
-  routerinfo.dir_port = 1;
+  routerinfo.ipv4_dirport =  1;
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
@@ -4060,7 +4060,7 @@ test_config_directory_fetch(void *arg)
             OP_EQ, 0);
 
   mock_advertised_server_mode_result = 0;
-  routerinfo.dir_port = 1;
+  routerinfo.ipv4_dirport =  1;
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
@@ -4077,7 +4077,7 @@ test_config_directory_fetch(void *arg)
             OP_EQ, 0);
 
   mock_advertised_server_mode_result = 1;
-  routerinfo.dir_port = 0;
+  routerinfo.ipv4_dirport =  0;
   routerinfo.supports_tunnelled_dir_requests = 0;
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
@@ -4087,7 +4087,7 @@ test_config_directory_fetch(void *arg)
             OP_EQ, 0);
 
   mock_advertised_server_mode_result = 1;
-  routerinfo.dir_port = 1;
+  routerinfo.ipv4_dirport =  1;
   routerinfo.supports_tunnelled_dir_requests = 1;
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);

@@ -84,7 +84,7 @@ dirserv_orconn_tls_done(const tor_addr_t *addr,
       log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
                router_describe(ri),
                tor_addr_to_str(addrstr, addr, sizeof(addrstr), 1),
-               ri->or_port);
+               ri->ipv4_orport);
       if (tor_addr_family(addr) == AF_INET) {
         rep_hist_note_router_reachable(digest_rcvd, addr, or_port, now);
         node->last_reachable = now;
@@ -132,7 +132,6 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
   const dirauth_options_t *dirauth_options = dirauth_get_options();
   channel_t *chan = NULL;
   const node_t *node = NULL;
-  tor_addr_t router_addr;
   const ed25519_public_key_t *ed_id_key;
   (void) now;
 
@@ -150,9 +149,9 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
 
   /* IPv4. */
   log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
-            router->nickname, fmt_addr32(router->addr), router->or_port);
-  tor_addr_from_ipv4h(&router_addr, router->addr);
-  chan = channel_tls_connect(&router_addr, router->or_port,
+            router->nickname, fmt_addr(&router->ipv4_addr),
+            router->ipv4_orport);
+  chan = channel_tls_connect(&router->ipv4_addr, router->ipv4_orport,
                              router->cache_info.identity_digest,
                              ed_id_key);
   if (chan) command_setup_channel(chan);

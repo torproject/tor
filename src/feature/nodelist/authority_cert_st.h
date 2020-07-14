@@ -27,10 +27,10 @@ struct authority_cert_t {
   char signing_key_digest[DIGEST_LEN];
   /** The listed expiration time of this certificate. */
   time_t expires;
-  /** This authority's IPv4 address, in host order. */
-  uint32_t addr;
+  /** This authority's IPv4 address. */
+  tor_addr_t ipv4_addr;
   /** This authority's directory port. */
-  uint16_t dir_port;
+  uint16_t ipv4_dirport;
 };
 
 #endif /* !defined(AUTHORITY_CERT_ST_H) */

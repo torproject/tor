@@ -284,8 +284,8 @@ static void
 router_do_dirport_reachability_checks(const routerinfo_t *me)
 {
   tor_addr_port_t my_dirport;
-  tor_addr_from_ipv4h(&my_dirport.addr, me->addr);
-  my_dirport.port = me->dir_port;
+  tor_addr_copy(&my_dirport.addr, &me->ipv4_addr);
+  my_dirport.port = me->ipv4_dirport;
 
   /* If there is already a pending connection, don't open another one. */
   if (!connection_get_by_type_addr_port_purpose(
@@ -443,7 +443,7 @@ router_dirport_found_reachable(void)
   const or_options_t *options = get_options();
 
   if (!can_reach_dir_port && me) {
-    char *address = tor_dup_ip(me->addr);
+    char *address = tor_addr_to_str_dup(&me->ipv4_addr);
 
     if (!address)
       return;
@@ -454,7 +454,7 @@ router_dirport_found_reachable(void)
                ready_to_publish(options) ?
                " Publishing server descriptor." : "");
 
-    if (router_should_advertise_dirport(options, me->dir_port)) {
+    if (router_should_advertise_dirport(options, me->ipv4_dirport)) {
       mark_my_descriptor_dirty("DirPort found reachable");
       /* This is a significant enough change to upload immediately,
        * at least in a test network */
@@ -464,7 +464,7 @@ router_dirport_found_reachable(void)
     }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
-                                address, me->dir_port);
+                                address, me->ipv4_dirport);
     tor_free(address);
   }
 }

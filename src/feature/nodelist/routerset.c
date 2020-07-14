@@ -327,10 +327,8 @@ int
 routerset_contains_router(const routerset_t *set, const routerinfo_t *ri,
                           country_t country)
 {
-  tor_addr_t addr_v4;
-  tor_addr_from_ipv4h(&addr_v4, ri->addr);
-  return routerset_contains2(set, &addr_v4, ri->or_port, &ri->ipv6_addr,
-                             ri->ipv6_orport, ri->nickname,
+  return routerset_contains2(set, &ri->ipv4_addr, ri->ipv4_orport,
+                             &ri->ipv6_addr, ri->ipv6_orport, ri->nickname,
                              ri->cache_info.identity_digest, country);
 }
 
@@ -341,11 +339,9 @@ routerset_contains_routerstatus(const routerset_t *set,
                                 const routerstatus_t *rs,
                                 country_t country)
 {
-  tor_addr_t addr;
-  tor_addr_from_ipv4h(&addr, rs->addr);
   return routerset_contains(set,
-                            &addr,
-                            rs->or_port,
+                            &rs->ipv4_addr,
+                            rs->ipv4_orport,
                             rs->nickname,
                             rs->identity_digest,
                             country);

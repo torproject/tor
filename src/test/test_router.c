@@ -61,8 +61,8 @@ rtr_tests_router_get_my_routerinfo(void)
 
     mock_routerinfo = tor_malloc_zero(sizeof(routerinfo_t));
     mock_routerinfo->nickname = tor_strdup("ConlonNancarrow");
-    mock_routerinfo->addr = 123456789;
-    mock_routerinfo->or_port = 443;
+    tor_addr_from_ipv4h(&mock_routerinfo->ipv4_addr, 123456789);
+    mock_routerinfo->ipv4_orport = 443;
     mock_routerinfo->platform = tor_strdup("unittest");
     mock_routerinfo->cache_info.published_on = now;
     mock_routerinfo->identity_pkey = crypto_pk_dup_key(ident_key);

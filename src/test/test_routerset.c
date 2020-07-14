@@ -1438,8 +1438,8 @@ test_rset_contains_router_ipv4(void *arg)
   set = routerset_new();
   s = "10.0.0.1";
   r = routerset_parse(set, s, "");
-  ri.addr = htonl(0x0a000001); /* 10.0.0.1 */
-  ri.or_port = 1234;
+  tor_addr_from_ipv4h(&ri.ipv4_addr, 0x0a000001);
+  ri.ipv4_orport = 1234;
 
   r = routerset_contains_router(set, &ri, country);
   tt_int_op(r, OP_EQ, 3);

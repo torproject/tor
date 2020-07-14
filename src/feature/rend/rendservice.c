@@ -3740,7 +3740,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       rend_data_free(rend_data);
       base32_encode(desc_id_base32, sizeof(desc_id_base32),
                     desc->desc_id, DIGEST_LEN);
-      hs_dir_ip = tor_dup_ip(hs_dir->addr);
+      hs_dir_ip = tor_addr_to_str_dup(&hs_dir->ipv4_addr);
       if (hs_dir_ip) {
         log_info(LD_REND, "Launching upload for v2 descriptor for "
                           "service '%s' with descriptor ID '%s' with validity "
@@ -3751,7 +3751,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                  seconds_valid,
                  hs_dir->nickname,
                  hs_dir_ip,
-                 hs_dir->or_port);
+                 hs_dir->ipv4_orport);
         tor_free(hs_dir_ip);
       }
 

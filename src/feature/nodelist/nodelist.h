@@ -35,8 +35,7 @@ node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(const networkstatus_t *ns);
 void nodelist_ensure_freshness(const networkstatus_t *ns);
 int nodelist_probably_contains_address(const tor_addr_t *addr);
-void nodelist_add_addr4_to_address_set(const uint32_t addr);
-void nodelist_add_addr6_to_address_set(const tor_addr_t *addr);
+void nodelist_add_addr_to_address_set(const tor_addr_t *addr);
 
 void nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md);
 void nodelist_remove_routerinfo(routerinfo_t *ri);
@@ -67,7 +66,6 @@ smartlist_t *node_get_all_orports(const node_t *node);
 int node_allows_single_hop_exits(const node_t *node);
 const char *node_get_nickname(const node_t *node);
 const char *node_get_platform(const node_t *node);
-uint32_t node_get_prim_addr_ipv4h(const node_t *node);
 void node_get_address_string(const node_t *node, char *cp, size_t len);
 long node_get_declared_uptime(const node_t *node);
 MOCK_DECL(const struct ed25519_public_key_t *,node_get_ed25519_id,
@@ -114,7 +112,6 @@ MOCK_DECL(const smartlist_t *, nodelist_get_list, (void));
 
 /* Temporary during transition to multiple addresses.  */
 void node_get_addr(const node_t *node, tor_addr_t *addr_out);
-#define node_get_addr_ipv4h(n) node_get_prim_addr_ipv4h((n))
 
 void nodelist_refresh_countries(void);
 void node_set_country(node_t *node);

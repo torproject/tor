@@ -460,19 +460,15 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
     if (ds && cert->cache_info.published_on > ds->addr_current_at) {
       /* Check to see whether we should update our view of the authority's
        * address. */
-      if (cert->addr && cert->dir_port &&
-          (ds->addr != cert->addr ||
-           ds->dir_port != cert->dir_port)) {
-        char *a = tor_dup_ip(cert->addr);
-        if (a) {
-          log_notice(LD_DIR, "Updating address for directory authority %s "
-                     "from %s:%d to %s:%d based on certificate.",
-                     ds->nickname, ds->address, (int)ds->dir_port,
-                     a, cert->dir_port);
-          tor_free(a);
-        }
-        ds->addr = cert->addr;
-        ds->dir_port = cert->dir_port;
+      if (!tor_addr_is_null(&cert->ipv4_addr) && cert->ipv4_dirport &&
+          (!tor_addr_eq(&ds->ipv4_addr, &cert->ipv4_addr) ||
+           ds->ipv4_dirport != cert->ipv4_dirport)) {
+        log_notice(LD_DIR, "Updating address for directory authority %s "
+                   "from %s:%"PRIu16" to %s:%"PRIu16" based on certificate.",
+                   ds->nickname, ds->address, ds->ipv4_dirport,
+                   fmt_addr(&cert->ipv4_addr), cert->ipv4_dirport);
+        tor_addr_copy(&ds->ipv4_addr, &cert->ipv4_addr);
+        ds->ipv4_dirport = cert->ipv4_dirport;
       }
       ds->addr_current_at = cert->cache_info.published_on;
     }
