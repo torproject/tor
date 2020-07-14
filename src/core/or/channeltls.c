@@ -107,8 +107,7 @@ static int channel_tls_get_remote_addr_method(const channel_t *chan,
                                               tor_addr_t *addr_out);
 static int
 channel_tls_get_transport_name_method(channel_t *chan, char **transport_out);
-static const char *
-channel_tls_get_remote_descr_method(channel_t *chan, int flags);
+static const char *channel_tls_describe_peer_method(const channel_t *chan);
 static int channel_tls_has_queued_writes_method(channel_t *chan);
 static int channel_tls_is_canonical_method(channel_t *chan, int req);
 static int
@@ -164,7 +163,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->free_fn = channel_tls_free_method;
   chan->get_overhead_estimate = channel_tls_get_overhead_estimate_method;
   chan->get_remote_addr = channel_tls_get_remote_addr_method;
-  chan->get_remote_descr = channel_tls_get_remote_descr_method;
+  chan->describe_peer = channel_tls_describe_peer_method;
   chan->get_transport_name = channel_tls_get_transport_name_method;
   chan->has_queued_writes = channel_tls_has_queued_writes_method;
   chan->is_canonical = channel_tls_is_canonical_method;
@@ -567,50 +566,22 @@ channel_tls_get_transport_name_method(channel_t *chan, char **transport_out)
 }
 
 /**
- * Get endpoint description of a channel_tls_t.
+ * Get a human-readable endpoint description of a channel_tls_t.
  *
- * This implements the get_remote_descr method for channel_tls_t; it returns
- * a text description of the remote endpoint of the channel suitable for use
- * in log messages. The req parameter is 0 for the canonical address or 1 for
- * the actual address seen.
+ * This format is intended for logging, and may change in the future;
+ * nothing should parse or rely on its particular details.
  */
 static const char *
-channel_tls_get_remote_descr_method(channel_t *chan, int flags)
+channel_tls_describe_peer_method(const channel_t *chan)
 {
-  static char buf[TOR_ADDRPORT_BUF_LEN];
-  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
-  connection_t *conn;
-  const char *answer = NULL;
-  char *addr_str;
-
+  const channel_tls_t *tlschan = BASE_CHAN_TO_TLS((channel_t*)chan);
   tor_assert(tlschan);
 
   if (tlschan->conn) {
-    conn = TO_CONN(tlschan->conn);
-    switch (flags) {
-      case 0:
-        /* Canonical address with port*/
-        tor_snprintf(buf, TOR_ADDRPORT_BUF_LEN,
-                     "%s:%u", conn->address, conn->port);
-        answer = buf;
-        break;
-      case GRD_FLAG_ORIGINAL:
-        /* Actual address with port */
-        addr_str = tor_addr_to_str_dup(&(tlschan->conn->real_addr));
-        tor_snprintf(buf, TOR_ADDRPORT_BUF_LEN, "%s:%u", addr_str, conn->port);
-        tor_free(addr_str);
-        answer = buf;
-        break;
-      default:
-        /* Something's broken in channel.c */
-        tor_assert_nonfatal_unreached_once();
-    }
+    return connection_describe_peer(TO_CONN(tlschan->conn));
   } else {
-    strlcpy(buf, "(No connection)", sizeof(buf));
-    answer = buf;
+    return "(No connection)";
   }
-
-  return answer;
 }
 
 /**
@@ -1903,8 +1874,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   if (me && !TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer &&
       channel_is_canonical(TLS_CHAN_TO_BASE(chan))) {
-    const char *descr =
-      TLS_CHAN_TO_BASE(chan)->get_remote_descr(TLS_CHAN_TO_BASE(chan), 0);
+    const char *descr = channel_get_actual_remote_descr(
+                                                    TLS_CHAN_TO_BASE(chan));
     log_info(LD_OR,
              "We made a connection to a relay at %s (fp=%s) but we think "
              "they will not consider this connection canonical. They "
