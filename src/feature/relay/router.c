@@ -38,6 +38,7 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/relay_config.h"
 #include "feature/relay/relay_find_addr.h"
+#include "feature/relay/relay_periodic.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
@@ -1757,16 +1758,6 @@ router_get_my_routerinfo_with_err,(int *err))
     return NULL;
   }
 
-  if (!desc_clean_since) {
-    int rebuild_err = router_rebuild_descriptor(0);
-    if (rebuild_err < 0) {
-      if (err)
-        *err = rebuild_err;
-
-      return NULL;
-    }
-  }
-
   if (!desc_routerinfo) {
     if (err)
       *err = TOR_ROUTERINFO_ERROR_DESC_REBUILDING;
@@ -2400,20 +2391,9 @@ router_rebuild_descriptor(int force)
   int err = 0;
   routerinfo_t *ri;
   extrainfo_t *ei;
-  uint32_t addr;
-  const or_options_t *options = get_options();
 
   if (desc_clean_since && !force)
     return 0;
-
-  if (router_pick_published_address(options, &addr, 0) < 0 ||
-      router_get_advertised_or_port(options) == 0) {
-    /* Stop trying to rebuild our descriptor every second. We'll
-     * learn that it's time to try again when ip_address_changed()
-     * marks it dirty. */
-    desc_clean_since = time(NULL);
-    return TOR_ROUTERINFO_ERROR_DESC_REBUILDING;
-  }
 
   log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
 
@@ -2514,11 +2494,13 @@ mark_my_descriptor_dirty(const char *reason)
   if (BUG(reason == NULL)) {
     reason = "marked descriptor dirty for unspecified reason";
   }
-  if (server_mode(options) && options->PublishServerDescriptor_)
+  if (server_mode(options) && options->PublishServerDescriptor_) {
     log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
+  }
   desc_clean_since = 0;
   if (!desc_dirty_reason)
     desc_dirty_reason = reason;
+  reschedule_descriptor_update_check();
 }
 
 /** How frequently will we republish our descriptor because of large (factor
