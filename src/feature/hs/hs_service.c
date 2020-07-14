@@ -3904,7 +3904,7 @@ hs_service_exports_circuit_id(const ed25519_public_key_t *pk)
 
 /** Add to file_list every filename used by a configured hidden service, and to
  * dir_list every directory path used by a configured hidden service. This is
- * used by the sandbox subsystem to whitelist those. */
+ * used by the sandbox subsystem to allowlist those. */
 void
 hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
                                     smartlist_t *dir_list)

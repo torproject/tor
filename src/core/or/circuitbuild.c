@@ -1777,7 +1777,7 @@ pick_restricted_middle_node(router_crn_flags_t flags,
 {
   const node_t *middle_node = NULL;
 
-  smartlist_t *whitelisted_live_middles = smartlist_new();
+  smartlist_t *allowlisted_live_middles = smartlist_new();
   smartlist_t *all_live_nodes = smartlist_new();
 
   tor_assert(pick_from);
@@ -1785,21 +1785,21 @@ pick_restricted_middle_node(router_crn_flags_t flags,
   /* Add all running nodes to all_live_nodes */
   router_add_running_nodes_to_smartlist(all_live_nodes, flags);
 
-  /* Filter all_live_nodes to only add live *and* whitelisted middles
-   * to the list whitelisted_live_middles. */
+  /* Filter all_live_nodes to only add live *and* allowlisted middles
+   * to the list allowlisted_live_middles. */
   SMARTLIST_FOREACH_BEGIN(all_live_nodes, node_t *, live_node) {
     if (routerset_contains_node(pick_from, live_node)) {
-      smartlist_add(whitelisted_live_middles, live_node);
+      smartlist_add(allowlisted_live_middles, live_node);
     }
   } SMARTLIST_FOREACH_END(live_node);
 
   /* Honor ExcludeNodes */
   if (exclude_set) {
-    routerset_subtract_nodes(whitelisted_live_middles, exclude_set);
+    routerset_subtract_nodes(allowlisted_live_middles, exclude_set);
   }
 
   if (exclude_list) {
-    smartlist_subtract(whitelisted_live_middles, exclude_list);
+    smartlist_subtract(allowlisted_live_middles, exclude_list);
   }
 
   /**
@@ -1815,9 +1815,9 @@ pick_restricted_middle_node(router_crn_flags_t flags,
    * If there are a lot of nodes in here, assume they did not load balance
    * and do it for them, but also warn them that they may be Doing It Wrong.
    */
-  if (smartlist_len(whitelisted_live_middles) <=
+  if (smartlist_len(allowlisted_live_middles) <=
           MAX_SANE_RESTRICTED_NODES) {
-    middle_node = smartlist_choose(whitelisted_live_middles);
+    middle_node = smartlist_choose(allowlisted_live_middles);
   } else {
     static ratelim_t pinned_notice_limit = RATELIM_INIT(24*3600);
     log_fn_ratelim(&pinned_notice_limit, LOG_NOTICE, LD_CIRC,
@@ -1825,17 +1825,17 @@ pick_restricted_middle_node(router_crn_flags_t flags,
             "in %d total nodes. This is a lot of nodes. "
             "You may want to consider using a Tor controller "
             "to select and update a smaller set of nodes instead.",
-            position_hint, smartlist_len(whitelisted_live_middles));
+            position_hint, smartlist_len(allowlisted_live_middles));
 
     /* NO_WEIGHTING here just means don't take node flags into account
      * (ie: use consensus measurement only). This is done so that
      * we don't further surprise the user by not using Exits that they
      * specified at all */
-    middle_node = node_sl_choose_by_bandwidth(whitelisted_live_middles,
+    middle_node = node_sl_choose_by_bandwidth(allowlisted_live_middles,
                                               NO_WEIGHTING);
   }
 
-  smartlist_free(whitelisted_live_middles);
+  smartlist_free(allowlisted_live_middles);
   smartlist_free(all_live_nodes);
 
   return middle_node;
