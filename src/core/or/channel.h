@@ -337,12 +337,10 @@ struct channel_t {
   int (*get_transport_name)(channel_t *chan, char **transport_out);
 
 #define GRD_FLAG_ORIGINAL 1
-#define GRD_FLAG_ADDR_ONLY 2
   /**
    * Get a text description of the remote endpoint; canonicalized if the flag
    * GRD_FLAG_ORIGINAL is not set, or the one we originally connected
-   * to/received from if it is.  If GRD_FLAG_ADDR_ONLY is set, we return only
-   * the original address.
+   * to/received from if it is.
    */
   const char * (*get_remote_descr)(channel_t *, int);
   /** Check if the lower layer has queued writes */
@@ -723,7 +721,6 @@ const char * channel_describe_transport(channel_t *chan);
 MOCK_DECL(void, channel_dump_statistics, (channel_t *chan, int severity));
 void channel_dump_transport_statistics(channel_t *chan, int severity);
 const char * channel_get_actual_remote_descr(channel_t *chan);
-const char * channel_get_actual_remote_address(channel_t *chan);
 MOCK_DECL(int, channel_get_addr_if_possible, (const channel_t *chan,
                                               tor_addr_t *addr_out));
 MOCK_DECL(const char *, channel_get_canonical_remote_descr,(channel_t *chan));

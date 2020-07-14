@@ -3996,10 +3996,13 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
      * caller might want to know whether the remote IP address has changed,
      * and we might already have corrected base_.addr[ess] for the relay's
      * canonical IP address. */
-    if (or_circ && or_circ->p_chan)
-      address = tor_strdup(channel_get_actual_remote_address(or_circ->p_chan));
-    else
+    tor_addr_t chan_addr;
+    if (or_circ && or_circ->p_chan &&
+        channel_get_addr_if_possible(or_circ->p_chan, &chan_addr)) {
+      address = tor_addr_to_str_dup(&chan_addr);
+    } else {
       address = tor_strdup("127.0.0.1");
+    }
     port = 1; /* XXXX This value is never actually used anywhere, and there
                * isn't "really" a connection here.  But we
                * need to set it to something nonzero. */

@@ -601,18 +601,6 @@ channel_tls_get_remote_descr_method(channel_t *chan, int flags)
         tor_free(addr_str);
         answer = buf;
         break;
-      case GRD_FLAG_ADDR_ONLY:
-        /* Canonical address, no port */
-        strlcpy(buf, conn->address, sizeof(buf));
-        answer = buf;
-        break;
-      case GRD_FLAG_ORIGINAL|GRD_FLAG_ADDR_ONLY:
-        /* Actual address, no port */
-        addr_str = tor_addr_to_str_dup(&(tlschan->conn->real_addr));
-        strlcpy(buf, addr_str, sizeof(buf));
-        tor_free(addr_str);
-        answer = buf;
-        break;
       default:
         /* Something's broken in channel.c */
         tor_assert_nonfatal_unreached_once();

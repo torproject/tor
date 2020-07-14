@@ -2802,19 +2802,6 @@ channel_get_actual_remote_descr(channel_t *chan)
 }
 
 /**
- * Return the text address of the remote endpoint.
- *
- * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
- * may invalidate the return value from this function.
- */
-const char *
-channel_get_actual_remote_address(channel_t *chan)
-{
-  /* Param 1 indicates the actual description */
-  return chan->get_remote_descr(chan, GRD_FLAG_ORIGINAL|GRD_FLAG_ADDR_ONLY);
-}
-
-/**
  * Return text description of the remote endpoint canonical address.
  *
  * This function return a test provided by the lower layer of the remote
