@@ -352,10 +352,15 @@ conn_state_to_string(int type, int state)
       break;
   }
 
+  if (state == 0) {
+    return "uninitialized";
+  }
+
   log_warn(LD_BUG, "unknown connection state %d (type %d)", state, type);
   tor_snprintf(buf, sizeof(buf),
                "unknown state [%d] on unknown [%s] connection",
                state, conn_type_to_string(type));
+  tor_assert_nonfatal_unreached_once();
   return buf;
 }
 
