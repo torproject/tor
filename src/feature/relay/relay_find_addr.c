@@ -24,20 +24,6 @@
  * headers. */
 static tor_addr_t last_guessed_ip = TOR_ADDR_NULL;
 
-/** We failed to resolve our address locally, but we'd like to build
- * a descriptor and publish / test reachability. If we have a guess
- * about our address based on directory headers, answer it and return
- * 0; else return -1. */
-static int
-router_guess_address_from_dir_headers(uint32_t *guess)
-{
-  if (!tor_addr_is_null(&last_guessed_ip)) {
-    *guess = tor_addr_to_ipv4h(&last_guessed_ip);
-    return 0;
-  }
-  return -1;
-}
-
 /** Consider the address suggestion suggested_addr as a possible one to use as
  * our address.
  *
@@ -214,45 +200,6 @@ relay_find_addr_to_publish, (const or_options_t *options, int family,
 
  found:
   return true;
-}
-
-/** Make a current best guess at our address, either because
- * it's configured in torrc, or because we've learned it from
- * dirserver headers. Place the answer in *<b>addr</b> and return
- * 0 on success, else return -1 if we have no guess.
- *
- * If <b>cache_only</b> is true, just return any cached answers, and
- * don't try to get any new answers.
- */
-MOCK_IMPL(int,
-router_pick_published_address, (const or_options_t *options, uint32_t *addr,
-                                int cache_only))
-{
-  tor_addr_t last_resolved_addr;
-
-  /* First, check the cached output from find_my_address(). */
-  resolved_addr_get_last(AF_INET, &last_resolved_addr);
-  if (!tor_addr_is_null(&last_resolved_addr)) {
-    *addr = tor_addr_to_ipv4h(&last_resolved_addr);
-    return 0;
-  }
-
-  /* Second, consider doing a resolve attempt right here. */
-  if (!cache_only) {
-    tor_addr_t my_addr;
-    if (find_my_address(options, AF_INET, LOG_INFO, &my_addr, NULL, NULL)) {
-      log_info(LD_CONFIG,"Success: chose address '%s'.", fmt_addr(&my_addr));
-      *addr = tor_addr_to_ipv4h(&my_addr);
-      return 0;
-    }
-  }
-
-  /* Third, check the cached output from router_new_address_suggestion(). */
-  if (router_guess_address_from_dir_headers(addr) >= 0)
-    return 0;
-
-  /* We have no useful cached answers. Return failure. */
-  return -1;
 }
 
 /** Return true iff this relay has an address set for the given family.
