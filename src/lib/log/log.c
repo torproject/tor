@@ -1308,7 +1308,7 @@ log_level_to_string(int level)
 /** NULL-terminated array of names for log domains such that domain_list[dom]
  * is a description of <b>dom</b>.
  *
- * Remember to update doc/tor.1.txt if you modify this list.
+ * Remember to update doc/man/tor.1.txt if you modify this list.
  * */
 static const char *domain_list[] = {
   "GENERAL", "CRYPTO", "NET", "CONFIG", "FS", "PROTOCOL", "MM",

@@ -1,5 +1,5 @@
 // When modifying, don't forget to update the defaults
-// for 'TestingTorNetwork' in 'doc/tor.1.txt'
+// for 'TestingTorNetwork' in 'doc/man/tor.1.txt'
 { "DirAllowPrivateAddresses", "1" },
 { "EnforceDistinctSubnets", "0" },
 { "AuthDirMaxServersPerAddr", "0" },

@@ -27,7 +27,7 @@
  *   <li>The option_vars_ array below in this module, which configures
  *       the names of the torrc options, their types, their multiplicities,
  *       and their mappings to fields in or_options_t.
- *   <li>The manual in doc/tor.1.txt, to document what the new option
+ *   <li>The manual in doc/man/tor.1.txt, to document what the new option
  *       is, and how it works.
  * </ul>
  *
