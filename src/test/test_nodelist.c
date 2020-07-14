@@ -703,8 +703,8 @@ test_nodelist_format_node_description(void *arg)
   rv = format_node_description(ndesc,
                                mock_digest,
                                mock_nickname,
-                               &mock_null_ip,
-                               NULL);
+                               NULL,
+                               &mock_null_ip);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789");
@@ -722,8 +722,8 @@ test_nodelist_format_node_description(void *arg)
   rv = format_node_description(ndesc,
                                mock_digest,
                                mock_nickname,
-                               &mock_ipv6,
-                               NULL);
+                               NULL,
+                               &mock_ipv6);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
@@ -732,18 +732,18 @@ test_nodelist_format_node_description(void *arg)
   rv = format_node_description(ndesc,
                                mock_digest,
                                mock_nickname,
-                               &mock_ipv6,
-                               &mock_ipv4);
+                               &mock_ipv4,
+                               &mock_ipv6);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ,
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
             "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
 
   /* test NULL handling */
-  rv = format_node_description(NULL, NULL, NULL, NULL, 0);
+  rv = format_node_description(NULL, NULL, NULL, NULL, NULL);
   tt_str_op(rv, OP_EQ, "<NULL BUFFER>");
 
-  rv = format_node_description(ndesc, NULL, NULL, NULL, 0);
+  rv = format_node_description(ndesc, NULL, NULL, NULL, NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(rv, OP_EQ, "<NULL ID DIGEST>");
 

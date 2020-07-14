@@ -36,8 +36,8 @@ STATIC const char *
 format_node_description(char *buf,
                         const char *id_digest,
                         const char *nickname,
-                        const tor_addr_t *ipv6_addr,
-                        const tor_addr_t *ipv4_addr)
+                        const tor_addr_t *ipv4_addr,
+                        const tor_addr_t *ipv6_addr)
 {
   size_t rv = 0;
   bool has_ipv6 = ipv6_addr && !tor_addr_is_null(ipv6_addr);
@@ -129,8 +129,8 @@ router_describe(const routerinfo_t *ri)
   return format_node_description(buf,
                                  ri->cache_info.identity_digest,
                                  ri->nickname,
-                                 &ri->ipv6_addr,
-                                 &ri->ipv4_addr);
+                                 &ri->ipv4_addr,
+                                 &ri->ipv6_addr);
 }
 
 /** Return a human-readable description of the node_t <b>node</b>.
@@ -169,8 +169,8 @@ node_describe(const node_t *node)
   return format_node_description(buf,
                                  node->identity,
                                  nickname,
-                                 ipv6_addr,
-                                 ipv4_addr);
+                                 ipv4_addr,
+                                 ipv6_addr);
 }
 
 /** Return a human-readable description of the routerstatus_t <b>rs</b>.
@@ -189,8 +189,8 @@ routerstatus_describe(const routerstatus_t *rs)
   return format_node_description(buf,
                                  rs->identity_digest,
                                  rs->nickname,
-                                 &rs->ipv6_addr,
-                                 &rs->ipv4_addr);
+                                 &rs->ipv4_addr,
+                                 &rs->ipv6_addr);
 }
 
 /** Return a human-readable description of the extend_info_t <b>ei</b>.
@@ -214,8 +214,8 @@ extend_info_describe(const extend_info_t *ei)
   return format_node_description(buf,
                                  ei->identity_digest,
                                  ei->nickname,
-                                 addr6,
-                                 addr4);
+                                 addr4,
+                                 addr6);
 }
 
 /** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the
