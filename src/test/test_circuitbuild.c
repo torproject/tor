@@ -1286,7 +1286,7 @@ test_circuit_extend(void *arg)
   MOCK(server_mode, mock_server_mode);
 
   /* Mock a debug function, but otherwise ignore it */
-  MOCK(channel_get_canonical_remote_descr,
+  MOCK(channel_describe_peer,
        mock_channel_get_canonical_remote_descr);
 
   setup_full_capture_of_logs(LOG_INFO);
@@ -1479,7 +1479,7 @@ test_circuit_extend(void *arg)
   UNMOCK(server_mode);
   server = 0;
 
-  UNMOCK(channel_get_canonical_remote_descr);
+  UNMOCK(channel_describe_peer);
 
   UNMOCK(extend_cell_parse);
   memset(&mock_extend_cell_parse_cell_out, 0,

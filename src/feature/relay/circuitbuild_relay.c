@@ -501,7 +501,7 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
     circ->n_chan = n_chan;
     log_debug(LD_CIRC,
               "n_chan is %s.",
-              channel_get_canonical_remote_descr(n_chan));
+              channel_describe_peer(n_chan));
 
     if (circuit_deliver_create_cell(circ, &ec.create_cell, 1) < 0)
       return -1;
