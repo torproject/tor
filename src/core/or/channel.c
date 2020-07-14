@@ -2794,31 +2794,24 @@ channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
 const char *
 channel_get_actual_remote_descr(channel_t *chan)
 {
-  tor_assert(chan);
-  tor_assert(chan->get_remote_descr);
-
-  /* Param 1 indicates the actual description */
-  return chan->get_remote_descr(chan, GRD_FLAG_ORIGINAL);
+  return channel_get_canonical_remote_descr(chan);
 }
 
 /**
  * Return text description of the remote endpoint canonical address.
  *
- * This function return a test provided by the lower layer of the remote
- * endpoint for this channel; it should use the known canonical address for
- * this OR's identity digest if possible.
+ * This function returns a human-readable string for logging; nothing
+ * should parse it or rely on a particular format.
  *
- * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
- * may invalidate the return value from this function.
+ * Subsequent calls to this function may invalidate its return value.
  */
 MOCK_IMPL(const char *,
 channel_get_canonical_remote_descr,(channel_t *chan))
 {
   tor_assert(chan);
-  tor_assert(chan->get_remote_descr);
+  tor_assert(chan->describe_peer);
 
-  /* Param 0 indicates the canonicalized description */
-  return chan->get_remote_descr(chan, 0);
+  return chan->describe_peer(chan);
 }
 
 /**
