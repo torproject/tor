@@ -1,0 +1,9 @@
+  o Minor features (logging):
+    - Provide more complete descriptions of our connections when logging
+      about them. Closes ticket 40041.
+
+  o Code simplification and refactoring:
+    - Refactor our code that logs a descriptions of connections, channels,
+      and the peers on them, to use a single call path. This change
+      enables us to refactor the data types that they use, and eliminate
+      many confusing users of those types. Closes ticket 40041.
