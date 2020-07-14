@@ -179,9 +179,9 @@ router_new_address_suggestion(const char *suggestion,
  * Return true on success and addr_out contains the address to use for the
  * given family. On failure to find the address, false is returned and
  * addr_out is set to an AF_UNSPEC address. */
-bool
-relay_find_addr_to_publish(const or_options_t *options, int family,
-                           bool cache_only, tor_addr_t *addr_out)
+MOCK_IMPL(bool,
+relay_find_addr_to_publish, (const or_options_t *options, int family,
+                             bool cache_only, tor_addr_t *addr_out))
 {
   tor_assert(options);
   tor_assert(addr_out);

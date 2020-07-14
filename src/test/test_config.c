@@ -3842,16 +3842,17 @@ test_config_default_dir_servers(void *arg)
   or_options_free(opts);
 }
 
-static int mock_router_pick_published_address_result = 0;
+static bool mock_relay_find_addr_to_publish_result = true;
 
-static int
-mock_router_pick_published_address(const or_options_t *options,
-                                   uint32_t *addr, int cache_only)
+static bool
+mock_relay_find_addr_to_publish(const or_options_t *options, int family,
+                                bool cache_only, tor_addr_t *addr_out)
 {
-  (void)options;
-  (void)addr;
-  (void)cache_only;
-  return mock_router_pick_published_address_result;
+  (void) options;
+  (void) family;
+  (void) cache_only;
+  (void) addr_out;
+  return mock_relay_find_addr_to_publish_result;
 }
 
 static int mock_router_my_exit_policy_is_reject_star_result = 0;
@@ -3887,11 +3888,11 @@ test_config_directory_fetch(void *arg)
   or_options_t *options = options_new();
   routerinfo_t routerinfo;
   memset(&routerinfo, 0, sizeof(routerinfo));
-  mock_router_pick_published_address_result = -1;
+  mock_relay_find_addr_to_publish_result = false;
   mock_router_my_exit_policy_is_reject_star_result = 1;
   mock_advertised_server_mode_result = 0;
   mock_router_get_my_routerinfo_result = NULL;
-  MOCK(router_pick_published_address, mock_router_pick_published_address);
+  MOCK(relay_find_addr_to_publish, mock_relay_find_addr_to_publish);
   MOCK(router_my_exit_policy_is_reject_star,
        mock_router_my_exit_policy_is_reject_star);
   MOCK(advertised_server_mode, mock_advertised_server_mode);
@@ -3947,14 +3948,14 @@ test_config_directory_fetch(void *arg)
   options = options_new();
   options->ORPort_set = 1;
 
-  mock_router_pick_published_address_result = -1;
+  mock_relay_find_addr_to_publish_result = false;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
   tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
   tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
@@ -3968,7 +3969,7 @@ test_config_directory_fetch(void *arg)
   options = options_new();
   options->ORPort_set = 1;
   options->ExitRelay = 1;
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   mock_router_my_exit_policy_is_reject_star_result = 0;
   mock_advertised_server_mode_result = 1;
   mock_router_get_my_routerinfo_result = &routerinfo;
@@ -3983,7 +3984,7 @@ test_config_directory_fetch(void *arg)
             OP_EQ, 0);
 
   options->RefuseUnknownExits = 0;
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
   tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
@@ -4000,7 +4001,7 @@ test_config_directory_fetch(void *arg)
   options->DirPort_set = 1;
   options->ORPort_set = 1;
   options->DirCache = 1;
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   mock_router_my_exit_policy_is_reject_star_result = 1;
 
   mock_advertised_server_mode_result = 1;
@@ -4051,7 +4052,7 @@ test_config_directory_fetch(void *arg)
 
  done:
   or_options_free(options);
-  UNMOCK(router_pick_published_address);
+  UNMOCK(relay_find_addr_to_publish);
   UNMOCK(router_get_my_routerinfo);
   UNMOCK(advertised_server_mode);
   UNMOCK(router_my_exit_policy_is_reject_star);
