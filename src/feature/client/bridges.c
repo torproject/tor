@@ -303,51 +303,21 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
 }
 
 /**
- * Return 1 iff <b>bridge_list</b> contains entry matching
- * given; IPv4 address in host byte order (<b>ipv4_addr</b>
- * and <b>port</b> (and no identity digest) OR it contains an
- * entry whose identity matches <b>digest</b>. Otherwise,
- * return 0.
- */
-static int
-bridge_exists_with_ipv4h_addr_and_port(const uint32_t ipv4_addr,
-                                       const uint16_t port,
-                                       const char *digest)
-{
-  tor_addr_t node_ipv4;
-
-  if (tor_addr_port_is_valid_ipv4h(ipv4_addr, port, 0)) {
-    tor_addr_from_ipv4h(&node_ipv4, ipv4_addr);
-
-   bridge_info_t *bridge =
-    get_configured_bridge_by_addr_port_digest(&node_ipv4,
-                                              port,
-                                              digest);
-
-   return (bridge != NULL);
-  }
-
-  return 0;
-}
-
-/**
  * Return 1 iff <b>bridge_list</b> contains entry matching given
- * <b>ipv6_addr</b> and <b>port</b> (and no identity digest) OR
+ * <b>addr</b> and <b>port</b> (and no identity digest) OR
  * it contains an  entry whose identity matches <b>digest</b>.
  * Otherwise, return 0.
  */
 static int
-bridge_exists_with_ipv6_addr_and_port(const tor_addr_t *ipv6_addr,
-                                      const uint16_t port,
-                                      const char *digest)
+bridge_exists_with_addr_and_port(const tor_addr_t *addr,
+                                 const uint16_t port,
+                                 const char *digest)
 {
-  if (!tor_addr_port_is_valid(ipv6_addr, port, 0))
+  if (!tor_addr_port_is_valid(addr, port, 0))
     return 0;
 
   bridge_info_t *bridge =
-   get_configured_bridge_by_addr_port_digest(ipv6_addr,
-                                             port,
-                                             digest);
+   get_configured_bridge_by_addr_port_digest(addr, port, digest);
 
   return (bridge != NULL);
 }
@@ -374,29 +344,29 @@ node_is_a_configured_bridge(const node_t *node)
    * check for absence of identity digest in a bridge.
    */
   if (node->ri) {
-    if (bridge_exists_with_ipv4h_addr_and_port(node->ri->addr,
-                                               node->ri->or_port,
-                                               node->identity))
+    if (bridge_exists_with_addr_and_port(&node->ri->ipv4_addr,
+                                         node->ri->ipv4_orport,
+                                         node->identity))
       return 1;
 
-    if (bridge_exists_with_ipv6_addr_and_port(&node->ri->ipv6_addr,
-                                              node->ri->ipv6_orport,
-                                              node->identity))
+    if (bridge_exists_with_addr_and_port(&node->ri->ipv6_addr,
+                                         node->ri->ipv6_orport,
+                                         node->identity))
       return 1;
   } else if (node->rs) {
-    if (bridge_exists_with_ipv4h_addr_and_port(node->rs->addr,
-                                               node->rs->or_port,
-                                               node->identity))
+    if (bridge_exists_with_addr_and_port(&node->rs->ipv4_addr,
+                                         node->rs->ipv4_orport,
+                                         node->identity))
       return 1;
 
-    if (bridge_exists_with_ipv6_addr_and_port(&node->rs->ipv6_addr,
-                                              node->rs->ipv6_orport,
-                                              node->identity))
+    if (bridge_exists_with_addr_and_port(&node->rs->ipv6_addr,
+                                         node->rs->ipv6_orport,
+                                         node->identity))
       return 1;
   }  else if (node->md) {
-    if (bridge_exists_with_ipv6_addr_and_port(&node->md->ipv6_addr,
-                                              node->md->ipv6_orport,
-                                              node->identity))
+    if (bridge_exists_with_addr_and_port(&node->md->ipv6_addr,
+                                         node->md->ipv6_orport,
+                                         node->identity))
       return 1;
   }
 
@@ -825,25 +795,23 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
    *   do that safely if we know that no function that connects to an OR
    *   does so through an address from any source other than node_get_addr().
    */
-  tor_addr_t addr;
   const or_options_t *options = get_options();
 
   if (node->ri) {
     routerinfo_t *ri = node->ri;
-    tor_addr_from_ipv4h(&addr, ri->addr);
-    if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
-         bridge->port == ri->or_port) ||
+    if ((!tor_addr_compare(&bridge->addr, &ri->ipv4_addr, CMP_EXACT) &&
+         bridge->port == ri->ipv4_orport) ||
         (!tor_addr_compare(&bridge->addr, &ri->ipv6_addr, CMP_EXACT) &&
          bridge->port == ri->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
       if (tor_addr_family(&bridge->addr) == AF_INET) {
-        ri->addr = tor_addr_to_ipv4h(&bridge->addr);
-        ri->or_port = bridge->port;
+        tor_addr_copy(&ri->ipv4_addr, &bridge->addr);
+        ri->ipv4_orport = bridge->port;
         log_info(LD_DIR,
                  "Adjusted bridge routerinfo for '%s' to match configured "
                  "address %s:%d.",
-                 ri->nickname, fmt_addr32(ri->addr), ri->or_port);
+                 ri->nickname, fmt_addr(&ri->ipv4_addr), ri->ipv4_orport);
       } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
         tor_addr_copy(&ri->ipv6_addr, &bridge->addr);
         ri->ipv6_orport = bridge->port;
@@ -886,21 +854,20 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
   }
   if (node->rs) {
     routerstatus_t *rs = node->rs;
-    tor_addr_from_ipv4h(&addr, rs->addr);
 
-    if ((!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
-        bridge->port == rs->or_port) ||
+    if ((!tor_addr_compare(&bridge->addr, &rs->ipv4_addr, CMP_EXACT) &&
+        bridge->port == rs->ipv4_orport) ||
        (!tor_addr_compare(&bridge->addr, &rs->ipv6_addr, CMP_EXACT) &&
         bridge->port == rs->ipv6_orport)) {
       /* they match, so no need to do anything */
     } else {
       if (tor_addr_family(&bridge->addr) == AF_INET) {
-        rs->addr = tor_addr_to_ipv4h(&bridge->addr);
-        rs->or_port = bridge->port;
+        tor_addr_copy(&rs->ipv4_addr, &bridge->addr);
+        rs->ipv4_orport = bridge->port;
         log_info(LD_DIR,
                  "Adjusted bridge routerstatus for '%s' to match "
                  "configured address %s.",
-                 rs->nickname, fmt_addrport(&bridge->addr, rs->or_port));
+                 rs->nickname, fmt_addrport(&bridge->addr, rs->ipv4_orport));
       /* set IPv6 preferences even if there is no ri */
       } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
         tor_addr_copy(&rs->ipv6_addr, &bridge->addr);

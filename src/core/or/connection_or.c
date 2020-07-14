@@ -1160,7 +1160,7 @@ static time_t or_connect_failure_map_next_cleanup_ts = 0;
  * port.
  *
  * We need to identify a connection failure with these three values because we
- * want to avoid to wrongfully blacklist a relay if someone is trying to
+ * want to avoid to wrongfully block a relay if someone is trying to
  * extend to a known identity digest but with the wrong IP/port. For instance,
  * it can happen if a relay changed its port but the client still has an old
  * descriptor with the old port. We want to stop connecting to that
@@ -2507,14 +2507,11 @@ connection_or_send_netinfo,(or_connection_t *conn))
    * is an outgoing connection, act like a normal client and omit it. */
   if ((public_server_mode(get_options()) || !conn->is_outgoing) &&
       (me = router_get_my_routerinfo())) {
-    tor_addr_t my_addr;
-    tor_addr_from_ipv4h(&my_addr, me->addr);
-
     uint8_t n_my_addrs = 1 + !tor_addr_is_null(&me->ipv6_addr);
     netinfo_cell_set_n_my_addrs(netinfo_cell, n_my_addrs);
 
     netinfo_cell_add_my_addrs(netinfo_cell,
-                              netinfo_addr_from_tor_addr(&my_addr));
+                              netinfo_addr_from_tor_addr(&me->ipv4_addr));
 
     if (!tor_addr_is_null(&me->ipv6_addr)) {
       netinfo_cell_add_my_addrs(netinfo_cell,

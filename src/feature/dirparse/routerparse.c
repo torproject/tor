@@ -519,15 +519,15 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR,"Router address is not an IP address.");
     goto err;
   }
-  router->addr = ntohl(in.s_addr);
+  tor_addr_from_in(&router->ipv4_addr, &in);
 
-  router->or_port =
+  router->ipv4_orport =
     (uint16_t) tor_parse_long(tok->args[2],10,0,65535,&ok,NULL);
   if (!ok) {
     log_warn(LD_DIR,"Invalid OR port %s", escaped(tok->args[2]));
     goto err;
   }
-  router->dir_port =
+  router->ipv4_dirport =
     (uint16_t) tor_parse_long(tok->args[4],10,0,65535,&ok,NULL);
   if (!ok) {
     log_warn(LD_DIR,"Invalid dir port %s", escaped(tok->args[4]));
@@ -907,13 +907,14 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   /* This router accepts tunnelled directory requests via begindir if it has
    * an open dirport or it included "tunnelled-dir-server". */
-  if (find_opt_by_keyword(tokens, K_DIR_TUNNELLED) || router->dir_port > 0) {
+  if (find_opt_by_keyword(tokens, K_DIR_TUNNELLED) ||
+      router->ipv4_dirport > 0) {
     router->supports_tunnelled_dir_requests = 1;
   }
 
   tok = find_by_keyword(tokens, K_ROUTER_SIGNATURE);
 
-  if (!router->or_port) {
+  if (!router->ipv4_orport) {
     log_warn(LD_DIR,"or_port unreadable or 0. Failing.");
     goto err;
   }

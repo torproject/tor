@@ -2362,7 +2362,7 @@ test_options_validate__rend(void *ignored)
   expect_log_msg("UseEntryGuards is disabled, but you"
             " have configured one or more hidden services on this Tor "
             "instance.  Your hidden services will be very easy to locate using"
-            " a well-known attack -- see http://freehaven.net/anonbib/#hs-"
+            " a well-known attack -- see https://freehaven.net/anonbib/#hs-"
             "attack06 for details.\n");
   tor_free(msg);
 
@@ -2378,7 +2378,7 @@ test_options_validate__rend(void *ignored)
   expect_no_log_msg("UseEntryGuards is disabled, but you"
             " have configured one or more hidden services on this Tor "
             "instance.  Your hidden services will be very easy to locate using"
-            " a well-known attack -- see http://freehaven.net/anonbib/#hs-"
+            " a well-known attack -- see https://freehaven.net/anonbib/#hs-"
             "attack06 for details.\n");
 
   free_options_test_data(tdata);

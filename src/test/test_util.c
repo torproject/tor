@@ -5651,7 +5651,7 @@ test_util_hostname_validation(void *arg)
   tt_assert(string_is_valid_nonrfc_hostname("luck.y13."));
 
   // We allow punycode TLDs. For examples, see
-  // http://data.iana.org/TLD/tlds-alpha-by-domain.txt
+  // https://data.iana.org/TLD/tlds-alpha-by-domain.txt
   tt_assert(string_is_valid_nonrfc_hostname("example.xn--l1acc"));
 
   done:

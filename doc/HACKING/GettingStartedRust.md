@@ -43,7 +43,7 @@ is
 [The Little Book of Rust Macros](https://danielkeep.github.io/tlborm/book/index.html).
 
 For learning more about FFI and Rust, see Jake Goulding's
-[Rust FFI Omnibus](http://jakegoulding.com/rust-ffi-omnibus/).
+[Rust FFI Omnibus](https://jakegoulding.com/rust-ffi-omnibus/).
 
 ## Compiling Tor with Rust enabled
 
@@ -54,7 +54,9 @@ fetching dependencies from Cargo or specifying a local directory.
 
 **Fetch dependencies from Cargo**
 
-    ./configure --enable-rust --enable-cargo-online-mode
+```console
+$ ./configure --enable-rust --enable-cargo-online-mode
+```
 
 **Using a local dependency cache**
 
@@ -66,13 +68,17 @@ We vendor our Rust dependencies in a separate repo using
 [cargo-vendor](https://github.com/alexcrichton/cargo-vendor).  To use
 them, do:
 
-    git submodule init
-    git submodule update
+```console
+$ git submodule init
+$ git submodule update
+```
 
 To specify the local directory containing the dependencies, (assuming
 you are in the top level of the repository) configure tor with:
 
-    TOR_RUST_DEPENDENCIES='path_to_dependencies_directory' ./configure --enable-rust
+```console
+$ TOR_RUST_DEPENDENCIES='path_to_dependencies_directory' ./configure --enable-rust
+```
 
 (Note that `TOR_RUST_DEPENDENCIES` must be the full path to the directory; it
 cannot be relative.)
@@ -80,7 +86,9 @@ cannot be relative.)
 Assuming you used the above `git submodule` commands and you're in the
 topmost directory of the repository, this would be:
 
-    TOR_RUST_DEPENDENCIES=`pwd`/src/ext/rust/crates ./configure --enable-rust
+```console
+$ TOR_RUST_DEPENDENCIES=`pwd`/src/ext/rust/crates ./configure --enable-rust
+```
 
 ## Identifying which modules to rewrite
 
@@ -102,10 +110,12 @@ areas of responsibility.
 A good first step is to build a module-level callgraph to understand how
 interconnected your target module is.
 
-    git clone https://git.torproject.org/user/nickm/calltool.git
-    cd tor
-    CFLAGS=0 ./configure
-    ../calltool/src/main.py module_callgraph
+```console
+$ git clone https://git.torproject.org/user/nickm/calltool.git
+$ cd tor
+$ CFLAGS=0 ./configure
+$ ../calltool/src/main.py module_callgraph
+```
 
 The output will tell you each module name, along with a set of every module that
 the module calls.  Modules which call fewer other modules are better targets.
@@ -156,15 +166,21 @@ run on your crate.
 
 Configure Tor's build system to build with Rust enabled:
 
-    ./configure --enable-fatal-warnings --enable-rust --enable-cargo-online-mode
+```console
+$ ./configure --enable-fatal-warnings --enable-rust --enable-cargo-online-mode
+```
 
 Tor's test should be run by doing:
 
-    make check
+```console
+$ make check
+```
 
 Tor's integration tests should also pass:
 
-    make test-stem
+```console
+$ make test-stem
+```
 
 ## Submitting a patch
 

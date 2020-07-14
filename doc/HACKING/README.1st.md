@@ -32,7 +32,9 @@ For an explanation of how to change Tor's design to work differently, look at
 
 For the latest version of the code, get a copy of git, and
 
-    git clone https://git.torproject.org/git/tor
+```console
+$ git clone https://git.torproject.org/git/tor
+```
 
 ## Stay in touch
 

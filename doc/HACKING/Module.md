@@ -70,7 +70,7 @@ There are couples of "rules" you want to follow:
   base. Every entry point should have a second definition if the module is
   disabled. For instance:
 
-  ```
+  ```c
   #ifdef HAVE_MODULE_DIRAUTH
 
   int sr_init(int save_to_disk);
@@ -109,7 +109,9 @@ There are couples of "rules" you want to follow:
 * When you include headers from the module, **always** use the full module
   path in your statement. Example:
 
-  `#include "feature/dirauth/dirvote.h"`
+```c
+#include "feature/dirauth/dirvote.h"`
+```
 
   The main reason is that we do **not** add the module include path by default
   so it needs to be specified. But also, it helps our human brain understand

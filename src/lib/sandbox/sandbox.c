@@ -935,7 +935,7 @@ sb_epoll_ctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
  * the seccomp filter sandbox.
  *
  * NOTE: if multiple filters need to be added, the PR_SECCOMP parameter needs
- * to be whitelisted in this function.
+ * to be allowlisted in this function.
  */
 static int
 sb_prctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)

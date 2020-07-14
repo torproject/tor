@@ -1,0 +1,5 @@
+  o Code simplification and refactoring (relay address):
+    - Most of IPv4 representation was using "uint32_t". It has now been moved to
+      use the internal "tor_addr_t" interface instead. This is so we can
+      properly integrate IPv6 along IPv4 with common interfaces. Closes ticket
+      40043.

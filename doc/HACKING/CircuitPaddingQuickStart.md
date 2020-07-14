@@ -18,20 +18,20 @@ The quick and dirty plan is to:
 
 ## Clone and compile tor
 
-```bash
-git clone https://git.torproject.org/tor.git
-cd tor
-git checkout tor-0.4.1.5
+```console
+$ git clone https://git.torproject.org/tor.git
+$ cd tor
+$ git checkout tor-0.4.1.5
 ```
 Above we use the tag for tor-0.4.1.5 where the circuit padding framework was
 released. Note that this version of the framework is missing many features and
 fixes that have since been merged to origin/master. If you need the newest
 framework features, you should use that master instead.
 
-```bash
-sh autogen.sh 
-./configure
-make
+```console
+$ sh autogen.sh 
+$ ./configure
+$ make
 ```
 When you run `./configure` you'll be told of missing dependencies and packages
 to install on debian-based distributions. Important: if you plan to run `tor` on
@@ -186,9 +186,9 @@ We also have to modify `circpad_machines_init()` in `circuitpadding.c` to
 register our machines:
 
 ```c
-  /* Register machines for the APE WF defense */
-  circpad_machine_client_wf_ape(origin_padding_machines);
-  circpad_machine_relay_wf_ape(relay_padding_machines);
+/* Register machines for the APE WF defense */
+circpad_machine_client_wf_ape(origin_padding_machines);
+circpad_machine_relay_wf_ape(relay_padding_machines);
 ```
 
 We run `make` to get a new `tor` binary and copy it to our local TB. 

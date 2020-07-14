@@ -59,9 +59,9 @@ add_trusted_dir_to_nodelist_addr_set(const dir_server_t *dir)
   tor_assert(dir->is_authority);
 
   /* Add IPv4 and then IPv6 if applicable. */
-  nodelist_add_addr4_to_address_set(dir->addr);
+  nodelist_add_addr_to_address_set(&dir->ipv4_addr);
   if (!tor_addr_is_null(&dir->ipv6_addr)) {
-    nodelist_add_addr6_to_address_set(&dir->ipv6_addr);
+    nodelist_add_addr_to_address_set(&dir->ipv6_addr);
   }
 }
 
@@ -269,7 +269,7 @@ router_addr_is_trusted_dir_type(const tor_addr_t *addr, dirinfo_type_t type)
       continue;
     }
     /* Match IPv4 or IPv6 address. */
-    if ((family == AF_INET && tor_addr_eq_ipv4h(addr, ent->addr)) ||
+    if ((family == AF_INET && tor_addr_eq(addr, &ent->ipv4_addr)) ||
         (family == AF_INET6 && tor_addr_eq(addr, &ent->ipv6_addr))) {
       return true;
     }
@@ -285,16 +285,15 @@ router_addr_is_trusted_dir_type(const tor_addr_t *addr, dirinfo_type_t type)
 static dir_server_t *
 dir_server_new(int is_authority,
                const char *nickname,
-               const tor_addr_t *addr,
+               const tor_addr_t *ipv4_addr,
                const char *hostname,
-               uint16_t dir_port, uint16_t or_port,
+               uint16_t ipv4_dirport, uint16_t ipv4_orport,
                const tor_addr_port_t *addrport_ipv6,
                const char *digest, const char *v3_auth_digest,
                dirinfo_type_t type,
                double weight)
 {
   dir_server_t *ent;
-  uint32_t a;
   char *hostname_ = NULL;
 
   tor_assert(digest);
@@ -302,22 +301,21 @@ dir_server_new(int is_authority,
   if (weight < 0)
     return NULL;
 
-  if (tor_addr_family(addr) == AF_INET)
-    a = tor_addr_to_ipv4h(addr);
-  else
+  if (!ipv4_addr) {
     return NULL;
+  }
 
   if (!hostname)
-    hostname_ = tor_addr_to_str_dup(addr);
+    hostname_ = tor_addr_to_str_dup(ipv4_addr);
   else
     hostname_ = tor_strdup(hostname);
 
   ent = tor_malloc_zero(sizeof(dir_server_t));
   ent->nickname = nickname ? tor_strdup(nickname) : NULL;
   ent->address = hostname_;
-  ent->addr = a;
-  ent->dir_port = dir_port;
-  ent->or_port = or_port;
+  tor_addr_copy(&ent->ipv4_addr, ipv4_addr);
+  ent->ipv4_dirport = ipv4_dirport;
+  ent->ipv4_orport = ipv4_orport;
   ent->is_running = 1;
   ent->is_authority = is_authority;
   ent->type = type;
@@ -339,13 +337,13 @@ dir_server_new(int is_authority,
     memcpy(ent->v3_identity_digest, v3_auth_digest, DIGEST_LEN);
 
   if (nickname)
-    tor_asprintf(&ent->description, "directory server \"%s\" at %s:%d",
-                 nickname, hostname_, (int)dir_port);
+    tor_asprintf(&ent->description, "directory server \"%s\" at %s:%" PRIu16,
+                 nickname, hostname_, ipv4_dirport);
   else
-    tor_asprintf(&ent->description, "directory server at %s:%d",
-                 hostname_, (int)dir_port);
+    tor_asprintf(&ent->description, "directory server at %s:%" PRIu16,
+                 hostname_, ipv4_dirport);
 
-  ent->fake_status.addr = ent->addr;
+  tor_addr_copy(&ent->fake_status.ipv4_addr, &ent->ipv4_addr);
   tor_addr_copy(&ent->fake_status.ipv6_addr, &ent->ipv6_addr);
   memcpy(ent->fake_status.identity_digest, digest, DIGEST_LEN);
   if (nickname)
@@ -353,30 +351,30 @@ dir_server_new(int is_authority,
             sizeof(ent->fake_status.nickname));
   else
     ent->fake_status.nickname[0] = '\0';
-  ent->fake_status.dir_port = ent->dir_port;
-  ent->fake_status.or_port = ent->or_port;
+  ent->fake_status.ipv4_dirport = ent->ipv4_dirport;
+  ent->fake_status.ipv4_orport = ent->ipv4_orport;
   ent->fake_status.ipv6_orport = ent->ipv6_orport;
 
   return ent;
 }
 
-/** Create an authoritative directory server at
- * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
- * <b>address</b> is NULL, add ourself.  Return the new trusted directory
- * server entry on success or NULL if we couldn't add it. */
+/** Create an authoritative directory server at <b>address</b>:<b>port</b>,
+ * with identity key <b>digest</b>.  If <b>ipv4_addr_str</b> is NULL, add
+ * ourself.  Return the new trusted directory server entry on success or NULL
+ * if we couldn't add it. */
 dir_server_t *
 trusted_dir_server_new(const char *nickname, const char *address,
-                       uint16_t dir_port, uint16_t or_port,
+                       uint16_t ipv4_dirport, uint16_t ipv4_orport,
                        const tor_addr_port_t *ipv6_addrport,
                        const char *digest, const char *v3_auth_digest,
                        dirinfo_type_t type, double weight)
 {
-  tor_addr_t addr;
+  tor_addr_t ipv4_addr;
   char *hostname=NULL;
   dir_server_t *result;
 
   if (!address) { /* The address is us; we should guess. */
-    if (!find_my_address(get_options(), AF_INET, LOG_WARN, &addr,
+    if (!find_my_address(get_options(), AF_INET, LOG_WARN, &ipv4_addr,
                          NULL, &hostname)) {
       log_warn(LD_CONFIG,
                "Couldn't find a suitable address when adding ourself as a "
@@ -384,24 +382,22 @@ trusted_dir_server_new(const char *nickname, const char *address,
       return NULL;
     }
     if (!hostname)
-      hostname = tor_addr_to_str_dup(&addr);
+      hostname = tor_addr_to_str_dup(&ipv4_addr);
 
     if (!hostname)
       return NULL;
   } else {
-    uint32_t a;
-    if (tor_lookup_hostname(address, &a)) {
+    if (tor_addr_lookup(address, AF_INET, &ipv4_addr)) {
       log_warn(LD_CONFIG,
                "Unable to lookup address for directory server at '%s'",
                address);
       return NULL;
     }
     hostname = tor_strdup(address);
-    tor_addr_from_ipv4h(&addr, a);
   }
 
-  result = dir_server_new(1, nickname, &addr, hostname,
-                          dir_port, or_port,
+  result = dir_server_new(1, nickname, &ipv4_addr, hostname,
+                          ipv4_dirport, ipv4_orport,
                           ipv6_addrport,
                           digest,
                           v3_auth_digest, type, weight);
@@ -413,15 +409,13 @@ trusted_dir_server_new(const char *nickname, const char *address,
  * <b>addr</b>:<b>or_port</b>/<b>dir_port</b>, with identity key digest
  * <b>id_digest</b> */
 dir_server_t *
-fallback_dir_server_new(const tor_addr_t *addr,
-                        uint16_t dir_port, uint16_t or_port,
+fallback_dir_server_new(const tor_addr_t *ipv4_addr,
+                        uint16_t ipv4_dirport, uint16_t ipv4_orport,
                         const tor_addr_port_t *addrport_ipv6,
                         const char *id_digest, double weight)
 {
-  return dir_server_new(0, NULL, addr, NULL, dir_port, or_port,
-                        addrport_ipv6,
-                        id_digest,
-                        NULL, ALL_DIRINFO, weight);
+  return dir_server_new(0, NULL, ipv4_addr, NULL, ipv4_dirport, ipv4_orport,
+                        addrport_ipv6, id_digest, NULL, ALL_DIRINFO, weight);
 }
 
 /** Add a directory server to the global list(s). */

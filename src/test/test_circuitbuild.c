@@ -824,16 +824,14 @@ test_circuit_extend_lspec_valid(void *arg)
   tor_free(p_chan);
 }
 
-#define NODE_SET_IPV4(node, ipv4_addr, ipv4_port) { \
-    tor_addr_t addr; \
-    tor_addr_parse(&addr, ipv4_addr); \
-    node->ri->addr = tor_addr_to_ipv4h(&addr); \
-    node->ri->or_port = ipv4_port; \
+#define NODE_SET_IPV4(node, ipv4_addr_str, ipv4_port) { \
+    tor_addr_parse(&node->ri->ipv4_addr, ipv4_addr_str); \
+    node->ri->ipv4_orport = ipv4_port; \
   }
 
 #define NODE_CLEAR_IPV4(node) { \
-    node->ri->addr = 0; \
-    node->ri->or_port = 0; \
+    tor_addr_make_unspec(&node->ri->ipv4_addr); \
+    node->ri->ipv4_orport = 0; \
   }
 
 #define NODE_SET_IPV6(node, ipv6_addr_str, ipv6_port) { \
@@ -864,7 +862,7 @@ test_circuit_extend_add_ip(void *arg)
 
   /* Do the IPv4 test */
   tt_int_op(circuit_extend_add_ipv4_helper(ec), OP_EQ, 0);
-  tor_addr_from_ipv4h(&ipv4_tmp, fake_node->ri->addr);
+  tor_addr_copy(&ipv4_tmp, &fake_node->ri->ipv4_addr);
   /* The IPv4 should match */
   tt_int_op(tor_addr_compare(&ec->orport_ipv4.addr, &ipv4_tmp, CMP_SEMANTIC),
             OP_EQ, 0);

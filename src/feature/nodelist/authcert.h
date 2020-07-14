@@ -41,7 +41,7 @@ void authority_cert_dl_failed(const char *id_digest,
 void authority_certs_fetch_missing(networkstatus_t *status, time_t now,
                                    const char *dir_hint);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
-int authority_cert_is_blacklisted(const authority_cert_t *cert);
+int authority_cert_is_denylisted(const authority_cert_t *cert);
 
 void authority_cert_free_(authority_cert_t *cert);
 #define authority_cert_free(cert) \

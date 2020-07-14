@@ -384,12 +384,12 @@ routerstatus_parse_entry_from_string(memarea_t *area,
              escaped(tok->args[5+offset]));
     goto err;
   }
-  rs->addr = ntohl(in.s_addr);
+  tor_addr_from_in(&rs->ipv4_addr, &in);
 
-  rs->or_port = (uint16_t) tor_parse_long(tok->args[6+offset],
-                                         10,0,65535,NULL,NULL);
-  rs->dir_port = (uint16_t) tor_parse_long(tok->args[7+offset],
-                                           10,0,65535,NULL,NULL);
+  rs->ipv4_orport = (uint16_t) tor_parse_long(tok->args[6+offset],
+                                              10,0,65535,NULL,NULL);
+  rs->ipv4_dirport = (uint16_t) tor_parse_long(tok->args[7+offset],
+                                               10,0,65535,NULL,NULL);
 
   {
     smartlist_t *a_lines = find_all_by_keyword(tokens, K_A);
@@ -563,7 +563,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       log_info(LD_BUG, "Found an entry in networkstatus with no "
                "microdescriptor digest. (Router %s ($%s) at %s:%d.)",
                rs->nickname, hex_str(rs->identity_digest, DIGEST_LEN),
-               fmt_addr32(rs->addr), rs->or_port);
+               fmt_addr(&rs->ipv4_addr), rs->ipv4_orport);
     }
   }
 
@@ -1354,8 +1354,8 @@ networkstatus_parse_vote_from_string(const char *s,
         goto err;
       }
       if (ns->type != NS_TYPE_CONSENSUS) {
-        if (authority_cert_is_blacklisted(ns->cert)) {
-          log_warn(LD_DIR, "Rejecting vote signature made with blacklisted "
+        if (authority_cert_is_denylisted(ns->cert)) {
+          log_warn(LD_DIR, "Rejecting vote signature made with denylisted "
                    "signing key %s",
                    hex_str(ns->cert->signing_key_digest, DIGEST_LEN));
           goto err;
@@ -1367,13 +1367,13 @@ networkstatus_parse_vote_from_string(const char *s,
                  escaped(tok->args[3]));
         goto err;
       }
-      voter->addr = ntohl(in.s_addr);
+      tor_addr_from_in(&voter->ipv4_addr, &in);
       int ok;
-      voter->dir_port = (uint16_t)
+      voter->ipv4_dirport = (uint16_t)
         tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
       if (!ok)
         goto err;
-      voter->or_port = (uint16_t)
+      voter->ipv4_orport = (uint16_t)
         tor_parse_long(tok->args[5], 10, 0, 65535, &ok, NULL);
       if (!ok)
         goto err;

@@ -114,7 +114,6 @@ test_nodelist(void *arg)
 
   tor_addr_t addr_v4, addr_v6, dummy_addr;
   tor_addr_parse(&addr_v4, "42.42.42.42");
-  uint32_t ipv4h = tor_addr_to_ipv4h(&addr_v4);
   tor_addr_parse(&addr_v6, "1:2:3:4::");
   memset(&dummy_addr, 'A', sizeof(dummy_addr));
 
@@ -148,9 +147,9 @@ test_nodelist(void *arg)
   memcpy(rs->descriptor_digest, md->digest, DIGEST256_LEN);
 
   /* Setup the rs, ri and md addresses. */
-  rs->addr = ipv4h;
+  tor_addr_copy(&rs->ipv4_addr, &addr_v4);
   tor_addr_parse(&rs->ipv6_addr, "1:2:3:4::");
-  ri->addr = ipv4h;
+  tor_addr_copy(&ri->ipv4_addr, &addr_v4);
   tor_addr_parse(&ri->ipv6_addr, "1:2:3:4::");
   tor_addr_parse(&md->ipv6_addr, "1:2:3:4::");
 

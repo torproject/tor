@@ -203,9 +203,9 @@ basic_routerinfo_new(const char *nickname, uint32_t ipv4_addr,
   r1->nickname = tor_strdup(nickname);
   r1->platform = tor_strdup(platform);
 
-  r1->addr = ipv4_addr;
-  r1->or_port = or_port;
-  r1->dir_port = dir_port;
+  tor_addr_from_ipv4h(&r1->ipv4_addr, ipv4_addr);
+  r1->ipv4_orport = or_port;
+  r1->ipv4_dirport = dir_port;
   r1->supports_tunnelled_dir_requests = 1;
 
   router_set_rsa_onion_pkey(pk1, &r1->onion_pkey, &r1->onion_pkey_len);
@@ -236,8 +236,8 @@ get_new_router_line(const routerinfo_t *r1)
 
   tor_asprintf(&line,
                "router %s %s %d 0 %d\n",
-               r1->nickname, fmt_addr32(r1->addr),
-               r1->or_port, r1->dir_port);
+               r1->nickname, fmt_addr(&r1->ipv4_addr),
+               r1->ipv4_orport, r1->ipv4_dirport);
   tor_assert(line);
 
   return line;
@@ -638,9 +638,9 @@ setup_dir_formats_options(const char *arg, or_options_t *options)
 STMT_BEGIN \
   tt_assert(r1); \
   tt_assert(rp1); \
-  tt_int_op(rp1->addr,OP_EQ, r1->addr); \
-  tt_int_op(rp1->or_port,OP_EQ, r1->or_port); \
-  tt_int_op(rp1->dir_port,OP_EQ, r1->dir_port); \
+  tt_assert(tor_addr_eq(&rp1->ipv4_addr, &r1->ipv4_addr)); \
+  tt_int_op(rp1->ipv4_orport,OP_EQ, r1->ipv4_orport); \
+  tt_int_op(rp1->ipv4_dirport,OP_EQ, r1->ipv4_dirport); \
   tt_int_op(rp1->bandwidthrate,OP_EQ, r1->bandwidthrate); \
   tt_int_op(rp1->bandwidthburst,OP_EQ, r1->bandwidthburst); \
   tt_int_op(rp1->bandwidthcapacity,OP_EQ, r1->bandwidthcapacity); \
@@ -718,7 +718,7 @@ test_dir_formats_rsa(void *arg)
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
 
-  setup_mock_configured_ports(r1->or_port, r1->dir_port);
+  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
 
   buf = router_dump_router_to_string(r1, r1->identity_pkey, NULL, NULL, NULL);
   tt_assert(buf);
@@ -767,7 +767,7 @@ test_dir_formats_rsa(void *arg)
   tt_str_op(buf,OP_EQ, buf2);
   tor_free(buf);
 
-  setup_mock_configured_ports(r1->or_port, r1->dir_port);
+  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
 
   buf = router_dump_router_to_string(r1, r1->identity_pkey, NULL, NULL, NULL);
   tt_assert(buf);
@@ -801,7 +801,7 @@ test_dir_formats_rsa(void *arg)
   MOCK(tor_cert_dup, mock_tor_cert_dup_null);
 
   /* Fake just enough of an ORPort and DirPort to get by */
-  setup_mock_configured_ports(r1->or_port, r1->dir_port);
+  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
 
   /* Test some of the low-level static functions. */
   e1 = router_build_fresh_signed_extrainfo(r1);
@@ -970,7 +970,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   smartlist_add(r2->exit_policy, ex2);
 
   /* Fake just enough of an ORPort to get by */
-  setup_mock_configured_ports(r2->or_port, 0);
+  setup_mock_configured_ports(r2->ipv4_orport, 0);
 
   buf = router_dump_router_to_string(r2,
                                      r2->identity_pkey, r2_onion_pkey,
@@ -1066,7 +1066,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   tt_str_op(buf, OP_EQ, buf2);
   tor_free(buf);
 
-  setup_mock_configured_ports(r2->or_port, 0);
+  setup_mock_configured_ports(r2->ipv4_orport, 0);
 
   buf = router_dump_router_to_string(r2, r2->identity_pkey, NULL, NULL, NULL);
   tt_assert(buf);
@@ -1112,7 +1112,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   MOCK(get_current_curve25519_keypair, mock_get_current_curve25519_keypair);
 
   /* Fake just enough of an ORPort to get by */
-  setup_mock_configured_ports(r2->or_port, 0);
+  setup_mock_configured_ports(r2->ipv4_orport, 0);
 
   /* Test the high-level interface. */
   rv = router_build_fresh_descriptor(&r2_out, &e2);
@@ -3061,9 +3061,9 @@ test_same_voter(networkstatus_voter_info_t *v1,
   tt_str_op(v1->nickname,OP_EQ, v2->nickname);
   tt_mem_op(v1->identity_digest,OP_EQ, v2->identity_digest, DIGEST_LEN);
   tt_str_op(v1->address,OP_EQ, v2->address);
-  tt_int_op(v1->addr,OP_EQ, v2->addr);
-  tt_int_op(v1->dir_port,OP_EQ, v2->dir_port);
-  tt_int_op(v1->or_port,OP_EQ, v2->or_port);
+  tt_assert(tor_addr_eq(&v1->ipv4_addr, &v2->ipv4_addr));
+  tt_int_op(v1->ipv4_dirport,OP_EQ, v2->ipv4_dirport);
+  tt_int_op(v1->ipv4_orport,OP_EQ, v2->ipv4_orport);
   tt_str_op(v1->contact,OP_EQ, v2->contact);
   tt_mem_op(v1->vote_digest,OP_EQ, v2->vote_digest, DIGEST_LEN);
  done:
@@ -3153,9 +3153,9 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
                "\x3\x3\x3\x3",
                DIGEST_LEN);
     tt_mem_op(rs->descriptor_digest,OP_EQ, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99008801);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 8000);
+    tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99008801));
+    tt_int_op(rs->ipv4_orport,OP_EQ, 443);
+    tt_int_op(rs->ipv4_dirport,OP_EQ, 8000);
     /* no flags except "running" (16) and "v2dir" (64) and "valid" (128) */
     tt_u64_op(vrs->flags, OP_EQ, UINT64_C(0xd0));
   } else if (tor_memeq(rs->identity_digest,
@@ -3175,9 +3175,9 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
       tt_str_op(rs->nickname,OP_EQ, "router1");
     }
     tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99009901));
+    tt_int_op(rs->ipv4_orport,OP_EQ, 443);
+    tt_int_op(rs->ipv4_dirport,OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
     tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
@@ -3269,9 +3269,9 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
     tt_str_op(rs->nickname,OP_EQ, "router1");
     tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
     tt_int_op(rs->published_on,OP_EQ, now-1000);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99009901));
+    tt_int_op(rs->ipv4_orport,OP_EQ, 443);
+    tt_int_op(rs->ipv4_dirport,OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
     tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
@@ -3643,9 +3643,9 @@ test_a_networkstatus(
   voter = smartlist_get(v1->voters, 0);
   tt_str_op(voter->nickname,OP_EQ, "Voter1");
   tt_str_op(voter->address,OP_EQ, "1.2.3.4");
-  tt_int_op(voter->addr,OP_EQ, 0x01020304);
-  tt_int_op(voter->dir_port,OP_EQ, 80);
-  tt_int_op(voter->or_port,OP_EQ, 9000);
+  tt_assert(tor_addr_eq_ipv4h(&voter->ipv4_addr, 0x01020304));
+  tt_int_op(voter->ipv4_dirport,OP_EQ, 80);
+  tt_int_op(voter->ipv4_orport,OP_EQ, 9000);
   tt_str_op(voter->contact,OP_EQ, "voter@example.com");
   tt_assert(v1->cert);
   tt_assert(!crypto_pk_cmp_keys(sign_skey_1, v1->cert->signing_key));
@@ -4147,9 +4147,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
       memset(rs->identity_digest, 3, DIGEST_LEN);
       memset(rs->descriptor_digest, 78, DIGEST_LEN);
-      rs->addr = 0x99008801;
-      rs->or_port = 443;
-      rs->dir_port = 8000;
+      tor_addr_from_ipv4h(&rs->ipv4_addr, 0x99008801);
+      rs->ipv4_orport = 443;
+      rs->ipv4_dirport = 8000;
       /* all flags but running and valid cleared */
       rs->is_flagged_running = 1;
       rs->is_valid = 1;
@@ -4171,9 +4171,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
       memset(rs->identity_digest, 5, DIGEST_LEN);
       memset(rs->descriptor_digest, 77, DIGEST_LEN);
-      rs->addr = 0x99009901;
-      rs->or_port = 443;
-      rs->dir_port = 0;
+      tor_addr_from_ipv4h(&rs->ipv4_addr, 0x99009901);
+      rs->ipv4_orport = 443;
+      rs->ipv4_dirport = 0;
       tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
       tor_addr_copy(&rs->ipv6_addr, &addr_ipv6);
       rs->ipv6_orport = 4711;
@@ -4197,9 +4197,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       strlcpy(rs->nickname, "router3", sizeof(rs->nickname));
       memset(rs->identity_digest, 0x33, DIGEST_LEN);
       memset(rs->descriptor_digest, 79, DIGEST_LEN);
-      rs->addr = 0xAA009901;
-      rs->or_port = 400;
-      rs->dir_port = 9999;
+      tor_addr_from_ipv4h(&rs->ipv4_addr, 0xAA009901);
+      rs->ipv4_orport = 400;
+      rs->ipv4_dirport = 9999;
       rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
         rs->is_flagged_running = rs->is_valid =
         rs->is_possible_guard = 1;
@@ -4222,9 +4222,9 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
       memset(rs->identity_digest, 0x34, DIGEST_LEN);
       memset(rs->descriptor_digest, 47, DIGEST_LEN);
-      rs->addr = 0xC0000203;
-      rs->or_port = 500;
-      rs->dir_port = 1999;
+      tor_addr_from_ipv4h(&rs->ipv4_addr, 0xC0000203);
+      rs->ipv4_orport = 500;
+      rs->ipv4_dirport = 1999;
       /* all flags but running and valid cleared */
       rs->is_flagged_running = 1;
       rs->is_valid = 1;
@@ -4324,9 +4324,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
                "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
                DIGEST_LEN);
     tt_mem_op(rs->descriptor_digest,OP_EQ, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99008801);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 8000);
+    tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99008801));
+    tt_int_op(rs->ipv4_orport,OP_EQ, 443);
+    tt_int_op(rs->ipv4_dirport,OP_EQ, 8000);
     tt_assert(rs->has_bandwidth);
     tt_assert(vrs->has_measured_bw);
     tt_int_op(rs->bandwidth_kb,OP_EQ, max_unmeasured_bw_kb / 2);
@@ -4348,9 +4348,9 @@ test_vrs_for_umbw(vote_routerstatus_t *vrs, int voter, time_t now)
                "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
                DIGEST_LEN);
     tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99009901));
+    tt_int_op(rs->ipv4_orport,OP_EQ, 443);
+    tt_int_op(rs->ipv4_dirport,OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
     tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
@@ -4457,9 +4457,9 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
     tt_str_op(rs->nickname,OP_EQ, "router1");
     tt_mem_op(rs->descriptor_digest,OP_EQ, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
     tt_int_op(rs->published_on,OP_EQ, now-1000);
-    tt_int_op(rs->addr,OP_EQ, 0x99009901);
-    tt_int_op(rs->or_port,OP_EQ, 443);
-    tt_int_op(rs->dir_port,OP_EQ, 0);
+    tt_assert(tor_addr_eq_ipv4h(&rs->ipv4_addr, 0x99009901));
+    tt_int_op(rs->ipv4_orport,OP_EQ, 443);
+    tt_int_op(rs->ipv4_dirport,OP_EQ, 0);
     tor_addr_parse(&addr_ipv6, "[1:2:3::4]");
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
     tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
@@ -4560,9 +4560,9 @@ test_dir_fmt_control_ns(void *arg)
   strlcpy(rs.nickname, "TetsuoMilk", sizeof(rs.nickname));
   memcpy(rs.identity_digest, "Stately, plump Buck ", DIGEST_LEN);
   memcpy(rs.descriptor_digest, "Mulligan came up fro", DIGEST_LEN);
-  rs.addr = 0x20304050;
-  rs.or_port = 9001;
-  rs.dir_port = 9002;
+  tor_addr_from_ipv4h(&rs.ipv4_addr, 0x20304050);
+  rs.ipv4_orport = 9001;
+  rs.ipv4_dirport = 9002;
   rs.is_exit = 1;
   rs.is_fast = 1;
   rs.is_flagged_running = 1;
@@ -4669,7 +4669,7 @@ reset_routerstatus(routerstatus_t *rs,
                 hex_identity_digest, HEX_DIGEST_LEN);
   /* A zero address matches everything, so the address needs to be set.
    * But the specific value is irrelevant. */
-  rs->addr = ipv4_addr;
+  tor_addr_from_ipv4h(&rs->ipv4_addr, ipv4_addr);
 }
 
 #define ROUTER_A_ID_STR    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -7277,8 +7277,8 @@ test_dir_dirserv_router_get_status(void *arg)
 
   /* Set up the routerinfo */
   ri = tor_malloc_zero(sizeof(routerinfo_t));
-  ri->addr = 0xc0a80001u;
-  ri->or_port = 9001;
+  tor_addr_from_ipv4h(&ri->ipv4_addr, 0xc0a80001u);
+  ri->ipv4_orport = 9001;
   ri->platform = tor_strdup("0.4.0.1-alpha");
   ri->nickname = tor_strdup("Jessica");
   ri->identity_pkey = crypto_pk_dup_key(pk);
@@ -7356,8 +7356,8 @@ test_dir_dirserv_would_reject_router(void *arg)
 
   /* Set up the routerstatus */
   memset(&rs, 0, sizeof(rs));
-  rs.addr = 0xc0a80001u;
-  rs.or_port = 9001;
+  tor_addr_from_ipv4h(&rs.ipv4_addr, 0xc0a80001u);
+  rs.ipv4_orport = 9001;
   strlcpy(rs.nickname, "Nicole", sizeof(rs.nickname));
   memcpy(rs.identity_digest, "Cloud nine is great ", DIGEST_LEN);
 

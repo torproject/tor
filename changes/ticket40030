@@ -1,0 +1,7 @@
+  o Removed features:
+    - Our "check-local" test target no longer tries to use the Coccinelle
+      semantic patching tool parse all the C files.  While it is a good idea
+      to try to make sure Coccinelle works on our C before we run a
+      Coccinelle patch, doing so on every test run has proven to be disruptive.
+      You can still run this tool manually with "make check-cocci". Closes
+      ticket 40030.

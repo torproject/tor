@@ -139,7 +139,7 @@ conn_stats_terminate(void)
 }
 
 /**
- * Record a single entry @a ent in the counts structure @cnt.
+ * Record a single entry @a ent in the counts structure @a cnt.
  */
 static void
 add_entry_to_count(conn_counts_t *cnt, const bidi_map_entry_t *ent)

@@ -562,7 +562,10 @@ void channel_listener_dumpstats(int severity);
 #ifdef CHANNEL_FILE_PRIVATE
 
 STATIC void channel_add_to_digest_map(channel_t *chan);
-
+STATIC bool channel_matches_target_addr_for_extend(
+                                          channel_t *chan,
+                                          const tor_addr_t *target_ipv4_addr,
+                                          const tor_addr_t *target_ipv6_addr);
 #endif /* defined(CHANNEL_FILE_PRIVATE) */
 
 /* Channel operations for subclasses and internal use only */

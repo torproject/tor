@@ -26,9 +26,8 @@
  * <b>id_digest</b>, nickname <b>nickname</b>, and addresses <b>addr32h</b> and
  * <b>addr</b>.
  *
- * The <b>nickname</b> and <b>addr</b> fields are optional and may be set to
- * NULL or the null address.  The <b>addr32h</b> field is optional and may be
- * set to 0.
+ * The <b>nickname</b>, <b>ipv6_addr</b> and <b>ipv4_addr</b> fields are
+ * optional and may be set to NULL or the null address.
  *
  * Return a pointer to the front of <b>buf</b>.
  * If buf is NULL, return a string constant describing the error.
@@ -37,11 +36,12 @@ STATIC const char *
 format_node_description(char *buf,
                         const char *id_digest,
                         const char *nickname,
-                        const tor_addr_t *addr,
-                        uint32_t addr32h)
+                        const tor_addr_t *ipv6_addr,
+                        const tor_addr_t *ipv4_addr)
 {
   size_t rv = 0;
-  bool has_addr = addr && !tor_addr_is_null(addr);
+  bool has_ipv6 = ipv6_addr && !tor_addr_is_null(ipv6_addr);
+  bool valid_ipv4 = false;
 
   if (!buf)
     return "<NULL BUFFER>";
@@ -77,39 +77,37 @@ format_node_description(char *buf,
     rv = strlcat(buf, nickname, NODE_DESC_BUF_LEN);
     tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
   }
-  if (addr32h || has_addr) {
+  if (ipv4_addr || has_ipv6) {
     rv = strlcat(buf, " at ", NODE_DESC_BUF_LEN);
     tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
   }
-  if (addr32h) {
-    int ntoa_rv = 0;
-    char ipv4_addr_str[INET_NTOA_BUF_LEN];
-    memset(ipv4_addr_str, 0, sizeof(ipv4_addr_str));
-    struct in_addr in;
-    memset(&in, 0, sizeof(in));
-
-    in.s_addr = htonl(addr32h);
-    ntoa_rv = tor_inet_ntoa(&in, ipv4_addr_str, sizeof(ipv4_addr_str));
-    tor_assert_nonfatal(ntoa_rv >= 0);
-
-    rv = strlcat(buf, ipv4_addr_str, NODE_DESC_BUF_LEN);
-    tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
-  }
-  /* Both addresses are valid */
-  if (addr32h && has_addr) {
-    rv = strlcat(buf, " and ", NODE_DESC_BUF_LEN);
-    tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
-  }
-  if (has_addr) {
+  if (ipv4_addr) {
     const char *str_rv = NULL;
     char addr_str[TOR_ADDR_BUF_LEN];
     memset(addr_str, 0, sizeof(addr_str));
 
-    str_rv = tor_addr_to_str(addr_str, addr, sizeof(addr_str), 1);
-    tor_assert_nonfatal(str_rv == addr_str);
-
-    rv = strlcat(buf, addr_str, NODE_DESC_BUF_LEN);
+    str_rv = tor_addr_to_str(addr_str, ipv4_addr, sizeof(addr_str), 0);
+    if (str_rv) {
+      rv = strlcat(buf, addr_str, NODE_DESC_BUF_LEN);
+      tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
+      valid_ipv4 = true;
+    }
+  }
+  /* Both addresses are valid */
+  if (valid_ipv4 && has_ipv6) {
+    rv = strlcat(buf, " and ", NODE_DESC_BUF_LEN);
     tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
+  }
+  if (has_ipv6) {
+    const char *str_rv = NULL;
+    char addr_str[TOR_ADDR_BUF_LEN];
+    memset(addr_str, 0, sizeof(addr_str));
+
+    str_rv = tor_addr_to_str(addr_str, ipv6_addr, sizeof(addr_str), 1);
+    if (str_rv) {
+      rv = strlcat(buf, addr_str, NODE_DESC_BUF_LEN);
+      tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
+    }
   }
 
   return buf;
@@ -132,7 +130,7 @@ router_describe(const routerinfo_t *ri)
                                  ri->cache_info.identity_digest,
                                  ri->nickname,
                                  &ri->ipv6_addr,
-                                 ri->addr);
+                                 &ri->ipv4_addr);
 }
 
 /** Return a human-readable description of the node_t <b>node</b>.
@@ -145,15 +143,14 @@ node_describe(const node_t *node)
 {
   static char buf[NODE_DESC_BUF_LEN];
   const char *nickname = NULL;
-  uint32_t addr32h = 0;
-  const tor_addr_t *ipv6_addr = NULL;
+  const tor_addr_t *ipv6_addr = NULL, *ipv4_addr = NULL;
 
   if (!node)
     return "<null>";
 
   if (node->rs) {
     nickname = node->rs->nickname;
-    addr32h = node->rs->addr;
+    ipv4_addr = &node->rs->ipv4_addr;
     ipv6_addr = &node->rs->ipv6_addr;
     /* Support consensus versions less than 28, when IPv6 addresses were in
      * microdescs. This code can be removed when 0.2.9 is no longer supported,
@@ -163,7 +160,7 @@ node_describe(const node_t *node)
     }
   } else if (node->ri) {
     nickname = node->ri->nickname;
-    addr32h = node->ri->addr;
+    ipv4_addr = &node->ri->ipv4_addr;
     ipv6_addr = &node->ri->ipv6_addr;
   } else {
     return "<null rs and ri>";
@@ -173,7 +170,7 @@ node_describe(const node_t *node)
                                  node->identity,
                                  nickname,
                                  ipv6_addr,
-                                 addr32h);
+                                 ipv4_addr);
 }
 
 /** Return a human-readable description of the routerstatus_t <b>rs</b>.
@@ -193,7 +190,7 @@ routerstatus_describe(const routerstatus_t *rs)
                                  rs->identity_digest,
                                  rs->nickname,
                                  &rs->ipv6_addr,
-                                 rs->addr);
+                                 &rs->ipv4_addr);
 }
 
 /** Return a human-readable description of the extend_info_t <b>ei</b>.
@@ -211,7 +208,7 @@ extend_info_describe(const extend_info_t *ei)
 
   const tor_addr_port_t *ap4 = extend_info_get_orport(ei, AF_INET);
   const tor_addr_port_t *ap6 = extend_info_get_orport(ei, AF_INET6);
-  uint32_t addr4 = ap4 ? tor_addr_to_ipv4h(&ap4->addr) : 0;
+  const tor_addr_t *addr4 = ap4 ? &ap4->addr : NULL;
   const tor_addr_t *addr6 = ap6 ? &ap6->addr : NULL;
 
   return format_node_description(buf,

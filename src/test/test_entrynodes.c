@@ -171,8 +171,8 @@ big_fake_network_setup(const struct testcase_t *testcase)
 
     /* Note: all these guards have the same address, so you'll need to
      * disable EnforceDistinctSubnets when a restriction is applied. */
-    n->rs->addr = 0x04020202;
-    n->rs->or_port = 1234;
+    tor_addr_from_ipv4h(&n->rs->ipv4_addr, 0x04020202);
+    n->rs->ipv4_orport = 1234;
     n->rs->is_v2_dir = 1;
     n->rs->has_bandwidth = 1;
     n->rs->bandwidth_kb = 30;
@@ -272,8 +272,8 @@ test_node_preferred_orport(void *arg)
 
   /* Setup node_ri */
   memset(&node_ri, 0, sizeof(node_ri));
-  node_ri.addr = tor_addr_to_ipv4h(&ipv4_addr);
-  node_ri.or_port = ipv4_port;
+  tor_addr_copy(&node_ri.ipv4_addr, &ipv4_addr);
+  node_ri.ipv4_orport = ipv4_port;
   tor_addr_copy(&node_ri.ipv6_addr, &ipv6_addr);
   node_ri.ipv6_orport = ipv6_port;
 
@@ -1002,10 +1002,10 @@ test_entry_guard_node_filter(void *arg)
   g[1]->pb.path_bias_disabled = 1;
 
   /* 2: Unreachable address. */
-  n[2]->rs->addr = 0;
+  tor_addr_make_unspec(&n[2]->rs->ipv4_addr);
 
   /* 3: ExcludeNodes */
-  n[3]->rs->addr = 0x90902020;
+  tor_addr_from_ipv4h(&n[3]->rs->ipv4_addr, 0x90902020);
   routerset_free(get_options_mutable()->ExcludeNodes);
   get_options_mutable()->ExcludeNodes = routerset_new();
   routerset_parse(get_options_mutable()->ExcludeNodes, "144.144.0.0/16", "");
@@ -1014,8 +1014,8 @@ test_entry_guard_node_filter(void *arg)
   get_options_mutable()->UseBridges = 1;
   sweep_bridge_list();
   bl = tor_malloc_zero(sizeof(bridge_line_t));
-  tor_addr_from_ipv4h(&bl->addr, n[4]->rs->addr);
-  bl->port = n[4]->rs->or_port;
+  tor_addr_copy(&bl->addr, &n[4]->rs->ipv4_addr);
+  bl->port = n[4]->rs->ipv4_orport;
   memcpy(bl->digest, n[4]->identity, 20);
   bridge_add_from_config(bl);
   bl = NULL; // prevent free.
@@ -1124,7 +1124,7 @@ test_entry_guard_expand_sample(void *arg)
   routerset_parse(get_options_mutable()->ExcludeNodes, "144.144.0.0/16", "");
   SMARTLIST_FOREACH(big_fake_net_nodes, node_t *, n, {
     if (n_sl_idx % 64 != 0) {
-      n->rs->addr = 0x90903030;
+      tor_addr_from_ipv4h(&n->rs->ipv4_addr, 0x90903030);
     }
   });
   entry_guards_update_filtered_sets(gs);
@@ -1162,7 +1162,7 @@ test_entry_guard_expand_sample_small_net(void *arg)
       test_node_free(n);
       SMARTLIST_DEL_CURRENT(big_fake_net_nodes, n);
     } else {
-      n->rs->addr = 0; // make the filter reject this.
+      tor_addr_make_unspec(&n->rs->ipv4_addr); // make the filter reject this.
     }
   });
 

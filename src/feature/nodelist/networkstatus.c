@@ -471,8 +471,8 @@ networkstatus_check_document_signature(const networkstatus_t *consensus,
                  DIGEST_LEN))
     return -1;
 
-  if (authority_cert_is_blacklisted(cert)) {
-    /* We implement blacklisting for authority signing keys by treating
+  if (authority_cert_is_denylisted(cert)) {
+    /* We implement denylisting for authority signing keys by treating
      * all their signatures as always bad. That way we don't get into
      * crazy loops of dropping and re-fetching signatures. */
     log_warn(LD_DIR, "Ignoring a consensus signature made with deprecated"
@@ -608,25 +608,25 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
     SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
       {
         tor_log(severity, LD_DIR, "Consensus includes unrecognized authority "
-                 "'%s' at %s:%d (contact %s; identity %s)",
-                 voter->nickname, voter->address, (int)voter->dir_port,
+                 "'%s' at %s:%" PRIu16 " (contact %s; identity %s)",
+                 voter->nickname, voter->address, voter->ipv4_dirport,
                  voter->contact?voter->contact:"n/a",
                  hex_str(voter->identity_digest, DIGEST_LEN));
       });
     SMARTLIST_FOREACH(need_certs_from, networkstatus_voter_info_t *, voter,
       {
         tor_log(severity, LD_DIR, "Looks like we need to download a new "
-                 "certificate from authority '%s' at %s:%d (contact %s; "
-                 "identity %s)",
-                 voter->nickname, voter->address, (int)voter->dir_port,
+                 "certificate from authority '%s' at %s:%" PRIu16
+                 " (contact %s; identity %s)",
+                 voter->nickname, voter->address, voter->ipv4_dirport,
                  voter->contact?voter->contact:"n/a",
                  hex_str(voter->identity_digest, DIGEST_LEN));
       });
     SMARTLIST_FOREACH(missing_authorities, dir_server_t *, ds,
       {
         tor_log(severity, LD_DIR, "Consensus does not include configured "
-                 "authority '%s' at %s:%d (identity %s)",
-                 ds->nickname, ds->address, (int)ds->dir_port,
+                 "authority '%s' at %s:%" PRIu16 " (identity %s)",
+                 ds->nickname, ds->address, ds->ipv4_dirport,
                  hex_str(ds->v3_identity_digest, DIGEST_LEN));
       });
     {
@@ -1594,9 +1594,9 @@ routerstatus_has_visibly_changed(const routerstatus_t *a,
 
   return strcmp(a->nickname, b->nickname) ||
          fast_memneq(a->descriptor_digest, b->descriptor_digest, DIGEST_LEN) ||
-         a->addr != b->addr ||
-         a->or_port != b->or_port ||
-         a->dir_port != b->dir_port ||
+         !tor_addr_eq(&a->ipv4_addr, &b->ipv4_addr) ||
+         a->ipv4_orport != b->ipv4_orport ||
+         a->ipv4_dirport != b->ipv4_dirport ||
          a->is_authority != b->is_authority ||
          a->is_exit != b->is_exit ||
          a->is_stable != b->is_stable ||
@@ -2392,10 +2392,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   memcpy(rs->identity_digest, node->identity, DIGEST_LEN);
   memcpy(rs->descriptor_digest, ri->cache_info.signed_descriptor_digest,
          DIGEST_LEN);
-  rs->addr = ri->addr;
+  tor_addr_copy(&rs->ipv4_addr, &ri->ipv4_addr);
   strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
-  rs->or_port = ri->or_port;
-  rs->dir_port = ri->dir_port;
+  rs->ipv4_orport = ri->ipv4_orport;
+  rs->ipv4_dirport = ri->ipv4_dirport;
   rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
 
   tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
