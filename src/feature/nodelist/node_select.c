@@ -222,7 +222,7 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
              "addresses for launching an outgoing connection: "
              "IPv4 %s OR %d Dir %d IPv6 %s OR %d Dir %d",
              routerstatus_describe(rs),
-             (ipv4_str) ? ipv4_str : "???", rs->ipv4_orport,
+             ipv4_str, rs->ipv4_orport,
              rs->ipv4_dirport, fmt_addr(&rs->ipv6_addr),
              rs->ipv6_orport, rs->ipv4_dirport);
     tor_free(ipv4_str);
