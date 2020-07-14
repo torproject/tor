@@ -254,3 +254,14 @@ router_pick_published_address, (const or_options_t *options, uint32_t *addr,
   /* We have no useful cached answers. Return failure. */
   return -1;
 }
+
+/** Return true iff this relay has an address set for the given family.
+ *
+ * This only checks the caches so it will not trigger a full discovery of the
+ * address. */
+bool
+relay_has_address_set(int family)
+{
+  tor_addr_t addr;
+  return relay_find_addr_to_publish(get_options(), family, 1, &addr);
+}
