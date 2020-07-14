@@ -733,3 +733,13 @@ is_local_to_resolve_addr, (const tor_addr_t *addr))
     return false;
   }
 }
+
+#ifdef TOR_UNIT_TESTS
+
+void
+resolve_addr_reset_suggested(int family)
+{
+  tor_addr_make_unspec(&last_suggested_addrs[af_to_idx(family)]);
+}
+
+#endif /* TOR_UNIT_TESTS */
