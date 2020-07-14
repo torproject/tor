@@ -2782,22 +2782,6 @@ channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
 }
 
 /**
- * Return text description of the remote endpoint.
- *
- * This function return a test provided by the lower layer of the remote
- * endpoint for this channel; it should specify the actual address connected
- * to/from.
- *
- * Subsequent calls to channel_get_{actual,canonical}_remote_{address,descr}
- * may invalidate the return value from this function.
- */
-const char *
-channel_describe_peer(channel_t *chan)
-{
-  return channel_describe_peer(chan);
-}
-
-/**
  * Return text description of the remote endpoint canonical address.
  *
  * This function returns a human-readable string for logging; nothing

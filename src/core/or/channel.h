@@ -718,7 +718,6 @@ channel_is_in_state(channel_t *chan, channel_state_t state)
 const char * channel_describe_transport(channel_t *chan);
 MOCK_DECL(void, channel_dump_statistics, (channel_t *chan, int severity));
 void channel_dump_transport_statistics(channel_t *chan, int severity);
-const char * channel_describe_peer(channel_t *chan);
 MOCK_DECL(int, channel_get_addr_if_possible, (const channel_t *chan,
                                               tor_addr_t *addr_out));
 MOCK_DECL(const char *, channel_describe_peer,(channel_t *chan));
