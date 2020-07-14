@@ -49,8 +49,8 @@ void router_get_verbose_nickname(char *buf, const routerinfo_t *router);
 STATIC const char *format_node_description(char *buf,
                                            const char *id_digest,
                                            const char *nickname,
-                                           const tor_addr_t *ipv6_addr,
-                                           const tor_addr_t *ipv4_addr);
+                                           const tor_addr_t *ipv4_addr,
+                                           const tor_addr_t *ipv6_addr);
 
 #endif /* defined(TOR_UNIT_TESTS) */
 
