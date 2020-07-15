@@ -2476,9 +2476,9 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   smartlist_t *exits  = smartlist_new();
   double f_guard, f_mid, f_exit;
   double f_path = 0.0;
-  /* Used to determine whether there are any exits in the consensus */
-  int np = 0;
   /* Used to determine whether there are any exits with descriptors */
+  int np = 0;
+  /* Used to determine whether there are any exits in the consensus */
   int nu = 0;
   const int authdir = authdir_mode_v3(options);
 
@@ -2488,8 +2488,8 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   log_debug(LD_NET,
             "%s: %d present, %d usable",
             "mid",
-            np,
-            nu);
+            *num_present_out,
+            *num_usable_out);
 
   if (options->EntryNodes) {
     count_usable_descriptors(&np, &nu, guards, consensus, now,
@@ -2528,7 +2528,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
    * building exit paths */
   /* Update our understanding of whether the consensus has exits */
   consensus_path_type_t old_have_consensus_path = have_consensus_path;
-  have_consensus_path = ((np > 0) ?
+  have_consensus_path = ((nu > 0) ?
                          CONSENSUS_PATH_EXIT :
                          CONSENSUS_PATH_INTERNAL);
 
