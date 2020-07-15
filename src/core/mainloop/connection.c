@@ -418,20 +418,26 @@ connection_describe_peer_internal(const connection_t *conn,
   } else if (conn->type == CONN_TYPE_OR) {
     /* For OR connections, we have a lot to do. */
     const or_connection_t *or_conn = TO_OR_CONN((connection_t *)conn);
-    char id_buf[HEX_DIGEST_LEN+1];
-    /* we report 'real_addr' as the address we're talking with */
-    addr = &or_conn->real_addr;
+    /* we report 'real_addr' as the address we're talking with, if it's set.
+     *
+     * TODO: Eventually we should have 'addr' always mean the address on the
+     * internet, and have a separate 'canonical_addr' field.
+     */
+    if (!tor_addr_is_null(&or_conn->real_addr)) {
+      addr = &or_conn->real_addr;
+    }
     /* We report the IDs we're talking to... */
     if (fast_digest_is_zero(or_conn->identity_digest)) {
-      strlcpy(id_buf, "unknown", sizeof(id_buf));
-      scrub = true; // This could be a client, so scrub it.
+      // This could be a client, so scrub it.  No identity to report.
+      scrub = true;
     } else {
+      char id_buf[HEX_DIGEST_LEN+1];
       base16_encode(id_buf, sizeof(id_buf),
                     or_conn->identity_digest, DIGEST_LEN);
+      tor_snprintf(extra_buf, sizeof(extra_buf),
+                   " ID=%s", id_buf);
     }
-    tor_snprintf(extra_buf, sizeof(extra_buf),
-                 " ID=%s", id_buf);
-    if (! tor_addr_eq(addr, &conn->addr)) {
+    if (! tor_addr_eq(addr, &conn->addr) && !scrub) {
       /* We report canonical address, if it's different */
       char canonical_addr_buf[TOR_ADDR_BUF_LEN];
       if (tor_addr_to_str(canonical_addr_buf, &conn->addr,
