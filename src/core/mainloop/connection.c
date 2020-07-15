@@ -449,8 +449,15 @@ connection_describe_peer_internal(const connection_t *conn,
 
   char addr_buf[TOR_ADDR_BUF_LEN];
   if (address == NULL) {
-    tor_addr_to_str(addr_buf, addr, sizeof(addr_buf), 1);
-    address = addr_buf;
+    if (tor_addr_family(addr) == 0) {
+      address = "<unset>";
+    } else {
+      address = tor_addr_to_str(addr_buf, addr, sizeof(addr_buf), 1);
+      if (!address) {
+        address = "<can't format!>";
+        tor_assert_nonfatal_unreached_once();
+      }
+    }
   }
 
   char portbuf[7];
