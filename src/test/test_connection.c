@@ -10,6 +10,7 @@
 #include "core/or/or.h"
 #include "test/test.h"
 
+#include "app/config/config.h"
 #include "app/config/or_options_st.h"
 #include "core/mainloop/connection.h"
 #include "core/or/connection_edge.h"
@@ -961,6 +962,111 @@ test_failed_orconn_tracker(void *arg)
   ;
 }
 
+static void
+test_conn_describe(void *arg)
+{
+  (void)arg;
+  or_options_t *options = get_options_mutable();
+  options->SafeLogging_ = SAFELOG_SCRUB_ALL;
+
+  // Let's start with a listener connection since they're simple.
+  connection_t *conn = connection_new(CONN_TYPE_OR_LISTENER, AF_INET);
+  tor_addr_parse(&conn->addr, "44.22.11.11");
+  conn->port = 80;
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR listener connection (ready) on 44.22.11.11:80");
+  // If the address is unspec, we should still work.
+  tor_addr_make_unspec(&conn->addr);
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR listener connection (ready) on <unset>:80");
+  // Try making the address null.
+  tor_addr_make_null(&conn->addr, AF_INET);
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR listener connection (ready) on 0.0.0.0:80");
+  // What if the address is uninitialized? (This can happen if we log about the
+  // connection before we set the address.)
+  memset(&conn->addr, 0, sizeof(conn->addr));
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR listener connection (ready) on <unset>:80");
+  connection_free_minimal(conn);
+
+  // Try a unix socket.
+  conn = connection_new(CONN_TYPE_CONTROL_LISTENER, AF_UNIX);
+  conn->address = tor_strdup("/a/path/that/could/exist");
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "Control listener connection (ready) on /a/path/that/could/exist");
+  connection_free_minimal(conn);
+
+  // Try an IPv6 address.
+  conn = connection_new(CONN_TYPE_AP_LISTENER, AF_INET6);
+  tor_addr_parse(&conn->addr, "ff00::3");
+  conn->port = 9050;
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "Socks listener connection (ready) on [ff00::3]:9050");
+  connection_free_minimal(conn);
+
+  // Now let's mess with exit connections.  They have some special issues.
+  options->SafeLogging_ = SAFELOG_SCRUB_NONE;
+  conn = connection_new(CONN_TYPE_EXIT, AF_INET);
+  // If address and state are unset, we should say SOMETHING.
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "Exit connection (uninitialized) to <unset> (DNS lookup pending)");
+  // Now suppose that the address is set but we haven't resolved the hostname.
+  conn->port = 443;
+  conn->address = tor_strdup("www.torproject.org");
+  conn->state = EXIT_CONN_STATE_RESOLVING;
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "Exit connection (waiting for dest info) to "
+            "www.torproject.org:443 (DNS lookup pending)");
+  //  Now give it a hostname!
+  tor_addr_parse(&conn->addr, "192.168.8.8");
+  conn->state = EXIT_CONN_STATE_OPEN;
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "Exit connection (open) to 192.168.8.8:443");
+  // But what if safelogging is on?
+  options->SafeLogging_ = SAFELOG_SCRUB_RELAY;
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "Exit connection (open) to [scrubbed]");
+  connection_free_minimal(conn);
+
+  // Now at last we look at OR addresses, which are complicated.
+  conn = connection_new(CONN_TYPE_OR, AF_INET6);
+  conn->state = OR_CONN_STATE_OPEN;
+  conn->port = 8080;
+  tor_addr_parse(&conn->addr, "[ffff:3333:1111::2]");
+  // This should get scrubbed, since the lack of a set ID means we might be
+  // talking to a client.
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR connection (open) with [scrubbed]");
+  // But now suppose we aren't safelogging? We'll get the address then.
+  options->SafeLogging_ = SAFELOG_SCRUB_NONE;
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR connection (open) with [ffff:3333:1111::2]:8080");
+  // Suppose we have an ID, so we know it isn't a client.
+  TO_OR_CONN(conn)->identity_digest[3] = 7;
+  options->SafeLogging_ = SAFELOG_SCRUB_RELAY; // back to safelogging.
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR connection (open) with [ffff:3333:1111::2]:8080 "
+            "ID=0000000700000000000000000000000000000000");
+  // Add a 'real address' that is the same as the one we have.
+  tor_addr_parse(&TO_OR_CONN(conn)->real_addr, "[ffff:3333:1111::2]");
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR connection (open) with [ffff:3333:1111::2]:8080 "
+            "ID=0000000700000000000000000000000000000000");
+  // Add a different 'real address'
+  tor_addr_parse(&TO_OR_CONN(conn)->real_addr, "[ffff:3333:1111::8]");
+  tt_str_op(connection_describe(conn), OP_EQ,
+            "OR connection (open) with [ffff:3333:1111::8]:8080 "
+            "ID=0000000700000000000000000000000000000000 "
+            "canonical_addr=[ffff:3333:1111::2]");
+
+  // Clear identity_digest so that free_minimal won't complain.
+  memset(TO_OR_CONN(conn)->identity_digest, 0, DIGEST_LEN);
+
+ done:
+  connection_free_minimal(conn);
+}
+
 #ifndef COCCI
 #define CONNECTION_TESTCASE(name, fork, setup)                           \
   { #name, test_conn_##name, fork, &setup, NULL }
@@ -995,5 +1101,6 @@ struct testcase_t connection_tests[] = {
 
 //CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
   { "failed_orconn_tracker", test_failed_orconn_tracker, TT_FORK, NULL, NULL },
+  { "describe", test_conn_describe, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
