@@ -463,10 +463,10 @@ connection_describe_peer_internal(const connection_t *conn,
 
   char portbuf[7];
   portbuf[0]=0;
-
-  if (scrub) {
-    address = safe_str(address);
+  if (scrub && get_options()->SafeLogging_ != SAFELOG_SCRUB_NONE) {
+    address = "[scrubbed]";
   } else {
+    /* Only set the port if we're not scrubbing the address. */
     if (conn->port != 0) {
       tor_snprintf(portbuf, sizeof(portbuf), ":%d", conn->port);
     }
