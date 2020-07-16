@@ -101,7 +101,7 @@ TO_DIR_CONN(connection_t *c)
 const dir_connection_t *
 CONST_TO_DIR_CONN(const connection_t *c)
 {
-  return CONST_TO_DIR_CONN(c);
+  return TO_DIR_CONN((connection_t *)c);
 }
 
 /** Return false if the directory purpose <b>dir_purpose</b>

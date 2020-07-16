@@ -242,7 +242,7 @@ TO_LISTENER_CONN(connection_t *c)
 const listener_connection_t *
 CONST_TO_LISTENER_CONN(const connection_t *c)
 {
-  return CONST_TO_LISTENER_CONN(c);
+  return TO_LISTENER_CONN((connection_t *)c);
 }
 
 size_t

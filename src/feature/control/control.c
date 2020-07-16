@@ -83,7 +83,7 @@ TO_CONTROL_CONN(connection_t *c)
 const control_connection_t *
 CONST_TO_CONTROL_CONN(const connection_t *c)
 {
-  return CONST_TO_CONTROL_CONN(c);
+  return TO_CONTROL_CONN((connection_t*)c);
 }
 
 /** Create and add a new controller connection on <b>sock</b>.  If

@@ -119,7 +119,7 @@ TO_OR_CONN(connection_t *c)
 const or_connection_t *
 CONST_TO_OR_CONN(const connection_t *c)
 {
-  return CONST_TO_OR_CONN(c);
+  return TO_OR_CONN((connection_t *)c);
 }
 
 /** Clear clear conn->identity_digest and update other data
