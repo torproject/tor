@@ -2114,6 +2114,18 @@ tor_addr_port_eq(const tor_addr_port_t *a,
   return tor_addr_eq(&a->addr, &b->addr) && a->port == b->port;
 }
 
+/**
+ * Copy a tor_addr_port_t from @source to @dest.
+ **/
+void
+tor_addr_port_copy(tor_addr_port_t *dest,
+                   const tor_addr_port_t *source)
+{
+  tor_assert(dest);
+  tor_assert(source);
+  memcpy(dest, source, sizeof(tor_addr_port_t));
+}
+
 /** Return true if <b>string</b> represents a valid IPv4 adddress in
  * 'a.b.c.d' form.
  */
