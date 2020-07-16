@@ -2115,7 +2115,7 @@ tor_addr_port_eq(const tor_addr_port_t *a,
 }
 
 /**
- * Copy a tor_addr_port_t from @source to @dest.
+ * Copy a tor_addr_port_t from @a source to @a dest.
  **/
 void
 tor_addr_port_copy(tor_addr_port_t *dest,
