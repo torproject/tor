@@ -87,18 +87,6 @@ months and expect it to merge cleanly. Try to merge pieces early and often.
 
 ## How we log changes
 
-Before diving in the details on how to write a changes file, note that we do
-NOT require a changes file for:
-
-  * Any change to a file that is not distributed in the tarball. This
-    includes:
-    - Any change to our CI configuration that does not affect the distributed
-      source.
-    - Any change to developer-only tools, unless those tools are distributed
-      in the tarball.
-  * Non-functional code movement.
-  * Identifier re-namings, comment edits, spelling fixes, and so on.
-
 When you do a commit that needs a ChangeLog entry, add a new file to
 the `changes` toplevel subdirectory.  It should have the format of a
 one-entry changelog section from the current ChangeLog file, as in
@@ -197,6 +185,14 @@ What needs a changes file?
 What does not need a changes file?
 
    * Bugfixes for code that hasn't shipped in any released version of Tor
+   * Any change to a file that is not distributed in the tarball. This
+     includes:
+     * Any change to our CI configuration that does not affect the distributed
+      source.
+     * Any change to developer-only tools, unless those tools are distributed
+      in the tarball.
+   * Non-functional code movement.
+   * Identifier re-namings, comment edits, spelling fixes, and so on.
 
 Why use changes files instead of Git commit messages?
 
