@@ -893,7 +893,9 @@ connection_or_init_conn_from_address(or_connection_t *conn,
 
   conn->base_.port = port;
   tor_addr_copy(&conn->base_.addr, addr);
-  conn->base_.address = tor_strdup(fmt_addr(addr));
+  if (! conn->base_.address) {
+    conn->base_.address = tor_strdup(fmt_addr(addr));
+  }
 
   connection_or_check_canonicity(conn, started_here);
 }
