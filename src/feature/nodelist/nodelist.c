@@ -1988,6 +1988,12 @@ node_set_country(node_t *node)
   else if (node->ri)
     ipv4_addr = &node->ri->ipv4_addr;
 
+  /* IPv4 is mandatory for a relay so this should not happen unless we are
+   * attempting to set the country code on a node without a descriptor. */
+  if (BUG(!ipv4_addr)) {
+    node->country = -1;
+    return;
+  }
   node->country = geoip_get_country_by_addr(ipv4_addr);
 }
 
