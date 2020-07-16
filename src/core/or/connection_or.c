@@ -99,13 +99,27 @@ static void connection_or_check_canonicity(or_connection_t *conn,
 
 /**************************************************************/
 
-/** Convert a connection_t* to an or_connection_t*; assert if the cast is
- * invalid. */
+/**
+ * Cast a `connection_t *` to an `or_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an `or_connnection_t`.
+ **/
 or_connection_t *
 TO_OR_CONN(connection_t *c)
 {
   tor_assert(c->magic == OR_CONNECTION_MAGIC);
   return DOWNCAST(or_connection_t, c);
+}
+
+/**
+ * Cast a `const connection_t *` to a `const or_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an `or_connnection_t`.
+ **/
+const or_connection_t *
+CONST_TO_OR_CONN(const connection_t *c)
+{
+  return TO_OR_CONN((connection_t *)c);
 }
 
 /** Clear clear conn->identity_digest and update other data

@@ -31,6 +31,8 @@ struct tor_addr_t;
 struct or_options_t;
 
 struct listener_connection_t *TO_LISTENER_CONN(struct connection_t *);
+const struct listener_connection_t *CONST_TO_LISTENER_CONN(
+                                      const struct connection_t *);
 
 struct buf_t;
 

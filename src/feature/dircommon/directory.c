@@ -79,13 +79,29 @@
  *   connection_finished_connecting() in connection.c
  */
 
-/** Convert a connection_t* to a dir_connection_t*; assert if the cast is
- * invalid. */
+/**
+ * Cast a `connection_t *` to a `dir_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not a
+ * `dir_connection_t`.
+ **/
 dir_connection_t *
 TO_DIR_CONN(connection_t *c)
 {
   tor_assert(c->magic == DIR_CONNECTION_MAGIC);
   return DOWNCAST(dir_connection_t, c);
+}
+
+/**
+ * Cast a `const connection_t *` to a `const dir_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not a
+ * `dir_connection_t`.
+ **/
+const dir_connection_t *
+CONST_TO_DIR_CONN(const connection_t *c)
+{
+  return TO_DIR_CONN((connection_t *)c);
 }
 
 /** Return false if the directory purpose <b>dir_purpose</b>
@@ -217,7 +233,7 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
     return false;
   }
 
-  edge_conn = TO_EDGE_CONN((connection_t *) linked_conn);
+  edge_conn = CONST_TO_EDGE_CONN(linked_conn);
   circ = edge_conn->on_circuit;
 
   /* Can't be a circuit we initiated and without a circuit, no channel. */

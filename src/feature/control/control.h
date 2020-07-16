@@ -13,6 +13,7 @@
 #define TOR_CONTROL_H
 
 control_connection_t *TO_CONTROL_CONN(connection_t *);
+const control_connection_t *CONST_TO_CONTROL_CONN(const connection_t *);
 
 #define CONTROL_CONN_STATE_MIN_ 1
 /** State for a control connection: Authenticated and accepting v1 commands. */

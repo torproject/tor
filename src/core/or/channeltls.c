@@ -389,6 +389,25 @@ channel_tls_from_base(channel_t *chan)
   return (channel_tls_t *)(chan);
 }
 
+/**
+ * Cast a const channel_tls_t to a const channel_t.
+ */
+const channel_t *
+channel_tls_to_base_const(const channel_tls_t *tlschan)
+{
+  return channel_tls_to_base((channel_tls_t*) tlschan);
+}
+
+/**
+ * Cast a const channel_t to a const channel_tls_t, with appropriate
+ * type-checking asserts.
+ */
+const channel_tls_t *
+channel_tls_from_base_const(const channel_t *chan)
+{
+  return channel_tls_from_base((channel_t *)chan);
+}
+
 /********************************************
  * Method implementations for channel_tls_t *
  *******************************************/
@@ -519,7 +538,7 @@ static int
 channel_tls_get_remote_addr_method(const channel_t *chan,
                                    tor_addr_t *addr_out)
 {
-  const channel_tls_t *tlschan = BASE_CHAN_TO_TLS((channel_t*) chan);
+  const channel_tls_t *tlschan = CONST_BASE_CHAN_TO_TLS(chan);
 
   tor_assert(tlschan);
   tor_assert(addr_out);
@@ -574,7 +593,7 @@ channel_tls_get_transport_name_method(channel_t *chan, char **transport_out)
 static const char *
 channel_tls_describe_peer_method(const channel_t *chan)
 {
-  const channel_tls_t *tlschan = BASE_CHAN_TO_TLS((channel_t*)chan);
+  const channel_tls_t *tlschan = CONST_BASE_CHAN_TO_TLS(chan);
   tor_assert(tlschan);
 
   if (tlschan->conn) {
