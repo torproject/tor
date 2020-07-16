@@ -189,7 +189,7 @@ TO_EDGE_CONN(connection_t *c)
 const edge_connection_t *
 CONST_TO_EDGE_CONN(const connection_t *c)
 {
-  return TO_EDGE_CONN((connection_t *)c);
+  return CONST_TO_EDGE_CONN(c);
 }
 
 /**
@@ -214,7 +214,7 @@ TO_ENTRY_CONN(connection_t *c)
 const entry_connection_t *
 CONST_TO_ENTRY_CONN(const connection_t *c)
 {
-  return TO_ENTRY_CONN((connection_t*) c);
+  return CONST_TO_ENTRY_CONN(c);
 }
 
 /**
@@ -239,7 +239,7 @@ EDGE_TO_ENTRY_CONN(edge_connection_t *c)
 const entry_connection_t *
 CONST_EDGE_TO_ENTRY_CONN(const edge_connection_t *c)
 {
-  return EDGE_TO_ENTRY_CONN((edge_connection_t*)c);
+  return CONST_EDGE_TO_ENTRY_CONN(c);
 }
 
 /** An AP stream has failed/finished. If it hasn't already sent back

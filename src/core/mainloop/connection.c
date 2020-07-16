@@ -242,7 +242,7 @@ TO_LISTENER_CONN(connection_t *c)
 const listener_connection_t *
 CONST_TO_LISTENER_CONN(const connection_t *c)
 {
-  return TO_LISTENER_CONN((connection_t *)c);
+  return CONST_TO_LISTENER_CONN(c);
 }
 
 size_t
@@ -433,7 +433,7 @@ connection_describe_peer_internal(const connection_t *conn,
     address = conn->address ? conn->address : "unix socket";
   } else if (conn->type == CONN_TYPE_OR) {
     /* For OR connections, we have a lot to do. */
-    const or_connection_t *or_conn = TO_OR_CONN((connection_t *)conn);
+    const or_connection_t *or_conn = CONST_TO_OR_CONN(conn);
     /* we report 'real_addr' as the address we're talking with, if it's set.
      *
      * TODO: Eventually we should have 'addr' always mean the address on the
@@ -2257,7 +2257,7 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
   /* OR conns keep the original address in real_addr, as addr gets overwritten
    * with the descriptor address */
   if (conn->type == CONN_TYPE_OR) {
-    const or_connection_t *or_conn = TO_OR_CONN((connection_t *)conn);
+    const or_connection_t *or_conn = CONST_TO_OR_CONN(conn);
     tor_addr_copy(&real_addr, &or_conn->real_addr);
   } else if (conn->type == CONN_TYPE_DIR) {
     tor_addr_copy(&real_addr, &conn->addr);

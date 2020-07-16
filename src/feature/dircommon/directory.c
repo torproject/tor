@@ -101,7 +101,7 @@ TO_DIR_CONN(connection_t *c)
 const dir_connection_t *
 CONST_TO_DIR_CONN(const connection_t *c)
 {
-  return TO_DIR_CONN((connection_t *)c);
+  return CONST_TO_DIR_CONN(c);
 }
 
 /** Return false if the directory purpose <b>dir_purpose</b>
@@ -233,7 +233,7 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
     return false;
   }
 
-  edge_conn = TO_EDGE_CONN((connection_t *) linked_conn);
+  edge_conn = CONST_TO_EDGE_CONN(linked_conn);
   circ = edge_conn->on_circuit;
 
   /* Can't be a circuit we initiated and without a circuit, no channel. */
