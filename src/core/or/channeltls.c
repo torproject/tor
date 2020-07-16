@@ -389,6 +389,25 @@ channel_tls_from_base(channel_t *chan)
   return (channel_tls_t *)(chan);
 }
 
+/**
+ * Cast a const channel_tls_t to a const channel_t.
+ */
+const channel_t *
+channel_tls_to_base_const(const channel_tls_t *tlschan)
+{
+  return channel_tls_to_base((channel_tls_t*) tlschan);
+}
+
+/**
+ * Cast a const channel_t to a const channel_tls_t, with appropriate
+ * type-checking asserts.
+ */
+const channel_tls_t *
+channel_tls_from_base_const(const channel_t *chan)
+{
+  return channel_tls_from_base((channel_t *)chan);
+}
+
 /********************************************
  * Method implementations for channel_tls_t *
  *******************************************/

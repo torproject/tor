@@ -19,6 +19,8 @@ struct curve25519_public_key_t;
 
 #define BASE_CHAN_TO_TLS(c) (channel_tls_from_base((c)))
 #define TLS_CHAN_TO_BASE(c) (channel_tls_to_base((c)))
+#define CONST_BASE_CHAN_TO_TLS(c) (channel_tls_from_base_const((c)))
+#define CONST_TLS_CHAN_TO_BASE(c) (channel_tls_to_base_const((c)))
 
 #define TLS_CHAN_MAGIC 0x8a192427U
 
@@ -44,6 +46,8 @@ channel_t * channel_tls_handle_incoming(or_connection_t *orconn);
 
 channel_t * channel_tls_to_base(channel_tls_t *tlschan);
 channel_tls_t * channel_tls_from_base(channel_t *chan);
+const channel_t * channel_tls_to_base_const(const channel_tls_t *tlschan);
+const channel_tls_t * channel_tls_from_base_const(const channel_t *chan);
 
 /* Things for connection_or.c to call back into */
 void channel_tls_handle_cell(cell_t *cell, or_connection_t *conn);
