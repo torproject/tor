@@ -203,7 +203,7 @@ update_socket_info_impl, (socket_table_ent_t *ent))
   tor_assert(ent);
   tor_assert(ent->chan);
   const tor_socket_t sock =
-    TO_CONN(BASE_CHAN_TO_TLS((channel_t *) ent->chan)->conn)->s;
+    TO_CONN(CONST_BASE_CHAN_TO_TLS(ent->chan)->conn)->s;
   struct tcp_info tcp;
   socklen_t tcp_info_len = sizeof(tcp);
 

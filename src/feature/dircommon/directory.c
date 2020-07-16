@@ -233,7 +233,7 @@ connection_dir_is_anonymous(const dir_connection_t *dir_conn)
     return false;
   }
 
-  edge_conn = TO_EDGE_CONN((connection_t *) linked_conn);
+  edge_conn = CONST_TO_EDGE_CONN(linked_conn);
   circ = edge_conn->on_circuit;
 
   /* Can't be a circuit we initiated and without a circuit, no channel. */
