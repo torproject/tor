@@ -17,8 +17,8 @@ are derived from a base object called a general circuit.
 - OR circuits are the ones going through us that we have not initiated and
   thus only seen by relays.
 
-Many operations are done on the base (general) circuit and some are specific
-to an origin or OR. The following section decribes each of them by circuit
+Many operations are done on the base (general) circuit, and some are specific
+to an origin or OR. The following section describes each of them by circuit
 type.
 
 ## Trace Events
@@ -26,12 +26,12 @@ type.
 For the LTTng tracer, the subsystem name of these events is: `tor_circuit`.
 
 Also, unless specified otherwise, every event emits a common set of parameters
-thus they should be expected always in the following order:
+thus they should always be expected in the following order:
 
 - `circ_id`: For an origin circuit, this is the global circuit identifier used
   in a cell. For an OR circuit, the value is 0.
 
-- `purpose`: Purpose of the circuit as in what is it used for. Note that this
+- `purpose`: Purpose of the circuit as in what it is used for. Note that this
   can change during the lifetime of a circuit. See `CIRCUIT_PURPOSE_*` in
   `core/or/circuitlist.h` for an exhaustive list of the possible values.
 
@@ -44,7 +44,7 @@ Now, the tracing events.
 ### General Circuit (`circuit_t`)
 
 The following events are triggered for the base circuit object and thus apply
-to all type of circuits.
+to all types of circuits.
 
   * `free`: A circuit object is freed that is memory is released and not
     usable anymore. After this event, no more events will be emitted for the
@@ -96,7 +96,7 @@ The following events are triggered only for origin circuits.
     launched.
 
   * `cannibalized`: Circuit has been cannibalized. This happens when we have
-    an already opened unused circuit (prehemptive circuits) and it was picked.
+    an already opened unused circuit (preemptive circuits) and it was picked.
 
   * `first_onion_skin`: First onion skin was sent that is the handshake with
     the first hop.
@@ -121,7 +121,7 @@ The following events are triggered only for origin circuits.
     circuit to be built.
 
   * `idle_timeout`: Circuit has timed out due to idleness. This is controlled
-    by the MaxCircuitDirtiness parameter whcih is 10 min by default.
+    by the MaxCircuitDirtiness parameter which is 10 min by default.
 
 For the common use case of a 3-hop circuit, the following events should be
 seen in this order:
