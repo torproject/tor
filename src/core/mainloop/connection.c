@@ -434,14 +434,6 @@ connection_describe_peer_internal(const connection_t *conn,
   } else if (conn->type == CONN_TYPE_OR) {
     /* For OR connections, we have a lot to do. */
     const or_connection_t *or_conn = CONST_TO_OR_CONN(conn);
-    /* we report 'real_addr' as the address we're talking with, if it's set.
-     *
-     * TODO: Eventually we should have 'addr' always mean the address on the
-     * internet, and have a separate 'canonical_addr' field.
-     */
-    if (!tor_addr_is_null(&or_conn->real_addr)) {
-      addr = &or_conn->real_addr;
-    }
     /* We report the IDs we're talking to... */
     if (fast_digest_is_zero(or_conn->identity_digest)) {
       // This could be a client, so scrub it.  No identity to report.
@@ -453,13 +445,17 @@ connection_describe_peer_internal(const connection_t *conn,
       tor_snprintf(extra_buf, sizeof(extra_buf),
                    " ID=%s", id_buf);
     }
-    if (! tor_addr_eq(addr, &conn->addr) && !scrub) {
+    if (! scrub && (! tor_addr_eq(addr, &or_conn->canonical_orport.addr) ||
+                    conn->port != or_conn->canonical_orport.port)) {
       /* We report canonical address, if it's different */
       char canonical_addr_buf[TOR_ADDR_BUF_LEN];
-      if (tor_addr_to_str(canonical_addr_buf, &conn->addr,
+      if (tor_addr_to_str(canonical_addr_buf, &or_conn->canonical_orport.addr,
                           sizeof(canonical_addr_buf), 1)) {
-        strlcat(extra_buf, " canonical_addr=", sizeof(extra_buf));
-        strlcat(extra_buf, canonical_addr_buf, sizeof(extra_buf));
+        tor_snprintf(extra_buf+strlen(extra_buf),
+                     sizeof(extra_buf)-strlen(extra_buf),
+                     " canonical_addr=%s:%"PRIu16,
+                     canonical_addr_buf,
+                     or_conn->canonical_orport.port);
       }
     }
   } else if (conn->type == CONN_TYPE_EXIT) {
@@ -570,6 +566,7 @@ or_connection_new(int type, int socket_family)
   tor_assert(type == CONN_TYPE_OR || type == CONN_TYPE_EXT_OR);
   connection_init(now, TO_CONN(or_conn), type, socket_family);
 
+  tor_addr_make_unspec(&or_conn->canonical_orport.addr);
   connection_or_set_canonical(or_conn, 0);
 
   if (type == CONN_TYPE_EXT_OR)
@@ -2252,16 +2249,7 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
                          ? fascist_firewall_prefer_ipv6_orport(options)
                          : fascist_firewall_prefer_ipv6_dirport(options));
   tor_addr_t real_addr;
-  tor_addr_make_null(&real_addr, AF_UNSPEC);
-
-  /* OR conns keep the original address in real_addr, as addr gets overwritten
-   * with the descriptor address */
-  if (conn->type == CONN_TYPE_OR) {
-    const or_connection_t *or_conn = CONST_TO_OR_CONN(conn);
-    tor_addr_copy(&real_addr, &or_conn->real_addr);
-  } else if (conn->type == CONN_TYPE_DIR) {
-    tor_addr_copy(&real_addr, &conn->addr);
-  }
+  tor_addr_copy(&real_addr, &conn->addr);
 
   /* Check if we broke a mandatory address family restriction */
   if ((must_ipv4 && tor_addr_family(&real_addr) == AF_INET6)

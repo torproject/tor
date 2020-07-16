@@ -584,7 +584,7 @@ dos_geoip_entry_about_to_free(const clientmap_entry_t *geoip_ent)
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
     if (conn->type == CONN_TYPE_OR) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
-      if (!tor_addr_compare(&geoip_ent->addr, &or_conn->real_addr,
+      if (!tor_addr_compare(&geoip_ent->addr, &TO_CONN(or_conn)->addr,
                             CMP_EXACT)) {
         or_conn->tracked_for_dos_mitigation = 0;
       }
@@ -696,12 +696,12 @@ dos_new_client_conn(or_connection_t *or_conn, const char *transport_name)
    * reason to do so is because network reentry is possible where a client
    * connection comes from an Exit node. Even when we'll fix reentry, this is
    * a robust defense to keep in place. */
-  if (nodelist_probably_contains_address(&or_conn->real_addr)) {
+  if (nodelist_probably_contains_address(&TO_CONN(or_conn)->addr)) {
     goto end;
   }
 
   /* We are only interested in client connection from the geoip cache. */
-  entry = geoip_lookup_client(&or_conn->real_addr, transport_name,
+  entry = geoip_lookup_client(&TO_CONN(or_conn)->addr, transport_name,
                               GEOIP_CLIENT_CONNECT);
   if (BUG(entry == NULL)) {
     /* Should never happen because we note down the address in the geoip
@@ -712,7 +712,7 @@ dos_new_client_conn(or_connection_t *or_conn, const char *transport_name)
   entry->dos_stats.concurrent_count++;
   or_conn->tracked_for_dos_mitigation = 1;
   log_debug(LD_DOS, "Client address %s has now %u concurrent connections.",
-            fmt_addr(&or_conn->real_addr),
+            fmt_addr(&TO_CONN(or_conn)->addr),
             entry->dos_stats.concurrent_count);
 
  end:
@@ -735,7 +735,7 @@ dos_close_client_conn(const or_connection_t *or_conn)
   }
 
   /* We are only interested in client connection from the geoip cache. */
-  entry = geoip_lookup_client(&or_conn->real_addr, NULL,
+  entry = geoip_lookup_client(&TO_CONN(or_conn)->addr, NULL,
                               GEOIP_CLIENT_CONNECT);
   if (entry == NULL) {
     /* This can happen because we can close a connection before the channel
@@ -753,7 +753,7 @@ dos_close_client_conn(const or_connection_t *or_conn)
   entry->dos_stats.concurrent_count--;
   log_debug(LD_DOS, "Client address %s has lost a connection. Concurrent "
                     "connections are now at %u",
-            fmt_addr(&or_conn->real_addr),
+            fmt_addr(&TO_CONN(or_conn)->addr),
             entry->dos_stats.concurrent_count);
 
  end:

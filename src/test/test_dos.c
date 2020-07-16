@@ -66,9 +66,9 @@ test_dos_conn_creation(void *arg)
   /* Initialize test data */
   or_connection_t or_conn;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr,
+  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&TO_CONN(&or_conn)->addr,
                                           "18.0.0.1"));
-  tor_addr_t *addr = &or_conn.real_addr;
+  tor_addr_t *addr = &TO_CONN(&or_conn)->addr;
 
   /* Get DoS subsystem limits */
   dos_init();
@@ -139,9 +139,9 @@ test_dos_circuit_creation(void *arg)
   /* Initialize test data */
   or_connection_t or_conn;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr,
+  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&TO_CONN(&or_conn)->addr,
                                           "18.0.0.1"));
-  tor_addr_t *addr = &or_conn.real_addr;
+  tor_addr_t *addr = &TO_CONN(&or_conn)->addr;
 
   /* Get DoS subsystem limits */
   dos_init();
@@ -202,9 +202,9 @@ test_dos_bucket_refill(void *arg)
   channel_init(chan);
   chan->is_client = 1;
   or_connection_t or_conn;
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr,
+  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&TO_CONN(&or_conn)->addr,
                                           "18.0.0.1"));
-  tor_addr_t *addr = &or_conn.real_addr;
+  tor_addr_t *addr = &TO_CONN(&or_conn)->addr;
 
   /* Initialize DoS subsystem and get relevant limits */
   dos_init();
@@ -443,10 +443,10 @@ test_known_relay(void *arg)
 
   /* Setup an OR conn so we can pass it to the DoS subsystem. */
   or_connection_t or_conn;
-  tor_addr_parse(&or_conn.real_addr, "42.42.42.42");
+  tor_addr_parse(&TO_CONN(&or_conn)->addr, "42.42.42.42");
 
   rs = tor_malloc_zero(sizeof(*rs));
-  tor_addr_copy(&rs->ipv4_addr, &or_conn.real_addr);
+  tor_addr_copy(&rs->ipv4_addr, &TO_CONN(&or_conn)->addr);
   crypto_rand(rs->identity_digest, sizeof(rs->identity_digest));
   smartlist_add(dummy_ns->routerstatus_list, rs);
 
@@ -457,7 +457,8 @@ test_known_relay(void *arg)
 
   /* We have now a node in our list so we'll make sure we don't count it as a
    * client connection. */
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &or_conn.real_addr, NULL, 0);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &TO_CONN(&or_conn)->addr,
+                         NULL, 0);
   /* Suppose we have 5 connections in rapid succession, the counter should
    * always be 0 because we should ignore this. */
   dos_new_client_conn(&or_conn, NULL);
@@ -465,18 +466,21 @@ test_known_relay(void *arg)
   dos_new_client_conn(&or_conn, NULL);
   dos_new_client_conn(&or_conn, NULL);
   dos_new_client_conn(&or_conn, NULL);
-  entry = geoip_lookup_client(&or_conn.real_addr, NULL, GEOIP_CLIENT_CONNECT);
+  entry = geoip_lookup_client(&TO_CONN(&or_conn)->addr, NULL,
+                              GEOIP_CLIENT_CONNECT);
   tt_assert(entry);
   /* We should have a count of 0. */
   tt_uint_op(entry->dos_stats.concurrent_count, OP_EQ, 0);
 
   /* To make sure that his is working properly, make a unknown client
    * connection and see if we do get it. */
-  tor_addr_parse(&or_conn.real_addr, "42.42.42.43");
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &or_conn.real_addr, NULL, 0);
+  tor_addr_parse(&TO_CONN(&or_conn)->addr, "42.42.42.43");
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, &TO_CONN(&or_conn)->addr,
+                         NULL, 0);
   dos_new_client_conn(&or_conn, NULL);
   dos_new_client_conn(&or_conn, NULL);
-  entry = geoip_lookup_client(&or_conn.real_addr, NULL, GEOIP_CLIENT_CONNECT);
+  entry = geoip_lookup_client(&TO_CONN(&or_conn)->addr, NULL,
+                              GEOIP_CLIENT_CONNECT);
   tt_assert(entry);
   /* We should have a count of 2. */
   tt_uint_op(entry->dos_stats.concurrent_count, OP_EQ, 2);

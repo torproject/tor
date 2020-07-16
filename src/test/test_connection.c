@@ -911,7 +911,8 @@ test_failed_orconn_tracker(void *arg)
 
   /* Prepare the OR connection that will be used in this test */
   or_connection_t or_conn;
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.real_addr, "18.0.0.1"));
+  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.canonical_orport.addr,
+                                          "18.0.0.1"));
   tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.base_.addr, "18.0.0.1"));
   or_conn.base_.port = 1;
   memset(or_conn.identity_digest, 'c', sizeof(or_conn.identity_digest));
@@ -1048,17 +1049,20 @@ test_conn_describe(void *arg)
   tt_str_op(connection_describe(conn), OP_EQ,
             "OR connection (open) with [ffff:3333:1111::2]:8080 "
             "ID=0000000700000000000000000000000000000000");
-  // Add a 'real address' that is the same as the one we have.
-  tor_addr_parse(&TO_OR_CONN(conn)->real_addr, "[ffff:3333:1111::2]");
+  // Add a 'canonical address' that is the same as the one we have.
+  tor_addr_parse(&TO_OR_CONN(conn)->canonical_orport.addr,
+                 "[ffff:3333:1111::2]");
+  TO_OR_CONN(conn)->canonical_orport.port = 8080;
   tt_str_op(connection_describe(conn), OP_EQ,
             "OR connection (open) with [ffff:3333:1111::2]:8080 "
             "ID=0000000700000000000000000000000000000000");
-  // Add a different 'real address'
-  tor_addr_parse(&TO_OR_CONN(conn)->real_addr, "[ffff:3333:1111::8]");
+  // Add a different 'canonical address'
+  tor_addr_parse(&TO_OR_CONN(conn)->canonical_orport.addr,
+                 "[ffff:3333:1111::8]");
   tt_str_op(connection_describe(conn), OP_EQ,
-            "OR connection (open) with [ffff:3333:1111::8]:8080 "
+            "OR connection (open) with [ffff:3333:1111::2]:8080 "
             "ID=0000000700000000000000000000000000000000 "
-            "canonical_addr=[ffff:3333:1111::2]");
+            "canonical_addr=[ffff:3333:1111::8]:8080");
 
   // Clear identity_digest so that free_minimal won't complain.
   memset(TO_OR_CONN(conn)->identity_digest, 0, DIGEST_LEN);
