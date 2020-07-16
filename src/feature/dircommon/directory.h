@@ -13,6 +13,7 @@
 #define TOR_DIRECTORY_H
 
 dir_connection_t *TO_DIR_CONN(connection_t *c);
+const dir_connection_t *CONST_TO_DIR_CONN(const connection_t *c);
 
 #define DIR_CONN_STATE_MIN_ 1
 /** State for connection to directory server: waiting for connect(). */

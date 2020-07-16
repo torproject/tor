@@ -181,6 +181,18 @@ TO_EDGE_CONN(connection_t *c)
 }
 
 /**
+ * Cast a `const connection_t *` to a `const edge_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an
+ * `edge_connection_t`.
+ **/
+const edge_connection_t *
+CONST_TO_EDGE_CONN(const connection_t *c)
+{
+  return TO_EDGE_CONN((connection_t *)c);
+}
+
+/**
  * Cast a `connection_t *` to an `entry_connection_t *`.
  *
  * Exit with an assertion failure if the input is not an
@@ -194,6 +206,18 @@ TO_ENTRY_CONN(connection_t *c)
 }
 
 /**
+ * Cast a `const connection_t *` to a `const entry_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an
+ * `entry_connection_t`.
+ **/
+const entry_connection_t *
+CONST_TO_ENTRY_CONN(const connection_t *c)
+{
+  return TO_ENTRY_CONN((connection_t*) c);
+}
+
+/**
  * Cast an `edge_connection_t *` to an `entry_connection_t *`.
  *
  * Exit with an assertion failure if the input is not an
@@ -204,6 +228,18 @@ EDGE_TO_ENTRY_CONN(edge_connection_t *c)
 {
   tor_assert(c->base_.magic == ENTRY_CONNECTION_MAGIC);
   return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_);
+}
+
+/**
+ * Cast a `const edge_connection_t *` to a `const entry_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an
+ * `entry_connection_t`.
+ **/
+const entry_connection_t *
+CONST_EDGE_TO_ENTRY_CONN(const edge_connection_t *c)
+{
+  return EDGE_TO_ENTRY_CONN((edge_connection_t*)c);
 }
 
 /** An AP stream has failed/finished. If it hasn't already sent back

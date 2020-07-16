@@ -16,6 +16,7 @@ struct ed25519_public_key_t;
 struct ed25519_keypair_t;
 
 or_connection_t *TO_OR_CONN(connection_t *);
+const or_connection_t *CONST_TO_OR_CONN(const connection_t *);
 
 #include "core/or/orconn_event.h"
 

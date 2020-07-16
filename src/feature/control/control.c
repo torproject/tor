@@ -74,6 +74,18 @@ TO_CONTROL_CONN(connection_t *c)
   return DOWNCAST(control_connection_t, c);
 }
 
+/**
+ * Cast a `const connection_t *` to a `const control_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not a
+ * `control_connection_t`.
+ **/
+const control_connection_t *
+CONST_TO_CONTROL_CONN(const connection_t *c)
+{
+  return TO_CONTROL_CONN((connection_t*)c);
+}
+
 /** Create and add a new controller connection on <b>sock</b>.  If
  * <b>CC_LOCAL_FD_IS_OWNER</b> is set in <b>flags</b>, this Tor process should
  * exit when the connection closes.  If <b>CC_LOCAL_FD_IS_AUTHENTICATED</b>

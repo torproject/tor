@@ -233,6 +233,18 @@ TO_LISTENER_CONN(connection_t *c)
   return DOWNCAST(listener_connection_t, c);
 }
 
+/**
+ * Cast a `const connection_t *` to a `const listener_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not a
+ * `listener_connection_t`.
+ **/
+const listener_connection_t *
+CONST_TO_LISTENER_CONN(const connection_t *c)
+{
+  return TO_LISTENER_CONN((connection_t *)c);
+}
+
 size_t
 connection_get_inbuf_len(connection_t *conn)
 {

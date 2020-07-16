@@ -20,6 +20,10 @@ edge_connection_t *TO_EDGE_CONN(connection_t *);
 entry_connection_t *TO_ENTRY_CONN(connection_t *);
 entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *);
 
+const edge_connection_t *CONST_TO_EDGE_CONN(const connection_t *);
+const entry_connection_t *CONST_TO_ENTRY_CONN(const connection_t *);
+const entry_connection_t *CONST_EDGE_TO_ENTRY_CONN(const edge_connection_t *);
+
 #define EXIT_CONN_STATE_MIN_ 1
 /** State for an exit connection: waiting for response from DNS farm. */
 #define EXIT_CONN_STATE_RESOLVING 1
