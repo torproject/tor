@@ -548,14 +548,8 @@ channel_tls_get_remote_addr_method(const channel_t *chan,
     return 0;
   }
 
-  if (! tor_addr_is_null(&tlschan->conn->real_addr)) {
-    /* They want the real address, and real_addr is set. */
-    tor_addr_copy(addr_out, &(tlschan->conn->real_addr));
-  } else {
-    /* We'll have to give them the nominal address, which hopefully has
-    * not been overwritten yet. */
-    tor_addr_copy(addr_out, &TO_CONN(tlschan->conn)->addr);
-  }
+  /* They want the real address, so give it to them. */
+  tor_addr_copy(addr_out, &TO_CONN(tlschan->conn)->addr);
 
   return 1;
 }
@@ -692,6 +686,16 @@ channel_tls_matches_extend_info_method(channel_t *chan,
     return 0;
   }
 
+  const tor_addr_port_t *orport = &tlschan->conn->canonical_orport;
+  // If the canonical address is set, then we'll allow matches based on that.
+  if (! tor_addr_is_unspec(&orport->addr)) {
+    if (extend_info_has_orport(extend_info, &orport->addr, orport->port)) {
+      return 1;
+    }
+  }
+
+  // We also want to match if the true address and port are listed in the
+  // extend info.
   return extend_info_has_orport(extend_info,
                                 &TO_CONN(tlschan->conn)->addr,
                                 TO_CONN(tlschan->conn)->port);
@@ -722,8 +726,8 @@ channel_tls_matches_target_method(channel_t *chan,
     return 0;
   }
 
-  /* real_addr is the address this connection came from.
-   * base_.addr is updated by connection_or_init_conn_from_address()
+  /* addr is the address this connection came from.
+   * canonical_orport is updated by connection_or_init_conn_from_address()
    * to be the address in the descriptor. It may be tempting to
    * allow either address to be allowed, but if we did so, it would
    * enable someone who steals a relay's keys to covertly impersonate/MITM it
@@ -734,7 +738,7 @@ channel_tls_matches_target_method(channel_t *chan,
    * An adversary who has stolen a relay's keys could also post a fake relay
    * descriptor, but that attack is easier to detect.
    */
-  return tor_addr_eq(&(tlschan->conn->real_addr), target);
+  return tor_addr_eq(&TO_CONN(tlschan->conn)->addr, target);
 }
 
 /**
@@ -1883,7 +1887,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
      * might be doing something funny, but nobody else is doing a MITM
      * on the relay's TCP.
      */
-    if (tor_addr_eq(&addr, &(chan->conn->real_addr))) {
+    if (tor_addr_eq(&addr, &TO_CONN(chan->conn)->addr)) {
       connection_or_set_canonical(chan->conn, 1);
       break;
     }
@@ -1921,7 +1925,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
    * we were unable to resolve it previously. The endpoint address is passed
    * in order to make sure to never consider an address that is the same as
    * our endpoint. */
-  relay_address_new_suggestion(&my_apparent_addr, &chan->conn->real_addr,
+  relay_address_new_suggestion(&my_apparent_addr, &TO_CONN(chan->conn)->addr,
                                identity_digest);
 
   if (! chan->conn->handshake_state->sent_netinfo) {

@@ -293,7 +293,7 @@ tlschan_connection_or_connect_mock(const tor_addr_t *addr,
   result->base_.port = port;
   memcpy(result->identity_digest, digest, DIGEST_LEN);
   result->chan = tlschan;
-  memcpy(&(result->real_addr), addr, sizeof(tor_addr_t));
+  memcpy(&result->base_.addr, addr, sizeof(tor_addr_t));
   result->tls = (tor_tls_t *)((void *)(&fake_tortls));
 
  done:

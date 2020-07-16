@@ -1554,11 +1554,11 @@ test_channel_listener(void *arg)
 #define TEST_SETUP_MATCHES_ADDR(orcon, addr, src, rv) STMT_BEGIN \
     rv = tor_inet_pton(addr.family, src, &addr.addr); \
     tt_int_op(rv, OP_EQ, 1); \
-    orcon->real_addr = addr; \
+    orcon->base_.addr = addr; \
   STMT_END;
 
 #define TEST_MATCHES_ADDR(chan, addr4, addr6, rv, exp) STMT_BEGIN       \
-     rv = channel_matches_target_addr_for_extend(chan, addr4, addr6);   \
+    rv = channel_matches_target_addr_for_extend(chan, addr4, addr6);    \
     tt_int_op(rv, OP_EQ, exp); \
   STMT_END;
 
