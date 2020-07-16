@@ -667,6 +667,9 @@ channel_tls_is_canonical_method(channel_t *chan, int req)
  *
  * This implements the matches_extend_info method for channel_tls_t; the upper
  * layer wants to know if this channel matches an extend_info_t.
+ *
+ * NOTE that this function only checks for an address/port match, and should
+ * be used only when no identify is available.
  */
 static int
 channel_tls_matches_extend_info_method(channel_t *chan,
