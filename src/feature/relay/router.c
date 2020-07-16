@@ -2040,8 +2040,10 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
 
   /* Find our resolved address both IPv4 and IPv6. In case the address is not
    * found, the object is set to an UNSPEC address. */
-  bool have_v4 = relay_find_addr_to_publish(options, AF_INET, 0, &ipv4_addr);
-  bool have_v6 = relay_find_addr_to_publish(options, AF_INET6, 0, &ipv6_addr);
+  bool have_v4 = relay_find_addr_to_publish(options, AF_INET, false,
+                                            &ipv4_addr);
+  bool have_v6 = relay_find_addr_to_publish(options, AF_INET6, false,
+                                            &ipv6_addr);
 
   /* Tor requires a relay to have an IPv4 so bail if we can't find it. */
   if (!have_v4) {

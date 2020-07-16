@@ -1652,10 +1652,10 @@ pt_get_extra_info_descriptor_string(void)
         tor_addr_t addr;
         /* Attempt to find the IPv4 and then attempt to find the IPv6 if we
          * can't find it. */
-        bool found = relay_find_addr_to_publish(get_options(), AF_INET, 0,
+        bool found = relay_find_addr_to_publish(get_options(), AF_INET, false,
                                                 &addr);
         if (!found) {
-          found = relay_find_addr_to_publish(get_options(), AF_INET6, 0,
+          found = relay_find_addr_to_publish(get_options(), AF_INET6, false,
                                              &addr);
         }
         if (!found) {
