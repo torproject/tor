@@ -1,0 +1,3 @@
+  o Documentation (tracing):
+    - Document in depth the circuit subsystem trace events in the new
+      doc/tracing/EventsCircuit.md. Closes ticket 40036.
