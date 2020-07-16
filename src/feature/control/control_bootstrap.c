@@ -274,7 +274,7 @@ control_event_bootstrap_problem(const char *warn, const char *reason,
   const char *recommendation = "ignore";
   int severity;
   char *or_id = NULL, *hostaddr = NULL;
-  or_connection_t *or_conn = NULL;
+  const or_connection_t *or_conn = NULL;
 
   /* bootstrap_percent must not be in "undefined" state here. */
   tor_assert(status >= 0);
