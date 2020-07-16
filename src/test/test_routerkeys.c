@@ -111,7 +111,6 @@ test_routerkeys_write_ed25519_identity(void *arg)
   set_client_identity_key(crypto_pk_dup_key(key));
 
   load_ed_keys(options, now);
-  generate_ed_link_cert(options, now, 0);
   tt_assert(get_master_identity_key());
 
   tt_int_op(0, OP_EQ, check_private_dir(ddir, CPD_CREATE, NULL));
