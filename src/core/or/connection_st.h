@@ -137,15 +137,11 @@ struct connection_t {
    * any more!
    *
    * The misuses of this field include:
-   *    * Setting it to the canonical address of a relay on an OR connection.
    *    * Setting it on linked connections, possibly.
    *    * Updating it based on the Forwarded-For header-- Forwarded-For is
-   *      set by a proxy, but not a local trusted troxy.
+   *      set by a proxy, but not a local trusted proxy.
    **/
-  tor_addr_t addr; /**< IP that socket "s" is directly connected to;
-                    * may be the IP address for a proxy or pluggable transport,
-                    * see "address" for the address of the final destination.
-                    */
+  tor_addr_t addr;
   uint16_t port; /**< If non-zero, port that socket "s" is directly connected
                   * to; may be the port for a proxy or pluggable transport,
                   * see "address" for the port at the final destination. */
