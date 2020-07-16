@@ -161,7 +161,6 @@ struct connection_t {
    *
    *    * An address we're trying to resolve (as an exit).
    *    * A unix address we're trying to bind to (as a listener).
-   *    * A canonical address for an OR connection.
    **/
   char *address;
   /** Another connection that's connected to this one in lieu of a socket. */
