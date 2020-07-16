@@ -220,8 +220,12 @@ static smartlist_t *outgoing_addrs = NULL;
 
 /**************************************************************/
 
-/** Convert a connection_t* to an listener_connection_t*; assert if the cast
- * is invalid. */
+/**
+ * Cast a `connection_t *` to a `listener_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not a
+ * `listener_connection_t`.
+ **/
 listener_connection_t *
 TO_LISTENER_CONN(connection_t *c)
 {

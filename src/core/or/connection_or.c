@@ -99,8 +99,11 @@ static void connection_or_check_canonicity(or_connection_t *conn,
 
 /**************************************************************/
 
-/** Convert a connection_t* to an or_connection_t*; assert if the cast is
- * invalid. */
+/**
+ * Cast a `connection_t *` to an `or_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an `or_connnection_t`.
+ **/
 or_connection_t *
 TO_OR_CONN(connection_t *c)
 {

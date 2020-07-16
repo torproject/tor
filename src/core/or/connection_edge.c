@@ -166,8 +166,12 @@ static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
 
-/** Convert a connection_t* to an edge_connection_t*; assert if the cast is
- * invalid. */
+/**
+ * Cast a `connection_t *` to an `edge_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an
+ * `edge_connection_t`.
+ **/
 edge_connection_t *
 TO_EDGE_CONN(connection_t *c)
 {
@@ -176,6 +180,12 @@ TO_EDGE_CONN(connection_t *c)
   return DOWNCAST(edge_connection_t, c);
 }
 
+/**
+ * Cast a `connection_t *` to an `entry_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an
+ * `entry_connection_t`.
+ **/
 entry_connection_t *
 TO_ENTRY_CONN(connection_t *c)
 {
@@ -183,6 +193,12 @@ TO_ENTRY_CONN(connection_t *c)
   return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_.base_);
 }
 
+/**
+ * Cast an `edge_connection_t *` to an `entry_connection_t *`.
+ *
+ * Exit with an assertion failure if the input is not an
+ * `entry_connection_t`.
+ **/
 entry_connection_t *
 EDGE_TO_ENTRY_CONN(edge_connection_t *c)
 {
