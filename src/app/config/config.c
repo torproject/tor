@@ -140,6 +140,7 @@
 
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"
+#include "lib/osinfo/libc.h"
 #include "lib/process/daemon.h"
 #include "lib/process/pidfile.h"
 #include "lib/process/restrict.h"
@@ -4364,6 +4365,12 @@ options_init_from_torrc(int argc, char **argv)
       printf("Libzstd \t\t%-15s\t\t%s\n",
                         tor_compress_version_str(ZSTD_METHOD),
                         tor_compress_header_version_str(ZSTD_METHOD));
+    }
+    if (tor_libc_get_name()) {
+      printf("%-7s \t\t%-15s\t\t%s\n",
+             tor_libc_get_name(),
+             tor_libc_get_header_version_str(),
+             tor_libc_get_version_str());
     }
     //TODO: Hex versions?
     return 1;

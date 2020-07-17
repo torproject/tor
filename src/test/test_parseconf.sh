@@ -202,7 +202,7 @@ STANDARD_LIBS="libevent\\|openssl\\|zlib"
 # shellcheck disable=SC2018,SC2019
 TOR_LIBS_ENABLED="$("$TOR_BINARY" --verify-config \
                       -f "$EMPTY" --defaults-torrc "$EMPTY" \
-                    | sed -n 's/.* Tor .* running on .* with\(.*\)\./\1/p' \
+                    | sed -n 's/.* Tor .* running on .* with\(.*\) and .* .* as libc\./\1/p' \
                     | tr 'A-Z' 'a-z' | tr ',' '\n' \
                     | grep -v "$STANDARD_LIBS" | grep -v "n/a" \
                     | sed 's/\( and\)* \(lib\)*\([a-z0-9]*\) .*/\3/' \

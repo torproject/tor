@@ -1,0 +1,6 @@
+  o Minor features (logging):
+    - Adds the running glibc version to the log. Also adds the
+      running and compiled glibc version to the library list
+      returned when using the flag --library-versions. Patch 
+      from Daniel Pinto. Closes ticket 40047; bugfix on 
+      0.4.5.0-alpha-dev.
