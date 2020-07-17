@@ -3257,7 +3257,7 @@ channel_when_last_xmit(channel_t *chan)
  * given extend_info_t.
  *
  * NOTE that this function only checks for an address/port match, and should
- * be used only when no identify is available.
+ * be used only when no identity is available.
  */
 int
 channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info)
