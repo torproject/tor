@@ -893,7 +893,9 @@ connection_or_init_conn_from_address(or_connection_t *conn,
 
   conn->base_.port = port;
   tor_addr_copy(&conn->base_.addr, addr);
-  tor_addr_copy(&conn->real_addr, addr);
+  if (! conn->base_.address) {
+    conn->base_.address = tor_strdup(fmt_addr(addr));
+  }
 
   connection_or_check_canonicity(conn, started_here);
 }
@@ -905,9 +907,10 @@ connection_or_init_conn_from_address(or_connection_t *conn,
 static void
 connection_or_check_canonicity(or_connection_t *conn, int started_here)
 {
+  (void) started_here;
+
   const char *id_digest = conn->identity_digest;
   const ed25519_public_key_t *ed_id = NULL;
-  const tor_addr_t *addr = &conn->real_addr;
   if (conn->chan)
     ed_id = & TLS_CHAN_TO_BASE(conn->chan)->ed25519_identity;
 
@@ -936,34 +939,17 @@ connection_or_check_canonicity(or_connection_t *conn, int started_here)
     } else {
       node_ap = &node_ipv6_ap;
     }
-    if (!started_here) {
-      /* Override the addr/port, so our log messages will make sense.
-       * This is dangerous, since if we ever try looking up a conn by
-       * its actual addr/port, we won't remember. Careful! */
-      /* XXXX arma: this is stupid, and it's the reason we need real_addr
-       * to track is_canonical properly.  What requires it? */
-      /* XXXX <arma> i believe the reason we did this, originally, is because
-       * we wanted to log what OR a connection was to, and if we logged the
-       * right IP address and port 56244, that wouldn't be as helpful. now we
-       * log the "right" port too, so we know if it's moria1 or moria2.
-       */
-      /* See #33898 for a ticket that resolves this technical debt. */
-      tor_addr_copy(&conn->base_.addr, &node_ap->addr);
-      conn->base_.port = node_ap->port;
-    }
+    /* Remember the canonical addr/port so our log messages will make
+       sense. */
+    tor_addr_port_copy(&conn->canonical_orport, node_ap);
     tor_free(conn->nickname);
     conn->nickname = tor_strdup(node_get_nickname(r));
-    tor_free(conn->base_.address);
-    conn->base_.address = tor_addr_to_str_dup(&node_ap->addr);
   } else {
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
     base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
                   conn->identity_digest, DIGEST_LEN);
-
-    tor_free(conn->base_.address);
-    conn->base_.address = tor_addr_to_str_dup(addr);
   }
 
   /*
@@ -1144,8 +1130,8 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
                  (int)(now - or_conn->base_.timestamp_created),
                  best->base_.s, (int)(now - best->base_.timestamp_created));
         connection_or_mark_bad_for_new_circs(or_conn);
-      } else if (!tor_addr_compare(&or_conn->real_addr,
-                                   &best->real_addr, CMP_EXACT)) {
+      } else if (tor_addr_eq(&TO_CONN(or_conn)->addr,
+                             &TO_CONN(best)->addr)) {
         log_info(LD_OR,
                  "Marking %s unsuitable for new circuits: "
                  "(fd "TOR_SOCKET_T_FORMAT", %d secs old).  We have a better "
@@ -1275,7 +1261,7 @@ static or_connect_failure_entry_t *
 or_connect_failure_new(const or_connection_t *or_conn)
 {
   or_connect_failure_entry_t *ocf = tor_malloc_zero(sizeof(*ocf));
-  or_connect_failure_init(or_conn->identity_digest, &or_conn->real_addr,
+  or_connect_failure_init(or_conn->identity_digest, &TO_CONN(or_conn)->addr,
                           TO_CONN(or_conn)->port, ocf);
   return ocf;
 }
@@ -1653,8 +1639,8 @@ connection_tls_start_handshake,(or_connection_t *conn, int receiving))
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
   }
-  tor_tls_set_logged_address(conn->tls, // XXX client and relay?
-      escaped_safe_str(conn->base_.address));
+  tor_tls_set_logged_address(conn->tls,
+                             connection_describe_peer(TO_CONN(conn)));
 
   connection_start_reading(TO_CONN(conn));
   log_debug(LD_HANDSHAKE,"starting TLS handshake on fd "TOR_SOCKET_T_FORMAT,
@@ -1801,18 +1787,15 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   crypto_pk_t *identity_rcvd=NULL;
   const or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
-  const char *safe_address =
-    started_here ? conn->base_.address :
-                   safe_str_client(conn->base_.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
   int has_cert = 0;
 
   check_no_tls_errors();
   has_cert = tor_tls_peer_has_cert(conn->tls);
   if (started_here && !has_cert) {
-    log_info(LD_HANDSHAKE,"Tried connecting to router at %s:%d, but it didn't "
+    log_info(LD_HANDSHAKE,"Tried connecting to router at %s, but it didn't "
              "send a cert! Closing.",
-             safe_address, conn->base_.port);
+             connection_describe_peer(TO_CONN(conn)));
     return -1;
   } else if (!has_cert) {
     log_debug(LD_HANDSHAKE,"Got incoming connection with no certificate. "
@@ -1824,9 +1807,9 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     int v = tor_tls_verify(started_here?severity:LOG_INFO,
                            conn->tls, &identity_rcvd);
     if (started_here && v<0) {
-      log_fn(severity,LD_HANDSHAKE,"Tried connecting to router at %s:%d: It"
+      log_fn(severity,LD_HANDSHAKE,"Tried connecting to router at %s: It"
              " has a cert but it's invalid. Closing.",
-             safe_address, conn->base_.port);
+             connection_describe_peer(TO_CONN(conn)));
         return -1;
     } else if (v<0) {
       log_info(LD_HANDSHAKE,"Incoming connection gave us an invalid cert "
@@ -1834,7 +1817,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     } else {
       log_debug(LD_HANDSHAKE,
                 "The certificate seems to be valid on %s connection "
-                "with %s:%d", conn_type, safe_address, conn->base_.port);
+                "with %s", conn_type,
+                connection_describe_peer(TO_CONN(conn)));
     }
     check_no_tls_errors();
   }
@@ -2027,9 +2011,14 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     /* If we learned an identity for this connection, then we might have
      * just discovered it to be canonical. */
     connection_or_check_canonicity(conn, conn->handshake_state->started_here);
+    if (conn->tls)
+      tor_tls_set_logged_address(conn->tls,
+                                 connection_describe_peer(TO_CONN(conn)));
   }
 
   if (authdir_mode_tests_reachability(options)) {
+    // We don't want to use canonical_orport here -- we want the address
+    // that we really used.
     dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
                             (const char*)rsa_peer_id, ed_peer_id);
   }
@@ -2507,11 +2496,9 @@ connection_or_send_netinfo,(or_connection_t *conn))
     netinfo_cell_set_timestamp(netinfo_cell, (uint32_t)now);
 
   /* Their address. */
-  const tor_addr_t *remote_tor_addr =
-    !tor_addr_is_null(&conn->real_addr) ? &conn->real_addr : &conn->base_.addr;
-  /* We use &conn->real_addr below, unless it hasn't yet been set. If it
-   * hasn't yet been set, we know that base_.addr hasn't been tampered with
-   * yet either. */
+  const tor_addr_t *remote_tor_addr = &TO_CONN(conn)->addr;
+  /* We can safely use TO_CONN(conn)->addr here, since we no longer replace
+   * it with a canonical address. */
   netinfo_addr_t *their_addr = netinfo_addr_from_tor_addr(remote_tor_addr);
 
   netinfo_cell_set_other_addr(netinfo_cell, their_addr);

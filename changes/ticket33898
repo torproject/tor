@@ -1,0 +1,7 @@
+  o Minor features (relay address tracking):
+    - We store relay addresses for OR connections in a more logical way.
+      Previously we would sometimes overwrite the actual address of a
+      connection with a "canonical address", and then store the "real
+      address" elsewhere to remember it.  We now track the "canonical address"
+      elsewhere for the cases where we need it, and leave the connection's
+      address alone.  Closes ticket 33898.

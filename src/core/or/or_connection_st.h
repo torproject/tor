@@ -50,17 +50,18 @@ struct or_connection_t {
   channel_tls_t *chan;
 
   /**
-   * The actual address (as modified by any proxies) that this connection
-   * came from or went to.  (See connection_t.addr for caveats.)
+   * The "canonical" address and port for this relay's ORPort, if this is
+   * a known relay.
    *
-   * TECHNICAL DEBT:
+   * An ORPort is "canonical" in this sense only if it is the same ORPort
+   * that is listed for this identity in the consensus we have.
    *
-   * This field shouldn't really exist.  We need it because our code
-   * overwrites conenction_t.addr with the "canonical address" of the OR we
-   * are talking to, taken from the descriptor of the authenticated OR.
-   * That's a bad choice.
+   * This field may be set on outbound connections for _any_ relay, and on
+   * inbound connections after authentication.  If we don't know the relay's
+   * identity, or if we don't have the relay's identity in our consensus, we
+   * leave this address as UNSPEC.
    **/
-  tor_addr_t real_addr;
+  tor_addr_port_t canonical_orport;
 
   /** Should this connection be used for extending circuits to the server
    * matching the <b>identity_digest</b> field?  Set to true if we're pretty

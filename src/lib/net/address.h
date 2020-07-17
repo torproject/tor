@@ -394,6 +394,7 @@ get_interface_address_list(int severity, int include_internal)
 tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
 int tor_addr_port_eq(const tor_addr_port_t *a,
                      const tor_addr_port_t *b);
+void tor_addr_port_copy(tor_addr_port_t *dest, const tor_addr_port_t *source);
 
 int string_is_valid_dest(const char *string);
 int string_is_valid_nonrfc_hostname(const char *string);
