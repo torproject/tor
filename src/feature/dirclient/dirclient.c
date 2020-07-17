@@ -2106,7 +2106,13 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->dirconn_direct) {
     char *guess = http_get_header(headers, X_ADDRESS_HEADER);
     if (guess) {
-      router_new_address_suggestion(guess, conn);
+      tor_addr_t addr;
+      if (tor_addr_parse(&addr, guess) < 0) {
+        log_debug(LD_DIR, "Malformed X-Your-Address-Is header %s. Ignoring.",
+                  escaped(guess));
+      } else {
+        relay_address_new_suggestion(&addr, &TO_CONN(conn)->addr, NULL);
+      }
       tor_free(guess);
     }
   }
