@@ -19,6 +19,9 @@
 #include "core/or/policies.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/relay/router.h"
+#include "feature/relay/routermode.h"
+#include "lib/crypt_ops/crypto_rand.h"
 
 #include "core/or/extend_info_st.h"
 #include "feature/nodelist/node_st.h"
@@ -274,16 +277,38 @@ extend_info_get_orport(const extend_info_t *ei, int family)
 const tor_addr_port_t *
 extend_info_pick_orport(const extend_info_t *ei)
 {
-  // XXXX S55 -- for now, we just pick the first.  We'll work on
-  // XXXX more choices as we move forward.
   IF_BUG_ONCE(!ei) {
     return NULL;
   }
+  const or_options_t *options = get_options();
+  if (!server_mode(options)) {
+    // If we aren't a server, just pick the first address we built into
+    // this extendinfo.
+    return &ei->orports[0];
+  }
 
-  if (tor_addr_is_unspec(&ei->orports[0].addr)) {
+  const bool ipv6_ok = router_can_extend_over_ipv6(options);
+
+  // Use 'usable' to collect the usable orports, then pick one.
+  const tor_addr_port_t *usable[EXTEND_INFO_MAX_ADDRS];
+  int n_usable = 0;
+  for (int i = 0; i < EXTEND_INFO_MAX_ADDRS; ++i) {
+    const tor_addr_port_t *a = &ei->orports[i];
+    const int family = tor_addr_family(&a->addr);
+    if (family == AF_INET || (ipv6_ok && family == AF_INET6)) {
+      usable[n_usable++] = a;
+    }
+  }
+
+  if (n_usable == 0) {
+    // Need to bail out early, since nothing will work.
     return NULL;
   }
-  return &ei->orports[0];
+
+  crypto_fast_rng_t *rng = get_thread_fast_rng();
+  const int idx = crypto_fast_rng_get_uint(rng, n_usable);
+
+  return usable[idx];
 }
 
 /**
