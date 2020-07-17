@@ -50,13 +50,16 @@ struct or_connection_t {
   channel_tls_t *chan;
 
   /**
-   * The canonical address and port for this relay's ORPort, if this is
+   * The "canonical" address and port for this relay's ORPort, if this is
    * a known relay.
    *
-   * This field may be set on outbound connections for any relay, and on
-   * inbound connections after authentication.  It is only set when we know
-   * that the address we are connected to matches the one that is listed in
-   * the directory for this relay.  Otherwise, it is left as UNSPEC.
+   * An ORPort is "canonical" in this sense only if it is the same ORPort
+   * that is listed for this identity in the consensus we have.
+   *
+   * This field may be set on outbound connections for _any_ relay, and on
+   * inbound connections after authentication.  If we don't know the relay's
+   * identity, or if we don't have the relay's identity in our consensus, we
+   * leave this address as UNSPEC.
    **/
   tor_addr_port_t canonical_orport;
 
