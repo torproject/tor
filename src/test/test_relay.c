@@ -316,11 +316,13 @@ test_find_addr_to_publish(void *arg)
   tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
 
   /* 1. Address located in the resolved cache. */
-  ret = relay_find_addr_to_publish(&options, AF_INET, true, &cache_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
 
-  ret = relay_find_addr_to_publish(&options, AF_INET6, true, &cache_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET6,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
   resolved_addr_reset_last(AF_INET);
@@ -330,21 +332,25 @@ test_find_addr_to_publish(void *arg)
    *    the find_my_address() code path because that is extensively tested in
    *    another unit tests. */
   resolved_addr_set_suggested(&ipv4_addr);
-  ret = relay_find_addr_to_publish(&options, AF_INET, true, &cache_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
 
   resolved_addr_set_suggested(&ipv6_addr);
-  ret = relay_find_addr_to_publish(&options, AF_INET6, true, &cache_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET6,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
   resolve_addr_reset_suggested(AF_INET);
   resolve_addr_reset_suggested(AF_INET6);
 
   /* 3. No IP anywhere. */
-  ret = relay_find_addr_to_publish(&options, AF_INET, true, &cache_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(!ret);
-  ret = relay_find_addr_to_publish(&options, AF_INET6, true, &cache_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET6,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(!ret);
 
  done:

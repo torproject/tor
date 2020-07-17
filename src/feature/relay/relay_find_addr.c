@@ -86,18 +86,19 @@ relay_address_new_suggestion(const tor_addr_t *suggested_addr,
  *    1. Resolved cache. Populated by find_my_address() during the relay
  *       periodic event that attempts to learn if our address has changed.
  *
- *    2. If cache_only is false, attempt to find the address using the
- *       relay_find_addr.h interface.
+ *    2. If flags is set with RELAY_FIND_ADDR_CACHE_ONLY, only the resolved
+ *       and suggested cache are looked at. No address discovery will be done.
  *
  *    3. Finally, if all fails, use the suggested address cache which is
- *       populated by the NETINFO cell values.
+ *       populated by the NETINFO cell content or HTTP header from a
+ *       directory.
  *
  * Return true on success and addr_out contains the address to use for the
  * given family. On failure to find the address, false is returned and
  * addr_out is set to an AF_UNSPEC address. */
 MOCK_IMPL(bool,
 relay_find_addr_to_publish, (const or_options_t *options, int family,
-                             bool cache_only, tor_addr_t *addr_out))
+                             int flags, tor_addr_t *addr_out))
 {
   tor_assert(options);
   tor_assert(addr_out);
@@ -113,7 +114,7 @@ relay_find_addr_to_publish, (const or_options_t *options, int family,
 
   /* Second, attempt to find our address. The following can do a DNS resolve
    * thus only do it when the no cache only flag is flipped. */
-  if (!cache_only) {
+  if (!(flags & RELAY_FIND_ADDR_CACHE_ONLY)) {
     if (find_my_address(options, family, LOG_INFO, addr_out, NULL, NULL)) {
       goto found;
     }
@@ -140,5 +141,6 @@ bool
 relay_has_address_set(int family)
 {
   tor_addr_t addr;
-  return relay_find_addr_to_publish(get_options(), family, 1, &addr);
+  return relay_find_addr_to_publish(get_options(), family,
+                                    RELAY_FIND_ADDR_CACHE_ONLY, &addr);
 }

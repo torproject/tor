@@ -1652,11 +1652,12 @@ pt_get_extra_info_descriptor_string(void)
         tor_addr_t addr;
         /* Attempt to find the IPv4 and then attempt to find the IPv6 if we
          * can't find it. */
-        bool found = relay_find_addr_to_publish(get_options(), AF_INET, false,
+        bool found = relay_find_addr_to_publish(get_options(), AF_INET,
+                                                RELAY_FIND_ADDR_NO_FLAG,
                                                 &addr);
         if (!found) {
-          found = relay_find_addr_to_publish(get_options(), AF_INET6, false,
-                                             &addr);
+          found = relay_find_addr_to_publish(get_options(), AF_INET6,
+                                             RELAY_FIND_ADDR_NO_FLAG, &addr);
         }
         if (!found) {
           log_err(LD_PT, "Unable to find address for transport %s", t->name);

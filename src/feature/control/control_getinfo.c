@@ -133,7 +133,8 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
   } else if (!strcmp(question, "address")) {
     tor_addr_t addr;
-    if (!relay_find_addr_to_publish(get_options(), AF_INET, true, &addr)) {
+    if (!relay_find_addr_to_publish(get_options(), AF_INET,
+                                    RELAY_FIND_ADDR_CACHE_ONLY, &addr)) {
       *errmsg = "Address unknown";
       return -1;
     }

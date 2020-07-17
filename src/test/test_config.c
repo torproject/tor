@@ -3846,11 +3846,11 @@ static bool mock_relay_find_addr_to_publish_result = true;
 
 static bool
 mock_relay_find_addr_to_publish(const or_options_t *options, int family,
-                                bool cache_only, tor_addr_t *addr_out)
+                                int flags, tor_addr_t *addr_out)
 {
   (void) options;
   (void) family;
-  (void) cache_only;
+  (void) flags;
   (void) addr_out;
   return mock_relay_find_addr_to_publish_result;
 }
