@@ -2497,9 +2497,8 @@ connection_or_send_netinfo,(or_connection_t *conn))
 
   /* Their address. */
   const tor_addr_t *remote_tor_addr = &TO_CONN(conn)->addr;
-  /* We use &conn->real_addr below, unless it hasn't yet been set. If it
-   * hasn't yet been set, we know that base_.addr hasn't been tampered with
-   * yet either. */
+  /* We can safely use TO_CONN(conn)->addr here, since we no longer replace
+   * it with a canonical address. */
   netinfo_addr_t *their_addr = netinfo_addr_from_tor_addr(remote_tor_addr);
 
   netinfo_cell_set_other_addr(netinfo_cell, their_addr);
