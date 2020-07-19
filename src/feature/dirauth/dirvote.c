@@ -4216,13 +4216,14 @@ compare_routerinfo_by_ipv4(const void **a, const void **b)
 {
   const routerinfo_t *first = *(routerinfo_t **)a;
   const routerinfo_t *second = *(routerinfo_t **)b;
-  // Don't use tor_addr_compare because it requires a tor_addr_t struct
   // If addresses are equal, use other comparison criterions
-  if (first->addr == second->addr) {
+  int addr_comparison = tor_addr_compare(&(first->ipv4_addr),
+                                         &(second->ipv4_addr), CMP_EXACT);
+  if (addr_comparison == 0) {
     return compare_routerinfo_usefulness(first, second);
   } else {
     // Otherwise, compare the addresses
-    if (first->addr < second->addr)
+    if (addr_comparison < 0 )
       return -1;
     else
       return 1;
@@ -4310,10 +4311,10 @@ get_sybil_list_by_ip_version(const smartlist_t *routers, sa_family_t family)
   const dirauth_options_t *options = dirauth_get_options();
   digestmap_t *omit_as_sybil = digestmap_new();
   smartlist_t *routers_by_ip = smartlist_new();
-  int addr_count = 0;
-  uint32_t last_ipv4_addr = 0;
-  tor_addr_t last_ipv6_addr;
-  int ipv6_comparison = 0;
+  int ipv4_addr_count = 0;
+  int ipv6_addr_count = 0;
+  tor_addr_t last_ipv6_addr, last_ipv4_addr;
+  int addr_comparison = 0;
   /* Allow at most this number of Tor servers on a single IP address, ... */
   int max_with_same_addr = options->AuthDirMaxServersPerAddr;
   if (max_with_same_addr <= 0)
@@ -4327,19 +4328,21 @@ get_sybil_list_by_ip_version(const smartlist_t *routers, sa_family_t family)
 
   SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
     if (family == AF_INET6) {
-      ipv6_comparison = tor_addr_compare(&last_ipv6_addr, &(ri->ipv6_addr),
+      addr_comparison = tor_addr_compare(&last_ipv6_addr, &(ri->ipv6_addr),
               CMP_EXACT);
-      if (ipv6_comparison != 0) {
+      if (addr_comparison != 0) {
         tor_addr_copy(&last_ipv6_addr, &(ri->ipv6_addr));
-        addr_count = 1;
-      } else if (++addr_count > max_with_same_addr) {
+        ipv6_addr_count = 1;
+      } else if (++ipv6_addr_count > max_with_same_addr) {
         digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
       }
     } else {
-      if (last_ipv4_addr != ri->addr) {
-        last_ipv4_addr = ri->addr;
-        addr_count = 1;
-      } else if (++addr_count > max_with_same_addr) {
+      addr_comparison = tor_addr_compare(&last_ipv4_addr, &(ri->ipv4_addr),
+                                         CMP_EXACT);
+      if (addr_comparison != 0) {
+        tor_addr_copy(&last_ipv4_addr, &(ri->ipv4_addr));
+        ipv4_addr_count = 1;
+      } else if (++ipv4_addr_count > max_with_same_addr) {
         digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
       }
     }
@@ -4362,14 +4365,12 @@ get_all_possible_sybil(const smartlist_t *routers)
   digestmap_t *omit_as_sybil = digestmap_new();
   // Sort the routers in two lists depending on their IP version
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
-      // If the router isn't IPv4
-      if (!ri->addr) {
-        // Double-check it's IPv6
-        if (tor_addr_family(&(ri->ipv6_addr)) == AF_INET6)
-          smartlist_add(routers_ipv6, ri);
+      // If the router is IPv6
+      if (tor_addr_family(&(ri->ipv6_addr)) == AF_INET6){
+        smartlist_add(routers_ipv6, ri);
       }
       // If the router is IPv4
-      if (ri -> addr) {
+      if (tor_addr_family(&(ri->ipv4_addr)) == AF_INET){
         smartlist_add(routers_ipv4, ri);
       }
   });

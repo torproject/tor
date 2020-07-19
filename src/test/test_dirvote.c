@@ -127,17 +127,23 @@ routerinfo_new(router_values *status, int family, int addr)
   memcpy(cache_info.identity_digest, status->digest,
          sizeof(cache_info.identity_digest));
   ri->cache_info = cache_info;
-  tor_addr_t ipv6;
+  tor_addr_t ipv6, ipv4;
   ipv6.family = family;
+  ipv4.family = family;
+  // Set the address of the other IP version to 0
   if (family == AF_INET) {
-    ri->addr = addr;
+    ipv4.addr.in_addr.s_addr = addr;
+    for (size_t i = 0; i < 16; i++) {
+      ipv6.addr.in6_addr.s6_addr[i] = 0;
+    }
   } else {
     for (size_t i = 0; i < 16; i++) {
       ipv6.addr.in6_addr.s6_addr[i] = addr;
     }
-    ri->addr = 0;
+    ipv4.addr.in_addr.s_addr = 0;
   }
   ri->ipv6_addr = ipv6;
+  ri->ipv4_addr = ipv4;
   return ri;
 }
 
@@ -237,7 +243,7 @@ test_dirvote_compare_routerinfo_by_ipv4(void *arg)
   a = compare_routerinfo_by_ipv4((const void **)&second,
                                  (const void **)&first);
   tt_assert(a > 0);
-  first->addr = second->addr;
+  tor_addr_copy(&(second->ipv4_addr), &(first->ipv6_addr));
   // The addresses are equal, they are compared by usefulness,
   // and first is less useful than second
   a = compare_routerinfo_by_ipv4((const void **)&first,
@@ -316,13 +322,13 @@ done:
 /** Test to see if the returned routers are exactly the ones that should be
  * flagged as sybils : we test for inclusion then for number of elements
  */
-#define TEST_SYBIL(true_sybil, possible_sybil)                 \
-    DIGESTMAP_FOREACH (true_sybil, sybil_id, void *, ignore) { \
-      (void)ignore;                                            \
-      tt_assert(digestmap_get(possible_sybil, sybil_id));      \
-    }                                                          \
-    DIGESTMAP_FOREACH_END;                                     \
-tt_assert(digestmap_size(true_sybil) == digestmap_size(possible_sybil));
+#define TEST_SYBIL(true_sybil, possible_sybil)               \
+  DIGESTMAP_FOREACH (true_sybil, sybil_id, void *, ignore) { \
+    (void)ignore;                                            \
+    tt_assert(digestmap_get(possible_sybil, sybil_id));      \
+  }                                                          \
+  DIGESTMAP_FOREACH_END;                                     \
+  tt_assert(digestmap_size(true_sybil) == digestmap_size(possible_sybil));
 
 static void
 test_dirvote_get_sybil_by_ip_version_ipv4(void *arg)
@@ -569,7 +575,7 @@ done:
 }
 #define NODE(name, flags)                           \
   {                                                 \
-     #name, test_dirvote_##name, (flags), NULL, NULL \
+    #name, test_dirvote_##name, (flags), NULL, NULL \
   }
 
 struct testcase_t dirvote_tests[] = {
