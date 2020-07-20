@@ -67,6 +67,7 @@
 
 #include "lib/meminfo/meminfo.h"
 #include "lib/osinfo/uname.h"
+#include "lib/osinfo/libc.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/fs/lockfile.h"
 #include "lib/tls/tortls.h"
@@ -574,7 +575,8 @@ tor_init(int argc, char *argv[])
     const char *version = get_version();
 
     log_notice(LD_GENERAL, "Tor %s running on %s with Libevent %s, "
-               "%s %s, Zlib %s, Liblzma %s, and Libzstd %s.", version,
+               "%s %s, Zlib %s, Liblzma %s, Libzstd %s and %s %s as libc.",
+               version,
                get_uname(),
                tor_libevent_get_version_str(),
                crypto_get_library_name(),
@@ -584,7 +586,10 @@ tor_init(int argc, char *argv[])
                tor_compress_supports_method(LZMA_METHOD) ?
                  tor_compress_version_str(LZMA_METHOD) : "N/A",
                tor_compress_supports_method(ZSTD_METHOD) ?
-                 tor_compress_version_str(ZSTD_METHOD) : "N/A");
+                 tor_compress_version_str(ZSTD_METHOD) : "N/A",
+               tor_libc_get_name() ?
+                 tor_libc_get_name() : "Unknown",
+               tor_libc_get_version_str());
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "
