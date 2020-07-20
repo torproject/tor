@@ -1290,10 +1290,6 @@ test_config_find_my_address_mixed(void *arg)
                      "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
   tor_addr_parse(&test_addr, "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
 
-  /* IPv4 address not guessed since one Address statement exists. */
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
   /* IPv6 address should be found and considered configured. */
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
@@ -1541,49 +1537,6 @@ test_config_find_my_address(void *arg)
 
   VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
   CLEANUP_FOUND_ADDRESS;
-
-  /*
-   * Case 6: Another address family is configured. Expected to fail.
-   */
-  if (p->family == AF_INET) {
-    config_line_append(&options->Address, "Address", "4242::4242");
-  } else {
-    config_line_append(&options->Address, "Address", "1.1.1.1");
-  }
-
-  setup_full_capture_of_logs(LOG_NOTICE);
-
-  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  expect_log_msg_containing("No Address option found for family");
-  teardown_capture_of_logs();
-
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
-  CLEANUP_FOUND_ADDRESS;
-
-  /*
-   * Case 7: Address is a non resolvable hostname. Expected to fail.
-   */
-  MOCK(tor_addr_lookup, tor_addr_lookup_failure);
-
-  config_line_append(&options->Address, "Address", "www.torproject.org");
-  prev_n_hostname_failure = n_hostname_failure;
-
-  setup_full_capture_of_logs(LOG_NOTICE);
-
-  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  expect_log_msg_containing("Could not resolve local Address "
-                            "'www.torproject.org'. Failing.");
-  teardown_capture_of_logs();
-
-  tt_int_op(n_hostname_failure, OP_EQ, ++prev_n_hostname_failure);
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
-  CLEANUP_FOUND_ADDRESS;
-
-  UNMOCK(tor_addr_lookup);
 
   /*
    * Case 8:
