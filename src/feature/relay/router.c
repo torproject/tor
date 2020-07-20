@@ -38,6 +38,7 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/relay_config.h"
 #include "feature/relay/relay_find_addr.h"
+#include "feature/relay/relay_periodic.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
@@ -1757,16 +1758,6 @@ router_get_my_routerinfo_with_err,(int *err))
     return NULL;
   }
 
-  if (!desc_clean_since) {
-    int rebuild_err = router_rebuild_descriptor(0);
-    if (rebuild_err < 0) {
-      if (err)
-        *err = rebuild_err;
-
-      return NULL;
-    }
-  }
-
   if (!desc_routerinfo) {
     if (err)
       *err = TOR_ROUTERINFO_ERROR_DESC_REBUILDING;
@@ -1822,54 +1813,55 @@ router_get_descriptor_gen_reason(void)
  * ORPort or DirPort.
  * listener_type is either CONN_TYPE_OR_LISTENER or CONN_TYPE_DIR_LISTENER. */
 static void
-router_check_descriptor_address_port_consistency(uint32_t ipv4h_desc_addr,
+router_check_descriptor_address_port_consistency(const tor_addr_t *addr,
                                                  int listener_type)
 {
+  int family, port_cfg;
+
+  tor_assert(addr);
   tor_assert(listener_type == CONN_TYPE_OR_LISTENER ||
              listener_type == CONN_TYPE_DIR_LISTENER);
 
-  /* The first advertised Port may be the magic constant CFG_AUTO_PORT.
-   */
-  int port_v4_cfg = get_first_advertised_port_by_type_af(listener_type,
-                                                         AF_INET);
-  if (port_v4_cfg != 0 &&
-      !port_exists_by_type_addr32h_port(listener_type,
-                                        ipv4h_desc_addr, port_v4_cfg, 1)) {
-        const tor_addr_t *port_addr = get_first_advertised_addr_by_type_af(
-                                                                listener_type,
-                                                                AF_INET);
-        /* If we're building a descriptor with no advertised address,
-         * something is terribly wrong. */
-        tor_assert(port_addr);
+  family = tor_addr_family(addr);
+  /* The first advertised Port may be the magic constant CFG_AUTO_PORT. */
+  port_cfg = get_first_advertised_port_by_type_af(listener_type, family);
+  if (port_cfg != 0 &&
+      !port_exists_by_type_addr_port(listener_type, addr, port_cfg, 1)) {
+    const tor_addr_t *port_addr =
+      get_first_advertised_addr_by_type_af(listener_type, family);
+    /* If we're building a descriptor with no advertised address,
+     * something is terribly wrong. */
+    tor_assert(port_addr);
 
-        tor_addr_t desc_addr;
-        char port_addr_str[TOR_ADDR_BUF_LEN];
-        char desc_addr_str[TOR_ADDR_BUF_LEN];
+    char port_addr_str[TOR_ADDR_BUF_LEN];
+    char desc_addr_str[TOR_ADDR_BUF_LEN];
 
-        tor_addr_to_str(port_addr_str, port_addr, TOR_ADDR_BUF_LEN, 0);
+    tor_addr_to_str(port_addr_str, port_addr, TOR_ADDR_BUF_LEN, 0);
+    tor_addr_to_str(desc_addr_str, addr, TOR_ADDR_BUF_LEN, 0);
 
-        tor_addr_from_ipv4h(&desc_addr, ipv4h_desc_addr);
-        tor_addr_to_str(desc_addr_str, &desc_addr, TOR_ADDR_BUF_LEN, 0);
-
-        const char *listener_str = (listener_type == CONN_TYPE_OR_LISTENER ?
-                                    "OR" : "Dir");
-        log_warn(LD_CONFIG, "The IPv4 %sPort address %s does not match the "
-                 "descriptor address %s. If you have a static public IPv4 "
-                 "address, use 'Address <IPv4>' and 'OutboundBindAddress "
-                 "<IPv4>'. If you are behind a NAT, use two %sPort lines: "
-                 "'%sPort <PublicPort> NoListen' and '%sPort <InternalPort> "
-                 "NoAdvertise'.",
-                 listener_str, port_addr_str, desc_addr_str, listener_str,
-                 listener_str, listener_str);
-      }
+    const char *listener_str = (listener_type == CONN_TYPE_OR_LISTENER ?
+                                "OR" : "Dir");
+    const char *af_str = fmt_af_family(family);
+    log_warn(LD_CONFIG, "The %s %sPort address %s does not match the "
+             "descriptor address %s. If you have a static public IPv4 "
+             "address, use 'Address <%s>' and 'OutboundBindAddress "
+             "<%s>'. If you are behind a NAT, use two %sPort lines: "
+             "'%sPort <PublicPort> NoListen' and '%sPort <InternalPort> "
+             "NoAdvertise'.",
+             af_str, listener_str, port_addr_str, desc_addr_str, af_str,
+             af_str, listener_str, listener_str, listener_str);
+  }
 }
 
-/* Tor relays only have one IPv4 address in the descriptor, which is derived
- * from the Address torrc option, or guessed using various methods in
- * router_pick_published_address().
- * Warn the operator if there is no ORPort on the descriptor address
- * ipv4h_desc_addr.
+/** Tor relays only have one IPv4 or/and one IPv6 address in the descriptor,
+ * which is derived from the Address torrc option, or guessed using various
+ * methods in relay_find_addr_to_publish().
+ *
+ * Warn the operator if there is no ORPort associated with the given address
+ * in addr.
+ *
  * Warn the operator if there is no DirPort on the descriptor address.
+ *
  * This catches a few common config errors:
  *  - operators who expect ORPorts and DirPorts to be advertised on the
  *    ports' listen addresses, rather than the torrc Address (or guessed
@@ -1878,20 +1870,22 @@ router_check_descriptor_address_port_consistency(uint32_t ipv4h_desc_addr,
  *    addresses;
  *  - discrepancies between guessed addresses and configured listen
  *    addresses (when the Address option isn't set).
+ *
  * If a listener is listening on all IPv4 addresses, it is assumed that it
  * is listening on the configured Address, and no messages are logged.
+ *
  * If an operators has specified NoAdvertise ORPorts in a NAT setting,
  * no messages are logged, unless they have specified other advertised
  * addresses.
+ *
  * The message tells operators to configure an ORPort and DirPort that match
- * the Address (using NoListen if needed).
- */
+ * the Address (using NoListen if needed). */
 static void
-router_check_descriptor_address_consistency(uint32_t ipv4h_desc_addr)
+router_check_descriptor_address_consistency(const tor_addr_t *addr)
 {
-  router_check_descriptor_address_port_consistency(ipv4h_desc_addr,
+  router_check_descriptor_address_port_consistency(addr,
                                                    CONN_TYPE_OR_LISTENER);
-  router_check_descriptor_address_port_consistency(ipv4h_desc_addr,
+  router_check_descriptor_address_port_consistency(addr,
                                                    CONN_TYPE_DIR_LISTENER);
 }
 
@@ -2033,7 +2027,7 @@ MOCK_IMPL(STATIC int,
 router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
 {
   routerinfo_t *ri = NULL;
-  uint32_t addr;
+  tor_addr_t ipv4_addr, ipv6_addr;
   char platform[256];
   int hibernating = we_are_hibernating();
   const or_options_t *options = get_options();
@@ -2044,22 +2038,41 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
     goto err;
   }
 
-  if (router_pick_published_address(options, &addr, 0) < 0) {
+  /* Find our resolved address both IPv4 and IPv6. In case the address is not
+   * found, the object is set to an UNSPEC address. */
+  bool have_v4 = relay_find_addr_to_publish(options, AF_INET,
+                                            RELAY_FIND_ADDR_NO_FLAG,
+                                            &ipv4_addr);
+  bool have_v6 = relay_find_addr_to_publish(options, AF_INET6,
+                                            RELAY_FIND_ADDR_NO_FLAG,
+                                            &ipv6_addr);
+
+  /* Tor requires a relay to have an IPv4 so bail if we can't find it. */
+  if (!have_v4) {
     log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
     result = TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
     goto err;
   }
-
   /* Log a message if the address in the descriptor doesn't match the ORPort
    * and DirPort addresses configured by the operator. */
-  router_check_descriptor_address_consistency(addr);
+  router_check_descriptor_address_consistency(&ipv4_addr);
+  router_check_descriptor_address_consistency(&ipv6_addr);
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
   ri->nickname = tor_strdup(options->Nickname);
-  tor_addr_from_ipv4h(&ri->ipv4_addr, addr);
-  ri->ipv4_orport = router_get_advertised_or_port(options);
+
+  /* IPv4. */
+  tor_addr_copy(&ri->ipv4_addr, &ipv4_addr);
+  ri->ipv4_orport = router_get_advertised_or_port_by_af(options, AF_INET);
   ri->ipv4_dirport = router_get_advertised_dir_port(options, 0);
+
+  /* IPv6. */
+  if (have_v6) {
+    tor_addr_copy(&ri->ipv6_addr, &ipv6_addr);
+    ri->ipv6_orport = router_get_advertised_or_port_by_af(options, AF_INET6);
+  }
+
   ri->supports_tunnelled_dir_requests =
     directory_permits_begindir_requests(options);
   ri->cache_info.published_on = time(NULL);
@@ -2070,13 +2083,6 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   ri->onion_curve25519_pkey =
     tor_memdup(&get_current_curve25519_keypair()->pubkey,
                sizeof(curve25519_public_key_t));
-
-  /* For now, at most one IPv6 or-address is being advertised. */
-  tor_addr_port_t ipv6_orport;
-  router_get_advertised_ipv6_or_ap(options, &ipv6_orport);
-  /* If there is no valid IPv6 ORPort, the address and port are null. */
-  tor_addr_copy(&ri->ipv6_addr, &ipv6_orport.addr);
-  ri->ipv6_orport = ipv6_orport.port;
 
   ri->identity_pkey = crypto_pk_dup_key(get_server_identity_key());
   if (BUG(crypto_pk_get_digest(ri->identity_pkey,
@@ -2389,20 +2395,9 @@ router_rebuild_descriptor(int force)
   int err = 0;
   routerinfo_t *ri;
   extrainfo_t *ei;
-  uint32_t addr;
-  const or_options_t *options = get_options();
 
   if (desc_clean_since && !force)
     return 0;
-
-  if (router_pick_published_address(options, &addr, 0) < 0 ||
-      router_get_advertised_or_port(options) == 0) {
-    /* Stop trying to rebuild our descriptor every second. We'll
-     * learn that it's time to try again when ip_address_changed()
-     * marks it dirty. */
-    desc_clean_since = time(NULL);
-    return TOR_ROUTERINFO_ERROR_DESC_REBUILDING;
-  }
 
   log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
 
@@ -2503,11 +2498,13 @@ mark_my_descriptor_dirty(const char *reason)
   if (BUG(reason == NULL)) {
     reason = "marked descriptor dirty for unspecified reason";
   }
-  if (server_mode(options) && options->PublishServerDescriptor_)
+  if (server_mode(options) && options->PublishServerDescriptor_) {
     log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
+  }
   desc_clean_since = 0;
   if (!desc_dirty_reason)
     desc_dirty_reason = reason;
+  reschedule_descriptor_update_check();
 }
 
 /** How frequently will we republish our descriptor because of large (factor

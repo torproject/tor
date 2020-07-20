@@ -194,7 +194,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
                         char **hostname_out, tor_addr_t *addr_out)
 {
   int ret;
-  bool explicit_ip = false;
+  bool explicit_ip = false, resolve_failure = false;
   int num_valid_addr = 0;
 
   tor_assert(options);
@@ -246,6 +246,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
       continue;
     } else {
       /* Hostname that can't be resolved, this is a fatal error. */
+      resolve_failure = true;
       log_fn(warn_severity, LD_CONFIG,
              "Could not resolve local Address '%s'. Failing.", cfg->value);
       continue;
@@ -253,13 +254,16 @@ get_address_from_config(const or_options_t *options, int warn_severity,
   }
 
   if (!num_valid_addr) {
-    log_fn(warn_severity, LD_CONFIG,
-           "No Address option found for family %s in configuration.",
-           fmt_af_family(family));
-    /* No Address statement for family but one exists since Address is not
-     * NULL thus we have to stop now and not attempt to send back a guessed
-     * address. */
-    return FN_RET_BAIL;
+    if (resolve_failure) {
+      /* We found no address but we got a resolution failure. This means we
+       * can know if the hostname given was v4 or v6 so we can't continue. */
+      return FN_RET_BAIL;
+    }
+    log_info(LD_CONFIG,
+             "No Address option found for family %s in configuration.",
+             fmt_af_family(family));
+    /* No Address statement for family so move on to try next method. */
+    return FN_RET_NEXT;
   }
 
   if (num_valid_addr >= MAX_CONFIG_ADDRESS) {
@@ -283,8 +287,8 @@ get_address_from_config(const or_options_t *options, int warn_severity,
   }
 
   /* Address can be used. We are done. */
-  log_fn(warn_severity, LD_CONFIG, "Address found in configuration: %s",
-         fmt_addr(addr_out));
+  log_info(LD_CONFIG, "Address found in configuration: %s",
+           fmt_addr(addr_out));
   return FN_RET_OK;
 }
 
@@ -346,8 +350,8 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
   *hostname_out = tor_strdup(hostname);
 
   /* Found it! */
-  log_fn(warn_severity, LD_CONFIG, "Address found from local hostname: %s",
-         fmt_addr(addr_out));
+  log_info(LD_CONFIG, "Address found from local hostname: %s",
+           fmt_addr(addr_out));
   return FN_RET_OK;
 }
 
@@ -398,8 +402,7 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
   *method_out = "INTERFACE";
 
   /* Found it! */
-  log_fn(warn_severity, LD_CONFIG, "Address found from interface: %s",
-         fmt_addr(addr_out));
+  log_info(LD_CONFIG, "Address found from interface: %s", fmt_addr(addr_out));
   return FN_RET_OK;
 }
 
@@ -729,3 +732,13 @@ is_local_to_resolve_addr, (const tor_addr_t *addr))
     return false;
   }
 }
+
+#ifdef TOR_UNIT_TESTS
+
+void
+resolve_addr_reset_suggested(int family)
+{
+  tor_addr_make_unspec(&last_suggested_addrs[af_to_idx(family)]);
+}
+
+#endif /* TOR_UNIT_TESTS */

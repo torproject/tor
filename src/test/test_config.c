@@ -1290,10 +1290,6 @@ test_config_find_my_address_mixed(void *arg)
                      "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
   tor_addr_parse(&test_addr, "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
 
-  /* IPv4 address not guessed since one Address statement exists. */
-  retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
   /* IPv6 address should be found and considered configured. */
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
@@ -1541,49 +1537,6 @@ test_config_find_my_address(void *arg)
 
   VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
   CLEANUP_FOUND_ADDRESS;
-
-  /*
-   * Case 6: Another address family is configured. Expected to fail.
-   */
-  if (p->family == AF_INET) {
-    config_line_append(&options->Address, "Address", "4242::4242");
-  } else {
-    config_line_append(&options->Address, "Address", "1.1.1.1");
-  }
-
-  setup_full_capture_of_logs(LOG_NOTICE);
-
-  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  expect_log_msg_containing("No Address option found for family");
-  teardown_capture_of_logs();
-
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
-  CLEANUP_FOUND_ADDRESS;
-
-  /*
-   * Case 7: Address is a non resolvable hostname. Expected to fail.
-   */
-  MOCK(tor_addr_lookup, tor_addr_lookup_failure);
-
-  config_line_append(&options->Address, "Address", "www.torproject.org");
-  prev_n_hostname_failure = n_hostname_failure;
-
-  setup_full_capture_of_logs(LOG_NOTICE);
-
-  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
-                           &method_used, &hostname_out);
-
-  expect_log_msg_containing("Could not resolve local Address "
-                            "'www.torproject.org'. Failing.");
-  teardown_capture_of_logs();
-
-  tt_int_op(n_hostname_failure, OP_EQ, ++prev_n_hostname_failure);
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
-  CLEANUP_FOUND_ADDRESS;
-
-  UNMOCK(tor_addr_lookup);
 
   /*
    * Case 8:
@@ -3889,16 +3842,17 @@ test_config_default_dir_servers(void *arg)
   or_options_free(opts);
 }
 
-static int mock_router_pick_published_address_result = 0;
+static bool mock_relay_find_addr_to_publish_result = true;
 
-static int
-mock_router_pick_published_address(const or_options_t *options,
-                                   uint32_t *addr, int cache_only)
+static bool
+mock_relay_find_addr_to_publish(const or_options_t *options, int family,
+                                int flags, tor_addr_t *addr_out)
 {
-  (void)options;
-  (void)addr;
-  (void)cache_only;
-  return mock_router_pick_published_address_result;
+  (void) options;
+  (void) family;
+  (void) flags;
+  (void) addr_out;
+  return mock_relay_find_addr_to_publish_result;
 }
 
 static int mock_router_my_exit_policy_is_reject_star_result = 0;
@@ -3934,11 +3888,11 @@ test_config_directory_fetch(void *arg)
   or_options_t *options = options_new();
   routerinfo_t routerinfo;
   memset(&routerinfo, 0, sizeof(routerinfo));
-  mock_router_pick_published_address_result = -1;
+  mock_relay_find_addr_to_publish_result = false;
   mock_router_my_exit_policy_is_reject_star_result = 1;
   mock_advertised_server_mode_result = 0;
   mock_router_get_my_routerinfo_result = NULL;
-  MOCK(router_pick_published_address, mock_router_pick_published_address);
+  MOCK(relay_find_addr_to_publish, mock_relay_find_addr_to_publish);
   MOCK(router_my_exit_policy_is_reject_star,
        mock_router_my_exit_policy_is_reject_star);
   MOCK(advertised_server_mode, mock_advertised_server_mode);
@@ -3994,14 +3948,14 @@ test_config_directory_fetch(void *arg)
   options = options_new();
   options->ORPort_set = 1;
 
-  mock_router_pick_published_address_result = -1;
+  mock_relay_find_addr_to_publish_result = false;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
   tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 0);
 
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
   tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
@@ -4015,7 +3969,7 @@ test_config_directory_fetch(void *arg)
   options = options_new();
   options->ORPort_set = 1;
   options->ExitRelay = 1;
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   mock_router_my_exit_policy_is_reject_star_result = 0;
   mock_advertised_server_mode_result = 1;
   mock_router_get_my_routerinfo_result = &routerinfo;
@@ -4030,7 +3984,7 @@ test_config_directory_fetch(void *arg)
             OP_EQ, 0);
 
   options->RefuseUnknownExits = 0;
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
   tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
@@ -4047,7 +4001,7 @@ test_config_directory_fetch(void *arg)
   options->DirPort_set = 1;
   options->ORPort_set = 1;
   options->DirCache = 1;
-  mock_router_pick_published_address_result = 0;
+  mock_relay_find_addr_to_publish_result = true;
   mock_router_my_exit_policy_is_reject_star_result = 1;
 
   mock_advertised_server_mode_result = 1;
@@ -4098,7 +4052,7 @@ test_config_directory_fetch(void *arg)
 
  done:
   or_options_free(options);
-  UNMOCK(router_pick_published_address);
+  UNMOCK(relay_find_addr_to_publish);
   UNMOCK(router_get_my_routerinfo);
   UNMOCK(advertised_server_mode);
   UNMOCK(router_my_exit_policy_is_reject_star);

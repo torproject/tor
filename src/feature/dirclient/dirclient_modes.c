@@ -40,15 +40,19 @@ int
 dirclient_fetches_from_authorities(const or_options_t *options)
 {
   const routerinfo_t *me;
-  uint32_t addr;
   int refuseunknown;
   if (options->FetchDirInfoEarly)
     return 1;
   if (options->BridgeRelay == 1)
     return 0;
-  if (server_mode(options) &&
-      router_pick_published_address(options, &addr, 1) < 0)
-    return 1; /* we don't know our IP address; ask an authority. */
+  /* We don't know our IP address; ask an authority. IPv4 is still mandatory
+   * to have thus if we don't have it, we ought to learn it from an authority
+   * through the NETINFO cell or the HTTP header it sends us back.
+   *
+   * Note that at the moment, relay do a direct connection so no NETINFO cell
+   * for now. */
+  if (server_mode(options) && !relay_has_address_set(AF_INET))
+    return 1;
   refuseunknown = ! router_my_exit_policy_is_reject_star() &&
     should_refuse_unknown_exits(options);
   if (!dir_server_mode(options) && !refuseunknown)

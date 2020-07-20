@@ -9,15 +9,20 @@
 #ifndef TOR_RELAY_FIND_ADDR_H
 #define TOR_RELAY_FIND_ADDR_H
 
-MOCK_DECL(int, router_pick_published_address,
-          (const or_options_t *options, uint32_t *addr, int cache_only));
-
-void router_new_address_suggestion(const char *suggestion,
-                                   const dir_connection_t *d_conn);
+typedef enum {
+  RELAY_FIND_ADDR_NO_FLAG    = (1U << 0),
+  RELAY_FIND_ADDR_CACHE_ONLY = (1U << 1),
+} relay_find_addr_flags_t;
 
 void relay_address_new_suggestion(const tor_addr_t *suggested_addr,
                                   const tor_addr_t *peer_addr,
                                   const char *identity_digest);
+
+MOCK_DECL(bool, relay_find_addr_to_publish,
+          (const or_options_t *options, int family, int flags,
+           tor_addr_t *addr_out));
+
+bool relay_has_address_set(int family);
 
 #ifdef RELAY_FIND_ADDR_PRIVATE
 

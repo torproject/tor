@@ -17,12 +17,27 @@
 #include "core/or/cell_st.h"
 #include "core/or/or_circuit_st.h"
 
+#define RESOLVE_ADDR_PRIVATE
+#include "feature/nodelist/dirlist.h"
+#include "feature/relay/relay_find_addr.h"
+#include "feature/relay/routermode.h"
+#include "feature/dirclient/dir_server_st.h"
+
+#include "app/config/resolve_addr.h"
+
 /* Test suite stuff */
 #include "test/test.h"
 #include "test/fakechans.h"
 #include "test/fakecircs.h"
 
 static void test_relay_append_cell_to_circuit_queue(void *arg);
+
+static int
+mock_server_mode_true(const or_options_t *options)
+{
+  (void) options;
+  return 1;
+}
 
 static void
 assert_circuit_ok_mock(const circuit_t *c)
@@ -192,10 +207,165 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   return;
 }
 
+static void
+test_suggested_address(void *arg)
+{
+  int ret;
+  const char *untrusted_id = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  dir_server_t *ds = NULL;
+  tor_addr_t ipv4_addr, ipv6_addr, cache_addr;
+  tor_addr_t trusted_addr, untrusted_addr;
+  tor_addr_port_t trusted_ap_v6 = { .port = 443 };
+
+  (void) arg;
+
+  MOCK(server_mode, mock_server_mode_true);
+
+  /* Unstrusted relay source. */
+  ret = tor_addr_parse(&untrusted_addr, "8.8.8.8");
+  tt_int_op(ret, OP_EQ, AF_INET);
+
+  /* Add gabelmoo as a trusted directory authority. */
+  ret = tor_addr_parse(&trusted_addr, "[2001:638:a000:4140::ffff:189]");
+  tt_int_op(ret, OP_EQ, AF_INET6);
+  tor_addr_copy(&trusted_ap_v6.addr, &trusted_addr);
+
+  ds = trusted_dir_server_new("gabelmoo", "131.188.40.189", 80, 443,
+                              &trusted_ap_v6,
+                              "F2044413DAC2E02E3D6BCF4735A19BCA1DE97281",
+                              "ED03BB616EB2F60BEC80151114BB25CEF515B226",
+                              V3_DIRINFO, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+
+  /* 1. Valid IPv4 from a trusted authority (gabelmoo). */
+  ret = tor_addr_parse(&ipv4_addr, "1.2.3.4");
+  relay_address_new_suggestion(&ipv4_addr, &ds->ipv4_addr, ds->digest);
+  resolved_addr_get_suggested(AF_INET, &cache_addr);
+  tt_assert(tor_addr_eq(&cache_addr, &ipv4_addr));
+  resolve_addr_reset_suggested(AF_INET);
+
+  /* 2. Valid IPv6 from a trusted authority (gabelmoo). */
+  ret = tor_addr_parse(&ipv6_addr, "[4242::4242]");
+  relay_address_new_suggestion(&ipv6_addr, &ds->ipv6_addr, ds->digest);
+  resolved_addr_get_suggested(AF_INET6, &cache_addr);
+  tt_assert(tor_addr_eq(&cache_addr, &ipv6_addr));
+  resolve_addr_reset_suggested(AF_INET6);
+
+  /* 3. Valid IPv4 but untrusted source. */
+  ret = tor_addr_parse(&ipv4_addr, "1.2.3.4");
+  relay_address_new_suggestion(&ipv4_addr, &untrusted_addr, untrusted_id);
+  resolved_addr_get_suggested(AF_INET, &cache_addr);
+  tt_assert(tor_addr_is_unspec(&cache_addr));
+
+  /* 4. Valid IPv6 but untrusted source. */
+  ret = tor_addr_parse(&ipv6_addr, "[4242::4242]");
+  relay_address_new_suggestion(&ipv6_addr, &untrusted_addr, untrusted_id);
+  resolved_addr_get_suggested(AF_INET6, &cache_addr);
+  tt_assert(tor_addr_is_unspec(&cache_addr));
+
+  /* 5. Internal IPv4 from a trusted authority (gabelmoo). */
+  ret = tor_addr_parse(&ipv4_addr, "127.0.0.1");
+  relay_address_new_suggestion(&ipv4_addr, &ds->ipv4_addr, ds->digest);
+  resolved_addr_get_suggested(AF_INET, &cache_addr);
+  tt_assert(tor_addr_is_unspec(&cache_addr));
+
+  /* 6. Internal IPv6 from a trusted authority (gabelmoo). */
+  ret = tor_addr_parse(&ipv6_addr, "[::1]");
+  relay_address_new_suggestion(&ipv6_addr, &ds->ipv6_addr, ds->digest);
+  resolved_addr_get_suggested(AF_INET6, &cache_addr);
+  tt_assert(tor_addr_is_unspec(&cache_addr));
+
+  /* 7. IPv4 from a trusted authority (gabelmoo). */
+  relay_address_new_suggestion(&ds->ipv4_addr, &ds->ipv4_addr, ds->digest);
+  resolved_addr_get_suggested(AF_INET, &cache_addr);
+  tt_assert(tor_addr_is_unspec(&cache_addr));
+
+  /* 8. IPv6 from a trusted authority (gabelmoo). */
+  relay_address_new_suggestion(&ds->ipv6_addr, &ds->ipv6_addr, ds->digest);
+  resolved_addr_get_suggested(AF_INET6, &cache_addr);
+  tt_assert(tor_addr_is_unspec(&cache_addr));
+
+ done:
+  dirlist_free_all();
+
+  UNMOCK(server_mode);
+}
+
+static void
+test_find_addr_to_publish(void *arg)
+{
+  int family;
+  bool ret;
+  tor_addr_t ipv4_addr, ipv6_addr, cache_addr;
+  or_options_t options;
+
+  (void) arg;
+
+  /* Populate our resolved cache with a valid IPv4 and IPv6. */
+  family = tor_addr_parse(&ipv4_addr, "1.2.3.4");
+  tt_int_op(family, OP_EQ, AF_INET);
+  resolved_addr_set_last(&ipv4_addr, "NA", NULL);
+  resolved_addr_get_last(AF_INET, &cache_addr);
+  tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
+
+  family = tor_addr_parse(&ipv6_addr, "[4242::4242]");
+  tt_int_op(family, OP_EQ, AF_INET6);
+  resolved_addr_set_last(&ipv6_addr, "NA", NULL);
+  resolved_addr_get_last(AF_INET6, &cache_addr);
+  tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
+
+  /* 1. Address located in the resolved cache. */
+  ret = relay_find_addr_to_publish(&options, AF_INET,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
+
+  ret = relay_find_addr_to_publish(&options, AF_INET6,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
+  resolved_addr_reset_last(AF_INET);
+  resolved_addr_reset_last(AF_INET6);
+
+  /* 2. No IP in the resolve cache, go to the suggested cache. We will ignore
+   *    the find_my_address() code path because that is extensively tested in
+   *    another unit tests. */
+  resolved_addr_set_suggested(&ipv4_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
+
+  resolved_addr_set_suggested(&ipv6_addr);
+  ret = relay_find_addr_to_publish(&options, AF_INET6,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
+  tt_assert(ret);
+  tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
+  resolve_addr_reset_suggested(AF_INET);
+  resolve_addr_reset_suggested(AF_INET6);
+
+  /* 3. No IP anywhere. */
+  ret = relay_find_addr_to_publish(&options, AF_INET,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
+  tt_assert(!ret);
+  ret = relay_find_addr_to_publish(&options, AF_INET6,
+                                   RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
+  tt_assert(!ret);
+
+ done:
+  ;
+}
+
 struct testcase_t relay_tests[] = {
   { "append_cell_to_circuit_queue", test_relay_append_cell_to_circuit_queue,
     TT_FORK, NULL, NULL },
   { "close_circ_rephist", test_relay_close_circuit,
     TT_FORK, NULL, NULL },
+  { "suggested_address", test_suggested_address,
+    TT_FORK, NULL, NULL },
+  { "find_addr_to_publish", test_find_addr_to_publish,
+    TT_FORK, NULL, NULL },
+
   END_OF_TESTCASES
 };

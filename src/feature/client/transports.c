@@ -1643,17 +1643,26 @@ pt_get_extra_info_descriptor_string(void)
 
     SMARTLIST_FOREACH_BEGIN(mp->transports, const transport_t *, t) {
       char *transport_args = NULL;
+      const char *addrport = NULL;
 
       /* If the transport proxy returned "0.0.0.0" as its address, and
        * we know our external IP address, use it. Otherwise, use the
        * returned address. */
-      const char *addrport = NULL;
-      uint32_t external_ip_address = 0;
-      if (tor_addr_is_null(&t->addr) &&
-          router_pick_published_address(get_options(),
-                                        &external_ip_address, 0) >= 0) {
+      if (tor_addr_is_null(&t->addr)) {
         tor_addr_t addr;
-        tor_addr_from_ipv4h(&addr, external_ip_address);
+        /* Attempt to find the IPv4 and then attempt to find the IPv6 if we
+         * can't find it. */
+        bool found = relay_find_addr_to_publish(get_options(), AF_INET,
+                                                RELAY_FIND_ADDR_NO_FLAG,
+                                                &addr);
+        if (!found) {
+          found = relay_find_addr_to_publish(get_options(), AF_INET6,
+                                             RELAY_FIND_ADDR_NO_FLAG, &addr);
+        }
+        if (!found) {
+          log_err(LD_PT, "Unable to find address for transport %s", t->name);
+          continue;
+        }
         addrport = fmt_addrport(&addr, t->port);
       } else {
         addrport = fmt_addrport(&t->addr, t->port);
