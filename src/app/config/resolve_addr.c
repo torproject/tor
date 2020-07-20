@@ -287,8 +287,8 @@ get_address_from_config(const or_options_t *options, int warn_severity,
   }
 
   /* Address can be used. We are done. */
-  log_fn(warn_severity, LD_CONFIG, "Address found in configuration: %s",
-         fmt_addr(addr_out));
+  log_info(LD_CONFIG, "Address found in configuration: %s",
+           fmt_addr(addr_out));
   return FN_RET_OK;
 }
 
@@ -350,8 +350,8 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
   *hostname_out = tor_strdup(hostname);
 
   /* Found it! */
-  log_fn(warn_severity, LD_CONFIG, "Address found from local hostname: %s",
-         fmt_addr(addr_out));
+  log_info(LD_CONFIG, "Address found from local hostname: %s",
+           fmt_addr(addr_out));
   return FN_RET_OK;
 }
 
@@ -402,8 +402,7 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
   *method_out = "INTERFACE";
 
   /* Found it! */
-  log_fn(warn_severity, LD_CONFIG, "Address found from interface: %s",
-         fmt_addr(addr_out));
+  log_info(LD_CONFIG, "Address found from interface: %s", fmt_addr(addr_out));
   return FN_RET_OK;
 }
 
