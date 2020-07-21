@@ -2032,6 +2032,7 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   int hibernating = we_are_hibernating();
   const or_options_t *options = get_options();
   int result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
+  uint16_t ipv6_orport = 0;
 
   if (BUG(!ri_out)) {
     result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
@@ -2067,10 +2068,13 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   ri->ipv4_orport = router_get_advertised_or_port_by_af(options, AF_INET);
   ri->ipv4_dirport = router_get_advertised_dir_port(options, 0);
 
-  /* IPv6. */
-  if (have_v6) {
+  /* IPv6. Do not publish an IPv6 if we don't have an ORPort that can be used
+   * with the address. This is possible for instance if the ORPort is
+   * IPv4Only. */
+  ipv6_orport = router_get_advertised_or_port_by_af(options, AF_INET6);
+  if (have_v6 && ipv6_orport != 0) {
     tor_addr_copy(&ri->ipv6_addr, &ipv6_addr);
-    ri->ipv6_orport = router_get_advertised_or_port_by_af(options, AF_INET6);
+    ri->ipv6_orport = ipv6_orport;
   }
 
   ri->supports_tunnelled_dir_requests =
