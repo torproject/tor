@@ -1526,9 +1526,16 @@ routerconf_find_ipv6_or_ap(const or_options_t *options,
 bool
 routerconf_has_ipv6_orport(const or_options_t *options)
 {
-  tor_addr_port_t ipv6_ap;
-  routerconf_find_ipv6_or_ap(options, &ipv6_ap);
-  return tor_addr_port_is_valid_ap(&ipv6_ap, 0);
+  /* What we want here is to learn if we have configured an IPv6 ORPort.
+   * Remember, ORPort can listen on [::] and thus consider internal by
+   * router_get_advertised_ipv6_or_ap() since we do _not_ want to advertise
+   * such address. */
+  const tor_addr_t *addr =
+    portconf_get_first_advertised_addr(CONN_TYPE_OR_LISTENER, AF_INET6);
+  const uint16_t port =
+    routerconf_find_or_port(options, AF_INET6);
+
+  return tor_addr_port_is_valid(addr, port, 1);
 }
 
 /** Returns true if this router can extend over IPv6.
