@@ -6504,14 +6504,13 @@ get_first_listener_addrport_string(int listener_type)
   return NULL;
 }
 
-/** Return the first advertised port of type <b>listener_type</b> in
- * <b>address_family</b>. Returns 0 when no port is found, and when passed
- * AF_UNSPEC. */
-int
-portconf_get_first_advertised_port(int listener_type, int address_family)
+/** Find and return the first configured advertised `port_cfg_t` of type @a
+ * listener_type in @a address_family. */
+static const port_cfg_t *
+portconf_get_first_advertised(int listener_type, int address_family)
 {
   if (address_family == AF_UNSPEC)
-    return 0;
+    return NULL;
 
   const smartlist_t *conf_ports = get_configured_ports();
   SMARTLIST_FOREACH_BEGIN(conf_ports, const port_cfg_t *, cfg) {
@@ -6519,11 +6518,23 @@ portconf_get_first_advertised_port(int listener_type, int address_family)
         !cfg->server_cfg.no_advertise) {
       if ((address_family == AF_INET && port_binds_ipv4(cfg)) ||
           (address_family == AF_INET6 && port_binds_ipv6(cfg))) {
-        return cfg->port;
+        return cfg;
       }
     }
   } SMARTLIST_FOREACH_END(cfg);
-  return 0;
+  return NULL;
+}
+
+/** Return the first advertised port of type <b>listener_type</b> in
+ * <b>address_family</b>. Returns 0 when no port is found, and when passed
+ * AF_UNSPEC. */
+int
+portconf_get_first_advertised_port(int listener_type, int address_family)
+{
+  const port_cfg_t *cfg;
+  cfg = portconf_get_first_advertised(listener_type, address_family);
+
+  return cfg ? cfg->port : 0;
 }
 
 /** Return the first advertised address of type <b>listener_type</b> in
@@ -6532,20 +6543,10 @@ portconf_get_first_advertised_port(int listener_type, int address_family)
 const tor_addr_t *
 portconf_get_first_advertised_addr(int listener_type, int address_family)
 {
-  if (address_family == AF_UNSPEC)
-    return NULL;
-  if (!configured_ports)
-    return NULL;
-  SMARTLIST_FOREACH_BEGIN(configured_ports, const port_cfg_t *, cfg) {
-    if (cfg->type == listener_type &&
-        !cfg->server_cfg.no_advertise) {
-      if ((address_family == AF_INET && port_binds_ipv4(cfg)) ||
-          (address_family == AF_INET6 && port_binds_ipv6(cfg))) {
-        return &cfg->addr;
-      }
-    }
-  } SMARTLIST_FOREACH_END(cfg);
-  return NULL;
+  const port_cfg_t *cfg;
+  cfg = portconf_get_first_advertised(listener_type, address_family);
+
+  return cfg ? &cfg->addr : NULL;
 }
 
 /** Return 1 if a port exists of type <b>listener_type</b> on <b>addr</b> and
