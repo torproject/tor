@@ -1,0 +1,5 @@
+  o Major features (relay, IPv6):
+    - When a relay with IPv6 support opens a connection to another
+      relay, and the extend cell lists both IPv4 and IPv6 addresses, the
+      first relay now picks randomly which address to use.  Closes
+      ticket 33220.
