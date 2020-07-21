@@ -222,7 +222,7 @@ remove_duplicate_orports(smartlist_t *ports)
  * *<b>n_low_ports_out</b> to the number of sub-1024 ports we will be
  * binding, and warn if we may be unable to re-bind after hibernation. */
 static int
-check_server_ports(smartlist_t *ports,
+check_and_prune_server_ports(smartlist_t *ports,
                    const or_options_t *options,
                    int *n_low_ports_out)
 {
@@ -382,7 +382,7 @@ port_parse_ports_relay(or_options_t *options,
     goto err;
   }
 
-  if (check_server_ports(ports, options, &n_low_ports) < 0) {
+  if (check_and_prune_server_ports(ports, options, &n_low_ports) < 0) {
     *msg = tor_strdup("Misconfigured server ports");
     goto err;
   }
