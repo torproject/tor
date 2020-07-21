@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Rename functions about "advertised" ports which are not in fact
+      guaranteed to return the ports have been advertised. Closes
+      ticket 40055.
