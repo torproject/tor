@@ -133,12 +133,96 @@ port_warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
   } SMARTLIST_FOREACH_END(port);
 }
 
+/** Return a static buffer containing the human readable logging string that
+ * describes the given port object. */
+static const char *
+describe_relay_port(const port_cfg_t *port)
+{
+  IF_BUG_ONCE(!port) {
+    return "<null port>";
+  }
+
+  static char buf[256];
+  const char *type, *addr;
+
+  switch (port->type) {
+  case CONN_TYPE_OR_LISTENER:
+    type = "OR";
+    break;
+  case CONN_TYPE_DIR_LISTENER:
+    type = "Dir";
+    break;
+  case CONN_TYPE_EXT_OR_LISTENER:
+    type = "ExtOR";
+    break;
+  default:
+    type = "";
+    break;
+  }
+
+  if (port->explicit_addr) {
+    addr = fmt_and_decorate_addr(&port->addr);
+  } else {
+    addr = "";
+  }
+
+  tor_snprintf(buf, sizeof(buf), "%sPort %s%s%d",
+               type, addr, (strlen(addr) > 0) ? ":" : "", port->port);
+  return buf;
+}
+
+/** Attempt to find duplicate ORPort that would be superseded by another and
+ * remove them from the given ports list. This is possible if we have for
+ * instance:
+ *
+ *    ORPort 9050
+ *    ORPort [4242::1]:9050
+ *
+ * First one binds to both v4 and v6 address but second one is specific to an
+ * address superseding the global bind one.
+ *
+ * The following is O(n^2) but it is done at bootstrap or config reload and
+ * the list is not very long usually. */
+static void
+remove_duplicate_orports(smartlist_t *ports)
+{
+  for (int i = 0; i < smartlist_len(ports); ++i) {
+    port_cfg_t *current = smartlist_get(ports, i);
+
+    /* Skip non ORPorts. */
+    if (current->type != CONN_TYPE_OR_LISTENER) {
+      continue;
+    }
+
+    for (int j = 0; j < smartlist_len(ports); ++j) {
+      port_cfg_t *next = smartlist_get(ports, j);
+
+      /* Avoid comparing the same object. */
+      if (current == next) {
+        continue;
+      }
+      /* Same address family and same port number, we have a match. */
+      if (!current->explicit_addr && next->explicit_addr &&
+          tor_addr_family(&current->addr) == tor_addr_family(&next->addr) &&
+          current->port == next->port) {
+        /* Remove current because next is explicitly set. */
+        smartlist_del_keeporder(ports, i--);
+        char *next_str = tor_strdup(describe_relay_port(next));
+        log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
+                 describe_relay_port(current), next_str);
+        tor_free(next_str);
+        port_cfg_free(current);
+      }
+    }
+  }
+}
+
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
  * consistency and warn as appropriate.  On Unix-based OSes, set
  * *<b>n_low_ports_out</b> to the number of sub-1024 ports we will be
  * binding, and warn if we may be unable to re-bind after hibernation. */
 static int
-check_server_ports(const smartlist_t *ports,
+check_server_ports(smartlist_t *ports,
                    const or_options_t *options,
                    int *n_low_ports_out)
 {
@@ -158,6 +242,9 @@ check_server_ports(const smartlist_t *ports,
   int n_dirport_listeners = 0;
   int n_low_port = 0;
   int r = 0;
+
+  /* Remove possible duplicate ORPorts before inspecting the list. */
+  remove_duplicate_orports(ports);
 
   SMARTLIST_FOREACH_BEGIN(ports, const port_cfg_t *, port) {
     if (port->type == CONN_TYPE_DIR_LISTENER) {
