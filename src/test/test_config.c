@@ -5181,17 +5181,17 @@ test_config_get_first_advertised(void *data)
   const tor_addr_t *addr;
 
   // no ports are configured? We get NULL.
-  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+  port = portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER,
                                               AF_INET);
   tt_int_op(port, OP_EQ, 0);
-  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+  addr = portconf_get_first_advertised_addr(CONN_TYPE_OR_LISTENER,
                                               AF_INET);
   tt_ptr_op(addr, OP_EQ, NULL);
 
-  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+  port = portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER,
                                               AF_INET6);
   tt_int_op(port, OP_EQ, 0);
-  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+  addr = portconf_get_first_advertised_addr(CONN_TYPE_OR_LISTENER,
                                               AF_INET6);
   tt_ptr_op(addr, OP_EQ, NULL);
 
@@ -5205,27 +5205,27 @@ test_config_get_first_advertised(void *data)
   tt_assert(r == 0);
 
   // UNSPEC gets us nothing.
-  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+  port = portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER,
                                               AF_UNSPEC);
   tt_int_op(port, OP_EQ, 0);
-  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+  addr = portconf_get_first_advertised_addr(CONN_TYPE_OR_LISTENER,
                                               AF_UNSPEC);
   tt_ptr_op(addr, OP_EQ, NULL);
 
   // Try AF_INET.
-  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+  port = portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER,
                                               AF_INET);
   tt_int_op(port, OP_EQ, 9911);
-  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+  addr = portconf_get_first_advertised_addr(CONN_TYPE_OR_LISTENER,
                                               AF_INET);
   tt_ptr_op(addr, OP_NE, NULL);
   tt_str_op(fmt_addrport(addr,port), OP_EQ, "5.6.7.8:9911");
 
   // Try AF_INET6
-  port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+  port = portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER,
                                               AF_INET6);
   tt_int_op(port, OP_EQ, 8080);
-  addr = get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER,
+  addr = portconf_get_first_advertised_addr(CONN_TYPE_OR_LISTENER,
                                               AF_INET6);
   tt_ptr_op(addr, OP_NE, NULL);
   tt_str_op(fmt_addrport(addr,port), OP_EQ, "[1234::5678]:8080");

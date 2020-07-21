@@ -1474,7 +1474,7 @@ uint16_t
 router_get_advertised_or_port_by_af(const or_options_t *options,
                                     sa_family_t family)
 {
-  int port = get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER,
+  int port = portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER,
                                                   family);
   (void)options;
 
@@ -1502,7 +1502,7 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
   tor_addr_make_null(&ipv6_ap_out->addr, AF_INET6);
   ipv6_ap_out->port = 0;
 
-  const tor_addr_t *addr = get_first_advertised_addr_by_type_af(
+  const tor_addr_t *addr = portconf_get_first_advertised_addr(
                                                       CONN_TYPE_OR_LISTENER,
                                                       AF_INET6);
   const uint16_t port = router_get_advertised_or_port_by_af(
@@ -1824,11 +1824,11 @@ router_check_descriptor_address_port_consistency(const tor_addr_t *addr,
 
   family = tor_addr_family(addr);
   /* The first advertised Port may be the magic constant CFG_AUTO_PORT. */
-  port_cfg = get_first_advertised_port_by_type_af(listener_type, family);
+  port_cfg = portconf_get_first_advertised_port(listener_type, family);
   if (port_cfg != 0 &&
       !port_exists_by_type_addr_port(listener_type, addr, port_cfg, 1)) {
     const tor_addr_t *port_addr =
-      get_first_advertised_addr_by_type_af(listener_type, family);
+      portconf_get_first_advertised_addr(listener_type, family);
     /* If we're building a descriptor with no advertised address,
      * something is terribly wrong. */
     tor_assert(port_addr);

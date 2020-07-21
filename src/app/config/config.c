@@ -6508,7 +6508,7 @@ get_first_listener_addrport_string(int listener_type)
  * <b>address_family</b>. Returns 0 when no port is found, and when passed
  * AF_UNSPEC. */
 int
-get_first_advertised_port_by_type_af(int listener_type, int address_family)
+portconf_get_first_advertised_port(int listener_type, int address_family)
 {
   if (address_family == AF_UNSPEC)
     return 0;
@@ -6530,7 +6530,7 @@ get_first_advertised_port_by_type_af(int listener_type, int address_family)
  * <b>address_family</b>. Returns NULL if there is no advertised address,
  * and when passed AF_UNSPEC. */
 const tor_addr_t *
-get_first_advertised_addr_by_type_af(int listener_type, int address_family)
+portconf_get_first_advertised_addr(int listener_type, int address_family)
 {
   if (address_family == AF_UNSPEC)
     return NULL;

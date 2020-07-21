@@ -15,7 +15,7 @@
 #include "app/config/or_options_st.h"
 
 #define get_orport_addr(family) \
-  (get_first_advertised_addr_by_type_af(CONN_TYPE_OR_LISTENER, family))
+  (portconf_get_first_advertised_addr(CONN_TYPE_OR_LISTENER, family))
 
 bool find_my_address(const or_options_t *options, int family,
                      int warn_severity, tor_addr_t *addr_out,
