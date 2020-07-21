@@ -271,6 +271,14 @@ port_parse_ports_relay(or_options_t *options,
     goto err;
   }
   if (port_parse_config(ports,
+                        options->ORPort_lines,
+                        "OR", CONN_TYPE_OR_LISTENER,
+                        "[::]", 0,
+                        CL_PORT_SERVER_OPTIONS) < 0) {
+    *msg = tor_strdup("Invalid ORPort configuration");
+    goto err;
+  }
+  if (port_parse_config(ports,
                         options->ExtORPort_lines,
                         "ExtOR", CONN_TYPE_EXT_OR_LISTENER,
                         "127.0.0.1", 0,

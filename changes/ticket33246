@@ -1,0 +1,3 @@
+  o Major feature (relay, IPv6):
+    - Relays now automatically bind on IPv6 for their ORPort unless specified
+      otherwise with the IPv4Only flag. Closes ticket 33246.

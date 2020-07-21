@@ -5831,6 +5831,15 @@ port_parse_config(smartlist_t *out,
   int got_zero_port=0, got_nonzero_port=0;
   char *unix_socket_path = NULL;
   port_cfg_t *cfg = NULL;
+  bool addr_is_explicit = false;
+  int family = -1;
+
+  /* Parse default address. This can fail for Unix socket for instance so
+   * family can be -1 and the default_addr will be made UNSPEC. */
+  tor_addr_t default_addr = TOR_ADDR_NULL;
+  if (defaultaddr) {
+    family = tor_addr_parse(&default_addr, defaultaddr);
+  }
 
   /* If there's no FooPort, then maybe make a default one. */
   if (! ports) {
@@ -5907,8 +5916,8 @@ port_parse_config(smartlist_t *out,
         port = 1;
     } else if (!strcasecmp(addrport, "auto")) {
       port = CFG_AUTO_PORT;
-      int af = tor_addr_parse(&addr, defaultaddr);
-      tor_assert(af >= 0);
+      tor_assert(family >= 0);
+      tor_addr_copy(&addr, &default_addr);
     } else if (!strcasecmpend(addrport, ":auto")) {
       char *addrtmp = tor_strndup(addrport, strlen(addrport)-5);
       port = CFG_AUTO_PORT;
@@ -5924,14 +5933,20 @@ port_parse_config(smartlist_t *out,
          "9050" might be a valid address. */
       port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
       if (ok) {
-        int af = tor_addr_parse(&addr, defaultaddr);
-        tor_assert(af >= 0);
+        tor_assert(family >= 0);
+        tor_addr_copy(&addr, &default_addr);
       } else if (tor_addr_port_lookup(addrport, &addr, &ptmp) == 0) {
         if (ptmp == 0) {
           log_warn(LD_CONFIG, "%sPort line has address but no port", portname);
           goto err;
         }
+        if (family != -1 && tor_addr_family(&addr) != family) {
+          /* This means we are parsing another ORPort family but we are
+           * attempting to find the default address' family ORPort. */
+          goto ignore;
+        }
         port = ptmp;
+        addr_is_explicit = true;
       } else {
         log_warn(LD_CONFIG, "Couldn't parse address %s for %sPort",
                  escaped(addrport), portname);
@@ -5942,6 +5957,7 @@ port_parse_config(smartlist_t *out,
     /* Default port_cfg_t object initialization */
     cfg = port_cfg_new(unix_socket_path ? strlen(unix_socket_path) : 0);
 
+    cfg->explicit_addr = addr_is_explicit;
     if (unix_socket_path && default_to_group_writable)
       cfg->is_group_writable = 1;
 
@@ -5984,15 +6000,25 @@ port_parse_config(smartlist_t *out,
       }
       if (cfg->server_cfg.bind_ipv4_only &&
           tor_addr_family(&addr) != AF_INET) {
-        log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
-                 portname);
-        goto err;
+        if (cfg->explicit_addr) {
+          log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv4",
+                   portname);
+          goto err;
+        }
+        /* This ORPort is IPv4Only but the default address is IPv6, ignore it
+         * since this will be configured with an IPv4 default address. */
+        goto ignore;
       }
       if (cfg->server_cfg.bind_ipv6_only &&
           tor_addr_family(&addr) != AF_INET6) {
-        log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
-                 portname);
-        goto err;
+        if (cfg->explicit_addr) {
+          log_warn(LD_CONFIG, "Could not interpret %sPort address as IPv6",
+                   portname);
+          goto err;
+        }
+        /* This ORPort is IPv6Only but the default address is IPv4, ignore it
+         * since this will be configured with an IPv6 default address. */
+        goto ignore;
       }
     } else {
       /* This is a client port; parse isolation options */
@@ -6205,9 +6231,10 @@ port_parse_config(smartlist_t *out,
       smartlist_add(out, cfg);
       /* out owns cfg now, don't re-use or free it */
       cfg = NULL;
-    } else {
-      tor_free(cfg);
     }
+
+ ignore:
+    tor_free(cfg);
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);
     tor_free(addrport);

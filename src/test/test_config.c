@@ -5162,6 +5162,44 @@ test_config_parse_port_config__ports__server_options(void *data)
                           0, CL_PORT_SERVER_OPTIONS);
   tt_int_op(ret, OP_EQ, -1);
 
+  /* Default address is IPv4 but pass IPv6Only flag. Should be ignored. */
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_invalid = mock_config_line("ORPort", "9050 IPv6Only");
+  ret = port_parse_config(slout, config_port_invalid, "ORPort", 0,
+                          "127.0.0.1", 0, CL_PORT_SERVER_OPTIONS);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Default address is IPv6 but pass IPv4Only flag. Should be ignored. */
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_invalid = mock_config_line("ORPort", "9050 IPv4Only");
+  ret = port_parse_config(slout, config_port_invalid, "ORPort", 0,
+                          "[::]", 0, CL_PORT_SERVER_OPTIONS);
+  tt_int_op(ret, OP_EQ, 0);
+
+  /* Explicit address is IPv6 but pass IPv4Only flag. Should error. */
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_invalid = mock_config_line("ORPort",
+                                         "[4242::4242]:9050 IPv4Only");
+  ret = port_parse_config(slout, config_port_invalid, "ORPort", 0,
+                          "[::]", 0, CL_PORT_SERVER_OPTIONS);
+  tt_int_op(ret, OP_EQ, -1);
+
+  /* Explicit address is IPv4 but pass IPv6Only flag. Should error. */
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_invalid = mock_config_line("ORPort",
+                                         "1.2.3.4:9050 IPv6Only");
+  ret = port_parse_config(slout, config_port_invalid, "ORPort", 0,
+                          "127.0.0.1", 0, CL_PORT_SERVER_OPTIONS);
+  tt_int_op(ret, OP_EQ, -1);
+
  done:
   if (slout)
     SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
