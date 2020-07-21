@@ -1033,11 +1033,11 @@ connection_close_immediate(connection_t *conn)
     tor_fragile_assert();
     return;
   }
-  if (conn->outbuf_flushlen) {
-    log_info(LD_NET,"fd %d, type %s, state %s, %d bytes on outbuf.",
+  if (connection_get_outbuf_len(conn)) {
+    log_info(LD_NET,"fd %d, type %s, state %s, %"TOR_PRIuSZ" bytes on outbuf.",
              (int)conn->s, conn_type_to_string(conn->type),
              conn_state_to_string(conn->type, conn->state),
-             (int)conn->outbuf_flushlen);
+             buf_datalen(conn->outbuf));
   }
 
   connection_unregister_events(conn);
@@ -1053,7 +1053,6 @@ connection_close_immediate(connection_t *conn)
     conn->linked_conn_is_closed = 1;
   if (conn->outbuf)
     buf_clear(conn->outbuf);
-  conn->outbuf_flushlen = 0;
 }
 
 /** Mark <b>conn</b> to be closed next time we loop through
@@ -3421,12 +3420,12 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
 {
   int base = RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
-  size_t conn_bucket = conn->outbuf_flushlen;
+  size_t conn_bucket = buf_datalen(conn->outbuf);
   size_t global_bucket_val = token_bucket_rw_get_write(&global_bucket);
 
   if (!connection_is_rate_limited(conn)) {
     /* be willing to write to local conns even if our buckets are empty */
-    return conn->outbuf_flushlen;
+    return conn_bucket;
   }
 
   if (connection_speaks_cells(conn)) {
@@ -4079,12 +4078,7 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
               result, (long)n_read, (long)n_written);
   } else if (conn->linked) {
     if (conn->linked_conn) {
-      result = buf_move_to_buf(conn->inbuf, conn->linked_conn->outbuf,
-                               &conn->linked_conn->outbuf_flushlen);
-      if (BUG(result<0)) {
-        log_warn(LD_BUG, "reading from linked connection buffer failed.");
-        return -1;
-      }
+      result = (int) buf_move_all(conn->inbuf, conn->linked_conn->outbuf);
     } else {
       result = 0;
     }
@@ -4188,12 +4182,11 @@ connection_fetch_from_buf_http(connection_t *conn,
                              body_out, body_used, max_bodylen, force_complete);
 }
 
-/** Return conn-\>outbuf_flushlen: how many bytes conn wants to flush
- * from its outbuf. */
+/** Return true if this connection has data to flush. */
 int
 connection_wants_to_flush(connection_t *conn)
 {
-  return conn->outbuf_flushlen > 0;
+  return connection_get_outbuf_len(conn) > 0;
 }
 
 /** Are there too many bytes on edge connection <b>conn</b>'s outbuf to
@@ -4203,7 +4196,7 @@ connection_wants_to_flush(connection_t *conn)
 int
 connection_outbuf_too_full(connection_t *conn)
 {
-  return (conn->outbuf_flushlen > 10*CELL_PAYLOAD_SIZE);
+  return connection_get_outbuf_len(conn) > 10*CELL_PAYLOAD_SIZE;
 }
 
 /**
@@ -4329,7 +4322,7 @@ connection_handle_write_impl(connection_t *conn, int force)
       return -1;
   }
 
-  max_to_write = force ? (ssize_t)conn->outbuf_flushlen
+  max_to_write = force ? (ssize_t)buf_datalen(conn->outbuf)
     : connection_bucket_write_limit(conn, now);
 
   if (connection_speaks_cells(conn) &&
@@ -4361,7 +4354,7 @@ connection_handle_write_impl(connection_t *conn, int force)
     /* else open, or closing */
     initial_size = buf_datalen(conn->outbuf);
     result = buf_flush_to_tls(conn->outbuf, or_conn->tls,
-                           max_to_write, &conn->outbuf_flushlen);
+                              max_to_write);
 
     if (result >= 0)
       update_send_buffer_size(conn->s);
@@ -4427,7 +4420,7 @@ connection_handle_write_impl(connection_t *conn, int force)
   } else {
     CONN_LOG_PROTECT(conn,
                      result = buf_flush_to_socket(conn->outbuf, conn->s,
-                                        max_to_write, &conn->outbuf_flushlen));
+                                                  max_to_write));
     if (result < 0) {
       if (CONN_IS_EDGE(conn))
         connection_edge_end_errno(TO_EDGE_CONN(conn));
@@ -4583,10 +4576,10 @@ connection_write_to_buf_failed(connection_t *conn)
 /** Helper for connection_write_to_buf_impl and connection_write_buf_to_buf:
  *
  * Called when an attempt to add bytes on <b>conn</b>'s outbuf has succeeded:
- * record the number of bytes added.
+ * start writing if appropriate.
  */
 static void
-connection_write_to_buf_commit(connection_t *conn, size_t len)
+connection_write_to_buf_commit(connection_t *conn)
 {
   /* If we receive optimistic data in the EXIT_CONN_STATE_RESOLVING
    * state, we don't want to try to write it right away, since
@@ -4595,7 +4588,6 @@ connection_write_to_buf_commit(connection_t *conn, size_t len)
   if (conn->write_event) {
     connection_start_writing(conn);
   }
-  conn->outbuf_flushlen += len;
 }
 
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
@@ -4618,25 +4610,20 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   if (!connection_may_write_to_buf(conn))
     return;
 
-  size_t written;
-
   if (zlib) {
-    size_t old_datalen = buf_datalen(conn->outbuf);
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     int done = zlib < 0;
     CONN_LOG_PROTECT(conn, r = buf_add_compress(conn->outbuf,
                                                 dir_conn->compress_state,
                                                 string, len, done));
-    written = buf_datalen(conn->outbuf) - old_datalen;
   } else {
     CONN_LOG_PROTECT(conn, r = buf_add(conn->outbuf, string, len));
-    written = len;
   }
   if (r < 0) {
     connection_write_to_buf_failed(conn);
     return;
   }
-  connection_write_to_buf_commit(conn, written);
+  connection_write_to_buf_commit(conn);
 }
 
 /**
@@ -4681,7 +4668,7 @@ connection_buf_add_buf(connection_t *conn, buf_t *buf)
     return;
 
   buf_move_all(conn->outbuf, buf);
-  connection_write_to_buf_commit(conn, len);
+  connection_write_to_buf_commit(conn);
 }
 
 #define CONN_GET_ALL_TEMPLATE(var, test) \
@@ -5568,18 +5555,6 @@ assert_connection_ok(connection_t *conn, time_t now)
   }
   if (conn->linked)
     tor_assert(!SOCKET_OK(conn->s));
-
-  if (conn->outbuf_flushlen > 0) {
-    /* With optimistic data, we may have queued data in
-     * EXIT_CONN_STATE_RESOLVING while the conn is not yet marked to writing.
-     * */
-    tor_assert((conn->type == CONN_TYPE_EXIT &&
-                conn->state == EXIT_CONN_STATE_RESOLVING) ||
-               connection_is_writing(conn) ||
-               conn->write_blocked_on_bw ||
-               (CONN_IS_EDGE(conn) &&
-                TO_EDGE_CONN(conn)->edge_blocked_on_circ));
-  }
 
   if (conn->hold_open_until_flushed)
     tor_assert(conn->marked_for_close);

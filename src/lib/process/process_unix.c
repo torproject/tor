@@ -418,7 +418,7 @@ process_unix_write(process_t *process, buf_t *buffer)
   /* We have data to write and the kernel have told us to write it. */
   return buf_flush_to_pipe(buffer,
                            process_get_unix_process(process)->stdin_handle.fd,
-                           max_to_write, &buffer_flush_len);
+                           max_to_write);
 }
 
 /** Read data from the given process's standard output and put it into

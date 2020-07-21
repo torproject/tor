@@ -985,33 +985,29 @@ conn_close_if_marked(int i)
     if (!conn->hold_open_until_flushed)
       log_info(LD_NET,
                "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
-               "to flush %d bytes. (Marked at %s:%d)",
+               "to flush %"TOR_PRIuSZ" bytes. (Marked at %s:%d)",
                escaped_safe_str_client(conn->address),
                (int)conn->s, conn_type_to_string(conn->type), conn->state,
-               (int)conn->outbuf_flushlen,
-                conn->marked_for_close_file, conn->marked_for_close);
+               connection_get_outbuf_len(conn),
+               conn->marked_for_close_file, conn->marked_for_close);
     if (conn->linked_conn) {
-      retval = buf_move_to_buf(conn->linked_conn->inbuf, conn->outbuf,
-                               &conn->outbuf_flushlen);
+      retval = (int) buf_move_all(conn->linked_conn->inbuf, conn->outbuf);
       if (retval >= 0) {
         /* The linked conn will notice that it has data when it notices that
          * we're gone. */
         connection_start_reading_from_linked_conn(conn->linked_conn);
       }
       log_debug(LD_GENERAL, "Flushed last %d bytes from a linked conn; "
-               "%d left; flushlen %d; wants-to-flush==%d", retval,
+               "%d left; wants-to-flush==%d", retval,
                 (int)connection_get_outbuf_len(conn),
-                (int)conn->outbuf_flushlen,
                 connection_wants_to_flush(conn));
     } else if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
-        retval = buf_flush_to_tls(conn->outbuf, TO_OR_CONN(conn)->tls, sz,
-                               &conn->outbuf_flushlen);
+        retval = buf_flush_to_tls(conn->outbuf, TO_OR_CONN(conn)->tls, sz);
       } else
         retval = -1; /* never flush non-open broken tls connections */
     } else {
-      retval = buf_flush_to_socket(conn->outbuf, conn->s, sz,
-                                   &conn->outbuf_flushlen);
+      retval = buf_flush_to_socket(conn->outbuf, conn->s, sz);
     }
     if (retval >= 0 && /* Technically, we could survive things like
                           TLS_WANT_WRITE here. But don't bother for now. */

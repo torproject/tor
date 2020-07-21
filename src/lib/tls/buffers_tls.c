@@ -106,8 +106,7 @@ buf_read_from_tls(buf_t *buf, tor_tls_t *tls, size_t at_most)
  * written on success, and a TOR_TLS error code on failure or blocking.
  */
 static inline int
-flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
-                size_t sz, size_t *buf_flushlen)
+flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk, size_t sz)
 {
   int r;
   size_t forced;
@@ -126,13 +125,9 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
   r = tor_tls_write(tls, data, sz);
   if (r < 0)
     return r;
-  if (*buf_flushlen > (size_t)r)
-    *buf_flushlen -= r;
-  else
-    *buf_flushlen = 0;
   buf_drain(buf, r);
-  log_debug(LD_NET,"flushed %d bytes, %d ready to flush, %d remain.",
-            r,(int)*buf_flushlen,(int)buf->datalen);
+  log_debug(LD_NET,"flushed %d bytes, %d remain.",
+            r,(int)buf->datalen);
   return r;
 }
 
@@ -140,18 +135,13 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
  * more than <b>flushlen</b> bytes.
  */
 int
-buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
-              size_t *buf_flushlen)
+buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen)
 {
   int r;
   size_t flushed = 0;
   ssize_t sz;
-  tor_assert(buf_flushlen);
-  IF_BUG_ONCE(*buf_flushlen > buf->datalen) {
-    *buf_flushlen = buf->datalen;
-  }
-  IF_BUG_ONCE(flushlen > *buf_flushlen) {
-    flushlen = *buf_flushlen;
+  IF_BUG_ONCE(flushlen > buf->datalen) {
+    flushlen = buf->datalen;
   }
   sz = (ssize_t) flushlen;
 
@@ -170,7 +160,7 @@ buf_flush_to_tls(buf_t *buf, tor_tls_t *tls, size_t flushlen,
       flushlen0 = 0;
     }
 
-    r = flush_chunk_tls(tls, buf, buf->head, flushlen0, buf_flushlen);
+    r = flush_chunk_tls(tls, buf, buf->head, flushlen0);
     if (r < 0)
       return r;
     flushed += r;
