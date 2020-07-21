@@ -1572,7 +1572,7 @@ router_can_extend_over_ipv6,(const or_options_t *options))
 uint16_t
 router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
 {
-  int dirport_configured = get_primary_dir_port();
+  int dirport_configured = portconf_get_primary_dir_port();
   (void)options;
 
   if (!dirport_configured)

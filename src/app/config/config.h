@@ -160,10 +160,8 @@ MOCK_DECL(const smartlist_t *,get_configured_ports,(void));
 int port_binds_ipv4(const port_cfg_t *port);
 int port_binds_ipv6(const port_cfg_t *port);
 int portconf_get_first_advertised_port(int listener_type,
-                                         int address_family);
-#define get_primary_or_port() \
-  (portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER, AF_INET))
-#define get_primary_dir_port() \
+                                       int address_family);
+#define portconf_get_primary_dir_port() \
   (portconf_get_first_advertised_port(CONN_TYPE_DIR_LISTENER, AF_INET))
 const tor_addr_t *portconf_get_first_advertised_addr(int listener_type,
                                                        int address_family);
