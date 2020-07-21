@@ -302,6 +302,8 @@ test_find_addr_to_publish(void *arg)
 
   (void) arg;
 
+  memset(&options, 0, sizeof(options));
+
   /* Populate our resolved cache with a valid IPv4 and IPv6. */
   family = tor_addr_parse(&ipv4_addr, "1.2.3.4");
   tt_int_op(family, OP_EQ, AF_INET);

@@ -315,6 +315,7 @@ static const config_var_t option_vars_[] = {
   VAR("AccountingRule",          STRING,   AccountingRule_option,  "max"),
   V(AccountingStart,             STRING,   NULL),
   V(Address,                     LINELIST, NULL),
+  V(AddressDisableIPv6,          BOOL,     "0"),
   OBSOLETE("AllowDotExit"),
   OBSOLETE("AllowInvalidNodes"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),

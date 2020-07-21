@@ -632,6 +632,13 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   if (method_out) *method_out = NULL;
   if (hostname_out) *hostname_out = NULL;
 
+  /* If an IPv6 is requested, check if IPv6 address discovery is disabled and
+   * if so we always return a failure. It is done here so we don't populate
+   * the resolve cache or do any DNS resolution. */
+  if (family == AF_INET6 && options->AddressDisableIPv6) {
+    return false;
+  }
+
   /*
    * Step 1: Discover address by attempting 3 different methods consecutively.
    */

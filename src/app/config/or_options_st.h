@@ -75,6 +75,10 @@ struct or_options_t {
    * options is accepted as in IPv4 and IPv6. */
   struct config_line_t *Address;
 
+  /** Boolean: If set, disable IPv6 address resolution, IPv6 ORPorts, IPv6
+   * reachability checks, and publishing an IPv6 ORPort in its descriptor. */
+  int AddressDisableIPv6;
+
   char *PidFile; /**< Where to store PID of Tor process. */
 
   struct routerset_t *ExitNodes; /**< Structure containing nicknames, digests,

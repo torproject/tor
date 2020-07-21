@@ -1260,6 +1260,7 @@ get_interface_address6_failure(int severity, sa_family_t family,
   do {                                        \
     config_free_lines(options->Address);      \
     config_free_lines(options->ORPort_lines); \
+    options->AddressDisableIPv6 = 0;          \
     options->ORPort_set = 0;                  \
     tor_free(options->DirAuthorities);        \
     tor_free(hostname_out);                   \
@@ -1454,6 +1455,24 @@ test_config_find_my_address(void *arg)
 
   options = options_new();
   options_init(options);
+
+  /*
+   * Case 0:
+   *    AddressDisableIPv6 is set.
+   *
+   * Only run this if we are in the IPv6 test.
+   */
+  if (p->family == AF_INET6) {
+    options->AddressDisableIPv6 = 1;
+    /* Set a valid IPv6. However, the discovery should still fail. */
+    config_line_append(&options->Address, "Address", p->public_ip);
+    tor_addr_parse(&test_addr, p->public_ip);
+
+    retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                             &method_used, &hostname_out);
+    VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+    CLEANUP_FOUND_ADDRESS;
+  }
 
   /*
    * Case 1:

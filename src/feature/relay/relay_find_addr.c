@@ -105,6 +105,13 @@ relay_find_addr_to_publish, (const or_options_t *options, int family,
 
   tor_addr_make_unspec(addr_out);
 
+  /* If an IPv6 is requested, check if IPv6 address discovery is disabled on
+   * this instance. If so, we return a failure. It is done here so we don't
+   * query the suggested cache that might be populated with an IPv6. */
+  if (family == AF_INET6 && options->AddressDisableIPv6) {
+    return false;
+  }
+
   /* First, check our resolved address cache. It should contain the address
    * we've discovered from the periodic relay event. */
   resolved_addr_get_last(family, addr_out);
