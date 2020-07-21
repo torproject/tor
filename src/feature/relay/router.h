@@ -65,13 +65,13 @@ int init_keys_client(void);
 
 uint16_t router_get_active_listener_port_by_type_af(int listener_type,
                                                     sa_family_t family);
-void router_get_advertised_ipv6_or_ap(const or_options_t *options,
+void routerconf_find_ipv6_or_ap(const or_options_t *options,
                                       tor_addr_port_t *ipv6_ap_out);
-bool router_has_advertised_ipv6_orport(const or_options_t *options);
+bool routerconf_has_ipv6_orport(const or_options_t *options);
 MOCK_DECL(bool, router_can_extend_over_ipv6,(const or_options_t *options));
-uint16_t router_get_advertised_or_port(const or_options_t *options,
+uint16_t routerconf_find_or_port(const or_options_t *options,
                                        sa_family_t family);
-uint16_t router_get_advertised_dir_port(const or_options_t *options,
+uint16_t routerconf_find_dir_port(const or_options_t *options,
                                         uint16_t dirport);
 
 int router_should_advertise_dirport(const or_options_t *options,

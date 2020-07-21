@@ -1151,10 +1151,10 @@ init_keys(void)
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
     tor_addr_port_t ipv6_orport;
-    router_get_advertised_ipv6_or_ap(options, &ipv6_orport);
+    routerconf_find_ipv6_or_ap(options, &ipv6_orport);
     ds = trusted_dir_server_new(options->Nickname, NULL,
-                                router_get_advertised_dir_port(options, 0),
-                                router_get_advertised_or_port(options,AF_INET),
+                                routerconf_find_dir_port(options, 0),
+                                routerconf_find_or_port(options,AF_INET),
                                 &ipv6_orport,
                                 digest,
                                 v3_digest,
@@ -1306,10 +1306,10 @@ decide_to_advertise_dir_impl(const or_options_t *options,
     return 1;
   if (net_is_disabled())
     return 0;
-  if (dir_port && !router_get_advertised_dir_port(options, dir_port))
+  if (dir_port && !routerconf_find_dir_port(options, dir_port))
     return 0;
   if (supports_tunnelled_dir_requests &&
-      !router_get_advertised_or_port(options, AF_INET))
+      !routerconf_find_or_port(options, AF_INET))
     return 0;
 
   /* Part two: consider config options that could make us choose to
@@ -1390,7 +1390,7 @@ decide_if_publishable_server(void)
     return 0;
   if (authdir_mode(options))
     return 1;
-  if (!router_get_advertised_or_port(options, AF_INET))
+  if (!routerconf_find_or_port(options, AF_INET))
     return 0;
   if (!router_orport_seems_reachable(options, AF_INET)) {
     // We have an ipv4 orport, and it doesn't seem reachable.
@@ -1463,7 +1463,7 @@ router_get_active_listener_port_by_type_af(int listener_type,
  * family; this is either the one configured in the ORPort option, or the one
  * we actually bound to if ORPort is "auto". Returns 0 if no port is found. */
 uint16_t
-router_get_advertised_or_port(const or_options_t *options,
+routerconf_find_or_port(const or_options_t *options,
                               sa_family_t family)
 {
   int port = portconf_get_first_advertised_port(CONN_TYPE_OR_LISTENER,
@@ -1479,11 +1479,11 @@ router_get_advertised_or_port(const or_options_t *options,
   return port;
 }
 
-/** As router_get_advertised_or_port(), but returns the IPv6 address and
+/** As routerconf_find_or_port(), but returns the IPv6 address and
  *  port in ipv6_ap_out, which must not be NULL. Returns a null address and
  * zero port, if no ORPort is found. */
 void
-router_get_advertised_ipv6_or_ap(const or_options_t *options,
+routerconf_find_ipv6_or_ap(const or_options_t *options,
                                  tor_addr_port_t *ipv6_ap_out)
 {
   /* Bug in calling function, we can't return a sensible result, and it
@@ -1497,7 +1497,7 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
   const tor_addr_t *addr = portconf_get_first_advertised_addr(
                                                       CONN_TYPE_OR_LISTENER,
                                                       AF_INET6);
-  const uint16_t port = router_get_advertised_or_port(options,
+  const uint16_t port = routerconf_find_or_port(options,
                                                       AF_INET6);
 
   if (!addr || port == 0) {
@@ -1524,10 +1524,10 @@ router_get_advertised_ipv6_or_ap(const or_options_t *options,
 
 /** Returns true if this router has an advertised IPv6 ORPort. */
 bool
-router_has_advertised_ipv6_orport(const or_options_t *options)
+routerconf_has_ipv6_orport(const or_options_t *options)
 {
   tor_addr_port_t ipv6_ap;
-  router_get_advertised_ipv6_or_ap(options, &ipv6_ap);
+  routerconf_find_ipv6_or_ap(options, &ipv6_ap);
   return tor_addr_port_is_valid_ap(&ipv6_ap, 0);
 }
 
@@ -1552,7 +1552,7 @@ router_can_extend_over_ipv6,(const or_options_t *options))
 {
   /* We might add some extra checks here, such as ExtendAllowIPv6Addresses
   * from ticket 33818. */
-  return router_has_advertised_ipv6_orport(options);
+  return routerconf_has_ipv6_orport(options);
 }
 
 /** Return the port that we should advertise as our DirPort;
@@ -1561,7 +1561,7 @@ router_can_extend_over_ipv6,(const or_options_t *options))
  * the one configured in the DirPort option,
  * or the one we actually bound to if DirPort is "auto". */
 uint16_t
-router_get_advertised_dir_port(const or_options_t *options, uint16_t dirport)
+routerconf_find_dir_port(const or_options_t *options, uint16_t dirport)
 {
   int dirport_configured = portconf_get_primary_dir_port();
   (void)options;
@@ -2056,13 +2056,13 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
 
   /* IPv4. */
   tor_addr_copy(&ri->ipv4_addr, &ipv4_addr);
-  ri->ipv4_orport = router_get_advertised_or_port(options, AF_INET);
-  ri->ipv4_dirport = router_get_advertised_dir_port(options, 0);
+  ri->ipv4_orport = routerconf_find_or_port(options, AF_INET);
+  ri->ipv4_dirport = routerconf_find_dir_port(options, 0);
 
   /* IPv6. Do not publish an IPv6 if we don't have an ORPort that can be used
    * with the address. This is possible for instance if the ORPort is
    * IPv4Only. */
-  ipv6_orport = router_get_advertised_or_port(options, AF_INET6);
+  ipv6_orport = routerconf_find_or_port(options, AF_INET6);
   if (have_v6 && ipv6_orport != 0) {
     tor_addr_copy(&ri->ipv6_addr, &ipv6_addr);
     ri->ipv6_orport = ipv6_orport;

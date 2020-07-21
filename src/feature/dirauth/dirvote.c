@@ -4724,8 +4724,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   voter->sigs = smartlist_new();
   voter->address = hostname;
   tor_addr_copy(&voter->ipv4_addr, &addr);
-  voter->ipv4_dirport = router_get_advertised_dir_port(options, 0);
-  voter->ipv4_orport = router_get_advertised_or_port(options, AF_INET);
+  voter->ipv4_dirport = routerconf_find_dir_port(options, 0);
+  voter->ipv4_orport = routerconf_find_or_port(options, AF_INET);
   voter->contact = tor_strdup(contact);
   if (options->V3AuthUseLegacyKey) {
     authority_cert_t *c = get_my_v3_legacy_cert();

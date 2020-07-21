@@ -3168,10 +3168,10 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
   smartlist_t *replacements = smartlist_new();
   const or_options_t *options = get_options();
   int retval = 0;
-  const uint16_t old_or_port = router_get_advertised_or_port(options, AF_INET);
+  const uint16_t old_or_port = routerconf_find_or_port(options, AF_INET);
   const uint16_t old_or_port_ipv6 =
-    router_get_advertised_or_port(options,AF_INET6);
-  const uint16_t old_dir_port = router_get_advertised_dir_port(options, 0);
+    routerconf_find_or_port(options,AF_INET6);
+  const uint16_t old_dir_port = routerconf_find_dir_port(options, 0);
 
   SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
     if (connection_is_listener(conn) && !conn->marked_for_close)
@@ -3241,9 +3241,9 @@ retry_all_listeners(smartlist_t *new_conns, int close_all_noncontrol)
   SMARTLIST_FOREACH(replacements, listener_replacement_t *, r, tor_free(r));
   smartlist_free(replacements);
 
-  if (old_or_port != router_get_advertised_or_port(options, AF_INET) ||
-      old_or_port_ipv6 != router_get_advertised_or_port(options, AF_INET6) ||
-      old_dir_port != router_get_advertised_dir_port(options, 0)) {
+  if (old_or_port != routerconf_find_or_port(options, AF_INET) ||
+      old_or_port_ipv6 != routerconf_find_or_port(options, AF_INET6) ||
+      old_dir_port != routerconf_find_dir_port(options, 0)) {
     /* Our chosen ORPort or DirPort is not what it used to be: the
      * descriptor we had (if any) should be regenerated.  (We won't
      * automatically notice this because of changes in the option,
