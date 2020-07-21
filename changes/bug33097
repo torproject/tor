@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Remove the now-redundant 'outbuf_flushlen' field from our connection
+      type. It was previously used for an older version of our rate-limiting
+      logic. Closes ticket 33097.

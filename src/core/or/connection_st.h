@@ -98,8 +98,6 @@ struct connection_t {
   struct buf_t *inbuf; /**< Buffer holding data read over this connection. */
   struct buf_t *outbuf; /**< Buffer holding data to write over this
                          * connection. */
-  size_t outbuf_flushlen; /**< How much data should we try to flush from the
-                           * outbuf? */
   time_t timestamp_last_read_allowed; /**< When was the last time libevent said
                                        * we could read? */
   time_t timestamp_last_write_allowed; /**< When was the last time libevent
