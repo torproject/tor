@@ -2589,51 +2589,59 @@ log_addr_has_changed(int severity,
              addrbuf_cur, source);
 }
 
-/** Check whether our own address as defined by the Address configuration
- * has changed. This is for routers that get their address from a service
- * like dyndns. If our address has changed, mark our descriptor dirty. */
+/** Check whether our own address has changed versus the one we have in our
+ * current descriptor.
+ *
+ * If our address has changed, call ip_address_changed() which takes
+ * appropriate actions. */
 void
 check_descriptor_ipaddress_changed(time_t now)
 {
-  uint32_t prev, cur;
-  tor_addr_t addr;
-  const or_options_t *options = get_options();
+  const routerinfo_t *my_ri = router_get_my_routerinfo();
   const char *method = NULL;
   char *hostname = NULL;
-  const routerinfo_t *my_ri = router_get_my_routerinfo();
+  int families[2] = { AF_INET, AF_INET6 };
+  bool has_changed = false;
 
   (void) now;
 
-  if (my_ri == NULL) /* make sure routerinfo exists */
-    return;
-
-  /* XXXX ipv6 */
-  prev = tor_addr_to_ipv4h(&my_ri->ipv4_addr);
-  if (!find_my_address(options, AF_INET, LOG_INFO, &addr, &method,
-                       &hostname)) {
-    log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
+  /* We can't learn our descriptor address without one. */
+  if (my_ri == NULL) {
     return;
   }
-  cur = tor_addr_to_ipv4h(&addr);
 
-  if (prev != cur) {
-    char *source;
-    tor_addr_t tmp_prev, tmp_cur;
+  for (size_t i = 0; i < ARRAY_LENGTH(families); i++) {
+    tor_addr_t current;
+    const tor_addr_t *previous;
+    int family = families[i];
 
-    tor_addr_from_ipv4h(&tmp_prev, prev);
-    tor_addr_from_ipv4h(&tmp_cur, cur);
+    /* Get the descriptor address from the family we are looking up. */
+    previous = &my_ri->ipv4_addr;
+    if (family == AF_INET6) {
+      previous = &my_ri->ipv6_addr;
+    }
 
-    tor_asprintf(&source, "METHOD=%s%s%s", method,
-                 hostname ? " HOSTNAME=" : "",
-                 hostname ? hostname : "");
+    /* Ignore returned value because we want to notice not only an address
+     * change but also if an address is lost (current == UNSPEC). */
+    find_my_address(get_options(), family, LOG_INFO, &current, &method,
+                    &hostname);
 
-    log_addr_has_changed(LOG_NOTICE, &tmp_prev, &tmp_cur, source);
-    tor_free(source);
+    if (!tor_addr_eq(previous, &current)) {
+      char *source;
+      tor_asprintf(&source, "METHOD=%s%s%s",
+                   method ? method : "UNKNOWN",
+                   hostname ? " HOSTNAME=" : "",
+                   hostname ? hostname : "");
+      log_addr_has_changed(LOG_NOTICE, previous, &current, source);
+      tor_free(source);
+      has_changed = true;
+    }
+    tor_free(hostname);
+  }
 
+  if (has_changed) {
     ip_address_changed(0);
   }
-
-  tor_free(hostname);
 }
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
