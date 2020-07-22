@@ -71,6 +71,7 @@
 #include "core/or/relay.h"
 #include "core/or/scheduler.h"
 #include "feature/client/entrynodes.h"
+#include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
@@ -755,6 +756,7 @@ channel_check_for_duplicates(void)
 {
   channel_idmap_entry_t **iter;
   channel_t *chan;
+  int total_dirauth_connections = 0, total_dirauths = 0;
   int total_relay_connections = 0, total_relays = 0, total_canonical = 0;
   int total_half_canonical = 0;
   int total_gt_one_connection = 0, total_gt_two_connections = 0;
@@ -762,12 +764,17 @@ channel_check_for_duplicates(void)
 
   HT_FOREACH(iter, channel_idmap, &channel_identity_map) {
     int connections_to_relay = 0;
+    const char *id_digest = (char *) (*iter)->digest;
 
     /* Only consider relay connections */
-    if (!connection_or_digest_is_known_relay((char*)(*iter)->digest))
+    if (!connection_or_digest_is_known_relay(id_digest))
       continue;
 
     total_relays++;
+
+    const bool is_dirauth = router_digest_is_trusted_dir(id_digest);
+    if (is_dirauth)
+      total_dirauths++;
 
     for (chan = TOR_LIST_FIRST(&(*iter)->channel_list); chan;
         chan = channel_next_with_rsa_identity(chan)) {
@@ -777,6 +784,8 @@ channel_check_for_duplicates(void)
 
       connections_to_relay++;
       total_relay_connections++;
+      if (is_dirauth)
+        total_dirauth_connections++;
 
       if (chan->is_canonical(chan, 0)) total_canonical++;
 
@@ -791,11 +800,28 @@ channel_check_for_duplicates(void)
     if (connections_to_relay > 4) total_gt_four_connections++;
   }
 
-#define MIN_RELAY_CONNECTIONS_TO_WARN 5
+  /* Don't bother warning about excessive connections unless we have
+   * at least this many connections, total.
+   */
+#define MIN_RELAY_CONNECTIONS_TO_WARN 25
+  /* If the average number of connections for a regular relay is more than
+   * this, that's too high.
+   */
+#define MAX_AVG_RELAY_CONNECTIONS 1.5
+  /* If the average number of connections for a dirauth is more than
+   * this, that's too high.
+   */
+#define MAX_AVG_DIRAUTH_CONNECTIONS 4
+
+  /* How many connections total would be okay, given the number of
+   * relays and dirauths that we have connections to? */
+  const int max_tolerable_connections = (int)(
+    (total_relays-total_dirauths) * MAX_AVG_RELAY_CONNECTIONS +
+    total_dirauths * MAX_AVG_DIRAUTH_CONNECTIONS);
 
   /* If we average 1.5 or more connections per relay, something is wrong */
   if (total_relays > MIN_RELAY_CONNECTIONS_TO_WARN &&
-          total_relay_connections >= 1.5*total_relays) {
+      total_relay_connections > max_tolerable_connections) {
     log_notice(LD_OR,
         "Your relay has a very large number of connections to other relays. "
         "Is your outbound address the same as your relay address? "
