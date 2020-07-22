@@ -651,6 +651,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   tor_assert(addr_out);
 
   /* Set them to NULL for safety reasons. */
+  tor_addr_make_unspec(addr_out);
   if (method_out) *method_out = NULL;
   if (hostname_out) *hostname_out = NULL;
 
