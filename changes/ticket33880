@@ -1,0 +1,6 @@
+  o Minor bugfixes (relay, usability):
+    - Adjust the rules for when to warn about having too many connections
+      to other relays. Previously we'd tolerate up to 1.5 connections
+      per relay on average.  Now we tolerate more connections for directory
+      authorities, and raise the number of total connections we need
+      to see before we warn.  Fixes bug 33880; bugfix on 0.3.1.1-alpha.
