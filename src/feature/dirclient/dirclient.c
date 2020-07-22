@@ -686,12 +686,14 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
    * connect to it. */
   if (!have_or && !have_dir) {
     static int logged_backtrace = 0;
+    char *ipv6_str = tor_addr_to_str_dup(&status->ipv6_addr);
     log_info(LD_BUG, "Rejected all OR and Dir addresses from %s when "
              "launching an outgoing directory connection to: IPv4 %s OR %d "
              "Dir %d IPv6 %s OR %d Dir %d", routerstatus_describe(status),
              fmt_addr(&status->ipv4_addr), status->ipv4_orport,
-             status->ipv4_dirport, fmt_addr(&status->ipv6_addr),
-             status->ipv6_orport, status->ipv4_dirport);
+             status->ipv4_dirport, ipv6_str, status->ipv6_orport,
+             status->ipv4_dirport);
+    tor_free(ipv6_str);
     if (!logged_backtrace) {
       log_backtrace(LOG_INFO, LD_BUG, "Addresses came from");
       logged_backtrace = 1;
