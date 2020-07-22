@@ -14,6 +14,7 @@
 #include "core/mainloop/mainloop.h"
 
 #include "feature/control/control_events.h"
+#include "feature/dirauth/authmode.h"
 
 #include "lib/encoding/confline.h"
 #include "lib/net/gethostname.h"
@@ -536,12 +537,15 @@ resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
   *done_one_resolve = true;
 }
 
+/** Ease our lives. Typedef to the address discovery function signature. */
+typedef fn_address_ret_t
+  (*fn_address_t)(
+     const or_options_t *options, int warn_severity, int family,
+     const char **method_out, char **hostname_out, tor_addr_t *addr_out);
+
 /** Address discovery function table. The order matters as in the first one is
  * executed first and so on. */
-static fn_address_ret_t
-  (*fn_address_table[])(
-    const or_options_t *options, int warn_severity, int family,
-    const char **method_out, char **hostname_out, tor_addr_t *addr_out) =
+static const fn_address_t fn_address_table[] =
 {
   /* These functions are in order for our find address algorithm. */
   get_address_from_config,
@@ -550,7 +554,23 @@ static fn_address_ret_t
   get_address_from_hostname,
 };
 /** Length of address table as in how many functions. */
-static const size_t fn_address_table_len = ARRAY_LENGTH(fn_address_table);
+static const size_t fn_address_table_len =
+  ARRAY_LENGTH(fn_address_table);
+
+/* Address discover function table for authorities (bridge or directory).
+ *
+ * They only discover their address from either the configuration file or the
+ * ORPort. They do not query the interface nor do any DNS resolution for
+ * security reasons. */
+static const fn_address_t fn_address_table_auth[] =
+{
+  /* These functions are in order for our find address algorithm. */
+  get_address_from_config,
+  get_address_from_orport,
+};
+/** Length of address table as in how many functions. */
+static const size_t fn_address_table_auth_len =
+  ARRAY_LENGTH(fn_address_table_auth);
 
 /** @brief Attempt to find our IP address that can be used as our external
  *         reachable address.
@@ -624,6 +644,8 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
   const char *method_used = NULL;
   char *hostname_used = NULL;
   tor_addr_t my_addr;
+  const fn_address_t *table = fn_address_table;
+  size_t table_len = fn_address_table_len;
 
   tor_assert(options);
   tor_assert(addr_out);
@@ -639,15 +661,20 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
     return false;
   }
 
+  /* For authorities (bridge and directory), we use a different table. */
+  if (authdir_mode(options)) {
+    table = fn_address_table_auth;
+    table_len = fn_address_table_auth_len;
+  }
+
   /*
-   * Step 1: Discover address by attempting 3 different methods consecutively.
+   * Step 1: Discover address by calling methods from the function table.
    */
 
   /* Go over the function table. They are in order. */
-  for (size_t idx = 0; idx < fn_address_table_len; idx++) {
-    fn_address_ret_t ret = fn_address_table[idx](options, warn_severity,
-                                                 family, &method_used,
-                                                 &hostname_used, &my_addr);
+  for (size_t idx = 0; idx < table_len; idx++) {
+    fn_address_ret_t ret = table[idx](options, warn_severity, family,
+                                      &method_used, &hostname_used, &my_addr);
     if (ret == FN_RET_BAIL) {
       return false;
     } else if (ret == FN_RET_OK) {
