@@ -2621,16 +2621,15 @@ check_descriptor_ipaddress_changed(time_t now)
       previous = &my_ri->ipv6_addr;
     }
 
-    if (!find_my_address(get_options(), family, LOG_INFO, &current, &method,
-                         &hostname)) {
-      /* Not found, continue onto next family. Logging is done within the
-       * function called. */
-      continue;
-    }
+    /* Ignore returned value because we want to notice not only an address
+     * change but also if an address is lost (current == UNSPEC). */
+    find_my_address(get_options(), family, LOG_INFO, &current, &method,
+                    &hostname);
 
     if (!tor_addr_eq(previous, &current)) {
       char *source;
-      tor_asprintf(&source, "METHOD=%s%s%s", method,
+      tor_asprintf(&source, "METHOD=%s%s%s",
+                   method ? method : "UNKNOWN",
                    hostname ? " HOSTNAME=" : "",
                    hostname ? hostname : "");
       log_addr_has_changed(LOG_NOTICE, previous, &current, source);
