@@ -1,0 +1,4 @@
+  o Major feature (fallbackdir):
+    - Rebuilding list for 2020. This includes 144 relays as fallback
+      directories. Closes ticket 40061.
+
