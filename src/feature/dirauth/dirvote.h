@@ -53,13 +53,17 @@
 #define MIN_SUPPORTED_CONSENSUS_METHOD 28
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 29
+#define MAX_SUPPORTED_CONSENSUS_METHOD 30
 
 /**
  * Lowest consensus method where microdescriptor lines are put in canonical
  * form for improved compressibility and ease of storage. See proposal 298.
  **/
 #define MIN_METHOD_FOR_CANONICAL_FAMILIES_IN_MICRODESCS 29
+
+/** Lowest consensus method where an unpadded base64 onion-key-ntor is allowed
+ * See #7869 */
+#define MIN_METHOD_FOR_UNPADDED_NTOR_KEY 30
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not

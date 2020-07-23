@@ -2107,21 +2107,21 @@ test_crypto_curve25519_encode(void *arg)
 {
   curve25519_secret_key_t seckey;
   curve25519_public_key_t key1, key2, key3;
-  char buf[64];
+  char buf[64], buf_nopad[64];
 
   (void)arg;
 
   curve25519_secret_key_generate(&seckey, 0);
   curve25519_public_key_generate(&key1, &seckey);
-  curve25519_public_to_base64(buf, &key1);
+  curve25519_public_to_base64(buf, &key1, true);
   tt_int_op(CURVE25519_BASE64_PADDED_LEN, OP_EQ, strlen(buf));
 
   tt_int_op(0, OP_EQ, curve25519_public_from_base64(&key2, buf));
   tt_mem_op(key1.public_key,OP_EQ, key2.public_key, CURVE25519_PUBKEY_LEN);
 
-  buf[CURVE25519_BASE64_PADDED_LEN - 1] = '\0';
-  tt_int_op(CURVE25519_BASE64_PADDED_LEN-1, OP_EQ, strlen(buf));
-  tt_int_op(0, OP_EQ, curve25519_public_from_base64(&key3, buf));
+  curve25519_public_to_base64(buf_nopad, &key1, false);
+  tt_int_op(CURVE25519_BASE64_LEN, OP_EQ, strlen(buf_nopad));
+  tt_int_op(0, OP_EQ, curve25519_public_from_base64(&key3, buf_nopad));
   tt_mem_op(key1.public_key,OP_EQ, key3.public_key, CURVE25519_PUBKEY_LEN);
 
   /* Now try bogus parses. */
