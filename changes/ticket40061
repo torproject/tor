@@ -1,0 +1,5 @@
+  o Major feature (fallback directory list):
+    - Replace the 148 fallback directories originally included in
+      Tor 0.4.1.4-rc (of which around 105 are still functional) with
+      a list of 144 fallbacks generated in July 2020.
+      Closes ticket 40061.
