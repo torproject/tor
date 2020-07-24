@@ -187,7 +187,7 @@ static void
 remove_duplicate_orports(smartlist_t *ports)
 {
   /* First we'll decide what to remove, then we'll remove it. */
-  bool *removing = tor_malloc_zero(sizeof(bool));
+  bool *removing = tor_calloc(smartlist_len(ports), sizeof(bool));
 
   for (int i = 0; i < smartlist_len(ports); ++i) {
     const port_cfg_t *current = smartlist_get(ports, i);
