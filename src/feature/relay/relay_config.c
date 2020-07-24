@@ -186,8 +186,14 @@ describe_relay_port(const port_cfg_t *port)
 static void
 remove_duplicate_orports(smartlist_t *ports)
 {
+  /* First we'll decide what to remove, then we'll remove it. */
+  bool *removing = tor_calloc(smartlist_len(ports), sizeof(bool));
+
   for (int i = 0; i < smartlist_len(ports); ++i) {
-    port_cfg_t *current = smartlist_get(ports, i);
+    const port_cfg_t *current = smartlist_get(ports, i);
+    if (removing[i]) {
+      continue;
+    }
 
     /* Skip non ORPorts. */
     if (current->type != CONN_TYPE_OR_LISTENER) {
@@ -195,10 +201,13 @@ remove_duplicate_orports(smartlist_t *ports)
     }
 
     for (int j = 0; j < smartlist_len(ports); ++j) {
-      port_cfg_t *next = smartlist_get(ports, j);
+      const port_cfg_t *next = smartlist_get(ports, j);
 
       /* Avoid comparing the same object. */
       if (current == next) {
+        continue;
+      }
+      if (removing[j]) {
         continue;
       }
       /* Same address family and same port number, we have a match. */
@@ -206,15 +215,26 @@ remove_duplicate_orports(smartlist_t *ports)
           tor_addr_family(&current->addr) == tor_addr_family(&next->addr) &&
           current->port == next->port) {
         /* Remove current because next is explicitly set. */
-        smartlist_del_keeporder(ports, i--);
+        removing[i] = true;
         char *next_str = tor_strdup(describe_relay_port(next));
         log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
                  describe_relay_port(current), next_str);
         tor_free(next_str);
-        port_cfg_free(current);
       }
     }
   }
+
+  /* Iterate over array in reverse order to keep indices valid. */
+  for (int i = smartlist_len(ports)-1; i >= 0; --i) {
+    tor_assert(i < smartlist_len(ports));
+    if (removing[i]) {
+      port_cfg_t *current = smartlist_get(ports, i);
+      smartlist_del_keeporder(ports, i);
+      port_cfg_free(current);
+    }
+  }
+
+  tor_free(removing);
 }
 
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
