@@ -12,6 +12,8 @@
 #include "orconfig.h"
 #include "core/or/or.h"
 
+#include "app/config/resolve_addr.h"
+
 #include "core/mainloop/periodic.h"
 #include "core/mainloop/cpuworker.h" // XXXX use a pubsub event.
 #include "core/mainloop/mainloop.h"
@@ -218,14 +220,31 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
           tor_asprintf(&where6, "[%s]:%d", address6, me->ipv6_orport);
         const char *opt_and = (!v4_ok && !v6_ok) ? "and" : "";
 
-        log_warn(LD_CONFIG,
-                 "Your server has not managed to confirm reachability for "
-                 "its ORPort(s) at %s%s%s. Relays do not publish descriptors "
-                 "until their ORPort and DirPort are reachable. Please check "
-                 "your firewalls, ports, address, /etc/hosts file, etc.",
-                 where4?where4:"",
-                 opt_and,
-                 where6?where6:"");
+        /* IPv4 reachability test worked but not the IPv6. We will _not_
+         * publish the descriptor if our IPv6 was configured. We will if it
+         * was auto discovered. */
+        if (v4_ok && !v6_ok && !resolved_addr_is_configured(AF_INET6)) {
+          static ratelim_t rlim = RATELIM_INIT(3600);
+          log_fn_ratelim(&rlim, LOG_NOTICE, LD_CONFIG,
+                         "Auto-discovered IPv6 address %s has not been found "
+                         "reachable. However, IPv4 address is reachable. "
+                         "Publishing server descriptor without IPv6 address.",
+                         where6 ? where6 : "");
+          /* Indicate we want to publish even if reachability test failed. */
+          mark_my_descriptor_if_omit_ipv6_changes("IPv4 is reachable. "
+                                                  "IPv6 is not but was "
+                                                  "auto-discovered", true);
+        } else {
+          log_warn(LD_CONFIG,
+                   "Your server has not managed to confirm reachability for "
+                   "its ORPort(s) at %s%s%s. Relays do not publish "
+                   "descriptors until their ORPort and DirPort are "
+                   "reachable. Please check your firewalls, ports, address, "
+                   "/etc/hosts file, etc.",
+                   where4?where4:"",
+                   opt_and,
+                   where6?where6:"");
+        }
         tor_free(where4);
         tor_free(where6);
         if (!v4_ok) {

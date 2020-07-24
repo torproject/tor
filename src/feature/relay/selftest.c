@@ -398,6 +398,7 @@ router_orport_found_reachable(int family)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   const or_options_t *options = get_options();
+  const char *reachable_reason = "ORPort found reachable";
   bool *can_reach_ptr;
   if (family == AF_INET) {
     can_reach_ptr = &can_reach_or_port_ipv4;
@@ -422,7 +423,13 @@ router_orport_found_reachable(int family)
                ready_to_publish(options) ?
                " Publishing server descriptor." : "");
 
-    mark_my_descriptor_dirty("ORPort found reachable");
+    /* Make sure our descriptor is marked to publish the IPv6 if it is now
+     * reachable. This can change at runtime. */
+    if (family == AF_INET6) {
+      mark_my_descriptor_if_omit_ipv6_changes(reachable_reason, false);
+    } else {
+      mark_my_descriptor_dirty(reachable_reason);
+    }
     /* This is a significant enough change to upload immediately,
      * at least in a test network */
     if (options->TestingTorNetwork == 1) {

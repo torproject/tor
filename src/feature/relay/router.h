@@ -84,6 +84,8 @@ void router_new_consensus_params(const networkstatus_t *);
 void router_upload_dir_desc_to_dirservers(int force);
 void mark_my_descriptor_dirty_if_too_old(time_t now);
 void mark_my_descriptor_dirty(const char *reason);
+void mark_my_descriptor_if_omit_ipv6_changes(const char *reason,
+                                               bool omit_ipv6);
 void check_descriptor_bandwidth_changed(time_t now);
 void check_descriptor_ipaddress_changed(time_t now);
 int router_has_bandwidth_to_be_dirserver(const or_options_t *options);

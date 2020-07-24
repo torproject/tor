@@ -2442,6 +2442,34 @@ router_new_consensus_params(const networkstatus_t *ns)
   publish_even_when_ipv6_orport_unreachable = ar || ar6;
 }
 
+/** Indicate if the IPv6 address should be omitted from the descriptor when
+ * publishing it. This can happen if the IPv4 is reachable but the
+ * auto-discovered IPv6 is not. We still publish the descriptor.
+ *
+ * Only relays should look at this and only for their descriptor.
+ *
+ * XXX: The real harder fix is to never put in the routerinfo_t a non
+ * reachable address and instead use the last resolved address cache to do
+ * reachability test or anything that has to do with what address tor thinks
+ * it has. */
+static bool omit_ipv6_on_publish = false;
+
+/** Mark our descriptor out of data iff the IPv6 omit status flag is flipped
+ * it changes from its previous value.
+ *
+ * This is used when our IPv6 port is found reachable or not. */
+void
+mark_my_descriptor_if_omit_ipv6_changes(const char *reason, bool omit_ipv6)
+{
+  bool previous = omit_ipv6_on_publish;
+  omit_ipv6_on_publish = omit_ipv6;
+
+  /* Only mark it dirty if the IPv6 omit flag was flipped. */
+  if (previous != omit_ipv6) {
+    mark_my_descriptor_dirty(reason);
+  }
+}
+
 /** If our router descriptor ever goes this long without being regenerated
  * because something changed, we force an immediate regenerate-and-upload. */
 #define FORCE_REGENERATE_DESCRIPTOR_INTERVAL (18*60*60)
@@ -2847,7 +2875,7 @@ router_dump_router_to_string(routerinfo_t *router,
     }
   }
 
-  if (router->ipv6_orport &&
+  if (!omit_ipv6_on_publish && router->ipv6_orport &&
       tor_addr_family(&router->ipv6_addr) == AF_INET6) {
     char addr[TOR_ADDR_BUF_LEN];
     const char *a;
