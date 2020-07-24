@@ -71,6 +71,29 @@ af_to_idx(const int family)
   }
 }
 
+/** Return string representation of the given method. */
+const char *
+resolved_addr_method_to_str(const resolved_addr_method_t method)
+{
+  switch (method) {
+  case RESOLVED_ADDR_NONE:
+    return "NONE";
+  case RESOLVED_ADDR_CONFIGURED:
+    return "CONFIGURED";
+  case RESOLVED_ADDR_CONFIGURED_ORPORT:
+    return "CONFIGURED_ORPORT";
+  case RESOLVED_ADDR_GETHOSTNAME:
+    return "GETHOSTNAME";
+  case RESOLVED_ADDR_INTERFACE:
+    return "INTERFACE";
+  case RESOLVED_ADDR_RESOLVED:
+    return "RESOLVED";
+  default:
+    tor_assert_nonfatal_unreached();
+    return "???";
+  }
+}
+
 /** Copy the last suggested address of family into addr_out.
  *
  * If no last suggested address exists, the addr_out is a null address (use
@@ -178,8 +201,8 @@ address_can_be_used(const tor_addr_t *addr, const or_options_t *options,
  * @param options Global configuration options.
  * @param warn_severity Log level that should be used on error.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
- * @param method_out OUT: String denoting by which method the address was
- *                   found. This is described in the control-spec.txt as
+ * @param method_out OUT: Method denoting how the address was found.
+ *                   This is described in the control-spec.txt as
  *                   actions for "STATUS_SERVER".
  * @param hostname_out OUT: String containing the hostname gotten from the
  *                     Address value if any.
@@ -191,7 +214,7 @@ address_can_be_used(const tor_addr_t *addr, const or_options_t *options,
  */
 static fn_address_ret_t
 get_address_from_config(const or_options_t *options, int warn_severity,
-                        int family, const char **method_out,
+                        int family, resolved_addr_method_t *method_out,
                         char **hostname_out, tor_addr_t *addr_out)
 {
   int ret;
@@ -205,7 +228,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
 
   /* Set them to NULL for safety reasons. */
   *hostname_out = NULL;
-  *method_out = NULL;
+  *method_out = RESOLVED_ADDR_NONE;
 
   log_debug(LD_CONFIG, "Attempting to get address from configuration");
 
@@ -223,7 +246,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
     af = tor_addr_parse(&addr, cfg->value);
     if (af == family) {
       tor_addr_copy(addr_out, &addr);
-      *method_out = "CONFIGURED";
+      *method_out = RESOLVED_ADDR_CONFIGURED;
       explicit_ip = true;
       num_valid_addr++;
       continue;
@@ -237,7 +260,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
      * do a DNS lookup. */
     if (!tor_addr_lookup(cfg->value, family, &addr)) {
       tor_addr_copy(addr_out, &addr);
-      *method_out = "RESOLVED";
+      *method_out = RESOLVED_ADDR_RESOLVED;
       if (*hostname_out) {
         tor_free(*hostname_out);
       }
@@ -299,8 +322,8 @@ get_address_from_config(const or_options_t *options, int warn_severity,
  * @param options Global configuration options.
  * @param warn_severity Log level that should be used on error.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
- * @param method_out OUT: String denoting by which method the address was
- *                   found. This is described in the control-spec.txt as
+ * @param method_out OUT: Method denoting how the address was found.
+ *                   This is described in the control-spec.txt as
  *                   actions for "STATUS_SERVER".
  * @param hostname_out OUT: String containing the local hostname.
  * @param addr_out OUT: Tor address resolved from the local hostname.
@@ -310,7 +333,7 @@ get_address_from_config(const or_options_t *options, int warn_severity,
  */
 static fn_address_ret_t
 get_address_from_hostname(const or_options_t *options, int warn_severity,
-                          int family, const char **method_out,
+                          int family, resolved_addr_method_t *method_out,
                           char **hostname_out, tor_addr_t *addr_out)
 {
   int ret;
@@ -321,7 +344,7 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
 
   /* Set them to NULL for safety reasons. */
   *hostname_out = NULL;
-  *method_out = NULL;
+  *method_out = RESOLVED_ADDR_NONE;
 
   log_debug(LD_CONFIG, "Attempting to get address from local hostname");
 
@@ -347,7 +370,7 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
   }
 
   /* addr_out contains the address of the local hostname. */
-  *method_out = "GETHOSTNAME";
+  *method_out = RESOLVED_ADDR_GETHOSTNAME;
   *hostname_out = tor_strdup(hostname);
 
   /* Found it! */
@@ -361,8 +384,9 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
  * @param options Global configuration options.
  * @param warn_severity Log level that should be used on error.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
- * @param method_out OUT: Always "INTERFACE" on success which is detailed in
- *                   the control-spec.txt as actions for "STATUS_SERVER".
+ * @param method_out OUT: Always RESOLVED_ADDR_INTERFACE on success which
+ *                   is detailed in the control-spec.txt as actions
+ *                   for "STATUS_SERVER".
  * @param hostname_out OUT: String containing the local hostname. For this
  *                     function, it is always set to NULL.
  * @param addr_out OUT: Tor address found attached to the interface.
@@ -372,7 +396,7 @@ get_address_from_hostname(const or_options_t *options, int warn_severity,
  */
 static fn_address_ret_t
 get_address_from_interface(const or_options_t *options, int warn_severity,
-                           int family, const char **method_out,
+                           int family, resolved_addr_method_t *method_out,
                            char **hostname_out, tor_addr_t *addr_out)
 {
   int ret;
@@ -382,7 +406,7 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
   tor_assert(addr_out);
 
   /* Set them to NULL for safety reasons. */
-  *method_out = NULL;
+  *method_out = RESOLVED_ADDR_NONE;
   *hostname_out = NULL;
 
   log_debug(LD_CONFIG, "Attempting to get address from network interface");
@@ -400,7 +424,7 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
     return FN_RET_NEXT;
   }
 
-  *method_out = "INTERFACE";
+  *method_out = RESOLVED_ADDR_INTERFACE;
 
   /* Found it! */
   log_info(LD_CONFIG, "Address found from interface: %s", fmt_addr(addr_out));
@@ -412,8 +436,8 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
  * @param options Global configuration options.
  * @param warn_severity Log level that should be used on error.
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
- * @param method_out OUT: Always "CONFIGURED_ORPORT" on success which is
- *                   detailed in the control-spec.txt as actions
+ * @param method_out OUT: Always RESOLVED_ADDR_CONFIGURED_ORPORT on success
+ *                   which is detailed in the control-spec.txt as actions
  *                   for "STATUS_SERVER".
  * @param hostname_out OUT: String containing the ORPort hostname if any.
  * @param addr_out OUT: Tor address found if any.
@@ -423,7 +447,7 @@ get_address_from_interface(const or_options_t *options, int warn_severity,
  */
 static fn_address_ret_t
 get_address_from_orport(const or_options_t *options, int warn_severity,
-                        int family, const char **method_out,
+                        int family, resolved_addr_method_t *method_out,
                         char **hostname_out, tor_addr_t *addr_out)
 {
   int ret;
@@ -432,6 +456,10 @@ get_address_from_orport(const or_options_t *options, int warn_severity,
   tor_assert(method_out);
   tor_assert(hostname_out);
   tor_assert(addr_out);
+
+  /* Set them to NULL for safety reasons. */
+  *method_out = RESOLVED_ADDR_NONE;
+  *hostname_out = NULL;
 
   log_debug(LD_CONFIG, "Attempting to get address from ORPort");
 
@@ -456,7 +484,7 @@ get_address_from_orport(const or_options_t *options, int warn_severity,
   }
 
   /* Found it! */
-  *method_out = "CONFIGURED_ORPORT";
+  *method_out = RESOLVED_ADDR_CONFIGURED_ORPORT;
   tor_addr_copy(addr_out, addr);
 
   log_fn(warn_severity, LD_CONFIG, "Address found from ORPort: %s",
@@ -481,7 +509,8 @@ get_address_from_orport(const or_options_t *options, int warn_severity,
  *                      NULL. (for logging and control port).
  */
 void
-resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
+resolved_addr_set_last(const tor_addr_t *addr,
+                       const resolved_addr_method_t method_used,
                        const char *hostname_used)
 {
   /** Have we done a first resolve. This is used to control logging. */
@@ -493,7 +522,6 @@ resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
   tor_addr_t *last_resolved;
 
   tor_assert(addr);
-  tor_assert(method_used);
 
   /* Do we have an hostname. */
   have_hostname = (hostname_used != NULL);
@@ -520,7 +548,8 @@ resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
     log_notice(LD_NET,
                "Your IP address seems to have changed to %s "
                "(METHOD=%s%s%s). Updating.",
-               fmt_addr(addr), method_used,
+               fmt_addr(addr),
+               resolved_addr_method_to_str(method_used),
                have_hostname ? " HOSTNAME=" : "",
                have_hostname ? hostname_used : "");
     ip_address_changed(0);
@@ -529,7 +558,8 @@ resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
   /* Notify control port. */
   control_event_server_status(LOG_NOTICE,
                               "EXTERNAL_ADDRESS ADDRESS=%s METHOD=%s%s%s",
-                              fmt_addr(addr), method_used,
+                              fmt_addr(addr),
+                              resolved_addr_method_to_str(method_used),
                               have_hostname ? " HOSTNAME=" : "",
                               have_hostname ? hostname_used : "");
   /* Copy address to cache. */
@@ -541,7 +571,8 @@ resolved_addr_set_last(const tor_addr_t *addr, const char *method_used,
 typedef fn_address_ret_t
   (*fn_address_t)(
      const or_options_t *options, int warn_severity, int family,
-     const char **method_out, char **hostname_out, tor_addr_t *addr_out);
+     resolved_addr_method_t *method_out, char **hostname_out,
+     tor_addr_t *addr_out);
 
 /** Address discovery function table. The order matters as in the first one is
  * executed first and so on. */
@@ -586,16 +617,16 @@ static const size_t fn_address_table_auth_len =
  *  1. Look at the configuration Address option.
 
  *     If Address is a public address, True is returned and addr_out is set
- *     with it, the method_out is set to "CONFIGURED" and hostname_out is set
- *     to NULL.
+ *     with it, the method_out is set to RESOLVED_ADDR_CONFIGURED and
+ *     hostname_out is set to NULL.
  *
  *     If Address is an internal address but NO custom authorities are used,
  *     an error is returned.
  *
  *     If Address is a hostname, that is it can't be converted to an address,
  *     it is resolved. On success, addr_out is set with the address,
- *     method_out is set to "RESOLVED" and hostname_out is set to the resolved
- *     hostname. On failure to resolve, an error is returned.
+ *     method_out is set to RESOLVED_ADDR_RESOLVED and hostname_out is set
+ *     to the resolved hostname. On failure to resolve, an error is returned.
  *
  *     If no given Address, fallback to the local hostname (see section 2).
  *
@@ -606,14 +637,14 @@ static const size_t fn_address_table_auth_len =
  *
  *     On failure, we attempt to look at the local hostname (3).
  *
- *     On success, addr_out is set with it, method_out is set to "INTERFACE"
- *     and hostname_out is set to NULL.
+ *     On success, addr_out is set with it, method_out is set to
+ *     RESOLVED_ADDR_INTERFACE and hostname_out is set to NULL.
  *
  *  3. Look at the local hostname.
  *
  *     If the local hostname resolves to a non internal address, addr_out is
- *     set with it, method_out is set to "GETHOSTNAME" and hostname_out is set
- *     to the resolved hostname.
+ *     set with it, method_out is set to RESOLVED_ADDR_GETHOSTNAME and
+ *     hostname_out is set to the resolved hostname.
  *
  *     If a local hostname can NOT be found, an error is returned.
  *
@@ -626,11 +657,11 @@ static const size_t fn_address_table_auth_len =
  * @param family IP address family. Only AF_INET and AF_INET6 are supported.
  * @param warn_severity Logging level.
  * @param addr_out OUT: Set with the IP address found if any.
- * @param method_out OUT: (optional) String denoting by which method the
- *                   address was found. This is described in the
- *                   control-spec.txt as actions for "STATUS_SERVER".
+ * @param method_out OUT: (optional) Method denoting how the address wa
+ *                   found. This is described in the control-spec.txt as
+ *                   actions for "STATUS_SERVER".
  * @param hostname_out OUT: String containing the hostname if any was used.
- *                     Only be set for "RESOLVED" and "GETHOSTNAME" methods.
+ *                     Only be set for RESOLVED and GETHOSTNAME methods.
  *                     Else it is set to NULL.
  *
  * @return True if the address was found for the given family. False if not or
@@ -638,10 +669,10 @@ static const size_t fn_address_table_auth_len =
  */
 bool
 find_my_address(const or_options_t *options, int family, int warn_severity,
-                tor_addr_t *addr_out, const char **method_out,
+                tor_addr_t *addr_out, resolved_addr_method_t *method_out,
                 char **hostname_out)
 {
-  const char *method_used = NULL;
+  resolved_addr_method_t method_used = RESOLVED_ADDR_NONE;
   char *hostname_used = NULL;
   tor_addr_t my_addr;
   const fn_address_t *table = fn_address_table;
@@ -652,7 +683,7 @@ find_my_address(const or_options_t *options, int family, int warn_severity,
 
   /* Set them to NULL for safety reasons. */
   tor_addr_make_unspec(addr_out);
-  if (method_out) *method_out = NULL;
+  if (method_out) *method_out = RESOLVED_ADDR_NONE;
   if (hostname_out) *hostname_out = NULL;
 
   /* If an IPv6 is requested, check if IPv6 address discovery is disabled and

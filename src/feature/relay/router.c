@@ -2598,7 +2598,7 @@ void
 check_descriptor_ipaddress_changed(time_t now)
 {
   const routerinfo_t *my_ri = router_get_my_routerinfo();
-  const char *method = NULL;
+  resolved_addr_method_t method = RESOLVED_ADDR_NONE;
   char *hostname = NULL;
   int families[2] = { AF_INET, AF_INET6 };
   bool has_changed = false;
@@ -2629,7 +2629,7 @@ check_descriptor_ipaddress_changed(time_t now)
     if (!tor_addr_eq(previous, &current)) {
       char *source;
       tor_asprintf(&source, "METHOD=%s%s%s",
-                   method ? method : "UNKNOWN",
+                   resolved_addr_method_to_str(method),
                    hostname ? " HOSTNAME=" : "",
                    hostname ? hostname : "");
       log_addr_has_changed(LOG_NOTICE, previous, &current, source);

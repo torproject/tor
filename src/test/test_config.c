@@ -1244,8 +1244,7 @@ get_interface_address6_failure(int severity, sa_family_t family,
 #define VALIDATE_FOUND_ADDRESS(ret, method, hostname)     \
   do {                                                    \
     tt_int_op(retval, OP_EQ, ret);                        \
-    if (method == NULL) tt_assert(!method_used);          \
-    else tt_str_op(method_used, OP_EQ, method);           \
+    tt_int_op(method, OP_EQ, method_used);                \
     if (hostname == NULL) tt_assert(!hostname_out);       \
     else tt_str_op(hostname_out, OP_EQ, hostname);        \
     if (ret == true) {                                    \
@@ -1274,7 +1273,7 @@ test_config_find_my_address_mixed(void *arg)
 {
   or_options_t *options;
   tor_addr_t resolved_addr, test_addr;
-  const char *method_used;
+  resolved_addr_method_t method_used;
   char *hostname_out = NULL;
   bool retval;
 
@@ -1294,7 +1293,7 @@ test_config_find_my_address_mixed(void *arg)
   /* IPv6 address should be found and considered configured. */
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
 
   CLEANUP_FOUND_ADDRESS;
 
@@ -1309,13 +1308,13 @@ test_config_find_my_address_mixed(void *arg)
   /* IPv4 address should be found and considered configured. */
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
 
   /* IPv6 address should be found and considered configured. */
   tor_addr_parse(&test_addr, "2a01:4f8:fff0:4f:266:37ff:fe2c:5d19");
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
 
   CLEANUP_FOUND_ADDRESS;
 
@@ -1332,14 +1331,16 @@ test_config_find_my_address_mixed(void *arg)
   tor_addr_parse(&test_addr, "1.1.1.1");
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v4");
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_RESOLVED,
+                         "www.torproject.org.v4");
   tor_free(hostname_out);
 
   /* IPv6 address should be found and considered resolved. */
   tor_addr_parse(&test_addr, "0101::0101");
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v6");
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_RESOLVED,
+                         "www.torproject.org.v6");
 
   CLEANUP_FOUND_ADDRESS;
   UNMOCK(tor_addr_lookup);
@@ -1357,13 +1358,14 @@ test_config_find_my_address_mixed(void *arg)
   tor_addr_parse(&test_addr, "1.1.1.1");
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
 
   /* IPv6 address should be found and considered resolved. */
   tor_addr_parse(&test_addr, "0101::0101");
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v6");
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_RESOLVED,
+                         "www.torproject.org.v6");
 
   CLEANUP_FOUND_ADDRESS;
   UNMOCK(tor_addr_lookup);
@@ -1381,14 +1383,15 @@ test_config_find_my_address_mixed(void *arg)
   tor_addr_parse(&test_addr, "1.1.1.1");
   retval = find_my_address(options, AF_INET, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org.v4");
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_RESOLVED,
+                         "www.torproject.org.v4");
   tor_free(hostname_out);
 
   /* IPv6 address should be found and considered resolved. */
   tor_addr_parse(&test_addr, "0101::0101");
   retval = find_my_address(options, AF_INET6, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(tor_addr_lookup);
@@ -1439,7 +1442,7 @@ test_config_find_my_address(void *arg)
 {
   or_options_t *options;
   tor_addr_t resolved_addr, test_addr;
-  const char *method_used;
+  resolved_addr_method_t method_used;
   char *hostname_out = NULL;
   bool retval;
   int prev_n_hostname_01010101;
@@ -1470,7 +1473,7 @@ test_config_find_my_address(void *arg)
 
     retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                              &method_used, &hostname_out);
-    VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+    VALIDATE_FOUND_ADDRESS(false, RESOLVED_ADDR_NONE, NULL);
     CLEANUP_FOUND_ADDRESS;
   }
 
@@ -1486,7 +1489,7 @@ test_config_find_my_address(void *arg)
   retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   /*
@@ -1503,7 +1506,7 @@ test_config_find_my_address(void *arg)
                            &method_used, &hostname_out);
 
   tt_int_op(n_hostname_01010101, OP_EQ, ++prev_n_hostname_01010101);
-  VALIDATE_FOUND_ADDRESS(true, "RESOLVED", "www.torproject.org");
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_RESOLVED, "www.torproject.org");
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(tor_addr_lookup);
@@ -1523,7 +1526,7 @@ test_config_find_my_address(void *arg)
                             "public IP addresses.");
   teardown_capture_of_logs();
 
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  VALIDATE_FOUND_ADDRESS(false, RESOLVED_ADDR_NONE, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   /*
@@ -1537,7 +1540,7 @@ test_config_find_my_address(void *arg)
   retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
 
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   /*
@@ -1554,7 +1557,7 @@ test_config_find_my_address(void *arg)
   expect_log_msg_containing("Found 2 Address statement of address family");
   teardown_capture_of_logs();
 
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  VALIDATE_FOUND_ADDRESS(false, RESOLVED_ADDR_NONE, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   /*
@@ -1575,7 +1578,7 @@ test_config_find_my_address(void *arg)
                            &method_used, &hostname_out);
 
   tt_int_op(n_get_interface_address6, OP_EQ, ++prev_n_get_interface_address6);
-  VALIDATE_FOUND_ADDRESS(true, "INTERFACE", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_INTERFACE, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);
@@ -1608,7 +1611,7 @@ test_config_find_my_address(void *arg)
             ++prev_n_hostname_01010101);
   tt_int_op(n_gethostname_replacement, OP_EQ,
             ++prev_n_gethostname_replacement);
-  VALIDATE_FOUND_ADDRESS(true, "GETHOSTNAME", "onionrouter!");
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_GETHOSTNAME, "onionrouter!");
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);
@@ -1642,7 +1645,7 @@ test_config_find_my_address(void *arg)
             ++prev_n_hostname_localhost);
   tt_int_op(n_gethostname_localhost, OP_EQ,
             ++prev_n_gethostname_localhost);
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  VALIDATE_FOUND_ADDRESS(false, RESOLVED_ADDR_NONE, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);
@@ -1672,7 +1675,7 @@ test_config_find_my_address(void *arg)
             ++prev_n_get_interface_address6_failure);
   tt_int_op(n_gethostname_failure, OP_EQ,
             ++prev_n_gethostname_failure);
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  VALIDATE_FOUND_ADDRESS(false, RESOLVED_ADDR_NONE, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);
@@ -1705,7 +1708,7 @@ test_config_find_my_address(void *arg)
             ++prev_n_gethostname_replacement);
   tt_int_op(n_hostname_failure, OP_EQ,
             ++prev_n_hostname_failure);
-  VALIDATE_FOUND_ADDRESS(false, NULL, NULL);
+  VALIDATE_FOUND_ADDRESS(false, RESOLVED_ADDR_NONE, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   /*
@@ -1736,7 +1739,7 @@ test_config_find_my_address(void *arg)
 
   retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
                            &method_used, &hostname_out);
-  VALIDATE_FOUND_ADDRESS(true, "CONFIGURED_ORPORT", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED_ORPORT, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   /*
@@ -1774,7 +1777,7 @@ test_config_find_my_address(void *arg)
                            &method_used, &hostname_out);
 
   tt_int_op(n_get_interface_address6, OP_EQ, ++prev_n_get_interface_address6);
-  VALIDATE_FOUND_ADDRESS(true, "INTERFACE", NULL);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_INTERFACE, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);

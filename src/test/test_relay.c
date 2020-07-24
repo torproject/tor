@@ -307,13 +307,13 @@ test_find_addr_to_publish(void *arg)
   /* Populate our resolved cache with a valid IPv4 and IPv6. */
   family = tor_addr_parse(&ipv4_addr, "1.2.3.4");
   tt_int_op(family, OP_EQ, AF_INET);
-  resolved_addr_set_last(&ipv4_addr, "NA", NULL);
+  resolved_addr_set_last(&ipv4_addr, RESOLVED_ADDR_CONFIGURED, NULL);
   resolved_addr_get_last(AF_INET, &cache_addr);
   tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
 
   family = tor_addr_parse(&ipv6_addr, "[4242::4242]");
   tt_int_op(family, OP_EQ, AF_INET6);
-  resolved_addr_set_last(&ipv6_addr, "NA", NULL);
+  resolved_addr_set_last(&ipv6_addr, RESOLVED_ADDR_CONFIGURED, NULL);
   resolved_addr_get_last(AF_INET6, &cache_addr);
   tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
 
