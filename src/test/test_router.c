@@ -7,9 +7,12 @@
  * \brief Unittests for code in router.c
  **/
 
+#define CONFIG_PRIVATE
+#define CONNECTION_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/mainloop/mainloop.h"
+#include "core/mainloop/connection.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h"
@@ -17,6 +20,9 @@
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/encoding/confline.h"
+
+#include "core/or/listener_connection_st.h"
 
 /* Test suite stuff */
 #include "test/test.h"
@@ -231,11 +237,101 @@ test_router_check_descriptor_bandwidth_changed(void *arg)
   UNMOCK(we_are_hibernating);
 }
 
+static smartlist_t *fake_connection_array = NULL;
+static smartlist_t *
+mock_get_connection_array(void)
+{
+  return fake_connection_array;
+}
+
+static void
+test_router_get_advertised_or_port(void *arg)
+{
+  (void)arg;
+  int r, w=0, n=0;
+  char *msg=NULL;
+  or_options_t *opts = options_new();
+  listener_connection_t *listener = NULL;
+  tor_addr_port_t ipv6;
+
+  // Test one failing case of router_get_advertised_ipv6_or_ap().
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::]:0");
+
+  // Set up a couple of configured ports.
+  config_line_append(&opts->ORPort_lines, "ORPort", "[1234::5678]:9999");
+  config_line_append(&opts->ORPort_lines, "ORPort", "5.6.7.8:auto");
+  r = parse_ports(opts, 0, &msg, &n, &w);
+  tt_assert(r == 0);
+
+  // There are no listeners, so the "auto" case will turn up no results.
+  tt_int_op(0, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+
+  // This will return the matching value from the configured port.
+  tt_int_op(9999, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET6));
+
+  // Now set up a dummy listener.
+  MOCK(get_connection_array, mock_get_connection_array);
+  fake_connection_array = smartlist_new();
+  listener = listener_connection_new(CONN_TYPE_OR_LISTENER, AF_INET);
+  TO_CONN(listener)->port = 54321;
+  smartlist_add(fake_connection_array, TO_CONN(listener));
+
+  // We should get a port this time.
+  tt_int_op(54321, OP_EQ, router_get_advertised_or_port_by_af(opts, AF_INET));
+
+  // Test one succeeding case of router_get_advertised_ipv6_or_ap().
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ,
+            "[1234::5678]:9999");
+
+ done:
+  or_options_free(opts);
+  config_free_all();
+  smartlist_free(fake_connection_array);
+  connection_free_minimal(TO_CONN(listener));
+  UNMOCK(get_connection_array);
+}
+
+static void
+test_router_get_advertised_or_port_localhost(void *arg)
+{
+  (void)arg;
+  int r, w=0, n=0;
+  char *msg=NULL;
+  or_options_t *opts = options_new();
+  tor_addr_port_t ipv6;
+
+  // Set up a couple of configured ports on localhost.
+  config_line_append(&opts->ORPort_lines, "ORPort", "[::1]:9999");
+  config_line_append(&opts->ORPort_lines, "ORPort", "127.0.0.1:8888");
+  r = parse_ports(opts, 0, &msg, &n, &w);
+  tt_assert(r == 0);
+
+  // We should refuse to advertise them, since we have default dirauths.
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::]:0");
+
+  // Now try with a fake authority set up.
+  config_line_append(&opts->DirAuthorities, "DirAuthority",
+                     "127.0.0.1:1066 "
+                     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+
+  router_get_advertised_ipv6_or_ap(opts, &ipv6);
+  tt_str_op(fmt_addrport(&ipv6.addr, ipv6.port), OP_EQ, "[::1]:9999");
+
+ done:
+  or_options_free(opts);
+  config_free_all();
+}
+
 #define ROUTER_TEST(name, flags)                          \
   { #name, test_router_ ## name, flags, NULL, NULL }
 
 struct testcase_t router_tests[] = {
   ROUTER_TEST(check_descriptor_bandwidth_changed, TT_FORK),
   ROUTER_TEST(dump_router_to_string_no_bridge_distribution_method, TT_FORK),
+  ROUTER_TEST(get_advertised_or_port, TT_FORK),
+  ROUTER_TEST(get_advertised_or_port_localhost, TT_FORK),
   END_OF_TESTCASES
 };

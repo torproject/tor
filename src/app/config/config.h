@@ -295,6 +295,10 @@ STATIC int open_and_add_file_log(const log_severity_list_t *severity,
                                  const char *fname,
                                  int truncate_log);
 
+STATIC int parse_ports(or_options_t *options, int validate_only,
+                       char **msg, int *n_ports_out,
+                       int *world_writable_control_socket);
+
 #endif /* defined(CONFIG_PRIVATE) */
 
 #endif /* !defined(TOR_CONFIG_H) */
