@@ -1651,11 +1651,12 @@ static void
 circuit_testing_opened(origin_circuit_t *circ)
 {
   if (have_performed_bandwidth_test ||
-      !router_all_orports_seem_reachable(get_options())) {
+      !router_orport_seems_reachable(get_options(), AF_INET)) {
     /* either we've already done everything we want with testing circuits,
-     * or this testing circuit became open due to a fluke, e.g. we picked
-     * a last hop where we already had the connection open due to an
-     * outgoing local circuit. */
+     * OR this IPv4 testing circuit became open due to a fluke, e.g. we picked
+     * a last hop where we already had the connection open due to a
+     * outgoing local circuit, OR this is an IPv6 self-test circuit, not
+     * a bandwidth test circuit. */
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
   } else if (circuit_enough_testing_circs()) {
     router_perform_bandwidth_test(NUM_PARALLEL_TESTING_CIRCS, time(NULL));
