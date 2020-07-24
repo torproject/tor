@@ -49,6 +49,8 @@ void resolved_addr_set_last(const tor_addr_t *addr,
 void resolved_addr_get_suggested(int family, tor_addr_t *addr_out);
 void resolved_addr_set_suggested(const tor_addr_t *addr);
 
+bool resolved_addr_is_configured(int family);
+
 MOCK_DECL(bool, is_local_to_resolve_addr, (const tor_addr_t *addr));
 
 #ifdef RESOLVE_ADDR_PRIVATE

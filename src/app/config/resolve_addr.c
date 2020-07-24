@@ -55,6 +55,11 @@ static tor_addr_t last_suggested_addrs[] =
   { TOR_ADDR_NULL, TOR_ADDR_NULL, TOR_ADDR_NULL };
 CTASSERT(ARRAY_LENGTH(last_suggested_addrs) == IDX_SIZE);
 
+/** True iff the address was found to be configured that is from the
+ * configuration file either using Address or ORPort. */
+static bool last_addrs_configured[] = { false, false, false };
+CTASSERT(ARRAY_LENGTH(last_addrs_configured) == IDX_SIZE);
+
 static inline int
 af_to_idx(const int family)
 {
@@ -92,6 +97,18 @@ resolved_addr_method_to_str(const resolved_addr_method_t method)
     tor_assert_nonfatal_unreached();
     return "???";
   }
+}
+
+/** Return true if the last address of family was configured or not. An
+ * address is considered configured if it was found in the Address or ORPort
+ * statement.
+ *
+ * This applies to the address returned by the function
+ * resolved_addr_get_last() which is the cache of discovered addresses. */
+bool
+resolved_addr_is_configured(int family)
+{
+  return last_addrs_configured[af_to_idx(family)];
 }
 
 /** Copy the last suggested address of family into addr_out.
@@ -565,6 +582,13 @@ resolved_addr_set_last(const tor_addr_t *addr,
   /* Copy address to cache. */
   tor_addr_copy(last_resolved, addr);
   *done_one_resolve = true;
+
+  /* Flag true if the address was configured. Else, indicate it was not. */
+  last_addrs_configured[idx] = false;
+  if (method_used == RESOLVED_ADDR_CONFIGURED ||
+      method_used == RESOLVED_ADDR_CONFIGURED_ORPORT) {
+    last_addrs_configured[idx] = true;
+  }
 }
 
 /** Ease our lives. Typedef to the address discovery function signature. */
