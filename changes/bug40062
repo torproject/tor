@@ -1,0 +1,6 @@
+  o Minor features (onion services):
+    - When writing an onion service hostname file, first read it to make
+      sure it contains what we want before attempting to write it. Now
+      onion services can set their existing onion service directories to
+      read-only and Tor will still work. Resolves ticket 40062. Patch by
+      Neel Chauhan.
