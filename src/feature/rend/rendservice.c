@@ -1554,7 +1554,7 @@ rend_service_load_keys(rend_service_t *s)
   fname = rend_service_path(s, hostname_fname);
 
   tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
-  if (write_str_to_file(fname,buf,0)<0) {
+  if (write_str_if_not_equal(fname, buf)) {
     log_warn(LD_CONFIG, "Could not write onion address to hostname file.");
     goto err;
   }
