@@ -835,7 +835,7 @@ router_initialize_tls_context(void)
 STATIC int
 router_write_fingerprint(int hashed, int ed25519_identity)
 {
-  char *keydir = NULL, *cp = NULL;
+  char *keydir = NULL;
   const char *fname = hashed ? "hashed-fingerprint" :
                       (ed25519_identity ? "fingerprint-ed25519" :
                                           "fingerprint");
@@ -870,7 +870,7 @@ router_write_fingerprint(int hashed, int ed25519_identity)
   tor_asprintf(&fingerprint_line, "%s %s\n", options->Nickname, fingerprint);
 
   /* Check whether we need to write the (hashed-)fingerprint file. */
-  if (write_str_if_not_equal(keydir, fingerprint_line)) {
+  if (write_str_to_file_if_not_equal(keydir, fingerprint_line)) {
     log_err(LD_FS, "Error writing %s%s line to file",
             hashed ? "hashed " : "",
             ed25519_identity ? "ed25519 identity" : "fingerprint");
@@ -884,7 +884,6 @@ router_write_fingerprint(int hashed, int ed25519_identity)
 
   result = 0;
  done:
-  tor_free(cp);
   tor_free(keydir);
   tor_free(fingerprint_line);
   return result;
