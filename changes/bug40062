@@ -1,0 +1,5 @@
+  o Major bugfixes (onion services):
+    - When writing an onion service hostname file, first read it to make
+      sure it contains what we want before attempting to write it. This
+      prevents a bug where we can't read an onion service directory if it's
+      read-only. Fixes bug 40062; bugfix on 0.0.6. Patch by Neel Chauhan.
