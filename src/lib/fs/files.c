@@ -718,6 +718,25 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
   return string;
 }
 
+/** Attempt to read a file <b>fname</b>. If the file's contents is
+ * equal to the string <b>str</b>, return 0. Otherwise, attempt to
+ * overwrite the file with the contents of <b>str</b> and return
+ * the value of write_str_to_file().
+ */
+int
+write_str_if_not_equal(const char *fname, const char *str)
+{
+  char *fstr;
+
+  fstr = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
+
+  if (!fstr || strcmp(str, fstr)) {
+    return write_str_to_file(fname, str, 0);
+  } else {
+    return 0;
+  }
+}
+
 #if !defined(HAVE_GETDELIM) || defined(TOR_UNIT_TESTS)
 #include "ext/getdelim.c"
 #endif
