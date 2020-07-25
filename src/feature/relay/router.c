@@ -870,15 +870,11 @@ router_write_fingerprint(int hashed, int ed25519_identity)
   tor_asprintf(&fingerprint_line, "%s %s\n", options->Nickname, fingerprint);
 
   /* Check whether we need to write the (hashed-)fingerprint file. */
-
-  cp = read_file_to_str(keydir, RFTS_IGNORE_MISSING, NULL);
-  if (!cp || strcmp(cp, fingerprint_line)) {
-    if (write_str_to_file(keydir, fingerprint_line, 0)) {
-      log_err(LD_FS, "Error writing %s%s line to file",
-              hashed ? "hashed " : "",
-              ed25519_identity ? "ed25519 identity" : "fingerprint");
-      goto done;
-    }
+  if (write_str_if_not_equal(keydir, fingerprint_line)) {
+    log_err(LD_FS, "Error writing %s%s line to file",
+            hashed ? "hashed " : "",
+            ed25519_identity ? "ed25519 identity" : "fingerprint");
+    goto done;
   }
 
   log_notice(LD_GENERAL, "Your Tor %s identity key %s fingerprint is '%s %s'",
