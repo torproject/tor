@@ -11,21 +11,18 @@ Changes in version 0.4.4.3-alpha - 2020-07-2?
   o Major bugfixes (NSS):
     - When running with NSS enabled, make sure that NSS knows to expect
       nonblocking sockets. Previously, we set our TCP sockets as
-      blocking, but did not tell NSS about the fact, which in turn could
-      lead to unexpected blocking behavior. Fixes bug 40035; bugfix
+      nonblocking, but did not tell NSS, which in turn could lead to
+      unexpected blocking behavior. Fixes bug 40035; bugfix
       on 0.3.5.1-alpha.
 
   o Minor bugfixes (linux seccomp2 sandbox):
     - Fix a regression on sandboxing rules for the openat() syscall. The
       fix for bug 25440 fixed the problem on systems with glibc >= 2.27
-      but broke tor on previous versions of glibc. We now apply the
-      correct seccomp rule according to the running glibc version. Patch
-      from Daniel Pinto. Fixes bug 27315; bugfix on 0.3.5.11.
+      but broke with versions of glibc. We now choose a rule based on
+      the glibc version. Patch from Daniel Pinto. Fixes bug 27315;
+      bugfix on 0.3.5.11.
     - Makes the seccomp sandbox allow the correct syscall for opendir
-      according to the running glibc version. The opendir function
-      either uses open or openat but the current code does not
-      differenciate between opendir and open calls. This adds a new
-      seccomp sandbox rule for opendir. This fixes crashes when
+      according to the running glibc version. This fixes crashes when
       reloading torrc with sandbox enabled when running on glibc 2.15 to
       2.21 and 2.26. Patch from Daniel Pinto. Fixes bug 40020; bugfix
       on 0.3.5.11.
