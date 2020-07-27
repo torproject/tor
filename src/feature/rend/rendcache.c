@@ -340,8 +340,9 @@ rend_cache_failure_purge(void)
 
 /** Lookup the rend failure cache using a relay identity digest in
  * <b>identity</b> which has DIGEST_LEN bytes and service ID <b>service_id</b>
- * which is a null-terminated string. If found, the intro failure is set in
- * <b>intro_entry</b> else it stays untouched. Return 1 iff found else 0. */
+ * which is a null-terminated string. If @a intro_entry is provided, then it
+ * is set to the entry on success, and to NULL on failure.
+ * Return 1 iff found else 0. */
 STATIC int
 cache_failure_intro_lookup(const uint8_t *identity, const char *service_id,
                            rend_cache_failure_intro_t **intro_entry)
