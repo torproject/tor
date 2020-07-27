@@ -991,7 +991,7 @@ conn_close_if_marked(int i)
                connection_get_outbuf_len(conn),
                conn->marked_for_close_file, conn->marked_for_close);
     if (conn->linked_conn) {
-      retval = buf_move_all(conn->linked_conn->inbuf, conn->outbuf);
+      retval = (int) buf_move_all(conn->linked_conn->inbuf, conn->outbuf);
       if (retval >= 0) {
         /* The linked conn will notice that it has data when it notices that
          * we're gone. */
