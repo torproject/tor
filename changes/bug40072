@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Fix startup crash with seccomp sandbox enabled when tor tries to
+      open the data directory. Patch from Daniel Pinto. Fixes bug 40072; 
+      bugfix on 0.4.4.3-alpha-dev.
