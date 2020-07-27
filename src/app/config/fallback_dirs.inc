@@ -465,11 +465,6 @@ URL: https:onionoo.torproject.orguptime?typerelay&first_seen_days90-&last_seen_d
 /* extrainfo=0 */
 /* ===== */
 ,
-"31.185.104.19:80 orport=443 id=9EAD5B2D3DBD96DBC80DCE423B0C345E920A758D"
-/* nickname=Digitalcourage3ip1 */
-/* extrainfo=0 */
-/* ===== */
-,
 "46.28.110.244:80 orport=443 id=9F7D6E6420183C2B76D3CE99624EBC98A21A967E"
 /* nickname=Nivrim */
 /* extrainfo=0 */
@@ -526,11 +521,6 @@ URL: https:onionoo.torproject.orguptime?typerelay&first_seen_days90-&last_seen_d
 ,
 "176.10.104.240:8080 orport=8443 id=AD86CD1A49573D52A7B6F4A35750F161AAD89C88"
 /* nickname=DigiGesTor1e2 */
-/* extrainfo=0 */
-/* ===== */
-,
-"31.185.104.20:80 orport=443 id=ADB2C26629643DBB9F8FE0096E7D16F9414B4F8D"
-/* nickname=Digitalcourage3ip2 */
 /* extrainfo=0 */
 /* ===== */
 ,
@@ -614,11 +604,6 @@ URL: https:onionoo.torproject.orguptime?typerelay&first_seen_days90-&last_seen_d
 "109.70.100.3:80 orport=443 id=C282248597D1C8522A2A7525E61C8B77BBC37614"
 " ipv6=[2a03:e600:100::3]:443"
 /* nickname=erbse */
-/* extrainfo=0 */
-/* ===== */
-,
-"31.185.104.21:80 orport=443 id=C2AAB088555850FC434E68943F551072042B85F1"
-/* nickname=Digitalcourage3ip3 */
 /* extrainfo=0 */
 /* ===== */
 ,
