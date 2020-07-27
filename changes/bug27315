@@ -1,6 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox):
-    - Fix a regression on sandboxing rules for the openat() syscall.
-      The fix for bug 25440 fixed the problem on systems with glibc >=
-      2.27 but broke tor on previous versions of glibc. We now apply 
-      the correct seccomp rule according to the running glibc version.
-      Patch from Daniel Pinto. Fixes bug 27315; bugfix on 0.3.5.11.
