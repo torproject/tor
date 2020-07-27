@@ -1,4 +1,4 @@
-Changes in version 0.4.4.3-alpha - 2020-07-2?
+Changes in version 0.4.4.3-alpha - 2020-07-27
   Tor 0.4.4.3-alpha fixes several annoyances in previous versions,
   including one affecting NSS users, and several affecting the Linux
   seccomp2 sandbox.
