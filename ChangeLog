@@ -1,3 +1,54 @@
+Changes in version 0.4.4.3-alpha - 2020-07-27
+  Tor 0.4.4.3-alpha fixes several annoyances in previous versions,
+  including one affecting NSS users, and several affecting the Linux
+  seccomp2 sandbox.
+
+  o Major features (fallback directory list):
+    - Replace the 148 fallback directories originally included in Tor
+      0.4.1.4-rc (of which around 105 are still functional) with a list
+      of 144 fallbacks generated in July 2020. Closes ticket 40061.
+
+  o Major bugfixes (NSS):
+    - When running with NSS enabled, make sure that NSS knows to expect
+      nonblocking sockets. Previously, we set our TCP sockets as
+      nonblocking, but did not tell NSS, which in turn could lead to
+      unexpected blocking behavior. Fixes bug 40035; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Fix a regression on sandboxing rules for the openat() syscall. The
+      fix for bug 25440 fixed the problem on systems with glibc >= 2.27
+      but broke with versions of glibc. We now choose a rule based on
+      the glibc version. Patch from Daniel Pinto. Fixes bug 27315;
+      bugfix on 0.3.5.11.
+    - Makes the seccomp sandbox allow the correct syscall for opendir
+      according to the running glibc version. This fixes crashes when
+      reloading torrc with sandbox enabled when running on glibc 2.15 to
+      2.21 and 2.26. Patch from Daniel Pinto. Fixes bug 40020; bugfix
+      on 0.3.5.11.
+
+  o Minor bugfixes (relay, usability):
+    - Adjust the rules for when to warn about having too many
+      connections to other relays. Previously we'd tolerate up to 1.5
+      connections per relay on average. Now we tolerate more connections
+      for directory authorities, and raise the number of total
+      connections we need to see before we warn. Fixes bug 33880; bugfix
+      on 0.3.1.1-alpha.
+
+  o Documentation:
+    - Replace most http:// URLs in our code and documentation with
+      https:// URLs. (We have left unchanged the code in src/ext/, and
+      the text in LICENSE.) Closes ticket 31812. Patch from Jeremy Rand.
+
+  o Removed features:
+    - Our "check-local" test target no longer tries to use the
+      Coccinelle semantic patching tool parse all the C files. While it
+      is a good idea to try to make sure Coccinelle works on our C
+      before we run a Coccinelle patch, doing so on every test run has
+      proven to be disruptive. You can still run this tool manually with
+      "make check-cocci". Closes ticket 40030.
+
+
 Changes in version 0.3.5.11 - 2020-07-09
   Tor 0.3.5.11 backports fixes from later tor releases, including several
   usability, portability, and reliability fixes.
