@@ -178,7 +178,7 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
   return result;
 }
 
-/** Parse an exit policy line of the format "accept[6]/reject[6] private:...".
+/** Parse an exit policy line of the format "accept[6]/reject[6] private[46]:...".
  * This didn't exist until Tor 0.1.1.15, so nobody should generate it in
  * router descriptors until earlier versions are obsolete.
  *
@@ -198,10 +198,23 @@ router_parse_addr_policy_private(directory_token_t *tok)
 
   arg += strlen("private");
   arg = (char*) eat_whitespace(arg);
-  if (!arg || *arg != ':')
+  if (!arg)
     return NULL;
 
-  if (parse_port_range(arg+1, &port_min, &port_max)<0)
+  /* we want to warn on accept6/reject6 in conjunction with IPv4 private addrs */
+  bool has_ipv4_policies = (*arg != '6');
+
+  /* "private4" and "private6" which may be followed by a port specifier */
+  if (*arg == '4' || *arg == '6')
+    ++arg;
+
+  /* accept only "private", "private4", "private6", with or without following
+   * port, or bail */
+  if (*arg != ':' || *arg != '\0')
+    return NULL;
+
+  /* handle port or bail */
+  if (*arg == ':' && parse_port_range(arg+1, &port_min, &port_max)<0)
     return NULL;
 
   memset(&result, 0, sizeof(result));
@@ -213,7 +226,7 @@ router_parse_addr_policy_private(directory_token_t *tok)
   result.prt_min = port_min;
   result.prt_max = port_max;
 
-  if (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) {
+  if (has_ipv4_policies && (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6)) {
     log_warn(LD_GENERAL,
              "'%s' expands into rules which apply to all private IPv4 and "
              "IPv6 addresses. (Use accept/reject private:* for IPv4 and "
