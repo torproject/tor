@@ -657,15 +657,7 @@ sb_opendir(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
     if (param != NULL && param->prot == 1 && param->syscall
         == PHONY_OPENDIR_SYSCALL) {
-      if (libc_uses_openat_for_opendir()) {
-        rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat),
-            SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
-            SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value),
-            SCMP_CMP(2, SCMP_CMP_EQ, O_RDONLY|O_NONBLOCK|O_LARGEFILE|
-                O_DIRECTORY|O_CLOEXEC));
-      } else {
-        rc = allow_file_open(ctx, 0, param->value);
-      }
+      rc = allow_file_open(ctx, libc_uses_openat_for_opendir(), param->value);
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add openat syscall, received "
             "libseccomp error %d", rc);
