@@ -729,6 +729,9 @@ write_str_to_file_if_not_equal(const char *fname, const char *str)
   char *fstr = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
 
   if (!fstr || strcmp(str, fstr)) {
+    if (fstr) {
+      tor_free(fstr);
+    }
     return write_str_to_file(fname, str, 0);
   } else {
     if (fstr) {
