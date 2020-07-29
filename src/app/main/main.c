@@ -849,8 +849,10 @@ sandbox_init_filter(void)
     OPEN_DATADIR2(name, name2 suffix);                  \
   } while (0)
 
+// KeyDirectory is a directory, but it is only opened in check_private_dir
+// which calls open instead of opendir
 #define OPEN_KEY_DIRECTORY() \
-  OPENDIR(options->KeyDirectory)
+  OPEN(options->KeyDirectory)
 #define OPEN_CACHEDIR(name)                      \
   sandbox_cfg_allow_open_filename(&cfg, get_cachedir_fname(name))
 #define OPEN_CACHEDIR_SUFFIX(name, suffix) do {  \
@@ -864,7 +866,9 @@ sandbox_init_filter(void)
     OPEN_KEYDIR(name suffix);                    \
   } while (0)
 
-  OPENDIR(options->DataDirectory);
+  // DataDirectory is a directory, but it is only opened in check_private_dir
+  // which calls open instead of opendir
+  OPEN(options->DataDirectory);
   OPEN_KEY_DIRECTORY();
 
   OPEN_CACHEDIR_SUFFIX("cached-certs", ".tmp");
