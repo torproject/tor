@@ -6497,6 +6497,35 @@ test_config_getinfo_config_names(void *arg)
   tor_free(answer);
 }
 
+static void
+test_config_duplicate_orports(void *arg)
+{
+  (void)arg;
+
+  config_line_t *config_port = NULL;
+  smartlist_t *ports = smartlist_new();
+
+  config_port = mock_config_line("ORPort", "127.0.0.1:9050");
+  port_parse_config(ports, config_port, "OR", CONN_TYPE_OR_LISTENER, "0.0.0.0",
+                    0, CL_PORT_SERVER_OPTIONS);
+  config_free_lines(config_port);
+
+  config_port = mock_config_line("ORPort", "[::1]:9050");
+  port_parse_config(ports, config_port, "OR", CONN_TYPE_OR_LISTENER, "[::]",
+                    0, CL_PORT_SERVER_OPTIONS);
+  config_free_lines(config_port);
+
+  tt_int_op(smartlist_len(ports), OP_EQ, 2);
+
+  remove_duplicate_orports(ports);
+
+  tt_int_op(smartlist_len(ports), OP_EQ, 1);
+
+ done:
+  SMARTLIST_FOREACH(ports,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_free(ports);
+}
+
 #ifndef COCCI
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
@@ -6562,5 +6591,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(extended_fmt, 0),
   CONFIG_TEST(kvline_parse, 0),
   CONFIG_TEST(getinfo_config_names, 0),
+  CONFIG_TEST(duplicate_orports, 0),
   END_OF_TESTCASES
 };

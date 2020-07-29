@@ -183,7 +183,7 @@ describe_relay_port(const port_cfg_t *port)
  *
  * The following is O(n^2) but it is done at bootstrap or config reload and
  * the list is not very long usually. */
-static void
+STATIC void
 remove_duplicate_orports(smartlist_t *ports)
 {
   /* First we'll decide what to remove, then we'll remove it. */
