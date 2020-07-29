@@ -6497,6 +6497,39 @@ test_config_getinfo_config_names(void *arg)
   tor_free(answer);
 }
 
+static void
+test_config_duplicate_orports(void *arg)
+{
+  (void)arg;
+
+  config_line_t *config_port = NULL;
+  smartlist_t *ports = smartlist_new();
+
+  // Pretend that the user has specified an implicit 0.0.0.0:9050, an implicit
+  // [::]:9050, and an explicit on [::1]:9050.
+  config_line_append(&config_port, "ORPort", "9050"); // two implicit entries.
+  config_line_append(&config_port, "ORPort", "[::1]:9050");
+
+  // Parse IPv4, then IPv6.
+  port_parse_config(ports, config_port, "OR", CONN_TYPE_OR_LISTENER, "0.0.0.0",
+                    0, CL_PORT_SERVER_OPTIONS);
+  port_parse_config(ports, config_port, "OR", CONN_TYPE_OR_LISTENER, "[::]",
+                    0, CL_PORT_SERVER_OPTIONS);
+
+  // There should be three ports at this point.
+  tt_int_op(smartlist_len(ports), OP_EQ, 3);
+
+  remove_duplicate_orports(ports);
+
+  // The explicit IPv6 port should have replaced the implicit IPv6 port.
+  tt_int_op(smartlist_len(ports), OP_EQ, 2);
+
+ done:
+  SMARTLIST_FOREACH(ports,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_free(ports);
+  config_free_lines(config_port);
+}
+
 #ifndef COCCI
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
@@ -6562,5 +6595,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(extended_fmt, 0),
   CONFIG_TEST(kvline_parse, 0),
   CONFIG_TEST(getinfo_config_names, 0),
+  CONFIG_TEST(duplicate_orports, 0),
   END_OF_TESTCASES
 };
