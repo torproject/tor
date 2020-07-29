@@ -311,13 +311,18 @@ done:
 /** Create routers values and routerinfos that always have the same
  * characteristics, and add them to the global digestmap. This macro is here to
  * avoid duplicated code fragments.
+ * The created name##_val pointer should be freed by the caller (and cannot
+ * be freed in the macro as it causes a heap-after-free error)
  */
-#define CREATE_ROUTER(digest, name, addr, ip_version)                     \
-  tor_digest name##_digest = digest;                                      \
-  router_values *name##_val = router_values_new(1, 1, 1, name##_digest);  \
-  digestmap_set(router_properties, name##_digest, name##_val);            \
-  routerinfo_t *name##_ri = routerinfo_new(name##_val, ip_version, addr); \
-  tor_free(name##_val);
+#define CREATE_ROUTER(digest, name, addr, ip_version)                    \
+  tor_digest name##_digest = digest;                                     \
+  router_values *name##_val = router_values_new(1, 1, 1, name##_digest); \
+  digestmap_set(router_properties, name##_digest, name##_val);           \
+  routerinfo_t *name##_ri = routerinfo_new(name##_val, ip_version, addr);
+
+#define ROUTER_FREE(name) \
+  tor_free(name##_val);   \
+  tor_free(name##_ri);
 
 /** Test to see if the returned routers are exactly the ones that should be
  * flagged as sybils : we test for inclusion then for number of elements
@@ -396,6 +401,14 @@ done:
   smartlist_free(routers_ipv4);
   digestmap_free(omit_as_sybil, NULL);
   digestmap_free(true_sybil_routers, NULL);
+  ROUTER_FREE(aaaa);
+  ROUTER_FREE(bbbb);
+  ROUTER_FREE(cccc);
+  ROUTER_FREE(dddd);
+  ROUTER_FREE(eeee);
+  ROUTER_FREE(ffff);
+  ROUTER_FREE(gggg);
+  ROUTER_FREE(hhhh);
 }
 
 static void
@@ -463,6 +476,14 @@ done:
   digestmap_free(true_sybil_routers, NULL);
   smartlist_free(routers_ipv6);
   digestmap_free(omit_as_sybil, NULL);
+  ROUTER_FREE(aaaa);
+  ROUTER_FREE(bbbb);
+  ROUTER_FREE(cccc);
+  ROUTER_FREE(dddd);
+  ROUTER_FREE(eeee);
+  ROUTER_FREE(ffff);
+  ROUTER_FREE(gggg);
+  ROUTER_FREE(hhhh);
 }
 
 static void
@@ -572,7 +593,24 @@ done:
   smartlist_free(routers);
   digestmap_free(omit_as_sybil, NULL);
   digestmap_free(true_sybil_routers, NULL);
+  ROUTER_FREE(aaaa);
+  ROUTER_FREE(bbbb);
+  ROUTER_FREE(cccc);
+  ROUTER_FREE(dddd);
+  ROUTER_FREE(eeee);
+  ROUTER_FREE(ffff);
+  ROUTER_FREE(gggg);
+  ROUTER_FREE(hhhh);
+  ROUTER_FREE(iiii);
+  ROUTER_FREE(jjjj);
+  ROUTER_FREE(kkkk);
+  ROUTER_FREE(llll);
+  ROUTER_FREE(mmmm);
+  ROUTER_FREE(nnnn);
+  ROUTER_FREE(oooo);
+  ROUTER_FREE(pppp);
 }
+
 #define NODE(name, flags)                           \
   {                                                 \
     #name, test_dirvote_##name, (flags), NULL, NULL \
