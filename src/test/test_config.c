@@ -6505,25 +6505,29 @@ test_config_duplicate_orports(void *arg)
   config_line_t *config_port = NULL;
   smartlist_t *ports = smartlist_new();
 
-  config_port = mock_config_line("ORPort", "127.0.0.1:9050");
+  // Pretend that the user has specified an implicit 0.0.0.0:9050, an implicit
+  // [::]:9050, and an explicit on [::1]:9050.
+  config_line_append(&config_port, "ORPort", "9050"); // two implicit entries.
+  config_line_append(&config_port, "ORPort", "[::1]:9050");
+
+  // Parse IPv4, then IPv6.
   port_parse_config(ports, config_port, "OR", CONN_TYPE_OR_LISTENER, "0.0.0.0",
                     0, CL_PORT_SERVER_OPTIONS);
-  config_free_lines(config_port);
-
-  config_port = mock_config_line("ORPort", "[::1]:9050");
   port_parse_config(ports, config_port, "OR", CONN_TYPE_OR_LISTENER, "[::]",
                     0, CL_PORT_SERVER_OPTIONS);
-  config_free_lines(config_port);
 
-  tt_int_op(smartlist_len(ports), OP_EQ, 2);
+  // There should be three ports at this point.
+  tt_int_op(smartlist_len(ports), OP_EQ, 3);
 
   remove_duplicate_orports(ports);
 
-  tt_int_op(smartlist_len(ports), OP_EQ, 1);
+  // The explicit IPv6 port should have replaced the implicit IPv6 port.
+  tt_int_op(smartlist_len(ports), OP_EQ, 2);
 
  done:
   SMARTLIST_FOREACH(ports,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_free(ports);
+  config_free_lines(config_port);
 }
 
 #ifndef COCCI
