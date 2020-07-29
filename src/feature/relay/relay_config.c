@@ -133,6 +133,22 @@ port_warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
   } SMARTLIST_FOREACH_END(port);
 }
 
+/**
+ * Return a static buffer describing the port number in @a port, which may
+ * CFG_AUTO_PORT.
+ **/
+static const char *
+describe_portnum(int port)
+{
+  static char buf[16];
+  if (port == CFG_AUTO_PORT) {
+    return "auto";
+  } else {
+    tor_snprintf(buf, sizeof(buf), "%d", port);
+    return buf;
+  }
+}
+
 /** Return a static buffer containing the human readable logging string that
  * describes the given port object. */
 static const char *
@@ -166,8 +182,9 @@ describe_relay_port(const port_cfg_t *port)
     addr = "";
   }
 
-  tor_snprintf(buf, sizeof(buf), "%sPort %s%s%d",
-               type, addr, (strlen(addr) > 0) ? ":" : "", port->port);
+  tor_snprintf(buf, sizeof(buf), "%sPort %s%s%s",
+               type, addr, (strlen(addr) > 0) ? ":" : "",
+               describe_portnum(port->port));
   return buf;
 }
 
