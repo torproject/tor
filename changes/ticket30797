@@ -1,0 +1,5 @@
+  o Removed features:
+    - We no longer ship or build a "tor.service" file for use with systemd.
+      No distribution included this script unmodified, and we don't have the
+      expertise ourselves to maintain this in a way that all the various
+      systemd-based distributions can use. Closes ticket 30797.
