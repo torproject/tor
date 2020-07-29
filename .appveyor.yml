@@ -65,6 +65,13 @@ install:
      # All installed library dlls must be copied to the test and app
      # directories, before running tor's tests. (See below.)
      #>
+- ps: >-
+    Execute-Bash curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
+- ps: >-
+    Execute-Bash curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig
+  ps: >-
+    Execute-Command "C:\msys64\usr\binpacman-key" --verify msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
+- ps: >-
     Execute-Command "C:\msys64\usr\bin\pacman" -Syu --verbose --noconfirm pacman ;
 - ps: >-
     Execute-Command "C:\msys64\usr\bin\pacman" -Sy --verbose --needed --noconfirm ${env:mingw_prefix}-libevent ${env:mingw_prefix}-openssl ${env:mingw_prefix}-pkg-config ${env:mingw_prefix}-xz ${env:mingw_prefix}-zstd ;
