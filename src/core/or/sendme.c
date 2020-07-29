@@ -394,7 +394,7 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
   while (conn->deliver_window <=
          (STREAMWINDOW_START - STREAMWINDOW_INCREMENT)) {
     log_debug(log_domain, "Outbuf %" TOR_PRIuSZ ", queuing stream SENDME.",
-              TO_CONN(conn)->outbuf_flushlen);
+              buf_datalen(TO_CONN(conn)->outbuf));
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
                                      NULL, 0) < 0) {

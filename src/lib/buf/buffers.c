@@ -685,17 +685,20 @@ buf_move_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
 }
 
 /** Moves all data from <b>buf_in</b> to <b>buf_out</b>, without copying.
+ * Return the number of bytes that were moved.
  */
-void
+size_t
 buf_move_all(buf_t *buf_out, buf_t *buf_in)
 {
   tor_assert(buf_out);
   if (!buf_in)
-    return;
+    return 0;
   if (BUG(buf_out->datalen > BUF_MAX_LEN || buf_in->datalen > BUF_MAX_LEN))
-    return;
+    return 0;
   if (BUG(buf_out->datalen > BUF_MAX_LEN - buf_in->datalen))
-    return;
+    return 0;
+
+  size_t n_bytes_moved = buf_in->datalen;
 
   if (buf_out->head == NULL) {
     buf_out->head = buf_in->head;
@@ -708,6 +711,8 @@ buf_move_all(buf_t *buf_out, buf_t *buf_in)
   buf_out->datalen += buf_in->datalen;
   buf_in->head = buf_in->tail = NULL;
   buf_in->datalen = 0;
+
+  return n_bytes_moved;
 }
 
 /** Internal structure: represents a position in a buffer. */
