@@ -504,3 +504,15 @@ targets in `Makefile.am`.
 
 (Adding new kinds of program to chutney will still require hacking the
 code.)
+
+## Other integration tests
+
+It's fine to write tests that use a POSIX shell to invoke Tor or test other
+aspects of the system.  When you do this, have a look at our existing tests
+of this kind in `src/test/` to make sure that you haven't forgotten anything
+important.  For example: it can be tricky to make sure you're invoking Tor at
+the right path in various build scenarios.
+
+We use a POSIX shell whenever possible here, and we use the shellcheck tool
+to make sure that our scripts portable.  We should only require bash for
+scripts that are developer-only.
