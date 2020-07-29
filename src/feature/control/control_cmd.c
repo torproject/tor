@@ -25,7 +25,6 @@
 #include "feature/client/addressmap.h"
 #include "feature/client/dnsserv.h"
 #include "feature/client/entrynodes.h"
-#include "feature/control/control_events.h"
 #include "feature/control/control.h"
 #include "feature/control/control_auth.h"
 #include "feature/control/control_cmd.h"
