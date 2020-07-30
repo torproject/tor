@@ -310,7 +310,6 @@ test_buffers_move_all(void *arg)
   buf_t *output = buf_new();
   char *s = NULL;
 
-#if 0
   /* Move from empty buffer to nonempty buffer. (This is a regression test for
    * #40076) */
   buf_add(output, "abc", 3);
@@ -329,7 +328,6 @@ test_buffers_move_all(void *arg)
   /* Move from empty to empty. */
   output = buf_new();
   input = buf_new();
-#endif
   buf_move_all(output, input);
   buf_assert_ok(input);
   buf_assert_ok(output);
