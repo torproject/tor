@@ -77,6 +77,8 @@
 #define DISABLE_PWDB_TESTS
 #endif
 
+static void set_file_mtime(const char *fname, time_t when);
+
 #define INFINITY_DBL ((double)INFINITY)
 #define NAN_DBL ((double)NAN)
 
@@ -5786,6 +5788,20 @@ test_util_get_avail_disk_space(void *arg)
   ;
 }
 
+/** Helper: Change the atime and mtime of a file. */
+static void
+set_file_mtime(const char *fname, time_t when)
+{
+  struct utimbuf u = { when, when };
+  struct stat st;
+  tt_int_op(0, OP_EQ, utime(fname, &u));
+  tt_int_op(0, OP_EQ, stat(fname, &st));
+  /* Let's hope that utime/stat give the same second as a round-trip? */
+  tt_i64_op(st.st_mtime, OP_EQ, when);
+done:
+  ;
+}
+
 static void
 test_util_touch_file(void *arg)
 {
@@ -5803,11 +5819,7 @@ test_util_touch_file(void *arg)
   tt_i64_op(st.st_mtime, OP_GE, now - 1);
 
   const time_t five_sec_ago = now - 5;
-  struct utimbuf u = { five_sec_ago, five_sec_ago };
-  tt_int_op(0, OP_EQ, utime(fname, &u));
-  tt_int_op(0, OP_EQ, stat(fname, &st));
-  /* Let's hope that utime/stat give the same second as a round-trip? */
-  tt_i64_op(st.st_mtime, OP_EQ, five_sec_ago);
+  set_file_mtime(fname, five_sec_ago);
 
   /* Finally we can touch the file */
   tt_int_op(0, OP_EQ, touch_file(fname));
