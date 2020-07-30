@@ -15,21 +15,21 @@
 # Skips the test if <skip-flavour> fails (default no skip).
 
 CHUTNEY_TRIES=3
-if [ ! -z "$1" ]; then
+if [ -n "$1" ]; then
     CHUTNEY_TRIES="$1"
 fi
 
-if [ ! -z "$2" ]; then
-    cd "$2"
+if [ -n "$2" ]; then
+    cd "$2" || exit
 fi
 
 CHUTNEY_TEST_CMD="make test-network-all"
-if [ ! -z "$3" ]; then
+if [ -n "$3" ]; then
     CHUTNEY_TEST_CMD="$CHUTNEY_PATH/tools/test-network.sh --flavour $3"
 fi
 
 CHUTNEY_SKIP_ON_FAIL_CMD="true"
-if [ ! -z "$4" ]; then
+if [ -n "$4" ]; then
     CHUTNEY_SKIP_ON_FAIL_CMD="$CHUTNEY_PATH/tools/test-network.sh --flavour $4"
 fi
 
@@ -54,9 +54,9 @@ while [ "$i" -le "$CHUTNEY_TRIES" ]; do
         echo "test '$CHUTNEY_TEST_CMD' succeeded after $i/$CHUTNEY_TRIES attempts, good"
         exit 0
     fi
-    i=$[$i+1]
+    i=$((i+1))
 done
 
-i=$[$i-1]
+i=$((i-1))
 echo "test '$CHUTNEY_TEST_CMD' failed $i/$CHUTNEY_TRIES attempts, bad"
 exit 1

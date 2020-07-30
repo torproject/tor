@@ -1,3 +1,0 @@
-  o Minor features (continuous integration):
-    - Remove sudo configuration lines from .travis.yml as they are no longer
-      needed with current Travis build environment. Resolves issue 30213.

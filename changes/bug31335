@@ -1,0 +1,3 @@
+  o Minor bugfixes (code quality):
+    - Fix "make check-includes" so it runs correctly on out-of-tree builds.
+      Fixes bug 31335; bugfix on 0.3.5.1-alpha.

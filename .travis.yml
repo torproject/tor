@@ -29,6 +29,8 @@ env:
     - HARDENING_OPTIONS="--enable-expensive-hardening"
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
+    ## Our default rust version is the minimum supported version
+    - RUST_VERSION="1.31.0"
     ## Turn off tor's sandbox in chutney, until we fix sandbox errors that are
     ## triggered by Ubuntu Xenial and Bionic. See #32722.
     - CHUTNEY_TOR_SANDBOX="0"
@@ -70,7 +72,7 @@ matrix:
     - env: NSS_OPTIONS="--enable-nss" C_DIALECT_OPTIONS="-std=gnu99"
 
     ## We include a single coverage build with the best options for coverage
-    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS=""
+    - env: COVERAGE_OPTIONS="--enable-coverage" HARDENING_OPTIONS="" TOR_TEST_RNG_SEED="636f766572616765"
 
     ## We clone our stem repo and run `make test-stem`
     - env: TEST_STEM="yes" SKIP_MAKE_CHECK="yes"
@@ -79,7 +81,7 @@ matrix:
     ## concurrent macOS jobs. We're not actively developing Rust, so it is
     ## the lowest priority.
     ## We run rust on macOS, because we have seen macOS rust failures before
-    #- env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    #- env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     #  compiler: clang
     #  os: osx
 
@@ -96,7 +98,7 @@ matrix:
 
     ## Since this job is disabled, there's not much point having an exception
     ## for it
-    #- env: RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
+    #- env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
     #  compiler: clang
     #  os: osx
 
@@ -125,6 +127,7 @@ addons:
       - libscrypt-dev
       - libseccomp-dev
       - libzstd-dev
+      - shellcheck
       ## Conditional build dependencies
       ## Always installed, so we don't need sudo
       - asciidoc
@@ -153,6 +156,7 @@ addons:
       - pkg-config
       ## Optional build dependencies
       - ccache
+      - shellcheck
       ## Conditional build dependencies
       ## Always installed, because manual brew installs are hard to get right
       - asciidoc
@@ -183,8 +187,8 @@ install:
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
   ## If we're using Rust, download rustup
   - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
-  ## Install the nightly channels of rustc and cargo and setup our toolchain environment
-  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain nightly; fi
+  ## Install the stable channels of rustc and cargo and setup our toolchain environment
+  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain $RUST_VERSION; fi
   - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
   ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
   - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
@@ -209,6 +213,10 @@ install:
   - if [[ "$CHUTNEY" != "" ]]; then pushd "$CHUTNEY_PATH"; git log -1 ; popd ; fi
   ## If we're running stem, show the stem version and commit
   - if [[ "$TEST_STEM" != "" ]]; then pushd stem; python -c "from stem import stem; print(stem.__version__);"; git log -1; popd; fi
+  ## We don't want Tor tests to depend on default configuration file at
+  ## ~/.torrc. So we put some random bytes in there, to make sure we get build
+  ## failures in case Tor is reading it during CI jobs.
+  - dd ibs=1 count=1024 if=/dev/urandom > ~/.torrc
 
 script:
   # Skip test_rebind on macOS

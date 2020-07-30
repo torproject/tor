@@ -1,0 +1,5 @@
+  o Minor bugfixes (directory):
+    - When checking if a directory connection is anonymous, test if the circuit
+      was marked for close before looking at its channel. This avoids a BUG()
+      stacktrace in case it was previously closed. Fixes bug 31958; bugfix on
+      0.4.2.1-alpha.

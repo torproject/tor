@@ -44,4 +44,6 @@ void dir_server_add(dir_server_t *ent);
 void clear_dir_servers(void);
 void dirlist_free_all(void);
 
-#endif
+MOCK_DECL(void, dirlist_add_trusted_dir_addresses, (void));
+
+#endif /* !defined(TOR_DIRLIST_H) */

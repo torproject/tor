@@ -1,4 +1,0 @@
-  o Minor bugfixes (relay):
-    - Avoid crashing when starting with a corrupt keys directory where
-      the old ntor key and the new ntor key are identical. Fixes bug 30916;
-      bugfix on 0.2.4.8-alpha.

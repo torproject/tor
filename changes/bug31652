@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion services):
+    - When we clean up intro circuits for a v3 onion service, don't remove
+      circuits that have an established or pending circuit even if ran out of
+      retries. This way, we don't cleanup the circuit of the last retry. Fixes
+      bug 31652; bugfix on 0.3.2.1-alpha.

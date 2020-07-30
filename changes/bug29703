@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - Backport the 0.3.4 src/test/test-network.sh to 0.2.9.
-      We need a recent test-network.sh to use new chutney features in CI.
-      Fixes bug 29703; bugfix on 0.2.9.1-alpha.

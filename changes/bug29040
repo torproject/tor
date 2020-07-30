@@ -1,4 +1,0 @@
-  o Minor bugfixes (onion services):
-    - Avoid crashing if ClientOnionAuthDir (incorrectly) contains
-      more than one private key for a hidden service. Fixes bug 29040;
-      bugfix on 0.3.5.1-alpha.

@@ -1,4 +1,0 @@
-  o Documentation:
-    - Use RFC 2397 data URL scheme to embed image into tor-exit-notice.html
-      so that operators would no longer have to host it themselves.
-      Closes ticket 31089.

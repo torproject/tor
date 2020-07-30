@@ -4,4 +4,4 @@ lib/malloc/*.h
 lib/err/*.h
 lib/string/*.h
 lib/smartlist_core/*.h
-lib/testsupport/testsupport.h
+lib/testsupport/*.h

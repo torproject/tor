@@ -187,7 +187,7 @@ int connection_proxy_connect(connection_t *conn, int type);
 int connection_read_proxy_handshake(connection_t *conn);
 void log_failed_proxy_connection(connection_t *conn);
 int get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
-                       const connection_t *conn);
+                       int *is_pt_out, const connection_t *conn);
 
 int retry_all_listeners(smartlist_t *new_conns,
                         int close_all_noncontrol);
@@ -195,8 +195,9 @@ int retry_all_listeners(smartlist_t *new_conns,
 void connection_mark_all_noncontrol_listeners(void);
 void connection_mark_all_noncontrol_connections(void);
 
-ssize_t connection_bucket_write_limit(connection_t *conn, time_t now);
-int global_write_bucket_low(connection_t *conn, size_t attempt, int priority);
+ssize_t connection_bucket_write_limit(struct connection_t *conn, time_t now);
+bool connection_dir_is_global_write_low(const struct connection_t *conn,
+                                        size_t attempt);
 void connection_bucket_init(void);
 void connection_bucket_adjust(const or_options_t *options);
 void connection_bucket_refill_all(time_t now,
@@ -226,6 +227,8 @@ MOCK_DECL(void, connection_write_to_buf_impl_,
 /* DOCDOC connection_write_to_buf */
 static void connection_buf_add(const char *string, size_t len,
                                     connection_t *conn);
+void connection_dir_buf_add(const char *string, size_t len,
+                            dir_connection_t *dir_conn, int done);
 static inline void
 connection_buf_add(const char *string, size_t len, connection_t *conn)
 {
@@ -240,6 +243,7 @@ size_t connection_get_outbuf_len(connection_t *conn);
 connection_t *connection_get_by_global_id(uint64_t id);
 
 connection_t *connection_get_by_type(int type);
+MOCK_DECL(connection_t *,connection_get_by_type_nonlinked,(int type));
 MOCK_DECL(connection_t *,connection_get_by_type_addr_port_purpose,(int type,
                                                   const tor_addr_t *addr,
                                                   uint16_t port, int purpose));

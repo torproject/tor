@@ -4,8 +4,10 @@ lib/cc/*.h
 lib/err/*.h
 lib/intmath/*.h
 lib/log/*.h
+lib/subsys/*.h
 lib/time/*.h
 lib/wallclock/*.h
+lib/defs/time.h
 
 # For load_windows_system_lib.
 lib/fs/winlib.h

@@ -1,0 +1,10 @@
+!advisory
+
+orconfig.h
+
+lib/crypt_ops/*.h
+lib/ctime/*.h
+lib/cc/*.h
+lib/log/*.h
+
+core/crypto/*.h

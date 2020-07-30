@@ -1,0 +1,24 @@
+// Warning: make sure these values are consistent with RESOLVED_TYPE_*
+// constants in Tor code and numbers in Section 6.4 of tor-spec.txt.
+
+const NETINFO_ADDR_TYPE_IPV4 = 4;
+const NETINFO_ADDR_TYPE_IPV6 = 6;
+
+struct netinfo_addr {
+  u8 addr_type;
+  u8 len;
+  union addr[addr_type] with length len {
+    NETINFO_ADDR_TYPE_IPV4: u32 ipv4;
+    NETINFO_ADDR_TYPE_IPV6: u8 ipv6[16];
+    default: ignore;
+  };
+
+}
+
+struct netinfo_cell {
+  u32 timestamp;
+  struct netinfo_addr other_addr;
+  u8 n_my_addrs;
+  struct netinfo_addr my_addrs[n_my_addrs];
+}
+

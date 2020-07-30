@@ -1,6 +1,7 @@
 orconfig.h
 
 lib/arch/*.h
+lib/buf/*.h
 lib/cc/*.h
 lib/container/*.h
 lib/crypt_ops/*.h
@@ -11,7 +12,7 @@ lib/log/*.h
 lib/malloc/*.h
 lib/net/*.h
 lib/string/*.h
-lib/testsupport/testsupport.h
+lib/subsys/*.h
+lib/testsupport/*.h
 lib/tls/*.h
-
-ciphers.inc
+lib/tls/*.inc

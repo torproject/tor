@@ -1,2 +1,0 @@
-  o Minor features (continuous integration):
-    - Add a Travis CI build for --enable-nss on Linux gcc. Closes ticket 27751.

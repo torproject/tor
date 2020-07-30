@@ -6,5 +6,5 @@ lib/malloc/*.h
 lib/ctime/*.h
 lib/string/*.h
 
-strlcat.c
-strlcpy.c
+ext/strlcat.c
+ext/strlcpy.c

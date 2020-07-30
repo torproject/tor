@@ -1,8 +1,0 @@
-  o Minor bugfixes (TLS protocol, integration tests):
-    - When classifying a client's selection of TLS ciphers, if the client
-      ciphers are not yet available, do not cache the result. Previously,
-      we had cached the unavailability of the cipher list and never looked
-      again, which in turn led us to assume that the client only supported
-      the ancient V1 link protocol.  This, in turn, was causing Stem
-      integration tests to stall in some cases.
-      Fixes bug 30021; bugfix on 0.2.4.8-alpha.

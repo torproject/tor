@@ -1,8 +1,12 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
 import os
 import os.path
 import re
+import sys
+
+def warn(msg):
+    sys.stderr.write("WARNING: %s\n"%msg)
 
 # Find all the include files, map them to their real names.
 
@@ -10,6 +14,8 @@ def exclude(paths, dirnames):
     for p in paths:
         if p in dirnames:
             dirnames.remove(p)
+
+DUPLICATE = object()
 
 def get_include_map():
     includes = { }
@@ -19,7 +25,10 @@ def get_include_map():
 
         for fname in fnames:
             if fname.endswith(".h"):
-                assert fname not in includes
+                if fname in includes:
+                    warn("Multiple headers named %s"%fname)
+                    includes[fname] = DUPLICATE
+                    continue
                 include = os.path.join(dirpath, fname)
                 assert include.startswith("src/")
                 includes[fname] = include[4:]
@@ -37,7 +46,7 @@ def fix_includes(inp, out, mapping):
         if m:
             include,hdr,rest = m.groups()
             basehdr = get_base_header_name(hdr)
-            if basehdr in mapping:
+            if basehdr in mapping and mapping[basehdr] is not DUPLICATE:
                 out.write('{}{}{}\n'.format(include,mapping[basehdr],rest))
                 continue
 

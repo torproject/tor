@@ -1,7 +1,0 @@
-  o Minor bugfixes (error handling):
-    - Report the tor version whenever an assertion fails. Previously, we only
-      reported the Tor version on some crashes, and some non-fatal assertions.
-      Fixes bug 31571; bugfix on 0.3.5.1-alpha.
-    - On abort, try harder to flush the output buffers of log messages. On
-      some platforms (macOS), log messages can be discarded when the process
-      terminates. Fixes bug 31571; bugfix on 0.3.5.1-alpha.

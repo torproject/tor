@@ -1,4 +1,0 @@
-  o Minor features (stem tests):
-    - Change "make test-stem" so it only runs the stem tests that use tor.
-      This change makes test-stem faster and more reliable.
-      Closes ticket 31554.
