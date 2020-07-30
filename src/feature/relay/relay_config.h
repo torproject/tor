@@ -84,6 +84,7 @@ int options_act_relay_dir(const struct or_options_t *old_options);
 
 #ifdef RELAY_CONFIG_PRIVATE
 
+STATIC void remove_duplicate_orports(struct smartlist_t *ports);
 STATIC int check_bridge_distribution_setting(const char *bd);
 STATIC int have_enough_mem_for_dircache(const struct or_options_t *options,
                                         size_t total_mem, char **msg);

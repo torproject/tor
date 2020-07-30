@@ -133,6 +133,22 @@ port_warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
   } SMARTLIST_FOREACH_END(port);
 }
 
+/**
+ * Return a static buffer describing the port number in @a port, which may
+ * CFG_AUTO_PORT.
+ **/
+static const char *
+describe_portnum(int port)
+{
+  static char buf[16];
+  if (port == CFG_AUTO_PORT) {
+    return "auto";
+  } else {
+    tor_snprintf(buf, sizeof(buf), "%d", port);
+    return buf;
+  }
+}
+
 /** Return a static buffer containing the human readable logging string that
  * describes the given port object. */
 static const char *
@@ -166,8 +182,9 @@ describe_relay_port(const port_cfg_t *port)
     addr = "";
   }
 
-  tor_snprintf(buf, sizeof(buf), "%sPort %s%s%d",
-               type, addr, (strlen(addr) > 0) ? ":" : "", port->port);
+  tor_snprintf(buf, sizeof(buf), "%sPort %s%s%s",
+               type, addr, (strlen(addr) > 0) ? ":" : "",
+               describe_portnum(port->port));
   return buf;
 }
 
@@ -183,11 +200,17 @@ describe_relay_port(const port_cfg_t *port)
  *
  * The following is O(n^2) but it is done at bootstrap or config reload and
  * the list is not very long usually. */
-static void
+STATIC void
 remove_duplicate_orports(smartlist_t *ports)
 {
+  /* First we'll decide what to remove, then we'll remove it. */
+  bool *removing = tor_calloc(smartlist_len(ports), sizeof(bool));
+
   for (int i = 0; i < smartlist_len(ports); ++i) {
-    port_cfg_t *current = smartlist_get(ports, i);
+    const port_cfg_t *current = smartlist_get(ports, i);
+    if (removing[i]) {
+      continue;
+    }
 
     /* Skip non ORPorts. */
     if (current->type != CONN_TYPE_OR_LISTENER) {
@@ -195,10 +218,13 @@ remove_duplicate_orports(smartlist_t *ports)
     }
 
     for (int j = 0; j < smartlist_len(ports); ++j) {
-      port_cfg_t *next = smartlist_get(ports, j);
+      const port_cfg_t *next = smartlist_get(ports, j);
 
       /* Avoid comparing the same object. */
       if (current == next) {
+        continue;
+      }
+      if (removing[j]) {
         continue;
       }
       /* Same address family and same port number, we have a match. */
@@ -206,15 +232,26 @@ remove_duplicate_orports(smartlist_t *ports)
           tor_addr_family(&current->addr) == tor_addr_family(&next->addr) &&
           current->port == next->port) {
         /* Remove current because next is explicitly set. */
-        smartlist_del_keeporder(ports, i--);
+        removing[i] = true;
         char *next_str = tor_strdup(describe_relay_port(next));
         log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
                  describe_relay_port(current), next_str);
         tor_free(next_str);
-        port_cfg_free(current);
       }
     }
   }
+
+  /* Iterate over array in reverse order to keep indices valid. */
+  for (int i = smartlist_len(ports)-1; i >= 0; --i) {
+    tor_assert(i < smartlist_len(ports));
+    if (removing[i]) {
+      port_cfg_t *current = smartlist_get(ports, i);
+      smartlist_del_keeporder(ports, i);
+      port_cfg_free(current);
+    }
+  }
+
+  tor_free(removing);
 }
 
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
