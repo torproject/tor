@@ -8,8 +8,6 @@ clone_depth: 50
 image:
   # Windows Server 2019
   - Visual Studio 2019
-  # Windows Server 2012 R2
-  - Visual Studio 2015
 
 environment:
   compiler: mingw
@@ -28,21 +26,6 @@ environment:
 matrix:
   # Don't keep building failing jobs
   fast_finish: true
-  # Skip the 32-bit Windows Server 2019 job, and the 64-bit Windows Server
-  # 2012 R2 job, to speed up the build.
-  # The environment variables must be listed without the 'environment' tag.
-  exclude:
-    - image: Visual Studio 2019
-      target: i686-w64-mingw32
-      compiler_path: mingw32
-      mingw_prefix: mingw-w64-i686
-      hardening: --enable-all-bugs-are-fatal
-    - image: Visual Studio 2015
-      target: x86_64-w64-mingw32
-      compiler_path: mingw64
-      mingw_prefix: mingw-w64-x86_64
-      # hardening doesn't work with mingw-w64-x86_64-gcc, because it's gcc 8
-      hardening: --disable-gcc-hardening
 
 install:
 - ps: >-
@@ -65,12 +48,6 @@ install:
      # All installed library dlls must be copied to the test and app
      # directories, before running tor's tests. (See below.)
      #>
-- ps: >-
-    Execute-Bash curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz ;
-- ps: >-
-    Execute-Bash curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig ;
-- ps: >-
-    Execute-Command "C:\msys64\usr\bin\pacman-key" --verify msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz ;
 - ps: >-
     Execute-Command "C:\msys64\usr\bin\pacman" -Syu --verbose --noconfirm pacman ;
 - ps: >-
