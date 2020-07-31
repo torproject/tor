@@ -819,6 +819,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
     case STREAM_EVENT_NEW_RESOLVE: status = "NEWRESOLVE"; break;
     case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
     case STREAM_EVENT_REMAP: status = "REMAP"; break;
+    case STREAM_EVENT_CONTROLLER_WAIT: status = "CONTROLLER_WAIT"; break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       return 0;
@@ -2362,15 +2363,6 @@ control_events_free_all(void)
   }
   global_event_mask = 0;
   disable_log_messages = 0;
-}
-
-/** Our own router descriptor has changed; tell any controllers that care.
- */
-int
-control_event_enter_controller_wait(void)
-{
-  send_control_event(EVENT_CONTROLLER_WAIT, "650 CONTROLLER_WAIT\r\n");
-  return 0;
 }
 
 #ifdef TOR_UNIT_TESTS

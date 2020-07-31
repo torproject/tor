@@ -36,7 +36,8 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_NEW          = 5,
   STREAM_EVENT_NEW_RESOLVE  = 6,
   STREAM_EVENT_FAILED_RETRIABLE = 7,
-  STREAM_EVENT_REMAP        = 8
+  STREAM_EVENT_REMAP        = 8,
+  STREAM_EVENT_CONTROLLER_WAIT = 9
 } stream_status_event_t;
 
 /** Used to indicate the type of a buildtime event */
