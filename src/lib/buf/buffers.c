@@ -692,6 +692,8 @@ buf_move_all(buf_t *buf_out, buf_t *buf_in)
   tor_assert(buf_out);
   if (!buf_in)
     return;
+  if (buf_datalen(buf_in) == 0)
+    return;
   if (BUG(buf_out->datalen >= INT_MAX || buf_in->datalen >= INT_MAX))
     return;
   if (BUG(buf_out->datalen >= INT_MAX - buf_in->datalen))
