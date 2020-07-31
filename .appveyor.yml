@@ -66,6 +66,7 @@ build_script:
             mkdir "${env:build}"
             Set-Location "${env:build}"
             Execute-Bash "which ${env:target}-gcc"
+            Execute-Bash "find ${env:compiler_path}"
             Execute-Bash "${env:target}-gcc --version"
             <# compile for mingw
              # mingw zstd doesn't come with a pkg-config file, so we manually
