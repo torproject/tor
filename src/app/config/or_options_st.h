@@ -945,6 +945,11 @@ struct or_options_t {
   int OfflineMasterKey;
 
   enum {
+    KEY_EXPIRATION_FORMAT_ISO8601 = 0,
+    KEY_EXPIRATION_FORMAT_TIMESTAMP
+  } key_expiration_format;
+
+  enum {
     FORCE_PASSPHRASE_AUTO=0,
     FORCE_PASSPHRASE_ON,
     FORCE_PASSPHRASE_OFF

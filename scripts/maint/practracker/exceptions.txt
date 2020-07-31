@@ -37,7 +37,7 @@ problem file-size /src/app/config/config.c 7525
 problem include-count /src/app/config/config.c 81
 problem function-size /src/app/config/config.c:options_act() 381
 problem function-size /src/app/config/config.c:options_validate_cb() 794
-problem function-size /src/app/config/config.c:options_init_from_torrc() 198
+problem function-size /src/app/config/config.c:options_init_from_torrc() 231
 problem function-size /src/app/config/config.c:options_init_from_string() 103
 problem function-size /src/app/config/config.c:options_init_logs() 125
 problem function-size /src/app/config/config.c:parse_bridge_line() 104
@@ -47,7 +47,7 @@ problem function-size /src/app/config/config.c:parse_dir_fallback_line() 101
 problem function-size /src/app/config/config.c:port_parse_config() 435
 problem function-size /src/app/config/config.c:parse_ports() 132
 problem function-size /src/app/config/resolve_addr.c:resolve_my_address_v4() 197
-problem file-size /src/app/config/or_options_st.h 1050
+problem file-size /src/app/config/or_options_st.h 1069
 problem include-count /src/app/main/main.c 71
 problem function-size /src/app/main/main.c:dumpstats() 102
 problem function-size /src/app/main/main.c:tor_init() 109

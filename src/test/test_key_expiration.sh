@@ -61,6 +61,11 @@ fi
 CASE1=$dflt
 CASE2=$dflt
 CASE3=$dflt
+CASE4=$dflt
+CASE5=$dflt
+CASE6=$dflt
+CASE7=$dflt
+CASE8=$dflt
 
 if [ $# -ge 1 ]; then
   eval "CASE${1}"=1
@@ -125,16 +130,17 @@ if [ "$CASE1" = 1 ]; then
 
   ${TOR} ${QUIETLY} --key-expiration 2>"$FN" || true
   grep "No valid argument to --key-expiration found!" "$FN" >/dev/null || \
-    die "Tor didn't mention supported --key-expiration argmuents"
+    die "Tor didn't mention supported --key-expiration arguments"
 
   echo "==== Case 1: ok"
 fi
 
 if [ "$CASE2" = 1 ]; then
-  echo "==== Case 2: Start Tor with --key-expiration 'sign' and make sure it prints an expiration."
+  echo "==== Case 2: Start Tor with --key-expiration 'sign' and make sure it"
+  echo "             prints an expiration using ISO8601 date format."
 
   ${TOR} ${QUIETLY} --key-expiration sign 2>"$FN"
-  grep "signing-cert-expiry:" "$FN" >/dev/null || \
+  grep "signing-cert-expiry: [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}" "$FN" >/dev/null || \
     die "Tor didn't print an expiration"
 
   echo "==== Case 2: ok"
@@ -159,4 +165,62 @@ if [ "$CASE3" = 1 ]; then
      "${DATA_DIR}/keys/ed25519_signing_cert"
 
   echo "==== Case 3: ok"
+fi
+
+if [ "$CASE4" = 1 ]; then
+  echo "==== Case 4: Start Tor with --format iso8601 and make sure it prints an"
+  echo "             error message due to missing --key-expiration argument."
+
+  ${TOR} --format iso8601 > "$FN" 2>&1 || true
+  grep -- "--format specified without --key-expiration!" "$FN" >/dev/null || \
+    die "Tor didn't print a missing --key-expiration error message"
+
+  echo "==== Case 4: ok"
+fi
+
+if [ "$CASE5" = 1 ]; then
+  echo "==== Case 5: Start Tor with --key-expiration 'sign' --format '' and"
+  echo "             make sure it prints an error message due to missing value."
+
+  ${TOR} --key-expiration sign --format > "$FN" 2>&1 || true
+  grep "Command-line option '--format' with no value. Failing." "$FN" >/dev/null || \
+    die "Tor didn't print a missing format value error message"
+
+  echo "==== Case 5: ok"
+fi
+
+if [ "$CASE6" = 1 ]; then
+  echo "==== Case 6: Start Tor with --key-expiration 'sign' --format 'invalid'"
+  echo "             and make sure it prints an error message due to invalid"
+  echo "             value."
+
+  ${TOR} --key-expiration sign --format invalid > "$FN" 2>&1 || true
+  grep "Invalid --format value" "$FN" >/dev/null || \
+    die "Tor didn't print an invalid format value error message"
+
+  echo "==== Case 6: ok"
+fi
+
+if [ "$CASE7" = 1 ]; then
+  echo "==== Case 7: Start Tor with --key-expiration 'sign' --format 'iso8601'"
+  echo "             and make sure it prints an expiration using ISO8601 date"
+  echo "             format."
+
+  ${TOR} ${QUIETLY} --key-expiration sign --format iso8601 2>"$FN"
+  grep "signing-cert-expiry: [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}" "$FN" >/dev/null || \
+    die "Tor didn't print an expiration"
+
+  echo "==== Case 7: ok"
+fi
+
+if [ "$CASE8" = 1 ]; then
+  echo "==== Case 8: Start Tor with --key-expiration 'sign' --format 'timestamp'"
+  echo "             and make sure it prints an expiration using timestamp date"
+  echo "             format."
+
+  ${TOR} ${QUIETLY} --key-expiration sign --format timestamp 2>"$FN"
+  grep "signing-cert-expiry: [0-9]\{5,\}" "$FN" >/dev/null || \
+    die "Tor didn't print an expiration"
+
+  echo "==== Case 8: ok"
 fi
