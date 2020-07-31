@@ -1,0 +1,5 @@
+  o Minor bugfixes (correctness, buffers):
+    - Fix a correctness bug that could cause an assertion failure if we ever
+      tried using the buf_move_all() function with an empty input.
+      As far as we know, no released versions of Tor do this.
+      Fixes bug 40076; bugfix on 0.3.3.1-alpha.
