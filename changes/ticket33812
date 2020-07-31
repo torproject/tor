@@ -1,7 +1,3 @@
-  o Code simplification and refactoring:
-    - Move the bandwidth structure and function declarations
-      to new file. Include this  module in other files.
-      Remove REPHIST_PRIVATE. Closes ticket 33812.
   o Testing:
     - Add unit tests for bandwidth statistics manipulation functions.
-      Closes ticket 33812. Patch by MrSquanchee
+      Closes ticket 33812. Patch by MrSquanchee.
