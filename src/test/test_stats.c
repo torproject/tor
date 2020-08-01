@@ -257,6 +257,7 @@ test_rephist_v3_onions(void *arg)
   char *desc1_str = NULL;
   ed25519_keypair_t signing_kp1;
   hs_descriptor_t *desc1 = NULL;
+  char *stats_string = NULL;
 
   const hs_stats_t *hs_stats = NULL;
 
@@ -327,11 +328,12 @@ test_rephist_v3_onions(void *arg)
   hs_descriptor_free(desc1);
   tor_free(desc1_str);
 
-  /* Now let's skip to four days forward so that the blinded key rolls forward */
+  /* Now let's skip to four days forward so that the blinded key rolls
+     forward */
   update_approx_time(approx_time() + 345600);
 
-  /* Now create a descriptor with the same identity key but diff rev counter and
-     different blinded key */
+  /* Now create a descriptor with the same identity key but diff rev counter
+     and different blinded key */
   desc1 = hs_helper_build_hs_desc_with_rev_counter(&signing_kp1, 44);
   tt_assert(desc1);
   ret = hs_desc_encode_descriptor(desc1, &signing_kp1, NULL, &desc1_str);
@@ -346,7 +348,7 @@ test_rephist_v3_onions(void *arg)
   hs_descriptor_free(desc1);
   tor_free(desc1_str);
 
-  char *stats_string = rep_hist_format_hs_stats(approx_time());
+  stats_string = rep_hist_format_hs_stats(approx_time());
   tt_assert(strstr(stats_string, "hidserv-dir-v3-onions-seen 3"));
 
  done:
