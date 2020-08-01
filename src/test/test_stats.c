@@ -452,7 +452,7 @@ static void
 test_get_bandwidth_lines(void *arg)
 {
   (void) arg;
-  char *str, *checkstr;
+  char *str = NULL, *checkstr = NULL;
   char t[ISO_TIME_LEN+1];
   int len = (67+MAX_HIST_VALUE_LEN)*4;
   checkstr = tor_malloc_zero(len);
@@ -486,7 +486,9 @@ test_get_bandwidth_lines(void *arg)
                     "2048,29696,14336,59392,29696\n",
                     t, t, t, t);
   test_get_bw_lines(str, checkstr);
+
  done:
+  tor_free(str);
   tor_free(checkstr);
   bwhist_free_all();
 }
