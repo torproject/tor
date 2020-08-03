@@ -4567,7 +4567,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     /* If it has a protover list and contains a protocol name greater than
      * MAX_PROTOCOL_NAME_LENGTH, skip it. */
     if (ri->protocol_list &&
-        protover_contains_long_protocol_names(ri->protocol_list)) {
+        protover_list_is_invalid(ri->protocol_list)) {
       continue;
     }
     if (ri->cache_info.published_on >= cutoff) {

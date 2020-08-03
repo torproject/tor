@@ -468,7 +468,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     }
 
     // If the protover line is malformed, reject this routerstatus.
-    if (protocols && protover_contains_long_protocol_names(protocols)) {
+    if (protocols && protover_list_is_invalid(protocols)) {
       goto err;
     }
     summarize_protover_flags(&rs->pv, protocols, version);
@@ -1076,7 +1076,7 @@ dup_protocols_string(smartlist_t *tokens, bool *error, directory_keyword kw)
   directory_token_t *tok = find_opt_by_keyword(tokens, kw);
   if (!tok)
     return NULL;
-  if (protover_contains_long_protocol_names(tok->args[0]))
+  if (protover_list_is_invalid(tok->args[0]))
     *error = true;
   return tor_strdup(tok->args[0]);
 }

@@ -69,7 +69,7 @@ typedef enum protocol_type_t {
   PRT_FLOWCTRL  = 11,
 } protocol_type_t;
 
-bool protover_contains_long_protocol_names(const char *s);
+bool protover_list_is_invalid(const char *s);
 int protover_all_supported(const char *s, char **missing);
 int protover_is_supported_here(protocol_type_t pr, uint32_t ver);
 const char *protover_get_supported_protocols(void);

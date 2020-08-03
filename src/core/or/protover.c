@@ -303,7 +303,7 @@ parse_protocol_list(const char *s)
  * name longer than MAX_PROTOCOL_NAME_LENGTH, and false otherwise.
  */
 bool
-protover_contains_long_protocol_names(const char *s)
+protover_list_is_invalid(const char *s)
 {
   smartlist_t *list = parse_protocol_list(s);
   if (!list)
