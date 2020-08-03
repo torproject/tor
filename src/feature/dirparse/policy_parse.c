@@ -203,15 +203,17 @@ router_parse_addr_policy_private(directory_token_t *tok)
     return NULL;
 
   switch (*arg) {
-    case '4':
+    case '4': /* "private4" */
       private_flag = ADDR_POLICY_PRIVATE4;
       break;
-    case '6':
+    case '6': /* "private6" */
       private_flag = ADDR_POLICY_PRIVATE6;
       break;
-    default:
+    case ':': /* "private" */
       private_flag = ADDR_POLICY_PRIVATE;
       break;
+    default: /* invalid token */
+      return NULL;
   }
 
   /* we want to warn on accept6/reject6 in conjunction with IPv4 private addrs */
