@@ -22,13 +22,22 @@ typedef enum {
 } addr_policy_action_t;
 #define addr_policy_action_bitfield_t ENUM_BF(addr_policy_action_t)
 
+/** Is this a "private", "private4", or "private6" pseudo-address? */
+typedef enum {
+  ADDR_POLICY_NOT_PRIVATE=0,
+  ADDR_POLICY_PRIVATE=1,
+  ADDR_POLICY_PRIVATE4=2,
+  ADDR_POLICY_PRIVATE6=3,
+} addr_policy_private_t;
+#define addr_policy_private_bitfield_t ENUM_BF(addr_policy_private_t)
+
 /** A reference-counted address policy rule. */
 struct addr_policy_t {
   int refcnt; /**< Reference count */
   /** What to do when the policy matches.*/
   addr_policy_action_bitfield_t policy_type:2;
-  unsigned int is_private:1; /**< True iff this is the pseudo-address,
-                              * "private". */
+  /** Whether this is a "private" pseudo-address. */
+  addr_policy_private_bitfield_t is_private:2;
   unsigned int is_canonical:1; /**< True iff this policy is the canonical
                                 * copy (stored in a hash table to avoid
                                 * duplication of common policies) */

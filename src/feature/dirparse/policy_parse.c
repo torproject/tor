@@ -191,6 +191,7 @@ router_parse_addr_policy_private(directory_token_t *tok)
   const char *arg;
   uint16_t port_min, port_max;
   addr_policy_t result;
+  addr_policy_private_bitfield_t private_flag = ADDR_POLICY_NOT_PRIVATE;
 
   arg = tok->args[0];
   if (strcmpstart(arg, "private"))
@@ -201,11 +202,24 @@ router_parse_addr_policy_private(directory_token_t *tok)
   if (!arg)
     return NULL;
 
+  switch (*arg) {
+    case '4':
+      private_flag = ADDR_POLICY_PRIVATE4;
+      break;
+    case '6':
+      private_flag = ADDR_POLICY_PRIVATE6;
+      break;
+    default:
+      private_flag = ADDR_POLICY_PRIVATE;
+      break;
+  }
+
   /* we want to warn on accept6/reject6 in conjunction with IPv4 private addrs */
-  bool has_ipv4_policies = (*arg != '6');
+  bool has_ipv4_policies = (private_flag != ADDR_POLICY_PRIVATE6);
 
   /* "private4" and "private6" keywords */
-  if (*arg == '4' || *arg == '6')
+  if (private_flag == ADDR_POLICY_PRIVATE4 ||
+      private_flag == ADDR_POLICY_PRIVATE6)
     ++arg;
 
   if (*arg != ':')
