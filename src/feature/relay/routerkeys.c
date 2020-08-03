@@ -520,14 +520,13 @@ print_cert_expiration(const char *expiration,
 /**
  * Log when a certificate, <b>cert</b>, with some <b>description</b> and
  * stored in a file named <b>fname</b>, is going to expire. Formats the expire
- * time according to <b>time_format</b>. Valid time formats are in the
- * key_expiration_format enum, in or_options_t.
+ * time according to <b>time_format</b>.
  */
 static void
 log_ed_cert_expiration(const tor_cert_t *cert,
                        const char *description,
                        const char *fname,
-                       int time_format) {
+                       key_expiration_format_t time_format) {
   if (BUG(!cert)) { /* If the specified key hasn't been loaded */
     log_warn(LD_OR, "No %s key loaded; can't get certificate expiration.",
              description);
@@ -582,7 +581,7 @@ log_master_signing_key_cert_expiration(const or_options_t *options)
 
   /* If we do have a signing key, log the expiration time. */
   if (signing_key) {
-    int time_format = options->key_expiration_format;
+    key_expiration_format_t time_format = options->key_expiration_format;
     log_ed_cert_expiration(signing_key, "signing", fn, time_format);
   } else {
     log_warn(LD_OR, "Could not load signing key certificate from %s, so " \

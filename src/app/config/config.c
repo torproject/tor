@@ -4434,9 +4434,8 @@ options_init_from_torrc(int argc, char **argv)
       const char *v = format_line->value;
       // keep the same order as enum key_expiration_format
       const char *formats[] = { "iso8601", "timestamp" };
-      const int formats_len = sizeof(formats) / sizeof(formats[0]);
       int format = -1;
-      for (int i = 0; i < formats_len; i++) {
+      for (unsigned i = 0; i < ARRAY_LENGTH(formats); i++) {
         if (!strcmp(v, formats[i])) {
           format = i;
           break;

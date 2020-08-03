@@ -35,6 +35,12 @@ typedef enum {
   TCP_PROXY_PROTOCOL_HAPROXY
 } tcp_proxy_protocol_t;
 
+/** Enumeration of available time formats for output of --key-expiration */
+typedef enum {
+  KEY_EXPIRATION_FORMAT_ISO8601 = 0,
+  KEY_EXPIRATION_FORMAT_TIMESTAMP
+} key_expiration_format_t;
+
 /** Configuration options for a Tor process. */
 struct or_options_t {
   uint32_t magic_;
@@ -944,10 +950,7 @@ struct or_options_t {
    * ed25519 identity key except from tor --keygen */
   int OfflineMasterKey;
 
-  enum {
-    KEY_EXPIRATION_FORMAT_ISO8601 = 0,
-    KEY_EXPIRATION_FORMAT_TIMESTAMP
-  } key_expiration_format;
+  key_expiration_format_t key_expiration_format;
 
   enum {
     FORCE_PASSPHRASE_AUTO=0,
