@@ -69,6 +69,9 @@ struct connection_t {
   /** True if connection_handle_write is currently running on this connection.
    */
   unsigned int in_connection_handle_write:1;
+  /** If true, then we treat this connection as remote for the purpose of
+   * rate-limiting, no matter what its address is. */
+  unsigned int always_rate_limit_as_remote:1;
 
   /* For linked connections:
    */
