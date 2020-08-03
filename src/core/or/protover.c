@@ -299,8 +299,9 @@ parse_protocol_list(const char *s)
 }
 
 /**
- * Return true if the unparsed protover in <b>s</b> would contain a protocol
- * name longer than MAX_PROTOCOL_NAME_LENGTH, and false otherwise.
+ * Return true if the unparsed protover list in <b>s</b> contains a
+ * parsing error, such as extra commas, a bad number, or an over-long
+ * name.
  */
 bool
 protover_list_is_invalid(const char *s)
