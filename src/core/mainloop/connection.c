@@ -637,7 +637,7 @@ connection_free_minimal(connection_t *conn)
     }
   }
 
-  tor_free(conn->address);
+  tor_str_wipe_and_free(conn->address);
 
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
@@ -657,7 +657,7 @@ connection_free_minimal(connection_t *conn)
     }
     or_handshake_state_free(or_conn->handshake_state);
     or_conn->handshake_state = NULL;
-    tor_free(or_conn->nickname);
+    tor_str_wipe_and_free(or_conn->nickname);
     if (or_conn->chan) {
       /* Owww, this shouldn't happen, but... */
       channel_t *base_chan = TLS_CHAN_TO_BASE(or_conn->chan);
@@ -677,8 +677,8 @@ connection_free_minimal(connection_t *conn)
   }
   if (conn->type == CONN_TYPE_AP) {
     entry_connection_t *entry_conn = TO_ENTRY_CONN(conn);
-    tor_free(entry_conn->chosen_exit_name);
-    tor_free(entry_conn->original_dest_address);
+    tor_str_wipe_and_free(entry_conn->chosen_exit_name);
+    tor_str_wipe_and_free(entry_conn->original_dest_address);
     if (entry_conn->socks_request)
       socks_request_free(entry_conn->socks_request);
     if (entry_conn->pending_optimistic_data) {
