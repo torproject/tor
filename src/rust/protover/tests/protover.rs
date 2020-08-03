@@ -70,18 +70,6 @@ fn protocol_all_supported_with_one_value() {
 }
 
 #[test]
-#[should_panic]
-fn parse_protocol_unvalidated_with_empty() {
-    let _: UnvalidatedProtoEntry = "".parse().unwrap();
-}
-
-#[test]
-#[should_panic]
-fn parse_protocol_validated_with_empty() {
-    let _: UnvalidatedProtoEntry = "".parse().unwrap();
-}
-
-#[test]
 fn protocol_all_supported_with_three_values() {
     let protocols: UnvalidatedProtoEntry = "LinkAuth=1 Microdesc=1-2 Relay=2".parse().unwrap();
     let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
@@ -156,7 +144,6 @@ fn parse_protocol_with_unexpected_characters() {
 }
 
 #[test]
-#[should_panic]
 fn protover_compute_vote_returns_empty_for_empty_string() {
     let protocols: &[UnvalidatedProtoEntry] = &["".parse().unwrap()];
     let listed = ProtoverVote::compute(protocols, &1);

@@ -253,6 +253,11 @@ impl FromStr for ProtoEntry {
     /// Otherwise, the `Err` value of this `Result` is a `ProtoverError`.
     fn from_str(protocol_entry: &str) -> Result<ProtoEntry, ProtoverError> {
         let mut proto_entry: ProtoEntry = ProtoEntry::default();
+
+        if protocol_entry.is_empty() {
+            return Ok(proto_entry);
+        }
+
         let entries = protocol_entry.split(' ');
 
         for entry in entries {
@@ -500,6 +505,10 @@ impl UnvalidatedProtoEntry {
         protocol_string: &'a str,
     ) -> Result<Vec<(&'a str, &'a str)>, ProtoverError> {
         let mut protovers: Vec<(&str, &str)> = Vec::new();
+
+        if protocol_string.is_empty() {
+            return Ok(protovers);
+        }
 
         for subproto in protocol_string.split(' ') {
             let mut parts = subproto.splitn(2, '=');
@@ -859,7 +868,8 @@ mod test {
 
     #[test]
     fn test_protoentry_from_str_empty() {
-        assert_protoentry_is_unparseable!("");
+        assert_protoentry_is_parseable!("");
+        assert!(UnvalidatedProtoEntry::from_str("").is_ok());
     }
 
     #[test]
@@ -880,11 +890,6 @@ mod test {
     #[test]
     fn test_protoentry_from_str_too_many_versions() {
         assert_protoentry_is_unparseable!("Desc=1-4294967295");
-    }
-
-    #[test]
-    fn test_protoentry_from_str_() {
-        assert_protoentry_is_unparseable!("");
     }
 
     #[test]
