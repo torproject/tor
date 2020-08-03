@@ -384,8 +384,12 @@ or_connection_new(int type, int socket_family)
 
   connection_or_set_canonical(or_conn, 0);
 
-  if (type == CONN_TYPE_EXT_OR)
+  if (type == CONN_TYPE_EXT_OR) {
+    /* If we aren't told an address for this connection, we should
+     * presume it isn't local, and should be rate-limited. */
+    TO_CONN(or_conn)->always_rate_limit_as_remote = 1;
     connection_or_set_ext_or_identifier(or_conn);
+  }
 
   return or_conn;
 }
@@ -3146,6 +3150,7 @@ connection_is_rate_limited(const connection_t *conn)
   if (conn->linked)
     return 0; /* Internal connection */
   else if (! options->CountPrivateBandwidth &&
+           ! conn->always_rate_limit_as_remote &&
            (tor_addr_family(&conn->addr) == AF_UNSPEC || /* no address */
             tor_addr_family(&conn->addr) == AF_UNIX ||   /* no address */
             tor_addr_is_internal(&conn->addr, 0)))
