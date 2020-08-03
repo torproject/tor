@@ -109,6 +109,7 @@ const struct control_event_t control_event_table[] = {
   { EVENT_HS_DESC, "HS_DESC" },
   { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
   { EVENT_NETWORK_LIVENESS, "NETWORK_LIVENESS" },
+  { EVENT_CONTROLLER_WAIT, "CONTROLLER_WAIT" },
   { 0, NULL },
 };
 
@@ -818,6 +819,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
     case STREAM_EVENT_NEW_RESOLVE: status = "NEWRESOLVE"; break;
     case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
     case STREAM_EVENT_REMAP: status = "REMAP"; break;
+    case STREAM_EVENT_CONTROLLER_WAIT: status = "CONTROLLER_WAIT"; break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       return 0;
