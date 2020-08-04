@@ -839,10 +839,11 @@ forward slash (/) in the configuration file and on the command line.
 
 [[Sandbox]] **Sandbox** **0**|**1**::
     If set to 1, Tor will run securely through the use of a syscall sandbox.
-    Otherwise the sandbox will be disabled. The option is currently an
-    experimental feature. It only works on Linux-based operating systems,
-    and only when Tor has been built with the libseccomp library. This option
-    can not be changed while tor is running. +
+    Otherwise the sandbox will be disabled. The option only works on
+    Linux-based operating systems, and only when Tor has been built with the
+    libseccomp library.  Note that this option may be incompatible with some
+    versions of libc, and some kernel versions.  This option can not be
+    changed while tor is running. +
      +
     When the **Sandbox** is 1, the following options can not be changed when tor
     is running:
