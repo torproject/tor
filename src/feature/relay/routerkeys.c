@@ -519,19 +519,33 @@ print_cert_expiration(const char *expiration,
 
 /**
  * Log when a certificate, <b>cert</b>, with some <b>description</b> and
- * stored in a file named <b>fname</b>, is going to expire.
+ * stored in a file named <b>fname</b>, is going to expire. Formats the expire
+ * time according to <b>time_format</b>.
  */
 static void
 log_ed_cert_expiration(const tor_cert_t *cert,
                        const char *description,
-                       const char *fname) {
-  char expiration[ISO_TIME_LEN+1];
-
+                       const char *fname,
+                       key_expiration_format_t time_format) {
   if (BUG(!cert)) { /* If the specified key hasn't been loaded */
     log_warn(LD_OR, "No %s key loaded; can't get certificate expiration.",
              description);
   } else {
-    format_local_iso_time(expiration, cert->valid_until);
+    char expiration[ISO_TIME_LEN+1];
+    switch (time_format) {
+      case KEY_EXPIRATION_FORMAT_ISO8601:
+        format_local_iso_time(expiration, cert->valid_until);
+        break;
+
+      case KEY_EXPIRATION_FORMAT_TIMESTAMP:
+        tor_snprintf(expiration, sizeof(expiration), "%"PRId64,
+                     (int64_t) cert->valid_until);
+        break;
+
+      default:
+        log_err(LD_BUG, "Unknown time format value: %d.", time_format);
+        return;
+    }
     log_notice(LD_OR, "The %s certificate stored in %s is valid until %s.",
                description, fname, expiration);
     print_cert_expiration(expiration, description);
@@ -567,7 +581,8 @@ log_master_signing_key_cert_expiration(const or_options_t *options)
 
   /* If we do have a signing key, log the expiration time. */
   if (signing_key) {
-    log_ed_cert_expiration(signing_key, "signing", fn);
+    key_expiration_format_t time_format = options->key_expiration_format;
+    log_ed_cert_expiration(signing_key, "signing", fn, time_format);
   } else {
     log_warn(LD_OR, "Could not load signing key certificate from %s, so " \
              "we couldn't learn anything about certificate expiration.", fn);

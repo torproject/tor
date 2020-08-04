@@ -2468,6 +2468,8 @@ static const struct {
   { .name="--key-expiration",
     .takes_argument=ARGUMENT_OPTIONAL,
     .command=CMD_KEY_EXPIRATION },
+  { .name="--format",
+    .takes_argument=ARGUMENT_NECESSARY },
   { .name="--newpass" },
   { .name="--no-passphrase" },
   { .name="--passphrase-fd",
@@ -4423,6 +4425,38 @@ options_init_from_torrc(int argc, char **argv)
       retval = -1;
       goto err;
     }
+  }
+
+  const config_line_t *format_line = config_line_find(cmdline_only_options,
+                                                      "--format");
+  if (format_line) {
+    if (command == CMD_KEY_EXPIRATION) {
+      const char *v = format_line->value;
+      // keep the same order as enum key_expiration_format
+      const char *formats[] = { "iso8601", "timestamp" };
+      int format = -1;
+      for (unsigned i = 0; i < ARRAY_LENGTH(formats); i++) {
+        if (!strcmp(v, formats[i])) {
+          format = i;
+          break;
+        }
+      }
+
+      if (format < 0) {
+        log_err(LD_CONFIG, "Invalid --format value %s", escaped(v));
+        retval = -1;
+        goto err;
+      } else {
+        get_options_mutable()->key_expiration_format = format;
+      }
+    } else {
+      log_err(LD_CONFIG, "--format specified without --key-expiration!");
+      retval = -1;
+      goto err;
+    }
+  } else {
+    get_options_mutable()->key_expiration_format =
+      KEY_EXPIRATION_FORMAT_ISO8601;
   }
 
   if (config_line_find(cmdline_only_options, "--newpass")) {

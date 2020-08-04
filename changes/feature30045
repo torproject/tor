@@ -1,0 +1,6 @@
+  o Minor features (admin tools):
+    - Add new --format argument to -key-expiration option to allow
+      specifying the time format of expiration date. Adds Unix
+      timestamp format support. Patch by Daniel Pinto. Closes
+      ticket 30045.
+

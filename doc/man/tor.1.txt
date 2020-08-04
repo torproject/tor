@@ -174,16 +174,22 @@ The following options in this section are only recognized on the
     If the file descriptor is not specified, the passphrase is read
     from the terminal by default.
 
-[[opt-key-expiration]] **`--key-expiration`** [__purpose__]::
+[[opt-key-expiration]] **`--key-expiration`** [__purpose__] [**`--format`** **`iso8601`**|**`timestamp`**]::
     The __purpose__ specifies which type of key certificate to determine
     the expiration of.  The only currently recognised __purpose__ is
     "sign". +
      +
     Running **`tor --key-expiration sign`** will attempt to find your
     signing key certificate and will output, both in the logs as well
-    as to stdout, the signing key certificate's expiration time in
-    ISO-8601 format.  For example, the output sent to stdout will be
-    of the form: "signing-cert-expiry: 2017-07-25 08:30:15 UTC"
+    as to stdout.  The optional **`--format`** argument lets you specify
+    the time format.  Currently, **`iso8601`** and **`timestamp`** are
+    supported.  If **`--format`** is not specified, the signing key
+    certificate's expiration time will be in ISO-8601 format.  For example,
+    the output sent to stdout will be of the form:
+    "signing-cert-expiry: 2017-07-25 08:30:15 UTC".  If **`--format`** **`timestamp`**
+    is specified, the signing key certificate's expiration time will be in
+    Unix timestamp format. For example, the output sent to stdout will be of the form:
+    "signing-cert-expiry: 1500971415".
 
 [[opt-dbg]] **--dbg-**...::
     Tor may support other options beginning with the string "dbg". These
