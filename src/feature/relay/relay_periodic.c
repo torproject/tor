@@ -150,6 +150,9 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
 {
   /* XXXX This whole thing was stuck in the middle of what is now
    * XXXX check_descriptor_callback.  I'm not sure it's right. */
+  /** How often should we consider launching reachability tests in our first
+   * TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT seconds? */
+#define EARLY_CHECK_REACHABILITY_INTERVAL (60)
 
   /* also, check religiously for reachability, if it's within the first
    * 20 minutes of our uptime. */
@@ -160,7 +163,7 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
       router_do_reachability_checks(1, dirport_reachability_count==0);
       if (++dirport_reachability_count > 5)
         dirport_reachability_count = 0;
-      return 1;
+      return EARLY_CHECK_REACHABILITY_INTERVAL;
     } else {
       /* If we haven't checked for 12 hours and our bandwidth estimate is
        * low, do another bandwidth test. This is especially important for
