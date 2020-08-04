@@ -1,0 +1,6 @@
+  o Minor bugfixes (logging):
+    - When logging a rate-limited message about how many messages have been
+      suppressed in the last N seconds, give an accurate value for N, rounded
+      up to the nearest minute.  Previously we would report the size of the
+      rate-limiting interval, regardless of when the messages started to
+      occur.  Fixes bug 19431; bugfix on 0.2.2.16-alpha.
