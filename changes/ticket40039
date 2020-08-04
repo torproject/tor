@@ -1,0 +1,5 @@
+  o Minor features (control port, relay):
+    - Introduce "GETINFO address/v4" and "GETINFO address/v6" in the control
+      port to fetch the Tor host's respective IPv4 or IPv6 address. We keep
+      "GETINFO address" for backwords-compatibility which retains the current
+      behavior. Closes ticket 40039. Patch by Neel Chauhan.
