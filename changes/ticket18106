@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Rename "fascist_firewall_*" identifiers to "reachable_addr_*" instead,
+      for consistency with other code. Closes ticket 18106.
