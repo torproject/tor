@@ -284,10 +284,10 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
       }
       if (purpose_needs_anonymity(dir_purpose, router_purpose, NULL)) {
         indirection = DIRIND_ANONYMOUS;
-      } else if (!fascist_firewall_allows_dir_server(ds,
+      } else if (!reachable_addr_allows_dir_server(ds,
                                                      FIREWALL_DIR_CONNECTION,
                                                      0)) {
-        if (fascist_firewall_allows_dir_server(ds, FIREWALL_OR_CONNECTION, 0))
+        if (reachable_addr_allows_dir_server(ds, FIREWALL_OR_CONNECTION, 0))
           indirection = DIRIND_ONEHOP;
         else
           indirection = DIRIND_ANONYMOUS;
@@ -487,7 +487,7 @@ directory_get_from_dirserver,(
         tor_addr_port_t or_ap;
         directory_request_t *req = directory_request_new(dir_purpose);
         /* we are willing to use a non-preferred address if we need to */
-        fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0,
+        reachable_addr_choose_from_node(node, FIREWALL_OR_CONNECTION, 0,
                                              &or_ap);
         directory_request_set_or_addr_port(req, &or_ap);
         directory_request_set_directory_id_digest(req,
@@ -666,7 +666,7 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
      * Use the preferred address and port if they are reachable, otherwise,
      * use the alternate address and port (if any).
      */
-    fascist_firewall_choose_address_rs(status, FIREWALL_OR_CONNECTION, 0,
+    reachable_addr_choose_from_rs(status, FIREWALL_OR_CONNECTION, 0,
                                        use_or_ap);
     have_or = tor_addr_port_is_valid_ap(use_or_ap, 0);
   }
@@ -677,7 +677,7 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
       indirection == DIRIND_ANON_DIRPORT ||
       (indirection == DIRIND_ONEHOP
        && !dirclient_must_use_begindir(options))) {
-    fascist_firewall_choose_address_rs(status, FIREWALL_DIR_CONNECTION, 0,
+    reachable_addr_choose_from_rs(status, FIREWALL_DIR_CONNECTION, 0,
                                        use_dir_ap);
     have_dir = tor_addr_port_is_valid_ap(use_dir_ap, 0);
   }
@@ -921,7 +921,7 @@ directory_command_should_use_begindir(const or_options_t *options,
   }
   if (indirection == DIRIND_ONEHOP) {
     /* We're firewalled and want a direct OR connection */
-    if (!fascist_firewall_allows_address_addr(or_addr, or_port,
+    if (!reachable_addr_allows_addr(or_addr, or_port,
                                               FIREWALL_OR_CONNECTION, 0, 0)) {
       *reason = "ORPort not reachable";
       return 0;

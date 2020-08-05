@@ -322,7 +322,7 @@ test_node_preferred_orport(void *arg)
    * ClientUseIPv4 is 0 */
   mocked_options->ClientUseIPv4 = 0;
   mocked_options->ClientUseIPv6 = 1;
-  node.ipv6_preferred = fascist_firewall_prefer_ipv6_orport(mocked_options);
+  node.ipv6_preferred = reachable_addr_prefer_ipv6_orport(mocked_options);
   node_get_pref_orport(&node, &ap);
   tt_assert(tor_addr_eq(&ap.addr, &ipv6_addr));
   tt_assert(ap.port == ipv6_port);

@@ -539,7 +539,7 @@ routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2)
  *  - <b>CRN_DIRECT_CONN</b>: is suitable for direct connections. Checks
  *                            for the relevant descriptors. Checks the address
  *                            against ReachableAddresses, ClientUseIPv4 0, and
- *                            fascist_firewall_use_ipv6() == 0);
+ *                            reachable_addr_use_ipv6() == 0);
  *  - <b>CRN_PREF_ADDR</b>: if we are connecting directly to the node, it has
  *                          an address that is preferred by the
  *                          ClientPreferIPv6ORPort setting;
@@ -594,7 +594,7 @@ router_can_choose_node(const node_t *node, int flags)
     return false;
   /* Choose a node with an OR address that matches the firewall rules */
   if (direct_conn && check_reach &&
-      !fascist_firewall_allows_node(node,
+      !reachable_addr_allows_node(node,
                                     FIREWALL_OR_CONNECTION,
                                     pref_addr))
     return false;

@@ -102,7 +102,7 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
 
   /* Choose a preferred address first, but fall back to an allowed address. */
   if (for_direct_connect)
-    fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0, &ap);
+    reachable_addr_choose_from_node(node, FIREWALL_OR_CONNECTION, 0, &ap);
   else {
     node_get_prim_orport(node, &ap);
   }

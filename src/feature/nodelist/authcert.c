@@ -808,7 +808,7 @@ authority_certs_fetch_resource_impl(const char *resource,
     /* clients always make OR connections to bridges */
     tor_addr_port_t or_ap;
     /* we are willing to use a non-preferred address if we need to */
-    fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0,
+    reachable_addr_choose_from_node(node, FIREWALL_OR_CONNECTION, 0,
                                          &or_ap);
 
     req = directory_request_new(DIR_PURPOSE_FETCH_CERTIFICATE);

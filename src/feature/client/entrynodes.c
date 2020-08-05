@@ -1466,7 +1466,7 @@ node_passes_guard_filter(const or_options_t *options,
       !routerset_contains_node(options->EntryNodes, node))
     return 0;
 
-  if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
+  if (!reachable_addr_allows_node(node, FIREWALL_OR_CONNECTION, 0))
     return 0;
 
   if (node_is_a_configured_bridge(node))
@@ -1492,7 +1492,7 @@ bridge_passes_guard_filter(const or_options_t *options,
   /* Ignore entrynodes */
   const tor_addr_port_t *addrport = bridge_get_addr_port(bridge);
 
-  if (!fascist_firewall_allows_address_addr(&addrport->addr,
+  if (!reachable_addr_allows_addr(&addrport->addr,
                                             addrport->port,
                                             FIREWALL_OR_CONNECTION,
                                             0, 0))

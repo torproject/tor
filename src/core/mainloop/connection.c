@@ -2246,11 +2246,11 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
     return;
   }
 
-  const int must_ipv4 = !fascist_firewall_use_ipv6(options);
+  const int must_ipv4 = !reachable_addr_use_ipv6(options);
   const int must_ipv6 = (options->ClientUseIPv4 == 0);
   const int pref_ipv6 = (conn->type == CONN_TYPE_OR
-                         ? fascist_firewall_prefer_ipv6_orport(options)
-                         : fascist_firewall_prefer_ipv6_dirport(options));
+                         ? reachable_addr_prefer_ipv6_orport(options)
+                         : reachable_addr_prefer_ipv6_dirport(options));
   tor_addr_t real_addr;
   tor_addr_copy(&real_addr, &conn->addr);
 
@@ -2275,7 +2275,7 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
     return;
   }
 
-  if (fascist_firewall_use_ipv6(options)) {
+  if (reachable_addr_use_ipv6(options)) {
     log_info(LD_NET, "Our outgoing connection is using IPv%d.",
              tor_addr_family(&real_addr) == AF_INET6 ? 6 : 4);
   }
@@ -2285,13 +2285,13 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
       || (pref_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {
     log_info(LD_NET, "Outgoing connection to %s doesn't satisfy "
              "ClientPreferIPv6%sPort %d, with ClientUseIPv4 %d, and "
-             "fascist_firewall_use_ipv6 %d (ClientUseIPv6 %d and UseBridges "
+             "reachable_addr_use_ipv6 %d (ClientUseIPv6 %d and UseBridges "
              "%d).",
              fmt_addr(&real_addr),
              conn->type == CONN_TYPE_OR ? "OR" : "Dir",
              conn->type == CONN_TYPE_OR ? options->ClientPreferIPv6ORPort
                                         : options->ClientPreferIPv6DirPort,
-             options->ClientUseIPv4, fascist_firewall_use_ipv6(options),
+             options->ClientUseIPv4, reachable_addr_use_ipv6(options),
              options->ClientUseIPv6, options->UseBridges);
   }
 }
