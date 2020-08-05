@@ -990,7 +990,7 @@ write_address_to_file(const hs_service_t *service, const char *fname_)
   tor_asprintf(&addr_buf, "%s.%s\n", service->onion_address, address_tld);
   /* Notice here that we use the given "fname_". */
   fname = hs_path_from_filename(service->config.directory_path, fname_);
-  if (write_str_to_file(fname, addr_buf, 0) < 0) {
+  if (write_str_to_file_if_not_equal(fname, addr_buf)) {
     log_warn(LD_REND, "Could not write onion address to hostname file %s",
              escaped(fname));
     goto end;

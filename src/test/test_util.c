@@ -77,6 +77,8 @@
 #define DISABLE_PWDB_TESTS
 #endif
 
+static void set_file_mtime(const char *fname, time_t when);
+
 #define INFINITY_DBL ((double)INFINITY)
 #define NAN_DBL ((double)NAN)
 
@@ -353,6 +355,55 @@ test_util_write_chunks_to_file(void *arg)
   tor_free(str);
   tor_free(data_str);
   tor_free(temp_str);
+}
+
+/* Test write_str_to_file_if_not_equal(). */
+static void
+test_util_write_str_if_changed(void *arg)
+{
+  (void)arg;
+  char *fname = tor_strdup(get_fname("write_if_changed"));
+  char *s = NULL;
+  int rv;
+  const char str1[] = "The wombat lives across the seas";
+  const char str2[] = "Among the far Antipodes"; /* -- Ogden Nash */
+
+  /* We can create files. */
+  rv = write_str_to_file_if_not_equal(fname, str1);
+  tt_int_op(rv, OP_EQ, 0);
+  s = read_file_to_str(fname, 0, NULL);
+  tt_str_op(s, OP_EQ, str1);
+  tor_free(s);
+
+  /* We can replace files. */
+  rv = write_str_to_file_if_not_equal(fname, str2);
+  tt_int_op(rv, OP_EQ, 0);
+  s = read_file_to_str(fname, 0, NULL);
+  tt_str_op(s, OP_EQ, str2);
+  tor_free(s);
+
+  /* Make sure we don't replace files when they're equal. (That's the whole
+   * point of the function we're testing. */
+  /* First, change the mtime of the file so that we can tell whether we
+   * replaced it. */
+  const time_t now = time(NULL);
+  const time_t five_sec_ago = now - 5;
+  set_file_mtime(fname, five_sec_ago);
+  rv = write_str_to_file_if_not_equal(fname, str2);
+  tt_int_op(rv, OP_EQ, 0);
+  /* Make sure that the file's mtime is unchanged... */
+  struct stat st;
+  rv = stat(fname, &st);
+  tt_int_op(rv, OP_EQ, 0);
+  tt_i64_op(st.st_mtime, OP_EQ, five_sec_ago);
+  /* And make sure its contents are unchanged. */
+  s = read_file_to_str(fname, 0, NULL);
+  tt_str_op(s, OP_EQ, str2);
+  tor_free(s);
+
+ done:
+  tor_free(fname);
+  tor_free(s);
 }
 
 #ifndef COCCI
@@ -5786,6 +5837,20 @@ test_util_get_avail_disk_space(void *arg)
   ;
 }
 
+/** Helper: Change the atime and mtime of a file. */
+static void
+set_file_mtime(const char *fname, time_t when)
+{
+  struct utimbuf u = { when, when };
+  struct stat st;
+  tt_int_op(0, OP_EQ, utime(fname, &u));
+  tt_int_op(0, OP_EQ, stat(fname, &st));
+  /* Let's hope that utime/stat give the same second as a round-trip? */
+  tt_i64_op(st.st_mtime, OP_EQ, when);
+done:
+  ;
+}
+
 static void
 test_util_touch_file(void *arg)
 {
@@ -5803,11 +5868,7 @@ test_util_touch_file(void *arg)
   tt_i64_op(st.st_mtime, OP_GE, now - 1);
 
   const time_t five_sec_ago = now - 5;
-  struct utimbuf u = { five_sec_ago, five_sec_ago };
-  tt_int_op(0, OP_EQ, utime(fname, &u));
-  tt_int_op(0, OP_EQ, stat(fname, &st));
-  /* Let's hope that utime/stat give the same second as a round-trip? */
-  tt_i64_op(st.st_mtime, OP_EQ, five_sec_ago);
+  set_file_mtime(fname, five_sec_ago);
 
   /* Finally we can touch the file */
   tt_int_op(0, OP_EQ, touch_file(fname));
@@ -6545,6 +6606,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(read_file_eof_zero_bytes, 0),
   UTIL_TEST(read_file_endlines, 0),
   UTIL_TEST(write_chunks_to_file, 0),
+  UTIL_TEST(write_str_if_changed, 0),
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(fraction, 0),
   UTIL_TEST(weak_random, 0),
