@@ -1,3 +1,5 @@
+image: debian:stable
+
 before_script:
     - apt-get update -qq
     - apt-get upgrade -qy
