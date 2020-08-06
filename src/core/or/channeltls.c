@@ -1761,10 +1761,18 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
    * This is actually never going to happen, since my_addr_len is at most 255,
    * and CELL_PAYLOAD_LEN - 6 is 503.  So we know that cp is < end. */
 
+  /* We should find out if we're canonical to our peer, so we know if we
+   * were extended (or if we extended ourselves) using the right address.
+   *
+   * Clients have no IDs and are never canonical.  Bridges can be canonical on
+   * incomin connections, but never on outgoing connections. */
+  const bool may_be_canonical_to_peer = me &&
+    (!get_options()->BridgeRelay || !started_here);
+
   if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
     tor_addr_from_ipv4n(&my_apparent_addr, get_uint32(my_addr_ptr));
 
-    if (!get_options()->BridgeRelay && me &&
+    if (may_be_canonical_to_peer &&
         get_uint32(my_addr_ptr) == htonl(me->addr)) {
       TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
     }
@@ -1772,7 +1780,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
     tor_addr_from_ipv6_bytes(&my_apparent_addr, (const char *) my_addr_ptr);
 
-    if (!get_options()->BridgeRelay && me &&
+    if (may_be_canonical_to_peer &&
         !tor_addr_is_null(&me->ipv6_addr) &&
         tor_addr_eq(&my_apparent_addr, &me->ipv6_addr)) {
       TLS_CHAN_TO_BASE(chan)->is_canonical_to_peer = 1;
