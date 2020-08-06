@@ -236,6 +236,9 @@ struct channel_t {
   /** The handle to this channel (to free on canceled timers) */
   struct channel_handle_t *timer_handle;
 
+  /** If not UNSPEC, the address that the peer says we have. */
+  tor_addr_t addr_according_to_peer;
+
   /**
    * These two fields specify the minimum and maximum negotiated timeout
    * values for inactivity (send or receive) before we decide to pad a

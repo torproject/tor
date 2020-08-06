@@ -1,0 +1,6 @@
+  o Minor bugfixes (self-testing):
+    - When receiving an incoming circuit, only accept it as evidence that we
+      are reachable if the declared address of its channel is the same
+      address we think that we have.  Otherwise, it could be evidence that
+      we're reachable on some other address. Fixes bug 20165; bugfix on
+      0.1.0.1-rc.

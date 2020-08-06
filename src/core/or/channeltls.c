@@ -1868,6 +1868,12 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
     }
   }
 
+  if (me) {
+    /* We're a relay; record the address that the other side said we had. */
+    tor_addr_copy(&TLS_CHAN_TO_BASE(chan)->addr_according_to_peer,
+                  &my_apparent_addr);
+  }
+
   n_other_addrs = netinfo_cell_get_n_my_addrs(netinfo_cell);
   for (uint8_t i = 0; i < n_other_addrs; i++) {
     /* Consider all the other addresses; if any matches, this connection is

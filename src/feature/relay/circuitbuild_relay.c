@@ -588,13 +588,17 @@ onionskin_answer(struct or_circuit_t *circ,
   if ((!channel_is_local(circ->p_chan)
        || get_options()->ExtendAllowPrivateAddresses)
       && !channel_is_outgoing(circ->p_chan)) {
-    /* record that we could process create cells from a non-local conn
+    /* Okay, it's a create cells from a non-local conn
      * that we didn't initiate; presumably this means that create cells
-     * can reach us too. */
+     * can reach us too. But what address can they reach us on? */
+    const tor_addr_t *my_supposed_addr = &circ->p_chan->addr_according_to_peer;
     tor_addr_t remote_addr;
-    if (channel_get_addr_if_possible(circ->p_chan, &remote_addr)) {
+    if (channel_get_addr_if_possible(circ->p_chan, &remote_addr) &&
+        router_addr_is_my_published_addr(my_supposed_addr)) {
       int family = tor_addr_family(&remote_addr);
-      router_orport_found_reachable(family);
+      if (family == tor_addr_family(my_supposed_addr)) {
+        router_orport_found_reachable(family);
+      }
     }
   }
 

@@ -872,6 +872,8 @@ channel_init(channel_t *chan)
 
   /* Channel is not in the scheduler heap. */
   chan->sched_heap_idx = -1;
+
+  tor_addr_make_unspec(&chan->addr_according_to_peer);
 }
 
 /**
