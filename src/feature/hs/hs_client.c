@@ -2168,6 +2168,8 @@ client_service_authorization_free_(hs_client_service_authorization_t *auth)
     return;
   }
 
+  tor_free(auth->client_name);
+
   memwipe(auth, 0, sizeof(*auth));
   tor_free(auth);
 }
