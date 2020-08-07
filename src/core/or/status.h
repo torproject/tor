@@ -11,6 +11,7 @@
 
 #include "lib/testsupport/testsupport.h"
 
+void note_connection(bool inbound, int family);
 int log_heartbeat(time_t now);
 
 #ifdef STATUS_PRIVATE

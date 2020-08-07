@@ -347,7 +347,9 @@ test_status_hb_not_in_consensus(void *arg)
                  "not in the cached consensus.\n");
   expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
                  "with 0 circuits open. "
-                 "I've sent 0 kB and received 0 kB.\n");
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
   expect_log_msg("Average packaged cell fullness: 100.000%. "
                  "TLS write overhead: 0%\n");
   expect_log_msg("Circuit handshake stats since last time: 1/1 TAP, "
@@ -462,6 +464,8 @@ test_status_hb_simple(void *arg)
   expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
                  "with 0 circuits open. "
                  "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6. "
                  "We are currently hibernating.\n");
 
   done:
@@ -581,7 +585,10 @@ test_status_hb_calls_log_accounting(void *arg)
 
   expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
                  "with 0 circuits open. "
-                 "I've sent 0 kB and received 0 kB.\n");
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
+
   expect_log_msg_containing("Heartbeat: Accounting enabled. Sent: 0 kB, "
                             "Received: 0 kB, Used: 0 kB / 0 kB, Rule: max. "
                             "The current accounting interval ends on ");
@@ -727,7 +734,9 @@ test_status_hb_packaged_cell_fullness(void *arg)
   tt_int_op(actual, OP_EQ, expected);
   expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
                  "with 0 circuits open. "
-                 "I've sent 0 kB and received 0 kB.\n");
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
   expect_log_msg("Average packaged cell fullness: 50.000%. "
                  "TLS write overhead: 0%\n");
 
@@ -850,7 +859,9 @@ test_status_hb_tls_write_overhead(void *arg)
   tt_int_op(actual, OP_EQ, expected);
   expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
                  "with 0 circuits open. "
-                 "I've sent 0 kB and received 0 kB.\n");
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
   expect_log_msg("Average packaged cell fullness: 100.000%. "
                  "TLS write overhead: 100%\n");
 

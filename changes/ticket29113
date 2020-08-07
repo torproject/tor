@@ -1,0 +1,3 @@
+  o Minor features (heartbeat):
+    - Include the total number of inbound and outbound IPv4 and IPv6
+      connections in the heartbeat message . Closes ticket 29113.

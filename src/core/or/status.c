@@ -113,6 +113,41 @@ log_onion_service_stats(void)
              hs_stats_get_n_rendezvous_launches());
 }
 
+/**
+ * @name connection counts for heartbeat
+ *
+ * Tracks incoming and outgoing connections on IPv4/IPv6, for heartbeat
+ * logs.
+ **/
+/**@{*/
+static unsigned n_incoming_ipv4;
+static unsigned n_incoming_ipv6;
+static unsigned n_outgoing_ipv4;
+static unsigned n_outgoing_ipv6;
+/**@}*/
+
+/**
+ * Note that a connection has arrived or has been made, for use in the
+ * heartbeat message.
+ **/
+void
+note_connection(bool inbound, int family)
+{
+  if (family == AF_INET) {
+    if (inbound) {
+      ++n_incoming_ipv4;
+    } else {
+      ++n_outgoing_ipv4;
+    }
+  } else if (family == AF_INET6) {
+    if (inbound) {
+      ++n_incoming_ipv6;
+    } else {
+      ++n_outgoing_ipv6;
+    }
+  }
+}
+
 /** Log a "heartbeat" message describing Tor's status and history so that the
  * user can know that there is indeed a running Tor.  Return 0 on success and
  * -1 on failure. */
@@ -143,8 +178,12 @@ log_heartbeat(time_t now)
   bw_sent = bytes_to_usage(get_bytes_written());
 
   log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
-         "circuits open. I've sent %s and received %s.%s",
+         "circuits open. I've sent %s and received %s. I've received %u "
+         "connections on IPv4 and %u on IPv6. I've made %u connections "
+         "with IPv4 and %u with IPv6.%s",
          uptime, count_circuits(), bw_sent, bw_rcvd,
+         n_incoming_ipv4, n_incoming_ipv6,
+         n_outgoing_ipv4, n_outgoing_ipv6,
          hibernating?" We are currently hibernating.":"");
 
   dirclient_dump_total_dls();
