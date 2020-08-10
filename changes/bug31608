@@ -1,0 +1,6 @@
+  o Minor bugfixes (circuit):
+    - In origin_circuit_init(), change the circuit state after
+      allocating build_state. This allows circuit_state_publish()
+      to run. Previously, we changed the state before allocating,
+      which meant circuit_state_publish() never ran. Fixes bug
+      31608; bugfix on 0.1.1.23. Patch by Neel Chauhan.

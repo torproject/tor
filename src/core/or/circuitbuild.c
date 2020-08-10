@@ -450,7 +450,6 @@ origin_circuit_init(uint8_t purpose, int flags)
 {
   /* sets circ->p_circ_id and circ->p_chan */
   origin_circuit_t *circ = origin_circuit_new();
-  circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_CHAN_WAIT);
   circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   circ->build_state->onehop_tunnel =
     ((flags & CIRCLAUNCH_ONEHOP_TUNNEL) ? 1 : 0);
@@ -462,6 +461,7 @@ origin_circuit_init(uint8_t purpose, int flags)
     ((flags & CIRCLAUNCH_IS_INTERNAL) ? 1 : 0);
   circ->build_state->is_ipv6_selftest =
     ((flags & CIRCLAUNCH_IS_IPV6_SELFTEST) ? 1 : 0);
+  circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_CHAN_WAIT);
   circ->base_.purpose = purpose;
   return circ;
 }
