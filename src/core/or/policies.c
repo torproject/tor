@@ -131,18 +131,18 @@ policy_expand_private(smartlist_t **policy)
         private_nets = private_nets_v6;
         break;
     }
-     for (i = 0; private_nets[i]; ++i) {
-       addr_policy_t newpolicy;
-       memcpy(&newpolicy, p, sizeof(addr_policy_t));
-       newpolicy.is_private = 0;
-       newpolicy.is_canonical = 0;
-       if (tor_addr_parse_mask_ports(private_nets[i], 0,
-                               &newpolicy.addr,
-                               &newpolicy.maskbits, &port_min, &port_max)<0) {
-         tor_assert_unreached();
-       }
-       smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy));
-     }
+    for (i = 0; private_nets[i]; ++i) {
+      addr_policy_t newpolicy;
+      memcpy(&newpolicy, p, sizeof(addr_policy_t));
+      newpolicy.is_private = 0;
+      newpolicy.is_canonical = 0;
+      if (tor_addr_parse_mask_ports(private_nets[i], 0,
+       &newpolicy.addr,
+       &newpolicy.maskbits, &port_min, &port_max)<0) {
+        tor_assert_unreached();
+      }
+      smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy));
+    }
      addr_policy_free(p);
   } SMARTLIST_FOREACH_END(p);
 
