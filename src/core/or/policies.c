@@ -80,13 +80,14 @@ typedef struct policy_summary_item_t {
  *  that all authorities agree on that list when creating summaries, so don't
  *  just change this without a proper migration plan and a proposal and stuff.
  */
-static const char *private_nets[] = {
-  "0.0.0.0/8", "169.254.0.0/16",
-  "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",
-  "[::]/8",
-  "[fc00::]/7", "[fe80::]/10", "[fec0::]/10", "[ff00::]/8", "[::]/127",
-  NULL
-};
+#define PRIVATE_NETS_V4 \
+  "0.0.0.0/8", "169.254.0.0/16", "127.0.0.0/8", "192.168.0.0/16", \
+  "10.0.0.0/8", "172.16.0.0/12"
+#define PRIVATE_NETS_V6 \
+  "[::]/8", "[fc00::]/7", "[fe80::]/10", "[fec0::]/10", "[ff00::]/8", "[::]/127"
+static const char *private_nets_v4[] = { PRIVATE_NETS_V4, NULL };
+static const char *private_nets_v6[] = { PRIVATE_NETS_V6, NULL };
+static const char *private_nets_all[] = { PRIVATE_NETS_V4, PRIVATE_NETS_V6, NULL };
 
 static int policies_parse_exit_policy_internal(
                                       config_line_t *cfg,
@@ -115,10 +116,21 @@ policy_expand_private(smartlist_t **policy)
   tmp = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(*policy, addr_policy_t *, p) {
-     if (! p->is_private) {
-       smartlist_add(tmp, p);
-       continue;
-     }
+    const char **private_nets;
+    switch (p->is_private) {
+      case ADDR_POLICY_NOT_PRIVATE:
+        smartlist_add(tmp, p);
+        continue;
+      case ADDR_POLICY_PRIVATE:
+        private_nets = private_nets_all;
+        break;
+      case ADDR_POLICY_PRIVATE4:
+        private_nets = private_nets_v4;
+        break;
+      case ADDR_POLICY_PRIVATE6:
+        private_nets = private_nets_v6;
+        break;
+    }
      for (i = 0; private_nets[i]; ++i) {
        addr_policy_t newpolicy;
        memcpy(&newpolicy, p, sizeof(addr_policy_t));
@@ -2509,10 +2521,10 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
 
      int is_private = 0;
      int i;
-     for (i = 0; private_nets[i]; ++i) {
+     for (i = 0; private_nets_all[i]; ++i) {
        tor_addr_t addr;
        maskbits_t maskbits;
-       if (tor_addr_parse_mask_ports(private_nets[i], 0, &addr,
+       if (tor_addr_parse_mask_ports(private_nets_all[i], 0, &addr,
                                      &maskbits, NULL, NULL)<0) {
          tor_assert(0);
        }
@@ -2945,7 +2957,7 @@ getinfo_helper_policies(control_connection_t *conn,
     *answer = tor_strdup(DEFAULT_EXIT_POLICY);
   } else if (!strcmp(question, "exit-policy/reject-private/default")) {
     smartlist_t *private_policy_strings;
-    const char **priv = private_nets;
+    const char **priv = private_nets_all;
 
     private_policy_strings = smartlist_new();
 
