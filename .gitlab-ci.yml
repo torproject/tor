@@ -1,17 +1,111 @@
-image: debian:stable
+# This file controls how gitlab validates Tor commits and merge requests.
+#
+# It is primarily based on a set of scripts and configurations by
+# Hans-Christoph Steiner.  It only copies parts of those scripts and
+# configurations for now.  If you want a new piece of functionality
+# (more debians, more fedoras, android support) then you shouldn't
+# start from scratch: have a look at the original ticket, at
+# https://gitlab.torproject.org/tpo/core/tor/-/issues/32193 !
+#
+# The file to copy from is
+# https://gitlab.torproject.org/tpo/core/tor/-/merge_requests/96/diffs#diff-content-587d266bb27a4dc3022bbed44dfa19849df3044c
+#
+# Having said that, if there is anything really stupid here, don't
+# blame it on Hans-Christoph! Tor probably added it on their own.
+#
+# Copyright 2020, The Tor Project, Inc.
+# See LICENSE for licence information.
 
-before_script:
-    - apt-get update -qq
-    - apt-get upgrade -qy
+# These variables are set everywhere, unconditionally.
+variables:
+  TERM: "ansi"
+  DEBUG_CI: "yes"
 
-build:
+# This template is for exporting ephemeral things from the scripts.  By
+# convention we expect our scripts to copy stuff into artifacts/, rather than
+# having a big list of files that be treated as artifacts.
+.artifacts-template: &artifacts-template
+  artifacts:
+    name: "${CI_PROJECT_PATH}_${CI_JOB_STAGE}_${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHA}"
+    expire_in: 1 week
+    when: always
+    paths:
+      - artifacts/
+
+.apt-template: &apt-template |
+      export LC_ALL=C.UTF-8
+      echo Etc/UTC > /etc/timezone
+      mkdir -p apt-cache
+      export APT_CACHE_DIR="$(pwd)/apt-cache"
+      echo 'quiet "1";' \
+           'APT::Install-Recommends "0";' \
+           'APT::Install-Suggests "0";' \
+           'APT::Acquire::Retries "20";' \
+           'APT::Get::Assume-Yes "true";' \
+           'Dpkg::Use-Pty "0";' \
+           "Dir::Cache::Archives \"${APT_CACHE_DIR}\"; " \
+        >> /etc/apt/apt.conf.d/99gitlab
+      apt-get update -qq
+      apt-get upgrade -qy
+
+.debian-template: &debian-template
+  <<: *artifacts-template
+  variables:
+    DEBIAN_FRONTEND: "noninteractive"
+  cache:
+    key: apt
+    paths:
+      - apt-cache
+  before_script:
+    - *apt-template
+    - apt-get install
+        automake
+        build-essential
+        git
+        libevent-dev
+        liblzma-dev
+        libscrypt-dev
+        libseccomp-dev
+        libssl-dev
+        pkg-config
+        python3
+        zlib1g-dev
+    - if [ "$ASCIIDOC" = yes ]; then apt-get install asciidoc xmlto; fi
+    - if [ "$DOXYGEN" = yes ]; then apt-get install doxygen; fi
+
+debian-minimal:
+  image: debian:stable
+  <<: *debian-template
   script:
-    - apt-get install -qy --fix-missing automake build-essential
-      libevent-dev libssl-dev zlib1g-dev
-      libseccomp-dev liblzma-dev libscrypt-dev
-    - ./autogen.sh
-    - ./configure --disable-asciidoc --enable-fatal-warnings
-      --disable-silent-rules
-    - make check || (e=$?; cat test-suite.log; exit $e)
-    - make install
+    - ./scripts/ci/ci-driver.sh
 
+###############################################
+# Temporarily diabled. This one just takes too long to finish right now!
+# Maybe we need to divide the call to ./src/test/test into a few segments,
+# that all end in similar amount of time?
+#debian-hardened:
+#  image: debian:testing
+#  <<: *debian-template
+#  variables:
+#    HARDENING: "yes"
+#  script:
+#    - ./scripts/ci/ci-driver.sh
+
+debian-distcheck:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    DISTCHECK: "yes"
+    CHECK: "no"
+  script:
+    - ./scripts/ci/ci-driver.sh
+
+debian-docs:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    DOXYGEN: "no"
+    ASCIIDOC: "no"
+    CHECK: "no"
+  script:
+    - ./scripts/ci/ci-driver.sh
