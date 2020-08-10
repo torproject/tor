@@ -261,8 +261,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
             > MAX_NICKNAME_LEN)) {
       goto perm_err;
     }
-    strncpy(tmp, rendcirc->build_state->chosen_exit->nickname,
-            (MAX_NICKNAME_LEN+1)); /* nul pads */
+    strlcpy(tmp, rendcirc->build_state->chosen_exit->nickname,
+            sizeof(tmp));
     memcpy(tmp+MAX_NICKNAME_LEN+1, rendcirc->rend_data->rend_cookie,
            REND_COOKIE_LEN);
     dh_offset = MAX_NICKNAME_LEN+1+REND_COOKIE_LEN;
