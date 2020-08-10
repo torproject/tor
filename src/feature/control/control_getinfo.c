@@ -131,9 +131,18 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     smartlist_free(signal_names);
   } else if (!strcmp(question, "features/names")) {
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
-  } else if (!strcmp(question, "address")) {
+  } else if (!strcmp(question, "address") || !strcmp(question, "address/v4")) {
     tor_addr_t addr;
     if (!relay_find_addr_to_publish(get_options(), AF_INET,
+                                    RELAY_FIND_ADDR_CACHE_ONLY, &addr)) {
+      *errmsg = "Address unknown";
+      return -1;
+    }
+    *answer = tor_addr_to_str_dup(&addr);
+    tor_assert_nonfatal(*answer);
+  } else if (!strcmp(question, "address/v6")) {
+    tor_addr_t addr;
+    if (!relay_find_addr_to_publish(get_options(), AF_INET6,
                                     RELAY_FIND_ADDR_CACHE_ONLY, &addr)) {
       *errmsg = "Address unknown";
       return -1;
@@ -1663,6 +1672,10 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("status/version/recommended", "List of currently recommended versions."),
   DOC("status/version/current", "Status of the current version."),
   ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
+  ITEM("address/v4", misc,
+       "IPv4 address of this Tor host, if we can guess it."),
+  ITEM("address/v6", misc,
+       "IPv6 address of this Tor host, if we can guess it."),
   ITEM("traffic/read", misc,"Bytes read since the process was started."),
   ITEM("traffic/written", misc,
        "Bytes written since the process was started."),
