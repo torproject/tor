@@ -145,6 +145,10 @@ tor-0.3.1.10
 ...
 ```
 
+If a bug was introduced before the oldest currently supported release series
+of Tor, and it's hard to track down where it was introduced, you may say
+"bugfix on all supported versions of Tor."
+
 If at all possible, try to create the changes file in the same commit where
 you are making the change.  Please give it a distinctive name that no other
 branch will use for the lifetime of your change. We usually use "ticketNNNNN"
