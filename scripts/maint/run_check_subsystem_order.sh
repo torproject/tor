@@ -12,6 +12,7 @@ if ! test -x "${INCLUDES_PY}" ; then
 fi
 
 "${TOR}" --dbg-dump-subsystem-list | \
+    "${PYTHON:-python}" \
     "${INCLUDES_PY}" --check-subsystem-order - "${abs_top_srcdir}/src"
 
 echo ok
