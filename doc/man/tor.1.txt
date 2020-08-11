@@ -1863,6 +1863,9 @@ different from other Tor clients:
     option overrides this option; if you have configured bridges and
     UseBridges is 1, the Bridges are used as your entry nodes. +
      +
+    This option can appear multiple times: the values from multiple lines are
+    spliced together. +
+     +
     The ExcludeNodes option overrides this option: any node listed in both
     EntryNodes and ExcludeNodes is treated as excluded. See
     <<ExcludeNodes,ExcludeNodes>> for more information on how to specify nodes.
@@ -1874,6 +1877,9 @@ different from other Tor clients:
     be wrapped in braces; fingerprints may be preceded by a dollar sign.
     (Example:
     ExcludeNodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+     +
+    This option can appear multiple times: the values from multiple lines are
+    spliced together. +
      +
     By default, this option is treated as a preference that Tor is allowed
     to override in order to keep working.
@@ -1900,12 +1906,18 @@ different from other Tor clients:
     list too.  See
     <<ExcludeNodes,ExcludeNodes>> for more information on how to specify
     nodes. See also the caveats on the <<ExitNodes,ExitNodes>> option below.
-
+     +
+    This option can appear multiple times: the values from multiple lines are
+    spliced together. +
+     +
 [[ExitNodes]] **ExitNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
     patterns of nodes to use as exit node---that is, a
     node that delivers traffic for you *outside* the Tor network.  See
     <<ExcludeNodes,ExcludeNodes>> for more information on how to specify nodes. +
+     +
+    This option can appear multiple times: the values from multiple lines are
+    spliced together. +
      +
     Note that if you list too few nodes here, or if you exclude too many exit
     nodes with ExcludeExitNodes, you can degrade functionality.  For example,
@@ -1944,6 +1956,9 @@ different from other Tor clients:
      +
     (Example:
     HSLayer2Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+     +
+    This option can appear multiple times: the values from multiple lines are
+    spliced together. +
      +
     When this is set, the resulting hidden service paths will
     look like:
@@ -2001,6 +2016,9 @@ different from other Tor clients:
     (Example:
     HSLayer3Nodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
      +
+    This option can appear multiple times: the values from multiple lines are
+    spliced together. +
+     +
     When this is set by itself, the resulting hidden service paths
     will look like: +
         C - G - M - L3 - Rend +
@@ -2048,7 +2066,10 @@ different from other Tor clients:
     to use for "middle" hops in your normal circuits.
     Normal circuits include all circuits except for direct connections
     to directory servers. Middle hops are all hops other than exit and entry.
-+
+     +
+    This option can appear multiple times: the values from multiple lines are
+    spliced together. +
+     +
     This is an **experimental** feature that is meant to be used by researchers
     and developers to test new features in the Tor network safely. Using it
     without care will strongly influence your anonymity. Other tor features may

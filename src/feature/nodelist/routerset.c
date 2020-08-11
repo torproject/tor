@@ -56,6 +56,7 @@ routerset_new(void)
   result->digests = digestmap_new();
   result->policies = smartlist_new();
   result->country_names = smartlist_new();
+  result->fragile = 0;
   return result;
 }
 
@@ -499,21 +500,32 @@ routerset_kv_parse(void *target, const config_line_t *line, char **errmsg,
                   const void *params)
 {
   (void)params;
-  routerset_t **p = (routerset_t**)target;
-  routerset_free(*p); // clear the old value, if any.
+  routerset_t **lines = target;
+
+  if (*lines && (*lines)->fragile) {
+    if (line->command == CONFIG_LINE_APPEND) {
+      (*lines)->fragile = 0;
+    } else {
+      routerset_free(*lines); // Represent empty sets as NULL
+    }
+  }
+
+  int ret;
   routerset_t *rs = routerset_new();
   if (routerset_parse(rs, line->value, line->key) < 0) {
-    routerset_free(rs);
     *errmsg = tor_strdup("Invalid router list.");
-    return -1;
+    ret = -1;
   } else {
-    if (routerset_is_empty(rs)) {
-      /* Represent empty sets as NULL. */
-      routerset_free(rs);
+    if (!routerset_is_empty(rs)) {
+      if (!*lines) {
+        *lines = routerset_new();
+      }
+      routerset_union(*lines, rs);
     }
-    *p = rs;
-    return 0;
+    ret = 0;
   }
+  routerset_free(rs);
+  return ret;
 }
 
 /**
@@ -564,6 +576,15 @@ routerset_copy(void *dest, const void *src, const void *params)
   return 0;
 }
 
+static void
+routerset_mark_fragile(void *target, const void *params)
+{
+  (void)params;
+  routerset_t **ptr = (routerset_t **)target;
+  if (*ptr)
+    (*ptr)->fragile = 1;
+}
+
 /**
  * Function table to implement a routerset_t-based configuration type.
  **/
@@ -571,7 +592,8 @@ static const var_type_fns_t routerset_type_fns = {
   .kv_parse = routerset_kv_parse,
   .encode = routerset_encode,
   .clear = routerset_clear,
-  .copy = routerset_copy
+  .copy = routerset_copy,
+  .mark_fragile = routerset_mark_fragile,
 };
 
 /**
@@ -585,5 +607,6 @@ static const var_type_fns_t routerset_type_fns = {
  **/
 const var_type_def_t ROUTERSET_type_defn = {
   .name = "RouterList",
-  .fns = &routerset_type_fns
+  .fns = &routerset_type_fns,
+  .flags = CFLG_NOREPLACE
 };

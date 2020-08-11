@@ -1,0 +1,3 @@
+ControlSocket 1234 # dummy to prevent empty output
+EntryNodes 127.0.0.1
+EntryNodes 127.0.0.2,127.0.0.3

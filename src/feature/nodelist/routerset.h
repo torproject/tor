@@ -88,6 +88,10 @@ struct routerset_t {
    * routerset_refresh_countries() whenever the geoip country list is
    * reloaded. */
   bitarray_t *countries;
+  /** If true, subsequent assignments to this routerset should replace
+   * it, not extend it.  Set only on the first item in a routerset in an
+   * or_options_t. */
+  unsigned int fragile:1;
 };
 #endif /* defined(ROUTERSET_PRIVATE) */
 #endif /* !defined(TOR_ROUTERSET_H) */
