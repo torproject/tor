@@ -107,3 +107,17 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    **/
   memset(mem, byte, sz);
 }
+
+/**
+ * Securely all memory in <b>str</b>, then free it.
+ *
+ * As tor_free(), tolerates null pointers.
+ **/
+void
+tor_str_wipe_and_free_(char *str)
+{
+  if (!str)
+    return;
+  memwipe(str, 0, strlen(str));
+  tor_free_(str);
+}
