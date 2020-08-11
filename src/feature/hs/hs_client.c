@@ -779,10 +779,16 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
    * the v3 rendezvous protocol */
   if (rp_ei) {
     const node_t *rp_node = node_get_by_id(rp_ei->identity_digest);
-    if (rp_node) {
-      if (BUG(!node_supports_v3_rendezvous_point(rp_node))) {
-        return;
-      }
+    if (rp_node && !node_supports_v3_rendezvous_point(rp_node)) {
+      /* Even tho we checked that this node supported v3 when we created the
+         rendezvous circuit, there is a chance that we might think it does
+         not support v3 anymore. This might happen if we got a new consensus
+         in the meanwhile, where the relay is still listed but its listed
+         descriptor digest has changed and hence we can't access its 'ri' or
+         'md'. */
+      log_info(LD_REND, "Rendezvous node %s did not support v3 after circuit "
+               "has opened.", safe_str_client(extend_info_describe(rp_ei)));
+      return;
     }
   }
 
