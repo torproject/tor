@@ -25,7 +25,7 @@ Frequently Asked Questions:
         https://www.torproject.org/docs/faq.html
 
 Release timeline:
-        https://gitlab.torproject.org/tpo/core/tor/-/wikis/NetworkTeam/CoreTorReleases
+        https://gitlab.torproject.org/tpo/core/team/-/wikis/NetworkTeam/CoreTorReleases
 
 To get started working on Tor development:
         See the doc/HACKING directory.
