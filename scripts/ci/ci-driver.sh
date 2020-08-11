@@ -256,7 +256,9 @@ fi
 # Tell the user about our versions of different tools and packages.
 
 uname -a
+printf "python: "
 python -V || echo "no 'python' binary."
+printf "python3: "
 python3 -V || echo "no 'python3' binary."
 
 show_git_version Tor "${CI_SRCDIR}"
@@ -266,6 +268,29 @@ fi
 if [[ "${CHUTNEY}" = "yes" ]]; then
     show_git_version Chutney "${CHUTNEY_PATH}"
 fi
+
+#############################################################################
+# Determine the version of Tor.
+
+TOR_VERSION=$(grep -m 1 AC_INIT configure.ac | sed -e 's/.*\[//; s/\].*//;')
+
+# Use variables like these when we need to behave differently depending on
+# Tor version.  Only create the variables we need.
+TOR_VER_AT_LEAST_043=no
+
+# These are the currently supported Tor versions; no need to work with anything
+# ancient in this script.
+case "$TOR_VERSION" in
+    0.3.*)
+        TOR_VER_AT_LEAST_043=no
+        ;;
+    0.4.[012].*)
+        TOR_VER_AT_LEAST_043=no
+        ;;
+    *)
+        TOR_VER_AT_LEAST_043=yes
+        ;;
+esac
 
 #############################################################################
 # Make sure the directories are all there.
@@ -362,7 +387,7 @@ fi
 
 FAILED_TESTS=""
 
-if [[ "${DOXYGEN}" = 'yes' ]]; then
+if [[ "${DOXYGEN}" = 'yes' && "${TOR_VER_AT_LEAST_043}" = 'yes' ]]; then
     start_section Doxygen
     if runcmd make doxygen; then
 	hooray "make doxygen has succeeded."
