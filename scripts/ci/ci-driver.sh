@@ -256,7 +256,9 @@ fi
 # Tell the user about our versions of different tools and packages.
 
 uname -a
+printf "python: "
 python -V || echo "no 'python' binary."
+printf "python3: "
 python3 -V || echo "no 'python3' binary."
 
 show_git_version Tor "${CI_SRCDIR}"
