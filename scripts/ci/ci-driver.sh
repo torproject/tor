@@ -257,7 +257,7 @@ fi
 
 uname -a
 python -V || echo "no 'python' binary."
-python3 -V || echo "no 'pythone' binary."
+python3 -V || echo "no 'python3' binary."
 
 show_git_version Tor "${CI_SRCDIR}"
 if [[ "${STEM}" = "yes" ]]; then
@@ -378,7 +378,7 @@ if [[ "${CHECK}" = "yes" ]]; then
         hooray "make check has succeeded."
     else
         error "Here are the contents of the test suite output:"
-        runcmd cat test_suite.log || true
+        runcmd cat test-suite.log || true
         FAILED_TESTS="${FAILED_TESTS} check"
     fi
     end_section "Check"
