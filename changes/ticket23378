@@ -1,0 +1,4 @@
+  o Documentation (manual page):
+    - Describe the status of the "Sandbox" option more accurately. It is no
+      longer "experimental", but it _is_ dependent on kernel and libc
+      versions. Closes ticket 23378.
