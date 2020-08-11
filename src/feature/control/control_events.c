@@ -109,7 +109,6 @@ const struct control_event_t control_event_table[] = {
   { EVENT_HS_DESC, "HS_DESC" },
   { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
   { EVENT_NETWORK_LIVENESS, "NETWORK_LIVENESS" },
-  { EVENT_CONTROLLER_WAIT, "CONTROLLER_WAIT" },
   { 0, NULL },
 };
 

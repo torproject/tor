@@ -287,8 +287,7 @@ typedef uint64_t event_mask_t;
 #define EVENT_NETWORK_LIVENESS        0x0023
 #define EVENT_PT_LOG                  0x0024
 #define EVENT_PT_STATUS               0x0025
-#define EVENT_CONTROLLER_WAIT         0x0026
-#define EVENT_MAX_                    0x0026
+#define EVENT_MAX_                    0x0025
 
 /* sizeof(control_connection_t.event_mask) in bits, currently a uint64_t */
 #define EVENT_CAPACITY_               0x0040
