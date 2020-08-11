@@ -44,13 +44,6 @@
 #include <errno.h>
 #include <string.h>
 
-#ifdef _WIN32
-#define IS_GLOB_CHAR(s,i) (((s)[(i)]) == '*' || ((s)[(i)]) == '?')
-#else
-#define IS_GLOB_CHAR(s,i) ((((s)[(i)]) == '*' || ((s)[(i)]) == '?') &&\
-                           ((i) == 0 || (s)[(i)-1] != '\\')) /* check escape */
-#endif
-
 /** Removes enclosing quotes from <b>path</b> and unescapes quotes between the
  * enclosing quotes. Backslashes are not unescaped. Return the unquoted
  * <b>path</b> on success or 0 if <b>path</b> is not quoted correctly. */
@@ -321,8 +314,78 @@ make_path_absolute(const char *fname)
 #endif /* defined(_WIN32) */
 }
 
-/** Expands globs in <b>pattern</b> for the path fragment between
- * <b>prev_sep</b> and <b>next_sep</b>. Returns NULL on failure. */
+/* The code below implements tor_glob and get_glob_opened_files. Because it is
+ * not easy to understand it by looking at individual functions, the big
+ * picture explanation here should be read first.
+ *
+ * Purpose of the functions:
+ * - tor_glob - recevies a pattern and returns all the paths that result from
+ *   its glob expansion, globs can be present on all path components.
+ * - get_glob_opened_files - receives a pattern and returns all the paths that
+ *   are opened during its expansion (the paths before any path fragment that
+ *   contains a glob as they have to be opened to check for glob matches). This
+ *   is used to get the paths that have to be added to the seccomp sandbox
+ *   allowed list.
+ *
+ * Due to OS API differences explained below, the implementation of tor_glob is
+ * completly different for Windows and POSIX systems, so we ended up with three
+ * different implementations:
+ * - tor_glob for POSIX - as POSIX glob does everything we need, we simply call
+ *   it and process the results. This is completly implemented in tor_glob.
+ * - tor_glob for WIN32 - because the WIN32 API only supports expanding globs
+ *   in the last path fragment, we need to expand the globs in each path
+ *   fragment manually and call recursively to get the same behaviour as POSIX
+ *   glob. When there are no globs in pattern, we know we are on the last path
+ *   fragment and collect the full path.
+ * - get_glob_opened_files - because the paths before any path fragment with a
+ *   glob will be opened to check for matches, we need to collect them and we
+ *   need to expand the globs in each path fragments and call recursively until
+ *   we find no more globs.
+ *
+ * As seen from the description above, both tor_glob for WIN32 and
+ * get_glob_opened_files receive a pattern and return a list of paths and have
+ * to expand all path fragments that contain globs and call themselves
+ * recursively. The differences are:
+ * - get_glob_opened_files collects paths before path fragments with globs
+ *   while tor_glob for WIN32 collects full paths resulting from the expansion
+ *   of all globs.
+ * - get_glob_opened_files can call tor_glob to expand path fragments with
+ *   globs while tor_glob for WIN32 cannot because it IS tor_glob. For tor_glob
+ *   for WIN32, an auxiliary function has to be used for this purpose.
+ *
+ * To avoid code duplication, the logic of tor_glob for WIN32 and
+ * get_glob_opened_files is implemented in get_glob_paths. The differences are
+ * configured by the extra function parameters:
+ * - final - if true, returns a list of paths obtained from expanding pattern
+ *   (implements tor_glob). Otherwise, returns the paths before path fragments
+ *   with globs (implements get_glob_opened_files).
+ * - unglob - function used to expand a path fragment. The function signature
+ *   is defined by the unglob_fn typedef. Two implementations are available:
+ *   - unglob_win32 - uses tor_listdir and PathMatchSpec (for tor_glob WIN32)
+ *   - unglob_opened_files - uses tor_glob (for get_glob_opened_files)
+ */
+
+/** Returns true if the character at position <b>pos</b> in <b>pattern</b> is
+ * considered a glob. Returns false otherwise. Takes escaping into account on
+ * systems where escaping globs is supported. */
+static inline bool
+is_glob_char(const char *pattern, int pos)
+{
+  bool is_glob = pattern[pos] == '*' || pattern[pos] == '?';
+#ifdef _WIN32
+  return is_glob;
+#else /* !defined(_WIN32) */
+  bool is_escaped = pos > 0 && pattern[pos-1] == '\\';
+  return is_glob && !is_escaped;
+#endif /* defined(_WIN32) */
+}
+
+/** Expands the first path fragment of <b>pattern</b> that contains globs. The
+ * path fragment is between <b>prev_sep</b> and <b>next_sep</b>. If the path
+ * fragment is the last fragment of <b>pattern</b>, <b>next_sep</b> will be the
+ * index of the last char. Returns a list of paths resulting from the glob
+ * expansion of the path fragment. Anything after <b>next_sep</b> is not
+ * included in the returned list. Returns NULL on failure. */
 typedef struct smartlist_t * unglob_fn(const char *pattern, int prev_sep,
                                        int next_sep);
 
@@ -350,7 +413,7 @@ add_non_glob_path(const char *path, struct smartlist_t *result)
  * expand each path fragment. If <b>final</b> is true, the paths are the result
  * of the glob expansion of <b>pattern</b> (implements tor_glob). Otherwise,
  * the paths are the paths opened by glob while expanding <b>pattern</b>
- * (implements get_glb_opened_files). Returns NULL on failure. */
+ * (implements get_glob_opened_files). Returns NULL on failure. */
 static struct smartlist_t *
 get_glob_paths(const char *pattern, unglob_fn unglob, bool final)
 {
@@ -360,7 +423,7 @@ get_glob_paths(const char *pattern, unglob_fn unglob, bool final)
 
   // find first path fragment with globs
   for (i = 0; pattern[i]; i++) {
-    is_glob = is_glob || IS_GLOB_CHAR(pattern, i);
+    is_glob = is_glob || is_glob_char(pattern, i);
     is_last = !pattern[i+1];
     is_sep = pattern[i] == *PATH_SEPARATOR || pattern[i] == '/';
     if (is_sep || is_last) {
@@ -422,7 +485,8 @@ end:
 #ifdef _WIN32
 /** Expands globs in <b>pattern</b> for the path fragment between
  * <b>prev_sep</b> and <b>next_sep</b> using the WIN32 API. Returns NULL on
- * failure. Used by the WIN32 implementation of tor_glob. */
+ * failure. Used by the WIN32 implementation of tor_glob. Implements unglob_fn,
+ * see its description for more details. */
 static struct smartlist_t *
 unglob_win32(const char *pattern, int prev_sep, int next_sep)
 {
@@ -450,10 +514,10 @@ unglob_win32(const char *pattern, int prev_sep, int next_sep)
 #ifdef UNICODE
         mbstowcs(tpattern, path_curr_glob, MAX_PATH);
         mbstowcs(tfile, full_path, MAX_PATH);
-#else
+#else /* !defined(UNICODE) */
         strlcpy(tpattern, path_curr_glob, MAX_PATH);
         strlcpy(tfile, full_path, MAX_PATH);
-#endif
+#endif /* defined(UNICODE) */
         if (PathMatchSpec(tfile, tpattern)) {
           smartlist_add(result, full_path);
         } else {
@@ -492,7 +556,8 @@ prot_lstat(const char *pathname, struct stat *buf)
 #endif /* defined(_WIN32) */
 
 /** Return a new list containing the paths that match the pattern
- * <b>pattern</b>. Return NULL on error.
+ * <b>pattern</b>. Return NULL on error. On POSIX systems, errno is set by the
+ * glob function.
  */
 struct smartlist_t *
 tor_glob(const char *pattern)
@@ -548,7 +613,7 @@ has_glob(const char *s)
 {
   int i;
   for (i = 0; s[i]; i++) {
-    if (IS_GLOB_CHAR(s, i)) {
+    if (is_glob_char(s, i)) {
       return true;
     }
   }
@@ -557,7 +622,8 @@ has_glob(const char *s)
 
 /** Expands globs in <b>pattern</b> for the path fragment between
  * <b>prev_sep</b> and <b>next_sep</b> using tor_glob. Returns NULL on
- * failure. Used by get_glob_opened_files. */
+ * failure. Used by get_glob_opened_files. Implements unglob_fn, see its
+ * description for more details. */
 static struct smartlist_t *
 unglob_opened_files(const char *pattern, int prev_sep, int next_sep)
 {
@@ -565,8 +631,8 @@ unglob_opened_files(const char *pattern, int prev_sep, int next_sep)
   smartlist_t *result = smartlist_new();
   // if the following fragments have no globs, we're done
   if (has_glob(&pattern[next_sep+1])) {
-    // if there is a glob after next_sep, we know it is a separator and not the
-    // last char and glob_path will have the path without the separator
+    // if there is a glob after next_sep, we know next_sep is a separator and
+    // not the last char and glob_path will have the path without the separator
     char *glob_path = tor_strndup(pattern, next_sep);
     smartlist_t *child_paths = tor_glob(glob_path);
     tor_free(glob_path);
