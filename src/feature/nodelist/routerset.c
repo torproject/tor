@@ -142,7 +142,7 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
       } else if ((strchr(nick,'.') || strchr(nick, ':') ||  strchr(nick, '*'))
                  && (p = router_parse_addr_policy_item_from_string(
                                      nick, ADDR_POLICY_REJECT,
-                                     &malformed_list))) {
+                                     &malformed_list, false))) {
         /* IPv4 addresses contain '.', IPv6 addresses contain ':',
          * and wildcard addresses contain '*'. */
         log_debug(LD_CONFIG, "Adding address %s to %s", nick, description);

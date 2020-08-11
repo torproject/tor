@@ -35,13 +35,17 @@ static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
  * on error - the rest of the policy list can continue to be processed and
  * used.
  *
+ * Set <b>is_torrc</b> to true if torrc-specific parsing should take place.
+ * Currently this allows the "private4" and "private6" virtual addresses to be
+ * used in configuration, but not in router descriptors.
+ *
  * The addr_policy_t returned by this function can have its address set to
  * AF_UNSPEC for '*'.  Use policy_expand_unspec() to turn this into a pair
  * of AF_INET and AF_INET6 items.
  */
 MOCK_IMPL(addr_policy_t *,
 router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
-                                           int *malformed_list))
+                                           int *malformed_list, bool is_torrc))
 {
   directory_token_t *tok = NULL;
   const char *cp, *eos;
@@ -92,7 +96,7 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
   /* Use the extended interpretation of accept/reject *,
    * expanding it into an IPv4 wildcard and an IPv6 wildcard.
    * Also permit *4 and *6 for IPv4 and IPv6 only wildcards. */
-  r = router_parse_addr_policy(tok, TAPMP_EXTENDED_STAR);
+  r = router_parse_addr_policy(tok, TAPMP_EXTENDED_STAR, is_torrc);
   if (!r) {
     goto err;
   }
@@ -131,9 +135,11 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
  * a new exit_policy_t corresponding to the token. If TAPMP_EXTENDED_STAR
  * is set in fmt_flags, K_ACCEPT6 and K_REJECT6 tokens followed by *
  * expand to IPv6-only policies, otherwise they expand to IPv4 and IPv6
- * policies */
+ * policies. If is_torrc is false, do not allow "private4" or
+ * "private6" virtual addresses. */
 addr_policy_t *
-router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
+router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags,
+                         bool is_torrc)
 {
   addr_policy_t newe;
   char *arg;
@@ -145,8 +151,15 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
     return NULL;
   arg = tok->args[0];
 
-  if (!strcmpstart(arg,"private"))
-    return router_parse_addr_policy_private(tok);
+  if (strcmpstart(arg,"private") == 0) {
+    /* Don't allow "private4" or "private6" in router descriptors */
+    if (!is_torrc &&
+        (arg[sizeof("private") + 1] == '4' ||
+         arg[sizeof("private") + 1] == '6'))
+      return NULL;
+    else
+      return router_parse_addr_policy_private(tok);
+  }
 
   memset(&newe, 0, sizeof(newe));
 

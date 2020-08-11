@@ -1182,7 +1182,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 {
   addr_policy_t *newe;
   /* Use the standard interpretation of accept/reject *, an IPv4 wildcard. */
-  newe = router_parse_addr_policy(tok, 0);
+  newe = router_parse_addr_policy(tok, 0, false);
   if (!newe)
     return -1;
   if (! router->exit_policy)

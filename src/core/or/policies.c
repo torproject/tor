@@ -224,7 +224,7 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
       log_debug(LD_CONFIG,"Adding new entry '%s'",ent);
       malformed_list = 0;
       item = router_parse_addr_policy_item_from_string(ent, assume_action,
-                                                       &malformed_list);
+                                                       &malformed_list, true);
       if (item) {
         smartlist_add(result, item);
       } else if (malformed_list) {
