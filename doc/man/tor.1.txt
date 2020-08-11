@@ -2233,6 +2233,10 @@ is non-zero):
     ("private" always produces rules for IPv4 and IPv6 addresses, even when
     used with accept6/reject6.) +
      +
+    To specify only IPv4 private networks as defined above, you may use the
+    "private4" alias. Similarly, you may use "private6" for only the IPv6
+    private networks. +
+     +
     Private addresses are rejected by default (at the beginning of your exit
     policy), along with any configured primary public IPv4 and IPv6 addresses.
     These private addresses are rejected unless you set the
