@@ -268,6 +268,29 @@ if [[ "${CHUTNEY}" = "yes" ]]; then
 fi
 
 #############################################################################
+# Determine the version of Tor.
+
+TOR_VERSION=$(grep -m 1 AC_INIT configure.ac | sed -e 's/.*\[//; s/\].*//;')
+
+# Use variables like these when we need to behave differently depending on
+# Tor version.  Only create the variables we need.
+TOR_VER_AT_LEAST_043=no
+
+# These are the currently supported Tor versions; no need to work with anything
+# ancient in this script.
+case "$TOR_VERSION" in
+    0.3.*)
+        TOR_VER_AT_LEAST_043=no
+        ;;
+    0.4.[012].*)
+        TOR_VER_AT_LEAST_043=no
+        ;;
+    *)
+        TOR_VER_AT_LEAST_043=yes
+        ;;
+esac
+
+#############################################################################
 # Make sure the directories are all there.
 
 # Make sure CI_SRCDIR exists and has a file we expect.
@@ -362,7 +385,7 @@ fi
 
 FAILED_TESTS=""
 
-if [[ "${DOXYGEN}" = 'yes' ]]; then
+if [[ "${DOXYGEN}" = 'yes' && "${TOR_VER_AT_LEAST_043}" = 'yes' ]]; then
     start_section Doxygen
     if runcmd make doxygen; then
 	hooray "make doxygen has succeeded."
