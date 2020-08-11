@@ -4583,7 +4583,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
  * actual maximum value.  We clip this value if it's too low, and autodetect
  * it if it's set to 0. */
 STATIC uint64_t
-compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
+compute_real_max_mem_in_queues(const uint64_t val, bool is_server)
 {
   uint64_t result;
 
@@ -4642,7 +4642,7 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
         result = avail;
       }
     }
-    if (log_guess && ! notice_sent) {
+    if (is_server && ! notice_sent) {
       log_notice(LD_CONFIG, "%sMaxMemInQueues is set to %"PRIu64" MB. "
                  "You can override this by setting MaxMemInQueues by hand.",
                  ram ? "Based on detected system memory, " : "",

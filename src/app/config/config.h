@@ -290,7 +290,7 @@ STATIC int parse_port_config(smartlist_t *out,
 STATIC int check_bridge_distribution_setting(const char *bd);
 
 STATIC uint64_t compute_real_max_mem_in_queues(const uint64_t val,
-                                               int log_guess);
+                                               bool is_server);
 STATIC int open_and_add_file_log(const log_severity_list_t *severity,
                                  const char *fname,
                                  int truncate_log);
