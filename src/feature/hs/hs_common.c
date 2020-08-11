@@ -1744,7 +1744,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
     switch (link_specifier_get_ls_type(ls)) {
     case LS_IPV4:
       /* Skip if we already seen a v4. If direct_conn is true, we skip this
-       * block because fascist_firewall_choose_address_ls() will set ap. If
+       * block because reachable_addr_choose_from_ls() will set ap. If
        * direct_conn is false, set ap to the first IPv4 address and port in
        * the link specifiers.*/
       if (have_v4 || direct_conn) continue;
@@ -1776,7 +1776,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
 
   /* Choose a preferred address first, but fall back to an allowed address. */
   if (direct_conn)
-    fascist_firewall_choose_address_ls(lspecs, 0, &ap);
+    reachable_addr_choose_from_ls(lspecs, 0, &ap);
 
   /* Legacy ID is mandatory, and we require an IP address. */
   if (!tor_addr_port_is_valid_ap(&ap, 0)) {

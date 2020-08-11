@@ -666,7 +666,7 @@ nodelist_set_consensus(const networkstatus_t *ns)
       node->is_bad_exit = rs->is_bad_exit;
       node->is_hs_dir = rs->is_hs_dir;
       node->ipv6_preferred = 0;
-      if (fascist_firewall_prefer_ipv6_orport(options) &&
+      if (reachable_addr_prefer_ipv6_orport(options) &&
           (tor_addr_is_null(&rs->ipv6_addr) == 0 ||
            (node->md && tor_addr_is_null(&node->md->ipv6_addr) == 0)))
         node->ipv6_preferred = 1;
@@ -1704,7 +1704,7 @@ node_has_ipv6_dirport(const node_t *node)
  *  ii) the router has no IPv4 OR address.
  *
  * If you don't have a node, consider looking it up.
- * If there is no node, use fascist_firewall_prefer_ipv6_orport().
+ * If there is no node, use reachable_addr_prefer_ipv6_orport().
  */
 int
 node_ipv6_or_preferred(const node_t *node)
@@ -1714,10 +1714,10 @@ node_ipv6_or_preferred(const node_t *node)
   node_assert_ok(node);
 
   /* XX/teor - node->ipv6_preferred is set from
-   * fascist_firewall_prefer_ipv6_orport() each time the consensus is loaded.
+   * reachable_addr_prefer_ipv6_orport() each time the consensus is loaded.
    */
   node_get_prim_orport(node, &ipv4_addr);
-  if (!fascist_firewall_use_ipv6(options)) {
+  if (!reachable_addr_use_ipv6(options)) {
     return 0;
   } else if (node->ipv6_preferred ||
              !tor_addr_port_is_valid_ap(&ipv4_addr, 0)) {
@@ -1812,7 +1812,7 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
  *  or
  *  ii) our preference is for IPv6 Dir addresses.
  *
- * If there is no node, use fascist_firewall_prefer_ipv6_dirport().
+ * If there is no node, use reachable_addr_prefer_ipv6_dirport().
  */
 int
 node_ipv6_dir_preferred(const node_t *node)
@@ -1821,15 +1821,15 @@ node_ipv6_dir_preferred(const node_t *node)
   tor_addr_port_t ipv4_addr;
   node_assert_ok(node);
 
-  /* node->ipv6_preferred is set from fascist_firewall_prefer_ipv6_orport(),
+  /* node->ipv6_preferred is set from reachable_addr_prefer_ipv6_orport(),
    * so we can't use it to determine DirPort IPv6 preference.
    * This means that bridge clients will use IPv4 DirPorts by default.
    */
   node_get_prim_dirport(node, &ipv4_addr);
-  if (!fascist_firewall_use_ipv6(options)) {
+  if (!reachable_addr_use_ipv6(options)) {
     return 0;
   } else if (!tor_addr_port_is_valid_ap(&ipv4_addr, 0)
-      || fascist_firewall_prefer_ipv6_dirport(get_options())) {
+      || reachable_addr_prefer_ipv6_dirport(get_options())) {
     return node_has_ipv6_dirport(node);
   }
   return 0;

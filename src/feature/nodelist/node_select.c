@@ -141,7 +141,7 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
 #define RETRY_ALTERNATE_IP_VERSION(retry_label)                               \
   STMT_BEGIN                                                                  \
     if (result == NULL && try_ip_pref && options->ClientUseIPv4               \
-        && fascist_firewall_use_ipv6(options) && !server_mode(options)        \
+        && reachable_addr_use_ipv6(options) && !server_mode(options)        \
         && !n_busy) {                                                         \
       n_excluded = 0;                                                         \
       n_busy = 0;                                                             \
@@ -212,8 +212,8 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
     log_debug(LD_DIR, "Wanted to make an outgoing directory connection, but "
               "we couldn't find a directory that fit our criteria. "
               "Perhaps we will succeed next time with less strict criteria.");
-  } else if (!fascist_firewall_allows_rs(rs, FIREWALL_OR_CONNECTION, 1)
-             && !fascist_firewall_allows_rs(rs, FIREWALL_DIR_CONNECTION, 1)
+  } else if (!reachable_addr_allows_rs(rs, FIREWALL_OR_CONNECTION, 1)
+             && !reachable_addr_allows_rs(rs, FIREWALL_DIR_CONNECTION, 1)
              ) {
     /* This is rare, and might be interesting to users trying to diagnose
      * connection issues on dual-stack machines. */
@@ -374,12 +374,12 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
      * we try routers that only have one address both times.)
      */
     if (!fascistfirewall || skip_or_fw ||
-        fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION,
+        reachable_addr_allows_node(node, FIREWALL_OR_CONNECTION,
                                      try_ip_pref))
       smartlist_add(is_trusted ? trusted_tunnel :
                     is_overloaded ? overloaded_tunnel : tunnel, (void*)node);
     else if (!must_have_or && (skip_dir_fw ||
-             fascist_firewall_allows_node(node, FIREWALL_DIR_CONNECTION,
+             reachable_addr_allows_node(node, FIREWALL_DIR_CONNECTION,
                                           try_ip_pref)))
       smartlist_add(is_trusted ? trusted_direct :
                     is_overloaded ? overloaded_direct : direct, (void*)node);
@@ -1162,11 +1162,11 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
        * we try routers that only have one address both times.)
        */
       if (!fascistfirewall || skip_or_fw ||
-          fascist_firewall_allows_dir_server(d, FIREWALL_OR_CONNECTION,
+          reachable_addr_allows_dir_server(d, FIREWALL_OR_CONNECTION,
                                              try_ip_pref))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel, (void*)d);
       else if (!must_have_or && (skip_dir_fw ||
-               fascist_firewall_allows_dir_server(d, FIREWALL_DIR_CONNECTION,
+               reachable_addr_allows_dir_server(d, FIREWALL_DIR_CONNECTION,
                                                   try_ip_pref)))
         smartlist_add(is_overloaded ? overloaded_direct : direct, (void*)d);
     }

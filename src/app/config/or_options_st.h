@@ -668,7 +668,7 @@ struct or_options_t {
   int ClientUseIPv4;
   /** If true, clients may connect over IPv6. If false, they will avoid
    * connecting over IPv4. We enforce this for OR and Dir connections.
-   * Use fascist_firewall_use_ipv6() instead of accessing this value
+   * Use reachable_addr_use_ipv6() instead of accessing this value
    * directly. */
   int ClientUseIPv6;
   /** If true, prefer an IPv6 OR port over an IPv4 one for entry node
@@ -678,7 +678,7 @@ struct or_options_t {
   int ClientPreferIPv6ORPort;
   /** If true, prefer an IPv6 directory port over an IPv4 one for direct
    * directory connections. If auto, bridge clients prefer IPv6, and other
-   * clients prefer IPv4. Use fascist_firewall_prefer_ipv6_dirport() instead of
+   * clients prefer IPv4. Use reachable_addr_prefer_ipv6_dirport() instead of
    * accessing this value directly.  */
   int ClientPreferIPv6DirPort;
 
