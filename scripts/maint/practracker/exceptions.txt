@@ -37,7 +37,7 @@ problem file-size /src/app/config/config.c 7525
 problem include-count /src/app/config/config.c 81
 problem function-size /src/app/config/config.c:options_act() 381
 problem function-size /src/app/config/config.c:options_validate_cb() 794
-problem function-size /src/app/config/config.c:options_init_from_torrc() 230
+problem function-size /src/app/config/config.c:options_init_from_torrc() 139
 problem function-size /src/app/config/config.c:options_init_from_string() 103
 problem function-size /src/app/config/config.c:options_init_logs() 125
 problem function-size /src/app/config/config.c:parse_bridge_line() 104

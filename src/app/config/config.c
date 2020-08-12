@@ -2727,6 +2727,140 @@ list_enabled_modules(void)
   // test variants in test_parseconf.sh to no useful purpose.
 }
 
+/** Prints compile-time and runtime library versions. */
+static void
+print_library_versions(void)
+{
+  printf("Tor version %s. \n", get_version());
+  printf("Library versions\tCompiled\t\tRuntime\n");
+  printf("Libevent\t\t%-15s\t\t%s\n",
+                    tor_libevent_get_header_version_str(),
+                    tor_libevent_get_version_str());
+#ifdef ENABLE_OPENSSL
+  printf("OpenSSL \t\t%-15s\t\t%s\n",
+                     crypto_openssl_get_header_version_str(),
+                     crypto_openssl_get_version_str());
+#endif
+#ifdef ENABLE_NSS
+  printf("NSS \t\t%-15s\t\t%s\n",
+                crypto_nss_get_header_version_str(),
+                crypto_nss_get_version_str());
+#endif
+  if (tor_compress_supports_method(ZLIB_METHOD)) {
+    printf("Zlib    \t\t%-15s\t\t%s\n",
+                      tor_compress_version_str(ZLIB_METHOD),
+                      tor_compress_header_version_str(ZLIB_METHOD));
+  }
+  if (tor_compress_supports_method(LZMA_METHOD)) {
+    printf("Liblzma \t\t%-15s\t\t%s\n",
+                      tor_compress_version_str(LZMA_METHOD),
+                      tor_compress_header_version_str(LZMA_METHOD));
+  }
+  if (tor_compress_supports_method(ZSTD_METHOD)) {
+    printf("Libzstd \t\t%-15s\t\t%s\n",
+                      tor_compress_version_str(ZSTD_METHOD),
+                      tor_compress_header_version_str(ZSTD_METHOD));
+  }
+  if (tor_libc_get_name()) {
+    printf("%-7s \t\t%-15s\t\t%s\n",
+           tor_libc_get_name(),
+           tor_libc_get_header_version_str(),
+           tor_libc_get_version_str());
+  }
+  //TODO: Hex versions?
+}
+
+/** Handles the --no-passphrase command line option. */
+static int
+handle_cmdline_no_passphrase(tor_cmdline_mode_t command)
+{
+  if (command == CMD_KEYGEN) {
+    get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_OFF;
+    return 0;
+  } else {
+    log_err(LD_CONFIG, "--no-passphrase specified without --keygen!");
+    return -1;
+  }
+}
+
+/** Handles the --format command line option. */
+static int
+handle_cmdline_format(tor_cmdline_mode_t command, const char *value)
+{
+  if (command == CMD_KEY_EXPIRATION) {
+    // keep the same order as enum key_expiration_format
+    const char *formats[] = { "iso8601", "timestamp" };
+    int format = -1;
+    for (unsigned i = 0; i < ARRAY_LENGTH(formats); i++) {
+      if (!strcmp(value, formats[i])) {
+        format = i;
+        break;
+      }
+    }
+
+    if (format < 0) {
+      log_err(LD_CONFIG, "Invalid --format value %s", escaped(value));
+      return -1;
+    } else {
+      get_options_mutable()->key_expiration_format = format;
+    }
+    return 0;
+  } else {
+    log_err(LD_CONFIG, "--format specified without --key-expiration!");
+    return -1;
+  }
+}
+
+/** Handles the --newpass command line option. */
+static int
+handle_cmdline_newpass(tor_cmdline_mode_t command)
+{
+  if (command == CMD_KEYGEN) {
+    get_options_mutable()->change_key_passphrase = 1;
+    return 0;
+  } else {
+    log_err(LD_CONFIG, "--newpass specified without --keygen!");
+    return -1;
+  }
+}
+
+/** Handles the --passphrase-fd command line option. */
+static int
+handle_cmdline_passphrase_fd(tor_cmdline_mode_t command, const char *value)
+{
+  if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
+    log_err(LD_CONFIG, "--no-passphrase specified with --passphrase-fd!");
+    return -1;
+  } else if (command != CMD_KEYGEN) {
+    log_err(LD_CONFIG, "--passphrase-fd specified without --keygen!");
+    return -1;
+  } else {
+    int ok = 1;
+    long fd = tor_parse_long(value, 10, 0, INT_MAX, &ok, NULL);
+    if (fd < 0 || ok == 0) {
+      log_err(LD_CONFIG, "Invalid --passphrase-fd value %s", escaped(value));
+      return -1;
+    }
+    get_options_mutable()->keygen_passphrase_fd = (int)fd;
+    get_options_mutable()->use_keygen_passphrase_fd = 1;
+    get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_ON;
+    return 0;
+  }
+}
+
+/** Handles the --master-key command line option. */
+static int
+handle_cmdline_master_key(tor_cmdline_mode_t command, const char *value)
+{
+  if (command != CMD_KEYGEN) {
+    log_err(LD_CONFIG, "--master-key without --keygen!");
+    return -1;
+  } else {
+    get_options_mutable()->master_key_fname = tor_strdup(value);
+    return 0;
+  }
+}
+
 /* Return true if <b>options</b> is using the default authorities, and false
  * if any authority-related option has been overridden. */
 int
@@ -4339,43 +4473,7 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   if (config_line_find(cmdline_only_options, "--library-versions")) {
-    printf("Tor version %s. \n", get_version());
-    printf("Library versions\tCompiled\t\tRuntime\n");
-    printf("Libevent\t\t%-15s\t\t%s\n",
-                      tor_libevent_get_header_version_str(),
-                      tor_libevent_get_version_str());
-#ifdef ENABLE_OPENSSL
-    printf("OpenSSL \t\t%-15s\t\t%s\n",
-                      crypto_openssl_get_header_version_str(),
-                      crypto_openssl_get_version_str());
-#endif
-#ifdef ENABLE_NSS
-    printf("NSS \t\t%-15s\t\t%s\n",
-           crypto_nss_get_header_version_str(),
-           crypto_nss_get_version_str());
-#endif
-    if (tor_compress_supports_method(ZLIB_METHOD)) {
-      printf("Zlib    \t\t%-15s\t\t%s\n",
-                        tor_compress_version_str(ZLIB_METHOD),
-                        tor_compress_header_version_str(ZLIB_METHOD));
-    }
-    if (tor_compress_supports_method(LZMA_METHOD)) {
-      printf("Liblzma \t\t%-15s\t\t%s\n",
-                        tor_compress_version_str(LZMA_METHOD),
-                        tor_compress_header_version_str(LZMA_METHOD));
-    }
-    if (tor_compress_supports_method(ZSTD_METHOD)) {
-      printf("Libzstd \t\t%-15s\t\t%s\n",
-                        tor_compress_version_str(ZSTD_METHOD),
-                        tor_compress_header_version_str(ZSTD_METHOD));
-    }
-    if (tor_libc_get_name()) {
-      printf("%-7s \t\t%-15s\t\t%s\n",
-             tor_libc_get_name(),
-             tor_libc_get_header_version_str(),
-             tor_libc_get_version_str());
-    }
-    //TODO: Hex versions?
+    print_library_versions();
     return 1;
   }
 
@@ -4389,10 +4487,7 @@ options_init_from_torrc(int argc, char **argv)
     cf = tor_strdup("");
   } else {
     cf_defaults = load_torrc_from_disk(cmdline_only_options, 1);
-
-    const config_line_t *f_line = config_line_find(cmdline_only_options,
-                                                   "-f");
-
+    const config_line_t *f_line = config_line_find(cmdline_only_options, "-f");
     const int read_torrc_from_stdin =
     (f_line != NULL && strcmp(f_line->value, "-") == 0);
 
@@ -4413,15 +4508,11 @@ options_init_from_torrc(int argc, char **argv)
 
   retval = options_init_from_string(cf_defaults, cf, command, command_arg,
                                     &errmsg);
-
   if (retval < 0)
     goto err;
 
   if (config_line_find(cmdline_only_options, "--no-passphrase")) {
-    if (command == CMD_KEYGEN) {
-      get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_OFF;
-    } else {
-      log_err(LD_CONFIG, "--no-passphrase specified without --keygen!");
+    if (handle_cmdline_no_passphrase(command) < 0) {
       retval = -1;
       goto err;
     }
@@ -4430,27 +4521,7 @@ options_init_from_torrc(int argc, char **argv)
   const config_line_t *format_line = config_line_find(cmdline_only_options,
                                                       "--format");
   if (format_line) {
-    if (command == CMD_KEY_EXPIRATION) {
-      const char *v = format_line->value;
-      // keep the same order as enum key_expiration_format
-      const char *formats[] = { "iso8601", "timestamp" };
-      int format = -1;
-      for (unsigned i = 0; i < ARRAY_LENGTH(formats); i++) {
-        if (!strcmp(v, formats[i])) {
-          format = i;
-          break;
-        }
-      }
-
-      if (format < 0) {
-        log_err(LD_CONFIG, "Invalid --format value %s", escaped(v));
-        retval = -1;
-        goto err;
-      } else {
-        get_options_mutable()->key_expiration_format = format;
-      }
-    } else {
-      log_err(LD_CONFIG, "--format specified without --key-expiration!");
+    if (handle_cmdline_format(command, format_line->value) < 0) {
       retval = -1;
       goto err;
     }
@@ -4460,59 +4531,31 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   if (config_line_find(cmdline_only_options, "--newpass")) {
-    if (command == CMD_KEYGEN) {
-      get_options_mutable()->change_key_passphrase = 1;
-    } else {
-      log_err(LD_CONFIG, "--newpass specified without --keygen!");
+    if (handle_cmdline_newpass(command) < 0) {
       retval = -1;
       goto err;
     }
   }
 
-  {
-    const config_line_t *fd_line = config_line_find(cmdline_only_options,
-                                                    "--passphrase-fd");
-    if (fd_line) {
-      if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
-        log_err(LD_CONFIG, "--no-passphrase specified with --passphrase-fd!");
-        retval = -1;
-        goto err;
-      } else if (command != CMD_KEYGEN) {
-        log_err(LD_CONFIG, "--passphrase-fd specified without --keygen!");
-        retval = -1;
-        goto err;
-      } else {
-        const char *v = fd_line->value;
-        int ok = 1;
-        long fd = tor_parse_long(v, 10, 0, INT_MAX, &ok, NULL);
-        if (fd < 0 || ok == 0) {
-          log_err(LD_CONFIG, "Invalid --passphrase-fd value %s", escaped(v));
-          retval = -1;
-          goto err;
-        }
-        get_options_mutable()->keygen_passphrase_fd = (int)fd;
-        get_options_mutable()->use_keygen_passphrase_fd = 1;
-        get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_ON;
-      }
+  const config_line_t *fd_line = config_line_find(cmdline_only_options,
+                                                  "--passphrase-fd");
+  if (fd_line) {
+    if (handle_cmdline_passphrase_fd(command, fd_line->value) < 0) {
+      retval = -1;
+      goto err;
     }
   }
 
-  {
-    const config_line_t *key_line = config_line_find(cmdline_only_options,
-                                                     "--master-key");
-    if (key_line) {
-      if (command != CMD_KEYGEN) {
-        log_err(LD_CONFIG, "--master-key without --keygen!");
-        retval = -1;
-        goto err;
-      } else {
-        get_options_mutable()->master_key_fname = tor_strdup(key_line->value);
-      }
+  const config_line_t *key_line = config_line_find(cmdline_only_options,
+                                                   "--master-key");
+  if (key_line) {
+    if (handle_cmdline_master_key(command, key_line->value) < 0) {
+      retval = -1;
+      goto err;
     }
   }
 
  err:
-
   tor_free(cf);
   tor_free(cf_defaults);
   if (errmsg) {

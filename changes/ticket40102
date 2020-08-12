@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Split implementation of several command line options from
+      options_init_from_torrc into smaller isolated functions.
+      Patch by Daniel Pinto. Closes ticket 40102.
