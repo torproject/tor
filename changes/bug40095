@@ -1,4 +1,0 @@
-  o Minor bugfixes (testing):
-    - When running the subsystem order check, use the python binary
-      configured with the PYTHON environment variable. Fixes bug 40095;
-      bugfix on 0.4.4.1-alpha.

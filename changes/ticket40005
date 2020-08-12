@@ -1,3 +1,0 @@
-  o Minor bugfix (control port, onion service):
-    - Consistently use 'address' in "Invalid v3 address" response to
-      ONION_CLIENT_AUTH commands. Fixes bug 40005; bugfix on 0.4.3.1-alpha.

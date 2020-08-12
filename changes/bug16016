@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging):
-    - Downgrade a noisy log message that could occur naturally when
-      receiving an extrainfo document that we no longer want.
-      Fixes bug 16016; bugfix on 0.2.6.3-alpha.

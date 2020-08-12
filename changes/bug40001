@@ -1,3 +1,0 @@
-  o Minor features (entry guards):
-    - Reinstate support for GUARD NEW/UP/DOWN control port events.
-      Closes ticket 40001.

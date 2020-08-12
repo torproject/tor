@@ -1,3 +1,0 @@
-  o Minor bugfixes (onion service v3):
-    - Remove a BUG() warning that could trigger in certain unlikely edge-cases.
-      Fixes bug 34086; bugfix on 0.3.2.1-alpha.

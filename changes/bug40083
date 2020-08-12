@@ -1,5 +1,0 @@
-  o Minor bugfixes (relay, self-testing):
-    - When starting up as a relay, if we haven't been able to verify that
-      we're reachable, only launch reachability tests at most once a minute.
-      Previously, we had been launching tests up to once a second, which
-      was needlessly noisy. Fixes bug 40083; bugfix on 0.2.8.1-alpha.

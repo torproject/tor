@@ -1,9 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox):
-    - Makes the seccomp sandbox allow the correct syscall for opendir
-      according to the running glibc version. The opendir function
-      either uses open or openat but the current code does not
-      differenciate between opendir and open calls. This adds a new
-      seccomp sandbox rule for opendir. This fixes crashes when 
-      reloading torrc with sandbox enabled when running on glibc
-      2.15 to 2.21 and 2.26. Patch from Daniel Pinto. Fixes bug 40020; 
-      bugfix on 0.3.5.11.

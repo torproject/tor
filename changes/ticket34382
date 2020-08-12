@@ -1,6 +1,0 @@
-  o Minor features (Linux seccomp2 sandbox, compilation):
-    - Allow Tor to build on platforms where it doesn't know how to
-      report which syscall had caused the linux seccomp2 sandbox
-      to fail. This change should make the sandbox code more portable
-      to less common Linux architectures.
-      Closes ticket 34382.
