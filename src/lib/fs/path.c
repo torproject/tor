@@ -553,6 +553,12 @@ prot_lstat(const char *pathname, struct stat *buf)
 {
   return lstat(sandbox_intern_string(pathname), buf);
 }
+/** As closedir, but has the right type for gl_closedir */
+static void
+wrap_closedir(void *arg)
+{
+  closedir(arg);
+}
 #endif /* defined(_WIN32) */
 
 /** Return a new list containing the paths that match the pattern
@@ -580,7 +586,7 @@ tor_glob(const char *pattern)
   typedef void (*gl_closedir)(void *);
   matches.gl_opendir = (gl_opendir) &prot_opendir;
   matches.gl_readdir = (gl_readdir) &readdir;
-  matches.gl_closedir = (gl_closedir) &closedir;
+  matches.gl_closedir = (gl_closedir) &wrap_closedir;
   matches.gl_stat = &prot_stat;
   matches.gl_lstat = &prot_lstat;
 #endif /* defined(GLOB_ALTDIRFUNC) */
