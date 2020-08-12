@@ -127,7 +127,7 @@ tor_process = subprocess.Popen([tor_path,
 if tor_process == None:
     fail('ERROR: running tor failed')
 
-wait_for_log('Opened Control listener on')
+wait_for_log('Opened Control listener')
 
 control_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 if control_socket.connect_ex(('127.0.0.1', control_port)):
