@@ -44,7 +44,6 @@ static int dump_statistics_mock_matches = 0;
 static int test_close_called = 0;
 static int test_chan_should_be_canonical = 0;
 static int test_chan_should_match_target = 0;
-static int test_chan_canonical_should_be_reliable = 0;
 static int test_chan_listener_close_fn_called = 0;
 static int test_chan_listener_fn_called = 0;
 
@@ -337,13 +336,9 @@ scheduler_release_channel_mock(channel_t *ch)
 }
 
 static int
-test_chan_is_canonical(channel_t *chan, int req)
+test_chan_is_canonical(channel_t *chan)
 {
   tor_assert(chan);
-
-  if (req && test_chan_canonical_should_be_reliable) {
-    return 1;
-  }
 
   if (test_chan_should_be_canonical) {
     return 1;
@@ -1360,6 +1355,9 @@ test_channel_for_extend(void *arg)
   /* Make it older than chan1. */
   chan2->timestamp_created = chan1->timestamp_created - 1;
 
+  /* Say it's all canonical. */
+  test_chan_should_be_canonical = 1;
+
   /* Set channel identities and add it to the channel map. The last one to be
    * added is made the first one in the list so the lookup will always return
    * that one first. */
@@ -1463,8 +1461,8 @@ test_channel_for_extend(void *arg)
   chan2->is_bad_for_new_circs = 0;
 
   /* Non canonical channels. */
+  test_chan_should_be_canonical = 0;
   test_chan_should_match_target = 0;
-  test_chan_canonical_should_be_reliable = 1;
   ret_chan = channel_get_for_extend(digest, &ed_id, &ipv4_addr, &ipv6_addr,
                                     &msg, &launch);
   tt_assert(!ret_chan);

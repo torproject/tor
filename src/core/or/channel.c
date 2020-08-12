@@ -787,10 +787,9 @@ channel_check_for_duplicates(void)
       if (is_dirauth)
         total_dirauth_connections++;
 
-      if (chan->is_canonical(chan, 0)) total_canonical++;
+      if (chan->is_canonical(chan)) total_canonical++;
 
-      if (!chan->is_canonical_to_peer && chan->is_canonical(chan, 0)
-          && chan->is_canonical(chan, 1)) {
+      if (!chan->is_canonical_to_peer && chan->is_canonical(chan)) {
         total_half_canonical++;
       }
     }
@@ -2457,21 +2456,9 @@ channel_get_for_extend,(const char *rsa_id_digest,
       continue;
     }
 
-    /* If the connection is using a recent link protocol, only return canonical
-     * connections, when the address is one of the addresses we wanted.
-     *
-     * The channel_is_canonical_is_reliable() function asks the lower layer
-     * if we should trust channel_is_canonical(). It only applies when
-     * the lower-layer transport is channel_tls_t.
-     *
-     * For old link protocols, we can't rely on is_canonical getting
-     * set properly if we're talking to the right address, since we might
-     * have an out-of-date descriptor, and we will get no NETINFO cell to
-     * tell us about the right address.
-     */
-    if (!channel_is_canonical(chan) &&
-         channel_is_canonical_is_reliable(chan) &&
-        !matches_target) {
+    /* Only return canonical connections or connections where the address
+     * is the address we wanted. */
+    if (!channel_is_canonical(chan) && !matches_target) {
       ++n_noncanonical;
       continue;
     }
@@ -2612,16 +2599,12 @@ channel_dump_statistics, (channel_t *chan, int severity))
 
   /* Handle marks */
   tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " has these marks: %s %s %s "
-      "%s %s %s",
+      " * Channel %"PRIu64 " has these marks: %s %s %s %s %s",
       (chan->global_identifier),
       channel_is_bad_for_new_circs(chan) ?
         "bad_for_new_circs" : "!bad_for_new_circs",
       channel_is_canonical(chan) ?
         "canonical" : "!canonical",
-      channel_is_canonical_is_reliable(chan) ?
-        "is_canonical_is_reliable" :
-        "!is_canonical_is_reliable",
       channel_is_client(chan) ?
         "client" : "!client",
       channel_is_local(chan) ?
@@ -2980,22 +2963,7 @@ channel_is_canonical(channel_t *chan)
   tor_assert(chan);
   tor_assert(chan->is_canonical);
 
-  return chan->is_canonical(chan, 0);
-}
-
-/**
- * Test if the canonical flag is reliable.
- *
- * This function asks if the lower layer thinks it's safe to trust the
- * result of channel_is_canonical().
- */
-int
-channel_is_canonical_is_reliable(channel_t *chan)
-{
-  tor_assert(chan);
-  tor_assert(chan->is_canonical);
-
-  return chan->is_canonical(chan, 1);
+  return chan->is_canonical(chan);
 }
 
 /**
