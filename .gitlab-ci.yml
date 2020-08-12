@@ -66,6 +66,7 @@ variables:
     - apt-get install
         automake
         build-essential
+        ca-certificates
         git
         libevent-dev
         liblzma-dev
@@ -77,6 +78,10 @@ variables:
         zlib1g-dev
     - if [ "$ASCIIDOC" = yes ]; then apt-get install asciidoc xmlto; fi
     - if [ "$DOXYGEN" = yes ]; then apt-get install doxygen; fi
+    - if [ "$STEM" = yes ]; then apt-get install timelimit; fi
+    - if [ "$CC" = clang ]; then apt-get install clang; fi
+    - if [ "$STEM" = yes ]; then git clone --depth 1 https://git.torproject.org/stem.git ; export STEM_PATH="$(pwd)/stem"; fi
+    - if [ "$CHUTNEY" = yes ]; then git clone --depth 1 https://git.torproject.org/chutney.git ;  export CHUTNEY_PATH="$(pwd)/chutney"; fi
 
 debian-minimal:
   image: debian:stable
@@ -84,17 +89,18 @@ debian-minimal:
   script:
     - ./scripts/ci/ci-driver.sh
 
-###############################################
-# Temporarily diabled. This one just takes too long to finish right now!
+
+# TODO: This one just takes too long to finish right now!
 # Maybe we need to divide the call to ./src/test/test into a few segments,
 # that all end in similar amount of time?
-#debian-hardened:
-#  image: debian:testing
-#  <<: *debian-template
-#  variables:
-#    HARDENING: "yes"
-#  script:
-#    - ./scripts/ci/ci-driver.sh
+debian-hardened:
+  image: debian:testing
+  <<: *debian-template
+  variables:
+    HARDENING: "yes"
+    CC: "clang"
+  script:
+    - ./scripts/ci/ci-driver.sh
 
 debian-distcheck:
   image: debian:stable
@@ -105,7 +111,6 @@ debian-distcheck:
   script:
     - ./scripts/ci/ci-driver.sh
 
-# TODO: it would be neat to disable the "make all" part of this one.
 debian-docs:
   image: debian:stable
   <<: *debian-template
@@ -113,5 +118,16 @@ debian-docs:
     DOXYGEN: "yes"
     ASCIIDOC: "yes"
     CHECK: "no"
+    RUN_STAGE_BUILD: "no"
+  script:
+    - ./scripts/ci/ci-driver.sh
+
+debian-integration:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    CHECK: "no"
+    CHUTNEY: "yes"
+    # STEM: "yes" -- currently failing on <044.
   script:
     - ./scripts/ci/ci-driver.sh

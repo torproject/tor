@@ -157,6 +157,8 @@ include src/include.am
 include doc/include.am
 include contrib/include.am
 
+manpages: $(nodist_man1_MANS)
+
 EXTRA_DIST+= \
 	ChangeLog					\
 	CONTRIBUTING					\
