@@ -411,10 +411,13 @@ fi
 
 if [[ "${CHUTNEY}" = "yes" ]]; then
     start_section "Chutney"
+    export CHUTNEY_TOR_SANDBOX=0
+    export CHUTNEY_ALLOW_FAILURES=2
     if runcmd make "${CHUTNEY_MAKE_TARGET}"; then
         hooray "Chutney tests have succeeded"
     else
         error "Chutney says:"
+        export CHUTNEY_DATA_DIR="${CHUTNEY_PATH}/net"
         runcmd "${CHUTNEY_PATH}"/tools/diagnostics.sh || true
         # XXXX These next two should be part of a make target.
         runcmd ls test_network_log || true
