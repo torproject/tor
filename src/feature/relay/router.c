@@ -1729,6 +1729,11 @@ router_is_me(const routerinfo_t *router)
   return router_digest_is_me(router->cache_info.identity_digest);
 }
 
+/**
+ * Return true if we are a server, and if @a addr is an address we are
+ * currently publishing (or trying to publish) in our descriptor.
+ * Return false otherwise.
+ **/
 bool
 router_addr_is_my_published_addr(const tor_addr_t *addr)
 {
