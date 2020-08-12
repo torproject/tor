@@ -1,3 +1,0 @@
-  o Minor features (defense in depth):
-    - Wipe more data from connection address fields before returning them to
-      the memory heap. Closes ticket 6198.

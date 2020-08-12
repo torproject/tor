@@ -1,6 +1,0 @@
-  o Minor features (security):
-    - Channels using obsolete versions of the Tor link protocol are no
-      longer allowed to circumvent address-canonicity checks.
-      (This is only a minor issue, since such channels have no way to
-      set ed25519 keys, and therefore should always be rejected.)
-      Closes ticket 40081.

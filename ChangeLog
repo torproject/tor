@@ -1,3 +1,59 @@
+Changes in version 0.4.4.4-rc - 2020-08-12
+  Tor 0.4.4.4-rc is the first release candidate in its series. It fixes
+  several bugs in previous versions, including some that caused annoying
+  behavior for relay and bridge operators.
+
+  o Minor features (security):
+    - Channels using obsolete versions of the Tor link protocol are no
+      longer allowed to circumvent address-canonicity checks. (This is
+      only a minor issue, since such channels have no way to set ed25519
+      keys, and therefore should always be rejected for circuits that
+      specify ed25519 identities.) Closes ticket 40081.
+
+  o Minor features (defense in depth):
+    - Wipe more data from connection address fields before returning
+      them to the memory heap. Closes ticket 6198.
+
+  o Minor bugfixes (correctness, buffers):
+    - Fix a correctness bug that could cause an assertion failure if we
+      ever tried using the buf_move_all() function with an empty input
+      buffer. As far as we know, no released versions of Tor do this.
+      Fixes bug 40076; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Fix startup crash with seccomp sandbox enabled when tor tries to
+      open the data directory. Patch from Daniel Pinto. Fixes bug 40072;
+      bugfix on 0.4.4.3-alpha-dev.
+
+  o Minor bugfixes (onion service v3):
+    - Remove a BUG() warning that could trigger in certain unlikely
+      edge-cases. Fixes bug 34086; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (rate limiting, bridges, pluggable transports):
+    - On a bridge, treat all connections from an ExtORPort as remote by
+      default for the purposes of rate-limiting. Previously, bridges
+      would treat the connection as local unless they explicitly
+      received a "USERADDR" command. ExtORPort connections still count
+      as local if there is a USERADDR command with an explicit local
+      address. Fixes bug 33747; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (relay, self-testing):
+    - When starting up as a relay, if we haven't been able to verify
+      that we're reachable, only launch reachability tests at most once
+      a minute. Previously, we had been launching tests up to once a
+      second, which was needlessly noisy. Fixes bug 40083; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (testing):
+    - When running the subsystem order check, use the python binary
+      configured with the PYTHON environment variable. Fixes bug 40095;
+      bugfix on 0.4.4.1-alpha.
+
+  o Minor bugfixes (windows):
+    - Fix a bug that prevented Tor from starting if its log file grew
+      above 2GB. Fixes bug 31036; bugfix on 0.2.1.8-alpha.
+
+
 Changes in version 0.4.4.3-alpha - 2020-07-27
   Tor 0.4.4.3-alpha fixes several annoyances in previous versions,
   including one affecting NSS users, and several affecting the Linux
