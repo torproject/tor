@@ -111,7 +111,6 @@ debian-distcheck:
   script:
     - ./scripts/ci/ci-driver.sh
 
-# TODO: it would be neat to disable the "make all" part of this one.
 debian-docs:
   image: debian:stable
   <<: *debian-template
@@ -119,6 +118,7 @@ debian-docs:
     DOXYGEN: "yes"
     ASCIIDOC: "yes"
     CHECK: "no"
+    RUN_STAGE_BUILD: "no"
   script:
     - ./scripts/ci/ci-driver.sh
 
