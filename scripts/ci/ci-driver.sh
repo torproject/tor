@@ -65,12 +65,14 @@ STEM_PATH="${STEM_PATH:-}"
 if [[ "${COLOR_CI}" == "yes" ]]; then
     T_RED=$(tput setaf 1 || true)
     T_GREEN=$(tput setaf 2 || true)
+    T_YELLOW=$(tput setaf 3 || true)
     T_DIM=$(tput dim || true)
     T_BOLD=$(tput bold || true)
     T_RESET=$(tput sgr0 || true)
 else
     T_RED=
     T_GREEN=
+    T_YELLOW=
     T_DIM=
     T_BOLD=
     T_RESET=
@@ -85,6 +87,12 @@ function die()
     echo "${T_BOLD}${T_RED}FATAL ERROR:${T_RESET} $*" 1>&2
     exit 1
 }
+
+function skipping()
+{
+    echo "${T_BOLD}${T_YELLOW}Skipping $*${T_RESET}"
+}
+
 function hooray()
 {
     echo "${T_BOLD}${T_GREEN}$*${T_RESET}"
@@ -363,12 +371,16 @@ fi
 
 FAILED_TESTS=""
 
-if [[ "${DOXYGEN}" = 'yes' && "${TOR_VER_AT_LEAST_043}" = 'yes' ]]; then
+if [[ "${DOXYGEN}" = 'yes' ]]; then
     start_section Doxygen
-    if runcmd make doxygen; then
-	hooray "make doxygen has succeeded."
+    if [[ "${TOR_VER_AT_LEAST_043}" = 'yes' ]]; then
+        if runcmd make doxygen; then
+	    hooray "make doxygen has succeeded."
+        else
+	    FAILED_TESTS="${FAILED_TESTS} doxygen"
+        fi
     else
-	FAILED_TESTS="${FAILED_TESTS} doxygen"
+        skipping "make doxygen: doxygen is broken for Tor < 0.4.3"
     fi
     end_section Doxygen
 fi
