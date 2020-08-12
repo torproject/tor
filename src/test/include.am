@@ -23,7 +23,15 @@ TESTSCRIPTS = \
 	src/test/test_workqueue_pipe.sh \
 	src/test/test_workqueue_pipe2.sh \
 	src/test/test_workqueue_socketpair.sh \
-	src/test/test_switch_id.sh
+	src/test/test_switch_id.sh \
+        src/test/unittest_part1.sh \
+        src/test/unittest_part2.sh \
+        src/test/unittest_part3.sh \
+        src/test/unittest_part4.sh \
+        src/test/unittest_part5.sh \
+        src/test/unittest_part6.sh \
+        src/test/unittest_part7.sh \
+        src/test/unittest_part8.sh
 
 if USE_RUST
 TESTSCRIPTS += \
@@ -35,7 +43,7 @@ TESTSCRIPTS += src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.s
 TESTSCRIPTS += src/test/test_rebind.sh
 endif
 
-TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
+TESTS += src/test/test-slow src/test/test-memwipe \
 	src/test/test_workqueue \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \
