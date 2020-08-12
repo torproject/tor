@@ -21,6 +21,11 @@ COLOR_CI="${COLOR_CI:-yes}"
 # Options for which CI system this is.
 ON_GITLAB="${ON_GITLAB:-yes}"
 
+# Options for things we usually won't want to skip.
+RUN_STAGE_CONFIGURE="${RUN_STAGE_CONFIGURE:-yes}"
+RUN_STAGE_BUILD="${RUN_STAGE_BUILD:-yes}"
+RUN_STAGE_TEST="${RUN_STAGE_TEST:-yes}"
+
 # Options for how to build Tor.  All should be yes/no.
 FATAL_WARNINGS="${FATAL_WARNINGS:-yes}"
 HARDENING="${HARDENING:-no}"
@@ -60,12 +65,14 @@ STEM_PATH="${STEM_PATH:-}"
 if [[ "${COLOR_CI}" == "yes" ]]; then
     T_RED=$(tput setaf 1 || true)
     T_GREEN=$(tput setaf 2 || true)
+    T_YELLOW=$(tput setaf 3 || true)
     T_DIM=$(tput dim || true)
     T_BOLD=$(tput bold || true)
     T_RESET=$(tput sgr0 || true)
 else
     T_RED=
     T_GREEN=
+    T_YELLOW=
     T_DIM=
     T_BOLD=
     T_RESET=
@@ -80,6 +87,12 @@ function die()
     echo "${T_BOLD}${T_RED}FATAL ERROR:${T_RESET} $*" 1>&2
     exit 1
 }
+
+function skipping()
+{
+    echo "${T_BOLD}${T_YELLOW}Skipping $*${T_RESET}"
+}
+
 function hooray()
 {
     echo "${T_BOLD}${T_GREEN}$*${T_RESET}"
@@ -165,33 +178,6 @@ else
     }
 fi
 
-if [[ "$*" == "" ]]; then
-    RUN_STAGE_CONFIGURE="yes"
-    RUN_STAGE_BUILD="yes"
-    RUN_STAGE_TEST="yes"
-else
-    RUN_STAGE_CONFIGURE="no"
-    RUN_STAGE_BUILD="no"
-    RUN_STAGE_TEST="no"
-
-    for stage in "$@"; do
-	case "$stage" in
-	    configure)
-		RUN_STAGE_CONFIGURE="yes"
-		;;
-	    build)
-		RUN_STAGE_BUILD="yes"
-		;;
-	    test)
-		RUN_STAGE_TEST="yes"
-		;;
-	    *)
-		error "Unknown stage $stage"
-		;;
-	esac
-    done
-fi
-
 #############################################################################
 # Validate inputs.
 
@@ -205,6 +191,10 @@ yes_or_no COVERAGE
 yes_or_no RUST
 yes_or_no DOXYGEN
 yes_or_no ASCIIDOC
+
+yes_or_no RUN_STAGE_CONFIGURE
+yes_or_no RUN_STAGE_BUILD
+yes_or_no RUN_STAGE_TEST
 
 yes_or_no CHECK
 yes_or_no STEM
@@ -370,6 +360,7 @@ if [[ "$RUN_STAGE_BUILD" = "yes" ]] ; then
 	end_section Distcheck
     fi
 fi
+
 ##############################
 # Run tests.
 
@@ -378,23 +369,30 @@ if [[ "$RUN_STAGE_TEST" == "no" ]]; then
     exit 0
 fi
 
-if [[ "$RUN_STAGE_BUILD" = "no" ]] ; then
-    debug "Skipped build stage. Making sure that ./src/app/tor exists."
-    if [[ ! -f "./src/app/tor" ]]; then
-	die "$(pwd)/src/app/tor does not exist"
-    fi
-fi
-
 FAILED_TESTS=""
 
-if [[ "${DOXYGEN}" = 'yes' && "${TOR_VER_AT_LEAST_043}" = 'yes' ]]; then
+if [[ "${DOXYGEN}" = 'yes' ]]; then
     start_section Doxygen
-    if runcmd make doxygen; then
-	hooray "make doxygen has succeeded."
+    if [[ "${TOR_VER_AT_LEAST_043}" = 'yes' ]]; then
+        if runcmd make doxygen; then
+	    hooray "make doxygen has succeeded."
+        else
+	    FAILED_TESTS="${FAILED_TESTS} doxygen"
+        fi
     else
-	FAILED_TESTS="${FAILED_TESTS} doxygen"
+        skipping "make doxygen: doxygen is broken for Tor < 0.4.3"
     fi
     end_section Doxygen
+fi
+
+if [[ "${ASCIIDOC}" = 'yes' ]]; then
+    start_section Asciidoc
+    if runcmd make manpages; then
+        hooray "make manpages has succeeded."
+    else
+        FAILED_TESTS="${FAILED_TESTS} asciidoc"
+    fi
+    end_section Asciidoc
 fi
 
 if [[ "${CHECK}" = "yes" ]]; then
@@ -411,10 +409,13 @@ fi
 
 if [[ "${CHUTNEY}" = "yes" ]]; then
     start_section "Chutney"
+    export CHUTNEY_TOR_SANDBOX=0
+    export CHUTNEY_ALLOW_FAILURES=2
     if runcmd make "${CHUTNEY_MAKE_TARGET}"; then
         hooray "Chutney tests have succeeded"
     else
         error "Chutney says:"
+        export CHUTNEY_DATA_DIR="${CHUTNEY_PATH}/net"
         runcmd "${CHUTNEY_PATH}"/tools/diagnostics.sh || true
         # XXXX These next two should be part of a make target.
         runcmd ls test_network_log || true
