@@ -143,6 +143,15 @@ tor_strupper(char *s)
   }
 }
 
+/** Replaces <b>old</b> with <b>replacement</b> in <b>s</b> */
+void
+tor_strreplacechar(char *s, char find, char replacement)
+{
+  for (s = strchr(s, find); s; s = strchr(s + 1, find)) {
+    *s = replacement;
+  }
+}
+
 /** Return 1 if every character in <b>s</b> is printable, else return 0.
  */
 int

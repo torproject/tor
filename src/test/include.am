@@ -46,6 +46,7 @@ else
 # Only do this when coverage is not on, since it invokes lots of code
 # in a kind of unpredictable way.
 TESTSCRIPTS += src/test/test_rebind.sh
+TESTSCRIPTS += src/test/test_include.sh
 endif
 endif
 
@@ -296,16 +297,15 @@ src_test_test_switch_id_LDADD = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
-	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_USERENV@ \
+	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_USERENV@ \
 	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@ @TOR_TRACE_LIBS@
-
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_test_LDADD = \
 	$(TOR_INTERNAL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@ @TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@ @TOR_TRACE_LIBS@
 
@@ -334,7 +334,7 @@ src_test_bench_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@ @TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@ @TOR_TRACE_LIBS@
 
@@ -344,7 +344,7 @@ src_test_test_workqueue_LDADD = \
 	$(TOR_INTERNAL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@ @TOR_TRACE_LIBS@
 
@@ -356,7 +356,7 @@ src_test_test_timers_LDADD = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
 	@TOR_LZMA_LIBS@ @TOR_TRACE_LIBS@
 src_test_test_timers_LDFLAGS = $(src_test_test_LDFLAGS)
@@ -393,7 +393,7 @@ src_test_test_ntor_cl_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ @TOR_LZMA_LIBS@ @TOR_TRACE_LIBS@
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 	$(AM_CPPFLAGS)
@@ -403,8 +403,8 @@ src_test_test_hs_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_hs_ntor_cl_LDADD = \
 	$(TOR_INTERNAL_LIBS) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
-	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ \
-	@CURVE25519_LIBS@ @TOR_TRACE_LIBS@
+	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ \
+        @CURVE25519_LIBS@ @TOR_TRACE_LIBS@
 src_test_test_hs_ntor_cl_AM_CPPFLAGS =	       \
 	$(AM_CPPFLAGS)
 
@@ -416,8 +416,8 @@ src_test_test_bt_cl_LDADD = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	$(rust_ldadd) \
 	@TOR_LIB_MATH@ \
-	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
-	@TOR_TRACE_LIBS@
+	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
+        @TOR_TRACE_LIBS@
 src_test_test_bt_cl_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS) $(TEST_CPPFLAGS)
 endif
@@ -432,6 +432,8 @@ EXTRA_DIST += \
 	src/test/slownacl_curve25519.py \
 	src/test/test_rebind.sh \
 	src/test/test_rebind.py \
+	src/test/test_include.sh \
+	src/test/test_include.py \
 	src/test/zero_length_keys.sh \
 	scripts/maint/run_check_subsystem_order.sh \
 	src/test/rust_supp.txt \

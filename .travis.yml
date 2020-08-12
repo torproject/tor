@@ -237,8 +237,8 @@ install:
   - dd ibs=1 count=1024 if=/dev/urandom > ~/.torrc
 
 script:
-  # Skip test_rebind on macOS
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export TOR_SKIP_TEST_REBIND=true; fi
+  # Skip test_rebind and test_include on macOS
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export TOR_SKIP_TEST_REBIND=true; export TOR_SKIP_TEST_INCLUDE=true; fi
   - ./autogen.sh
   - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
   - echo "Configure flags are $CONFIGURE_FLAGS CC=\"$CC $C_DIALECT_OPTIONS\""
