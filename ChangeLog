@@ -1,4 +1,4 @@
-Changes in version 0.4.4.4-rc - 2020-08-12
+Changes in version 0.4.4.4-rc - 2020-08-13
   Tor 0.4.4.4-rc is the first release candidate in its series. It fixes
   several bugs in previous versions, including some that caused annoying
   behavior for relay and bridge operators.
@@ -45,7 +45,7 @@ Changes in version 0.4.4.4-rc - 2020-08-12
       on 0.2.8.1-alpha.
 
   o Minor bugfixes (testing):
-    - When running the subsystem order check, use the python binary
+    - When running the subsystem order check, use the Python binary
       configured with the PYTHON environment variable. Fixes bug 40095;
       bugfix on 0.4.4.1-alpha.
 
