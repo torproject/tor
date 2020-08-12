@@ -1869,7 +1869,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   }
 
   if (me) {
-    /* We're a relay; record the address that the other side said we had. */
+    /* We have a descriptor, so we are a relay: record the address that the
+     * other side said we had. */
     tor_addr_copy(&TLS_CHAN_TO_BASE(chan)->addr_according_to_peer,
                   &my_apparent_addr);
   }
