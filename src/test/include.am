@@ -377,7 +377,15 @@ EXTRA_DIST += \
 	src/test/test_workqueue_efd2.sh \
 	src/test/test_workqueue_pipe.sh \
 	src/test/test_workqueue_pipe2.sh \
-	src/test/test_workqueue_socketpair.sh
+	src/test/test_workqueue_socketpair.sh \
+        src/test/unittest_part1.sh \
+        src/test/unittest_part2.sh \
+        src/test/unittest_part3.sh \
+        src/test/unittest_part4.sh \
+        src/test/unittest_part5.sh \
+        src/test/unittest_part6.sh \
+        src/test/unittest_part7.sh \
+        src/test/unittest_part8.sh
 
 test-rust:
 	$(TESTS_ENVIRONMENT) "$(abs_top_srcdir)/src/test/test_rust.sh"
