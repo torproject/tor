@@ -37,6 +37,7 @@ variables:
     paths:
       - artifacts/
 
+# This template
 .apt-template: &apt-template |
       export LC_ALL=C.UTF-8
       echo Etc/UTC > /etc/timezone
@@ -57,12 +58,18 @@ variables:
   <<: *artifacts-template
   variables:
     DEBIAN_FRONTEND: "noninteractive"
+  # TODO: Using "cache" in this way speeds up our downloads.  It would be
+  # even better, though, to start with a pre-upgraded debian image.
+  #
+  # TODO: Will we have to do this differently once we have more than one
+  # debian version that we're using?
   cache:
     key: apt
     paths:
       - apt-cache
   before_script:
     - *apt-template
+    # Install patches unconditionally.
     - apt-get install
         automake
         build-essential
@@ -76,23 +83,29 @@ variables:
         pkg-config
         python3
         zlib1g-dev
+    # Install patches that we only need for some use cases.
     - if [ "$ASCIIDOC" = yes ]; then apt-get install asciidoc xmlto; fi
     - if [ "$DOXYGEN" = yes ]; then apt-get install doxygen; fi
     - if [ "$STEM" = yes ]; then apt-get install timelimit; fi
     - if [ "$CC" = clang ]; then apt-get install clang; fi
+    # TODO: This next line should not be debian-only.
     - if [ "$STEM" = yes ]; then git clone --depth 1 https://git.torproject.org/stem.git ; export STEM_PATH="$(pwd)/stem"; fi
+    # TODO: This next line should not be debian-only.
     - if [ "$CHUTNEY" = yes ]; then git clone --depth 1 https://git.torproject.org/chutney.git ;  export CHUTNEY_PATH="$(pwd)/chutney"; fi
 
+# Minmal check on debian: just make, make check.
+#
 debian-minimal:
   image: debian:stable
   <<: *debian-template
   script:
     - ./scripts/ci/ci-driver.sh
 
-
-# TODO: This one just takes too long to finish right now!
-# Maybe we need to divide the call to ./src/test/test into a few segments,
-# that all end in similar amount of time?
+#####
+# Run "make check" with a hardened clang on debian stable.  This takes
+# care of a hardening check, and a compile-with-clang check.
+#
+# TODO: This will be faster once we merge #40098 and #40099.
 debian-hardened:
   image: debian:testing
   <<: *debian-template
@@ -102,6 +115,8 @@ debian-hardened:
   script:
     - ./scripts/ci/ci-driver.sh
 
+#####
+# Distcheck on debian stable
 debian-distcheck:
   image: debian:stable
   <<: *debian-template
@@ -111,6 +126,8 @@ debian-distcheck:
   script:
     - ./scripts/ci/ci-driver.sh
 
+#####
+# Documentation tests on debian stable: doxygen and asciidoc.
 debian-docs:
   image: debian:stable
   <<: *debian-template
@@ -122,12 +139,19 @@ debian-docs:
   script:
     - ./scripts/ci/ci-driver.sh
 
+#####
+# Integration tests on debian stable: chutney and stem.
+#
+# TODO: It would be cool if this target didn't have to re-build tor, and
+#       could instead re-use Tor from debian-minimal.  That can be done
+#       with the 'artifacts' mechanism, in theory, but it would be good to
+#       avoid having to have a system with hundreds of artifacts.
 debian-integration:
   image: debian:stable
   <<: *debian-template
   variables:
     CHECK: "no"
     CHUTNEY: "yes"
-    # STEM: "yes" -- currently failing on <044.
+    STEM: "yes"
   script:
     - ./scripts/ci/ci-driver.sh
