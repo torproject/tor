@@ -517,7 +517,7 @@ test_rset_parse_policy_ipv4(void *arg)
 addr_policy_t *
 rset_parse_policy_ipv4_parse_item_from_string(
                                       const char *s, int assume_action,
-                                      int *bogus)
+                                      int *bogus, bool is_torrc)
 {
   (void)s;
   (void)assume_action;
