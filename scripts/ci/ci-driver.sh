@@ -267,18 +267,26 @@ TOR_VERSION=$(grep -m 1 AC_INIT configure.ac | sed -e 's/.*\[//; s/\].*//;')
 # Use variables like these when we need to behave differently depending on
 # Tor version.  Only create the variables we need.
 TOR_VER_AT_LEAST_043=no
+TOR_VER_AT_LEAST_044=no
 
 # These are the currently supported Tor versions; no need to work with anything
 # ancient in this script.
 case "$TOR_VERSION" in
     0.3.*)
         TOR_VER_AT_LEAST_043=no
+        TOR_VER_AT_LEAST_044=no
         ;;
     0.4.[012].*)
         TOR_VER_AT_LEAST_043=no
+        TOR_VER_AT_LEAST_044=no
+        ;;
+    0.4.3.*)
+        TOR_VER_AT_LEAST_043=yes
+        TOR_VER_AT_LEAST_044=no
         ;;
     *)
         TOR_VER_AT_LEAST_043=yes
+        TOR_VER_AT_LEAST_044=yes
         ;;
 esac
 
@@ -427,21 +435,25 @@ fi
 
 if [[ "${STEM}" = "yes" ]]; then
    start_section "Stem"
-   # XXXX This shold probably be part some test-stem make target.
-   if runcmd timelimit -p -t 520 -s USR1 -T 30 -S ABRT \
-         python3 "${STEM_PATH}/run_tests.py" \
-         --tor src/app/tor \
-         --integ --test control.controller \
-         --test control.base_controller \
-         --test process \
-         --log TRACE \
-         --log-file stem.log ; then
-       hooray "Stem tests have succeeded"
-   else
+   if [[ "${TOR_VER_AT_LEAST_044}" = 'yes' ]]; then
+     # XXXX This shold probably be part some test-stem make target.
+     if runcmd timelimit -p -t 520 -s USR1 -T 30 -S ABRT \
+           python3 "${STEM_PATH}/run_tests.py" \
+           --tor src/app/tor \
+           --integ --test control.controller \
+           --test control.base_controller \
+           --test process \
+           --log TRACE \
+           --log-file stem.log ; then
+         hooray "Stem tests have succeeded"
+     else
        error "Stem output:"
        runcmd tail -1000 "${STEM_PATH}"/test/data/tor_log
        runcmd grep -v "SocketClosed" stem.log | tail -1000
        FAILED_TESTS="${FAILED_TESTS} stem"
+     fi
+   else
+       skipping "Stem: broken with <= 0.4.3. See bug tor#40077"
    fi
    end_section "Stem"
 fi
