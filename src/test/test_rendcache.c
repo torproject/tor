@@ -1095,6 +1095,7 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   desc->timestamp = now;
   desc->pk = pk_generate(0);
   e->parsed = desc;
+  rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   digestmap_set(rend_cache_v2_dir, key, e);
 
   /* Set the cutoff to minus 10 seconds. */
