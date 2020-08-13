@@ -1,0 +1,4 @@
+  o Minor bugfixes (tests):
+    - Fix the behavior of the rend_cache/clean_v2_descs_as_dir when run on
+      its own.  Previously, it would exit with an error.
+      Fixes bug 40099; bugfix on 0.2.8.1-alpha.
