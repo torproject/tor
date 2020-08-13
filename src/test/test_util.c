@@ -4622,11 +4622,14 @@ test_util_glob(void *ptr)
   TEST("\\*");
   EXPECT_EMPTY();
 
-  // test forbidden directory
-  tor_asprintf(&pattern, "%s"PATH_SEPARATOR"*"PATH_SEPARATOR"*", dirname);
-  results = tor_glob(pattern);
-  tor_free(pattern);
-  tt_assert(!results);
+  if (getuid() != 0) {
+    // test forbidden directory, if we're not root.
+    // (Root will be able to see this directory anyway.)
+    tor_asprintf(&pattern, "%s"PATH_SEPARATOR"*"PATH_SEPARATOR"*", dirname);
+    results = tor_glob(pattern);
+    tor_free(pattern);
+    tt_assert(!results);
+  }
 #endif
 
 #undef TEST
