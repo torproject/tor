@@ -37,6 +37,7 @@ variables:
     paths:
       - artifacts/
 
+# This template
 .apt-template: &apt-template |
       export LC_ALL=C.UTF-8
       echo Etc/UTC > /etc/timezone
@@ -90,9 +91,7 @@ debian-minimal:
     - ./scripts/ci/ci-driver.sh
 
 
-# TODO: This one just takes too long to finish right now!
-# Maybe we need to divide the call to ./src/test/test into a few segments,
-# that all end in similar amount of time?
+# TODO: This will be faster once we merge #40098 and #40099.
 debian-hardened:
   image: debian:testing
   <<: *debian-template
@@ -128,6 +127,6 @@ debian-integration:
   variables:
     CHECK: "no"
     CHUTNEY: "yes"
-    # STEM: "yes" -- currently failing on <044.
+    STEM: "yes"
   script:
     - ./scripts/ci/ci-driver.sh
