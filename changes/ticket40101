@@ -1,0 +1,3 @@
+  o Documentation:
+    - Replace URLs from our old bugtracker so that they refer to the
+      new bugtracker and wiki. Closes ticket 40101.

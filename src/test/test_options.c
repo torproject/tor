@@ -1013,7 +1013,7 @@ test_options_validate__relay_with_hidden_services(void *ignored)
             "Tor is currently configured as a relay and a hidden service. "
             "That's not very secure: you should probably run your hidden servi"
             "ce in a separate Tor process, at least -- see "
-            "https://trac.torproject.org/8742\n");
+            "https://bugs.torproject.org/tpo/core/tor/8742.\n");
 
  done:
   teardown_capture_of_logs();

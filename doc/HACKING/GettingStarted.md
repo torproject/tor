@@ -71,10 +71,11 @@ Once you've reached this point, here's what you need to know.
      Many people have gotten started by looking for an area where they
      personally felt Tor was underperforming, and investigating ways to
      fix it. If you're looking for ideas, you can head to
-     [trac](https://trac.torproject.org) our bug tracking tool and look for
-     tickets that have received the "easy" tag: these are ones that developers
+     [gitlab](https://gitlab.torproject.org) our bug tracking tool and look for
+     tickets that have received the "First Contribution" label: these are ones
+     that developers
      think would be pretty simple for a new person to work on.  For a bigger
-     challenge, you might want to look for tickets with the "lorax"
+     challenge, you might want to look for tickets with the "Project Ideas"
      keyword: these are tickets that the developers think might be a
      good idea to build, but which we have no time to work on any time
      soon.
@@ -140,10 +141,10 @@ Once you've reached this point, here's what you need to know.
   8. Submitting your patch
 
      We review patches through tickets on our bugtracker at
-    [trac](https://trac.torproject.org). You can either upload your patches there, or
+     [gitlab](https://gitlab.torproject.org). You can either upload your patches there, or
      put them at a public git repository somewhere we can fetch them
      (like gitlab, github or bitbucket) and then paste a link on the appropriate
-     trac ticket.
+     ticket.
 
      Once your patches are available, write a short explanation of what
      you've done on trac, and then change the status of the ticket to

@@ -42,7 +42,7 @@ static inline int strcasecmp(const char *a, const char *b) {
  * (If --enable-fragile-hardening is passed to configure, we use the hardened
  * variants, which do not suffer from this issue.)
  *
- * See https://trac.torproject.org/projects/tor/ticket/15205
+ * See https://bugs.torproject.org/tpo/core/tor/15205.
  */
 #undef strlcat
 #undef strlcpy

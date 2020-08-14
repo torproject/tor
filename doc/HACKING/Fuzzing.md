@@ -130,4 +130,4 @@ $ src/test/fuzz/fuzz-http --debug < /path/to/test.case
 Please report any issues discovered using the process in Tor's security issue
 policy:
 
-https://trac.torproject.org/projects/tor/wiki/org/meetings/2016SummerDevMeeting/Notes/SecurityIssuePolicy
+https://gitlab.torproject.org/tpo/core/team/-/wikis/NetworkTeam/SecurityPolicy

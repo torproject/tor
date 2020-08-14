@@ -3458,7 +3458,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
              "configured. This is bad because it's very easy to locate your "
              "entry guard which can then lead to the deanonymization of your "
              "hidden service -- for more details, see "
-             "https://trac.torproject.org/projects/tor/ticket/14917. "
+             "https://bugs.torproject.org/tpo/core/tor/14917. "
              "For this reason, the use of one EntryNodes with an hidden "
              "service is prohibited until a better solution is found.");
     return -1;
@@ -3475,7 +3475,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
              "be harmful to the service anonymity. Because of this, we "
              "recommend you either don't do that or make sure you know what "
              "you are doing. For more details, please look at "
-             "https://trac.torproject.org/projects/tor/ticket/21155.");
+             "https://bugs.torproject.org/tpo/core/tor/21155.");
   }
 
   /* Single Onion Services: non-anonymous hidden services */

@@ -2144,7 +2144,7 @@ circuit_mark_all_dirty_circs_as_unusable(void)
  * This function is in the critical path of circuit_mark_for_close().
  * It must be (and is) O(1)!
  *
- * See https://trac.torproject.org/projects/tor/ticket/23512.
+ * See https://bugs.torproject.org/tpo/core/tor/23512
  */
 void
 circuit_synchronize_written_or_bandwidth(const circuit_t *c,

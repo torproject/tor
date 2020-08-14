@@ -2,5 +2,4 @@
 @brief app/config: Top-level configuration code
 
 Refactoring this module is a work in progress, see
-[ticket 29211](https://trac.torproject.org/projects/tor/ticket/29211).
-
+[ticket 29211](https://bugs.torproject.org/tpo/core/tor/29211)
