@@ -4475,11 +4475,11 @@ test_util_glob(void *ptr)
   tor_asprintf(&forbidden_forbidden,
                "%s"PATH_SEPARATOR"forbidden"PATH_SEPARATOR"forbidden",dirname);
 #ifndef _WIN32
-  chmod(forbidden, 0700);
+  tt_int_op(0, OP_EQ, chmod(forbidden, 0700));
 #endif
   tt_int_op(0, OP_EQ, create_test_directory_structure(forbidden));
 #ifndef _WIN32
-  chmod(forbidden, 0);
+  tt_int_op(0, OP_EQ, chmod(forbidden, 0));
 #endif
 
 #define TEST(input) \
@@ -4638,10 +4638,10 @@ test_util_glob(void *ptr)
 
  done:
 #ifndef _WIN32
-  chmod(forbidden, 0700);
-  chmod(dir1_forbidden, 0700);
-  chmod(dir2_forbidden, 0700);
-  chmod(forbidden_forbidden, 0700);
+  (void) chmod(forbidden, 0700);
+  (void) chmod(dir1_forbidden, 0700);
+  (void) chmod(dir2_forbidden, 0700);
+  (void) chmod(forbidden_forbidden, 0700);
 #endif
   tor_free(dir1);
   tor_free(dir2);
@@ -4825,10 +4825,20 @@ test_util_get_glob_opened_files(void *ptr)
 
  done:
 #ifndef _WIN32
-  chmod(forbidden, 0700);
-  chmod(dir1_forbidden, 0700);
-  chmod(dir2_forbidden, 0700);
-  chmod(forbidden_forbidden, 0700);
+  {
+    int chmod_failed = 0;
+    if (forbidden)
+    chmod_failed |= chmod(forbidden, 0700);
+    if (dir1_forbidden)
+      chmod_failed |= chmod(dir1_forbidden, 0700);
+    if (dir2_forbidden)
+      chmod_failed |= chmod(dir2_forbidden, 0700);
+    if (forbidden_forbidden)
+      chmod_failed |= chmod(forbidden_forbidden, 0700);
+    if (chmod_failed) {
+      TT_FAIL(("unable to chmod a file on cleanup: %s", strerror(errno)));
+    }
+  }
 #endif
   tor_free(dir1);
   tor_free(dir2);
