@@ -4670,7 +4670,9 @@ test_util_get_glob_opened_files(void *ptr)
   // used for cleanup
   char *dir1_forbidden = NULL, *dir2_forbidden = NULL;
   char *forbidden_forbidden = NULL;
+#ifndef _WIN32
   int chmod_failed;
+#endif
 
   dirname = tor_strdup(get_fname("test_get_glob_opened_files"));
   tt_ptr_op(dirname, OP_NE, NULL);
