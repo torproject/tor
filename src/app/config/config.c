@@ -4050,8 +4050,11 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
  * actual maximum value.  We clip this value if it's too low, and autodetect
  * it if it's set to 0. */
 STATIC uint64_t
-compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
+compute_real_max_mem_in_queues(const uint64_t val, bool is_server)
 {
+#define MIN_SERVER_MB 64
+#define MIN_UNWARNED_SERVER_MB 256
+#define MIN_UNWARNED_CLIENT_MB 64
   uint64_t result;
 
   if (val == 0) {
@@ -4109,7 +4112,7 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
         result = avail;
       }
     }
-    if (log_guess && ! notice_sent) {
+    if (is_server && ! notice_sent) {
       log_notice(LD_CONFIG, "%sMaxMemInQueues is set to %"PRIu64" MB. "
                  "You can override this by setting MaxMemInQueues by hand.",
                  ram ? "Based on detected system memory, " : "",
@@ -4117,10 +4120,24 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
       notice_sent = 1;
     }
     return result;
-  } else if (val < ONE_GIGABYTE / 4) {
-    log_warn(LD_CONFIG, "MaxMemInQueues must be at least 256 MB for now. "
-             "Ideally, have it as large as you can afford.");
-    return ONE_GIGABYTE / 4;
+  } else if (is_server && val < ONE_MEGABYTE * MIN_SERVER_MB) {
+    /* We can't configure less than this much on a server.  */
+    log_warn(LD_CONFIG, "MaxMemInQueues must be at least %d MB on servers "
+             "for now. Ideally, have it as large as you can afford.",
+             MIN_SERVER_MB);
+    return MIN_SERVER_MB * ONE_MEGABYTE;
+  } else if (is_server && val < ONE_MEGABYTE * MIN_UNWARNED_SERVER_MB) {
+    /* On a server, if it's less than this much, we warn that things
+     * may go badly. */
+    log_warn(LD_CONFIG, "MaxMemInQueues is set to a low value; if your "
+             "relay doesn't work, this may be the reason why.");
+    return val;
+  } else if (! is_server && val < ONE_MEGABYTE * MIN_UNWARNED_CLIENT_MB) {
+    /* On a client, if it's less than this much, we warn that things
+     * may go badly. */
+    log_warn(LD_CONFIG, "MaxMemInQueues is set to a low value; if your "
+             "client doesn't work, this may be the reason why.");
+    return val;
   } else {
     /* The value was fine all along */
     return val;

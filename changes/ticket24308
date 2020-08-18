@@ -1,0 +1,6 @@
+  o Minor features (denial-of-service memory limiter):
+    - Allow the user to configure even lower values for the MaxMemInQueues
+      parameter.  Relays now enforce a minimum of 64 MB, when previously
+      the minimum was 256 MB.  On clients, there is no minimum. Relays and
+      clients will both warn if the value is set so low that Tor is likely
+      to stop working. Closes ticket 24308.
