@@ -3716,7 +3716,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                     desc->desc_id, DIGEST_LEN);
       hs_dir_ip = tor_dup_ip(hs_dir->addr);
       if (hs_dir_ip) {
-        log_info(LD_REND, "Launching upload for v2 descriptor for "
+        log_warn(LD_REND, "Launching upload for v2 descriptor for "
                           "service '%s' with descriptor ID '%s' with validity "
                           "of %d seconds to hidden service directory '%s' on "
                           "%s:%d.",

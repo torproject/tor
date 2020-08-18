@@ -2567,6 +2567,9 @@ rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
     return; // We're not collecting stats
   }
 
+  bool seen_before = !!digestmap_get(hs_stats->v2_onions_seen_this_period,
+                                     pubkey_hash);
+
   /* Get the digest of the pubkey which will be used to detect whether
      we've seen this hidden service before or not.  */
   if (crypto_pk_get_digest(pubkey, pubkey_hash) < 0) {
@@ -2575,10 +2578,12 @@ rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
     return;
   }
 
+  log_warn(LD_GENERAL, "Considering v2 descriptor with pubkey hash %s (%sseen before)",
+           hex_str(pubkey_hash, DIGEST_LEN), seen_before ? "" : " not ");
+
   /* Check if this is the first time we've seen this hidden
      service. If it is, count it as new. */
-  if (!digestmap_get(hs_stats->v2_onions_seen_this_period,
-                     pubkey_hash)) {
+  if (!seen_before) {
     digestmap_set(hs_stats->v2_onions_seen_this_period,
                   pubkey_hash, (void*)(uintptr_t)1);
   }
@@ -2593,9 +2598,15 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
     return; // We're not collecting stats
   }
 
+  bool seen_before = !!digestmap_get(hs_stats->v3_onions_seen_this_period,
+                                     (char*)blinded_key);
+
+  log_warn(LD_GENERAL, "Considering v3 descriptor with %s (%sseen before)",
+           hex_str((char*)blinded_key, 32),
+           seen_before ? "" : "not ");
+
   /* Count it if we haven't seen it before. */
-  if (!digestmap_get(hs_stats->v3_onions_seen_this_period,
-                     (char*)blinded_key)) {
+  if (!seen_before) {
     digestmap_set(hs_stats->v3_onions_seen_this_period,
                   (char*)blinded_key, (void*)(uintptr_t)1);
   }

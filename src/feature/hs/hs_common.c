@@ -1427,6 +1427,8 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
       if (!smartlist_contains(responsible_dirs, node->rs)) {
         smartlist_add(responsible_dirs, node->rs);
         ++n_added;
+      } else {
+        log_warn(LD_GENERAL, "Skipped hsdir because already selected");
       }
       if (++idx == smartlist_len(sorted_nodes)) {
         /* Wrap if we've reached the end of the list. */
