@@ -2148,7 +2148,7 @@ count_acceptable_nodes, (const smartlist_t *nodes, int direct))
  * The alternative is building the circuit in reverse. Reverse calls to
  * onion_extend_cpath() (ie: select outer hops first) would then have the
  * property that you don't gain information about inner hops by observing
- * outer ones. See https://trac.torproject.org/projects/tor/ticket/24487
+ * outer ones. See https://bugs.torproject.org/tpo/core/tor/24487
  * for this.
  *
  * (Note further that we still exclude the exit to prevent A - B - A

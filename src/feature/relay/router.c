@@ -176,7 +176,7 @@ routerinfo_err_is_transient(int err)
   /**
    * For simplicity, we consider all errors other than
    * "not a server" transient - see discussion on
-   * https://trac.torproject.org/projects/tor/ticket/27034
+   * https://bugs.torproject.org/tpo/core/tor/27034.
    */
   return err != TOR_ROUTERINFO_ERROR_NOT_A_SERVER;
 }

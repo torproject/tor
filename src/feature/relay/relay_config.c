@@ -1037,7 +1037,7 @@ options_validate_relay_mode(const or_options_t *old_options,
         "Tor is currently configured as a relay and a hidden service. "
         "That's not very secure: you should probably run your hidden service "
         "in a separate Tor process, at least -- see "
-        "https://trac.torproject.org/8742");
+        "https://bugs.torproject.org/tpo/core/tor/8742.");
 
   if (options->BridgeRelay && options->DirPort_set) {
     log_warn(LD_CONFIG, "Can't set a DirPort on a bridge relay; disabling "

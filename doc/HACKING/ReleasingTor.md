@@ -215,7 +215,7 @@ $ git push origin tag tor-0.4.x.y-<status>
    can vary.
 
    For templates to use when announcing, see:
-       https://trac.torproject.org/projects/tor/wiki/org/teams/NetworkTeam/AnnouncementTemplates
+       https://gitlab.torproject.org/tpo/core/team/-/wikis/NetworkTeam/AnnouncementTemplates
 
 ## V. Aftermath and cleanup
 

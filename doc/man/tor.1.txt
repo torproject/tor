@@ -211,9 +211,9 @@ backslash character (\) before the end of the line.  Comments can be used in
 such multiline entries, but they must start at the beginning of a line.
 
 Configuration options can be imported from files or folders using the %include
-option with the value being a path. This path can have wildcards. Wildcards are 
-expanded first, then sorted using lexical order. Then, for each matching file or 
-folder, the following rules are followed: if the path is a file, the options from 
+option with the value being a path. This path can have wildcards. Wildcards are
+expanded first, then sorted using lexical order. Then, for each matching file or
+folder, the following rules are followed: if the path is a file, the options from
 the file will be parsed as if they were written where the %include option is. If
 the path is a folder, all files on that folder will be parsed following lexical
 order. Files starting with a dot are ignored. Files in subfolders are ignored.
@@ -3854,7 +3854,7 @@ https://spec.torproject.org. See also **torsocks**(1) and **torify**(1).
 == BUGS
 
 Because Tor is still under development, there may be plenty of bugs. Please
-report them at https://trac.torproject.org/.
+report them at https://bugs.torproject.org/.
 
 == AUTHORS
 
