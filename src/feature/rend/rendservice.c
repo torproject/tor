@@ -3658,6 +3658,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
   smartlist_t *responsible_dirs = smartlist_new();
   smartlist_t *successful_uploads = smartlist_new();
   routerstatus_t *hs_dir;
+  smartlist_t *all_dirs = smartlist_new();
   for (i = 0; i < smartlist_len(descs); i++) {
     rend_encoded_v2_service_descriptor_t *desc = smartlist_get(descs, i);
     /** If any HSDirs are specified, they should be used instead of
@@ -3676,6 +3677,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
         goto done;
       }
     }
+    smartlist_add_all(all_dirs, responsible_dirs);
     for (j = 0; j < smartlist_len(responsible_dirs); j++) {
       char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       char *hs_dir_ip;
@@ -3758,7 +3760,20 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       }
     });
   }
+
+  /* Detect potential undercounts */
+  while (1) {
+    routerstatus_t *rs = smartlist_pop_last(all_dirs);
+    if (!rs) {
+      break;
+    }
+    if (smartlist_contains(all_dirs, rs)) {
+      log_warn(LD_GENERAL, "Found duplicate %s in responsible dirs", rs->nickname);
+    }
+  }
+
  done:
+  smartlist_free(all_dirs);
   smartlist_free(responsible_dirs);
   smartlist_free(successful_uploads);
 }

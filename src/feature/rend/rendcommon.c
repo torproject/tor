@@ -856,6 +856,9 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   do {
     routerstatus_t *r = smartlist_get(c->routerstatus_list, i);
     if (r->is_hs_dir) {
+      if (smartlist_contains(responsible_dirs, r)) {
+        log_warn(LD_GENERAL, "Duplicate within same replica");
+      }
       smartlist_add(responsible_dirs, r);
       if (++n_added == REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
         return 0;
