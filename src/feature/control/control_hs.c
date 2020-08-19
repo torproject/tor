@@ -139,7 +139,7 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
         control_printf_endreply(conn, 512, "ClientName longer than %d chars",
                                 REND_CLIENTNAME_MAX_LEN);
       }
-      strlcpy(creds->client_name, line->value, strlen(line->value) + 1);
+      creds->client_name = tor_strdup(line->value);
     }
   }
 
@@ -262,7 +262,7 @@ encode_client_auth_cred_for_control_port(
     }
   }
 
-  if (*cred->client_name) {
+  if (cred->client_name) {
     smartlist_add_asprintf(control_line, " ClientName=%s", cred->client_name);
   }
 

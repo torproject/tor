@@ -72,7 +72,7 @@ typedef struct hs_client_service_authorization_t {
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32+1];
 
   /** An client name used to connect to the onion service. */
-  char client_name[REND_CLIENTNAME_MAX_LEN+1];
+  char *client_name;
 
   /* Optional flags for this client. */
   int flags;
