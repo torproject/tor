@@ -1,0 +1,4 @@
+  o Minor features (control port):
+    - If a ClientName was specified in ONION_CLIENT_AUTH_ADD for an
+      onion service, display it when we use ONION_CLIENT_AUTH_VIEW
+      on it. Closes ticket 40089. Patch by Neel Chauhan.
