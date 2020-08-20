@@ -134,6 +134,13 @@ handle_control_onion_client_auth_add(control_connection_t *conn,
         }
       } SMARTLIST_FOREACH_END(flag);
     }
+    if (!strcasecmp(line->key, "ClientName")) {
+      if (strlen(line->value) > REND_CLIENTNAME_MAX_LEN) {
+        control_printf_endreply(conn, 512, "ClientName longer than %d chars",
+                                REND_CLIENTNAME_MAX_LEN);
+      }
+      creds->client_name = tor_strdup(line->value);
+    }
   }
 
   hs_client_register_auth_status_t register_status;
@@ -253,6 +260,10 @@ encode_client_auth_cred_for_control_port(
     if (cred->flags & CLIENT_AUTH_FLAG_IS_PERMANENT) {
       smartlist_add_asprintf(control_line, " Flags=Permanent");
     }
+  }
+
+  if (cred->client_name) {
+    smartlist_add_asprintf(control_line, " ClientName=%s", cred->client_name);
   }
 
   /* Join all the components into a single string */

@@ -212,7 +212,8 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
   int retval;
-  ed25519_public_key_t service_identity_pk_2fv, service_identity_pk_jt4;
+  ed25519_public_key_t service_identity_pk_2fv, service_identity_pk_jt4,
+                       service_identity_pk_jam;
   control_connection_t conn;
   char *args = NULL;
   char *cp1 = NULL;
@@ -236,6 +237,12 @@ test_hs_control_good_onion_client_auth_add(void *arg)
     retval = hs_parse_address(
                  "jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd",
                  &service_identity_pk_jt4,
+                 NULL, NULL);
+    tt_int_op(retval, OP_EQ, 0);
+
+    retval = hs_parse_address(
+                 "jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd",
+                 &service_identity_pk_jam,
                  NULL, NULL);
     tt_int_op(retval, OP_EQ, 0);
   }
@@ -268,10 +275,24 @@ test_hs_control_good_onion_client_auth_add(void *arg)
   cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
   tt_str_op(cp1, OP_EQ, "250 OK\r\n");
   tor_free(cp1);
+  tor_free(args);
+
+  /* Register second service (even with an unrecognized argument) */
+  args = tor_strdup("jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd "
+           "x25519:FCV0c0ELDKKDpSFgVIB8Yow8Evj5iD+GoiTtK878NkQ= "
+           "ClientName=MeganNicole ");
+
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Check contents */
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "250 OK\r\n");
+  tor_free(cp1);
 
   client_auths = get_hs_client_auths_map();
   tt_assert(client_auths);
-  tt_uint_op(digest256map_size(client_auths), OP_EQ, 2);
+  tt_uint_op(digest256map_size(client_auths), OP_EQ, 3);
 
   hs_client_service_authorization_t *client_2fv =
     digest256map_get(client_auths, service_identity_pk_2fv.pubkey);
@@ -282,6 +303,11 @@ test_hs_control_good_onion_client_auth_add(void *arg)
     digest256map_get(client_auths, service_identity_pk_jt4.pubkey);
   tt_assert(client_jt4);
   tt_int_op(client_jt4->flags, OP_EQ, 0);
+
+  hs_client_service_authorization_t *client_jam =
+    digest256map_get(client_auths, service_identity_pk_jam.pubkey);
+  tt_assert(client_jam);
+  tt_int_op(client_jam->flags, OP_EQ, 0);
 
   /* Now let's VIEW the auth credentials */
   tor_free(conn.current_cmd);
@@ -294,6 +320,9 @@ test_hs_control_good_onion_client_auth_add(void *arg)
 #define VIEW_CORRECT_REPLY_NO_ADDR "250-ONION_CLIENT_AUTH_VIEW\r\n"   \
   "250-CLIENT 2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd "  \
     "x25519:iJ1tjKCrMAbiFT2bVrCjhbfMDnE1fpaRbIS5ZHKUvEQ=\r\n"   \
+  "250-CLIENT jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd " \
+    "x25519:FCV0c0ELDKKDpSFgVIB8Yow8Evj5iD+GoiTtK878NkQ= " \
+    "ClientName=MeganNicole\r\n" \
   "250-CLIENT jt4grrjwzyz3pjkylwfau5xnjaj23vxmhskqaeyfhrfylelw4hvxcuyd " \
     "x25519:eIIdIGoSZwI2Q/lSzpf92akGki5I+PZIDz37MA5BhlA=\r\n"             \
   "250 OK\r\n"
@@ -364,7 +393,19 @@ test_hs_control_good_onion_client_auth_add(void *arg)
 
   /* Now also remove the other one */
   tor_free(args);
-  args =tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd");
+  args =
+    tor_strdup("2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd");
+
+  retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
+  tt_int_op(retval, OP_EQ, 0);
+  cp1 = buf_get_contents(TO_CONN(&conn)->outbuf, &sz);
+  tt_str_op(cp1, OP_EQ, "250 OK\r\n");
+  tor_free(cp1);
+
+  /* Now also remove the other one */
+  tor_free(args);
+  args =
+    tor_strdup("jamie3vkiwibfiwucd6vxijskbhpjdyajmzeor4mc4i7yopvpo4p7cyd");
 
   retval = handle_control_command(&conn, (uint32_t) strlen(args), args);
   tt_int_op(retval, OP_EQ, 0);
