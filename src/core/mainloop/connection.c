@@ -82,6 +82,7 @@
 #include "core/or/policies.h"
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
+#include "core/or/status.h"
 #include "core/or/crypt_path.h"
 #include "core/proto/proto_haproxy.h"
 #include "core/proto/proto_http.h"
@@ -2042,6 +2043,9 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       connection_mark_for_close(newconn);
     return 0;
   }
+
+  note_connection(true /* inbound */, conn->socket_family);
+
   return 0;
 }
 
@@ -2212,6 +2216,8 @@ connection_connect_sockaddr,(connection_t *conn,
       inprogress = 1;
     }
   }
+
+  note_connection(false /* outbound */, conn->socket_family);
 
   /* it succeeded. we're connected. */
   log_fn(inprogress ? LOG_DEBUG : LOG_INFO, LD_NET,

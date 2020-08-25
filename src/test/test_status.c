@@ -26,6 +26,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "app/config/statefile.h"
 #include "lib/tls/tortls.h"
+#include "test/log_test_helpers.h"
 
 #include "core/or/origin_circuit_st.h"
 #include "app/config/or_state_st.h"
@@ -308,10 +309,6 @@ static int status_hb_not_in_consensus_public_server_mode(
 static const routerinfo_t *status_hb_not_in_consensus_get_my_routerinfo(void);
 static const node_t * status_hb_not_in_consensus_node_get_by_id(
              const char *identity_digest);
-static void status_hb_not_in_consensus_logv(
-             int severity, log_domain_mask_t domain, const char *funcname,
-             const char *suffix, const char *format, va_list ap);
-static int status_hb_not_in_consensus_logv_called = 0;
 static int status_hb_not_in_consensus_server_mode(const or_options_t *options);
 
 static routerinfo_t *mock_routerinfo;
@@ -332,8 +329,6 @@ test_status_hb_not_in_consensus(void *arg)
        status_hb_not_in_consensus_get_my_routerinfo);
   MOCK(node_get_by_id,
        status_hb_not_in_consensus_node_get_by_id);
-  MOCK(logv,
-       status_hb_not_in_consensus_logv);
   MOCK(server_mode,
        status_hb_not_in_consensus_server_mode);
 
@@ -344,18 +339,38 @@ test_status_hb_not_in_consensus(void *arg)
   onion_handshakes_assigned[ONION_HANDSHAKE_TYPE_NTOR] = 1;
 
   expected = 0;
+  setup_capture_of_logs(LOG_INFO);
   actual = log_heartbeat(0);
-
   tt_int_op(actual, OP_EQ, expected);
-  tt_int_op(status_hb_not_in_consensus_logv_called, OP_EQ, 6);
 
-  done:
+  expect_log_msg("Heartbeat: It seems like we are "
+                 "not in the cached consensus.\n");
+  expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
+                 "with 0 circuits open. "
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
+  expect_log_msg("Average packaged cell fullness: 100.000%. "
+                 "TLS write overhead: 0%\n");
+  expect_log_msg("Circuit handshake stats since last time: 1/1 TAP, "
+                 "1/1 NTor.\n");
+  expect_log_msg("Since startup we initiated 0 and received 0 v1 "
+                 "connections; initiated 0 and received 0 v2 connections; "
+                 "initiated 0 and received 0 v3 connections; "
+                 "initiated 0 and received 0 v4 connections; "
+                 "initiated 0 and received 0 v5 connections.\n");
+  expect_log_msg("DoS mitigation since startup: 0 circuits killed with "
+                 "too many cells. [cc not enabled] [conn not enabled] "
+                 "0 INTRODUCE2 rejected.\n");
+  tt_int_op(mock_saved_log_n_entries(), OP_EQ, 6);
+
+ done:
+    teardown_capture_of_logs();
     UNMOCK(tls_get_write_overhead_ratio);
     UNMOCK(we_are_hibernating);
     UNMOCK(public_server_mode);
     UNMOCK(router_get_my_routerinfo);
     UNMOCK(node_get_by_id);
-    UNMOCK(logv);
     UNMOCK(server_mode);
     tor_free(mock_routerinfo);
 }
@@ -396,76 +411,6 @@ status_hb_not_in_consensus_node_get_by_id(const char *identity_digest)
   return NULL;
 }
 
-static void
-status_hb_not_in_consensus_logv(int severity, log_domain_mask_t domain,
-  const char *funcname, const char *suffix, const char *format, va_list ap)
-{
-  switch (status_hb_not_in_consensus_logv_called)
-  {
-    case 0:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Heartbeat: It seems like we are not in the cached consensus.");
-      break;
-    case 1:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Heartbeat: Tor's uptime is %s, with %d circuits open. "
-          "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
-      break;
-    case 2:
-      tt_int_op(severity, OP_EQ, LOG_INFO);
-      break;
-    case 3:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "rep_hist_log_circuit_handshake_stats"),
-                OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-        "Circuit handshake stats since last time: %d/%d TAP, %d/%d NTor.");
-      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes assigned (TAP) */
-      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes requested (TAP) */
-      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes assigned (NTOR) */
-      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes requested (NTOR) */
-      break;
-    case 4:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "rep_hist_log_link_protocol_counts"),
-                OP_NE, NULL);
-      break;
-    case 5:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_str_op(format, OP_EQ, "DoS mitigation since startup:%s%s%s%s%s");
-      tt_str_op(va_arg(ap, char *), OP_EQ,
-                " 0 circuits killed with too many cells.");
-      tt_str_op(va_arg(ap, char *), OP_EQ, " [cc not enabled]");
-      tt_str_op(va_arg(ap, char *), OP_EQ, " [conn not enabled]");
-      tt_str_op(va_arg(ap, char *), OP_EQ, "");
-      tt_str_op(va_arg(ap, char *), OP_EQ, " 0 INTRODUCE2 rejected.");
-      break;
-    default:
-      tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
-      break;
-  }
-
-  done:
-    status_hb_not_in_consensus_logv_called++;
-}
-
 static int
 status_hb_not_in_consensus_server_mode(const or_options_t *options)
 {
@@ -485,13 +430,7 @@ static int status_hb_simple_public_server_mode(const or_options_t *options);
 static long status_hb_simple_get_uptime(void);
 static uint64_t status_hb_simple_get_bytes_read(void);
 static uint64_t status_hb_simple_get_bytes_written(void);
-static void status_hb_simple_logv(int severity, log_domain_mask_t domain,
-                                  const char *funcname, const char *suffix,
-                                  const char *format, va_list ap);
-ATTR_UNUSED static int status_hb_simple_logv_called = 0;
 static int status_hb_simple_server_mode(const or_options_t *options);
-
-static int status_hb_simple_n_msgs = 0;
 
 static void
 test_status_hb_simple(void *arg)
@@ -511,27 +450,32 @@ test_status_hb_simple(void *arg)
        status_hb_simple_get_bytes_read);
   MOCK(get_bytes_written,
        status_hb_simple_get_bytes_written);
-  MOCK(logv,
-       status_hb_simple_logv);
   MOCK(server_mode,
        status_hb_simple_server_mode);
 
   log_global_min_severity_ = LOG_DEBUG;
 
+  setup_capture_of_logs(LOG_INFO);
   expected = 0;
   actual = log_heartbeat(0);
 
   tt_int_op(actual, OP_EQ, expected);
-  tt_int_op(status_hb_simple_n_msgs, OP_EQ, 1);
+
+  expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
+                 "with 0 circuits open. "
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6. "
+                 "We are currently hibernating.\n");
 
   done:
+    teardown_capture_of_logs();
     UNMOCK(tls_get_write_overhead_ratio);
     UNMOCK(we_are_hibernating);
     UNMOCK(public_server_mode);
     UNMOCK(get_uptime);
     UNMOCK(get_bytes_read);
     UNMOCK(get_bytes_written);
-    UNMOCK(logv);
     UNMOCK(server_mode);
 }
 
@@ -573,32 +517,6 @@ status_hb_simple_get_bytes_written(void)
   return 0;
 }
 
-static void
-status_hb_simple_logv(int severity, log_domain_mask_t domain,
-  const char *funcname,
-  const char *suffix, const char *format, va_list ap)
-{
-  if (severity == LOG_INFO)
-    return;
-  ++status_hb_simple_n_msgs;
-
-  tt_int_op(severity, OP_EQ, LOG_NOTICE);
-  tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-  tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-  tt_ptr_op(suffix, OP_EQ, NULL);
-  tt_str_op(format, OP_EQ,
-      "Heartbeat: Tor's uptime is %s, with %d circuits open. "
-      "I've sent %s and received %s.%s");
-  tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
-  tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
-  tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
-  tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
-  tt_str_op(va_arg(ap, char *), OP_EQ, " We are currently hibernating.");
-
-  done:
-    ;
-}
-
 static int
 status_hb_simple_server_mode(const or_options_t *options)
 {
@@ -620,11 +538,6 @@ static int status_hb_calls_log_accounting_public_server_mode(
 static long status_hb_calls_log_accounting_get_uptime(void);
 static uint64_t status_hb_calls_log_accounting_get_bytes_read(void);
 static uint64_t status_hb_calls_log_accounting_get_bytes_written(void);
-static void status_hb_calls_log_accounting_logv(
-                      int severity, log_domain_mask_t domain,
-                      const char *funcname, const char *suffix,
-                      const char *format, va_list ap);
-static int status_hb_calls_log_accounting_logv_called = 0;
 static int status_hb_calls_log_accounting_server_mode(
                       const or_options_t *options);
 static or_state_t * status_hb_calls_log_accounting_get_or_state(void);
@@ -653,8 +566,6 @@ test_status_hb_calls_log_accounting(void *arg)
        status_hb_calls_log_accounting_get_bytes_read);
   MOCK(get_bytes_written,
        status_hb_calls_log_accounting_get_bytes_written);
-  MOCK(logv,
-       status_hb_calls_log_accounting_logv);
   MOCK(server_mode,
        status_hb_calls_log_accounting_server_mode);
   MOCK(get_or_state,
@@ -666,20 +577,31 @@ test_status_hb_calls_log_accounting(void *arg)
 
   log_global_min_severity_ = LOG_DEBUG;
 
+  setup_capture_of_logs(LOG_NOTICE);
   expected = 0;
   actual = log_heartbeat(0);
 
   tt_int_op(actual, OP_EQ, expected);
-  tt_int_op(status_hb_calls_log_accounting_logv_called, OP_EQ, 3);
+
+  expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
+                 "with 0 circuits open. "
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
+
+  expect_log_msg_containing("Heartbeat: Accounting enabled. Sent: 0 kB, "
+                            "Received: 0 kB, Used: 0 kB / 0 kB, Rule: max. "
+                            "The current accounting interval ends on ");
+  tt_int_op(mock_saved_log_n_entries(), OP_EQ, 2);
 
   done:
+    teardown_capture_of_logs();
     UNMOCK(tls_get_write_overhead_ratio);
     UNMOCK(we_are_hibernating);
     UNMOCK(public_server_mode);
     UNMOCK(get_uptime);
     UNMOCK(get_bytes_read);
     UNMOCK(get_bytes_written);
-    UNMOCK(logv);
     UNMOCK(server_mode);
     UNMOCK(accounting_is_enabled);
     UNMOCK(accounting_get_end_time);
@@ -723,58 +645,6 @@ static uint64_t
 status_hb_calls_log_accounting_get_bytes_written(void)
 {
   return 0;
-}
-
-static void
-status_hb_calls_log_accounting_logv(int severity, log_domain_mask_t domain,
-  const char *funcname, const char *suffix, const char *format, va_list ap)
-{
-  switch (status_hb_calls_log_accounting_logv_called)
-  {
-    case 0:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Heartbeat: Tor's uptime is %s, with %d circuits open. "
-          "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
-      break;
-    case 1:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_accounting"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Heartbeat: Accounting enabled. Sent: %s, Received: %s, Used: %s / "
-          "%s, Rule: %s. The current accounting interval ends on %s, in %s.");
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_sent */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_rcvd */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_used */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_max */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "max");  /* acc_rule */
-      /* format_local_iso_time uses local tz, so we can't just compare
-       * the string against a constant */
-      char datetime[ISO_TIME_LEN+1];
-      format_local_iso_time(datetime, 60);
-      tt_str_op(va_arg(ap, char *), OP_EQ, datetime); /* end_buf */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0:01 hours");   /* remaining */
-      break;
-    case 2:
-      tt_int_op(severity, OP_EQ, LOG_INFO);
-      break;
-    default:
-      tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
-      break;
-  }
-
-  done:
-    status_hb_calls_log_accounting_logv_called++;
 }
 
 static int
@@ -826,11 +696,6 @@ static int status_hb_packaged_cell_fullness_public_server_mode(
 static long status_hb_packaged_cell_fullness_get_uptime(void);
 static uint64_t status_hb_packaged_cell_fullness_get_bytes_read(void);
 static uint64_t status_hb_packaged_cell_fullness_get_bytes_written(void);
-static void status_hb_packaged_cell_fullness_logv(
-                          int severity, log_domain_mask_t domain,
-                          const char *funcname, const char *suffix,
-                          const char *format, va_list ap);
-static int status_hb_packaged_cell_fullness_logv_called = 0;
 static int status_hb_packaged_cell_fullness_server_mode(
                           const or_options_t *options);
 static int status_hb_packaged_cell_fullness_accounting_is_enabled(
@@ -854,8 +719,6 @@ test_status_hb_packaged_cell_fullness(void *arg)
        status_hb_packaged_cell_fullness_get_bytes_read);
   MOCK(get_bytes_written,
        status_hb_packaged_cell_fullness_get_bytes_written);
-  MOCK(logv,
-       status_hb_packaged_cell_fullness_logv);
   MOCK(server_mode,
        status_hb_packaged_cell_fullness_server_mode);
   MOCK(accounting_is_enabled,
@@ -865,12 +728,20 @@ test_status_hb_packaged_cell_fullness(void *arg)
   stats_n_data_bytes_packaged = RELAY_PAYLOAD_SIZE;
   stats_n_data_cells_packaged = 2;
   expected = 0;
+  setup_capture_of_logs(LOG_INFO);
   actual = log_heartbeat(0);
 
   tt_int_op(actual, OP_EQ, expected);
-  tt_int_op(status_hb_packaged_cell_fullness_logv_called, OP_EQ, 2);
+  expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
+                 "with 0 circuits open. "
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
+  expect_log_msg("Average packaged cell fullness: 50.000%. "
+                 "TLS write overhead: 0%\n");
 
   done:
+    teardown_capture_of_logs();
     stats_n_data_bytes_packaged = 0;
     stats_n_data_cells_packaged = 0;
     UNMOCK(tls_get_write_overhead_ratio);
@@ -879,7 +750,6 @@ test_status_hb_packaged_cell_fullness(void *arg)
     UNMOCK(get_uptime);
     UNMOCK(get_bytes_read);
     UNMOCK(get_bytes_written);
-    UNMOCK(logv);
     UNMOCK(server_mode);
     UNMOCK(accounting_is_enabled);
 }
@@ -923,47 +793,6 @@ status_hb_packaged_cell_fullness_get_bytes_written(void)
   return 0;
 }
 
-static void
-status_hb_packaged_cell_fullness_logv(int severity,
-    log_domain_mask_t domain, const char *funcname,
-    const char *suffix, const char *format, va_list ap)
-{
-  switch (status_hb_packaged_cell_fullness_logv_called)
-  {
-    case 0:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Heartbeat: Tor's uptime is %s, with %d circuits open. "
-          "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
-      break;
-    case 1:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Average packaged cell fullness: %2.3f%%. "
-          "TLS write overhead: %.f%%");
-      tt_double_op(fabs(va_arg(ap, double) - 50.0), OP_LE, DBL_EPSILON);
-      tt_double_op(fabs(va_arg(ap, double) - 0.0), OP_LE, DBL_EPSILON);
-      break;
-    default:
-      tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
-      break;
-  }
-
-  done:
-    status_hb_packaged_cell_fullness_logv_called++;
-}
-
 static int
 status_hb_packaged_cell_fullness_server_mode(const or_options_t *options)
 {
@@ -993,11 +822,6 @@ static int status_hb_tls_write_overhead_public_server_mode(
 static long status_hb_tls_write_overhead_get_uptime(void);
 static uint64_t status_hb_tls_write_overhead_get_bytes_read(void);
 static uint64_t status_hb_tls_write_overhead_get_bytes_written(void);
-static void status_hb_tls_write_overhead_logv(
-               int severity, log_domain_mask_t domain,
-               const char *funcname, const char *suffix,
-               const char *format, va_list ap);
-static int status_hb_tls_write_overhead_logv_called = 0;
 static int status_hb_tls_write_overhead_server_mode(
                const or_options_t *options);
 static int status_hb_tls_write_overhead_accounting_is_enabled(
@@ -1021,8 +845,6 @@ test_status_hb_tls_write_overhead(void *arg)
        status_hb_tls_write_overhead_get_bytes_read);
   MOCK(get_bytes_written,
        status_hb_tls_write_overhead_get_bytes_written);
-  MOCK(logv,
-       status_hb_tls_write_overhead_logv);
   MOCK(server_mode,
        status_hb_tls_write_overhead_server_mode);
   MOCK(accounting_is_enabled,
@@ -1031,19 +853,26 @@ test_status_hb_tls_write_overhead(void *arg)
   log_global_min_severity_ = LOG_DEBUG;
 
   expected = 0;
+  setup_capture_of_logs(LOG_NOTICE);
   actual = log_heartbeat(0);
 
   tt_int_op(actual, OP_EQ, expected);
-  tt_int_op(status_hb_tls_write_overhead_logv_called, OP_EQ, 2);
+  expect_log_msg("Heartbeat: Tor's uptime is 0:00 hours, "
+                 "with 0 circuits open. "
+                 "I've sent 0 kB and received 0 kB. "
+                 "I've received 0 connections on IPv4 and 0 on IPv6. "
+                 "I've made 0 connections with IPv4 and 0 with IPv6.\n");
+  expect_log_msg("Average packaged cell fullness: 100.000%. "
+                 "TLS write overhead: 100%\n");
 
   done:
+    teardown_capture_of_logs();
     UNMOCK(tls_get_write_overhead_ratio);
     UNMOCK(we_are_hibernating);
     UNMOCK(public_server_mode);
     UNMOCK(get_uptime);
     UNMOCK(get_bytes_read);
     UNMOCK(get_bytes_written);
-    UNMOCK(logv);
     UNMOCK(server_mode);
     UNMOCK(accounting_is_enabled);
 }
@@ -1084,46 +913,6 @@ static uint64_t
 status_hb_tls_write_overhead_get_bytes_written(void)
 {
   return 0;
-}
-
-static void
-status_hb_tls_write_overhead_logv(int severity, log_domain_mask_t domain,
-  const char *funcname, const char *suffix, const char *format, va_list ap)
-{
-  switch (status_hb_tls_write_overhead_logv_called)
-  {
-    case 0:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Heartbeat: Tor's uptime is %s, with %d circuits open. "
-          "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
-      break;
-    case 1:
-      tt_int_op(severity, OP_EQ, LOG_NOTICE);
-      tt_u64_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
-      tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ,
-          "Average packaged cell fullness: %2.3f%%. "
-          "TLS write overhead: %.f%%");
-      tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, OP_EQ, 1);
-      tt_double_op(fabs(va_arg(ap, double) - 100.0), OP_LE, DBL_EPSILON);
-      break;
-    default:
-      tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
-      break;
-  }
-
-  done:
-    status_hb_tls_write_overhead_logv_called++;
 }
 
 static int
