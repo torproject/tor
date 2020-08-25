@@ -285,6 +285,11 @@ handle_establish_intro_cell_dos_extension(
     }
   }
 
+  /* At this point, the extension is valid so any values out of it implies
+   * that it was set explicitly and thus flag the circuit that it should not
+   * look at the consensus for that reason for the defenses' values. */
+  circ->introduce2_dos_defense_explicit = 1;
+
   /* A value of 0 is valid in the sense that we accept it but we still disable
    * the defenses so return false. */
   if (intro2_rate_per_sec == 0 || intro2_burst_per_sec == 0) {
