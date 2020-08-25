@@ -1,0 +1,3 @@
+  o Minor bugfixes (guard selection algorithm):
+    - Avoid needless guard-related warning when upgrading from 0.4.3 to 0.4.4.
+      Fixes bug 40105; bugfix on 0.4.4.1-alpha.

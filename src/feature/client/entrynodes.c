@@ -3139,9 +3139,9 @@ entry_guard_parse_from_state(const char *s)
 
     guard->sampled_idx = guard->confirmed_idx;
   } else {
-    log_warn(LD_GUARD, "The state file seems to be into a status that could"
-        " yield to weird entry node selection: we're missing both a"
-        " sampled_idx and a confirmed_idx.");
+    log_info(LD_GUARD, "The state file seems to be into a status that could"
+             " yield to weird entry node selection: we're missing both a"
+             " sampled_idx and a confirmed_idx.");
     guard->sampled_idx = invalid_sampled_idx++;
   }
 
