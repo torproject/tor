@@ -1,0 +1,6 @@
+  o Major bugfixes (onion services, DoS):
+    - The consensus parameters for the onion service DoS defenses was
+      overwriting the circuit parameters that could have been set by the service
+      operator using HiddenServiceEnableIntroDoSDefense. Fixes bug 40109; bugfix
+      on 0.4.2.1-alpha.
+

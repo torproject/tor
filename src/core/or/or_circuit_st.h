@@ -75,6 +75,10 @@ struct or_circuit_t {
   /** If set, the DoS defenses are enabled on this circuit meaning that the
    * introduce2_bucket is initialized and used. */
   unsigned int introduce2_dos_defense_enabled : 1;
+  /** If set, the DoS defenses were explicitly enabled through the
+   * ESTABLISH_INTRO cell extension. If unset, the consensus is used to learn
+   * if the defenses can be enabled or not. */
+  unsigned int introduce2_dos_defense_explicit : 1;
 
   /** INTRODUCE2 cell bucket controlling how much can go on this circuit. Only
    * used if this is a service introduction circuit at the intro point
