@@ -1,0 +1,3 @@
+  o Testing (CI):
+    - Build tracing configure option into our CI. Closes ticket 40038.
+
