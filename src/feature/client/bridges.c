@@ -249,8 +249,8 @@ get_configured_bridge_by_exact_addr_port_digest(const tor_addr_t *addr,
  * address/port matches only. */
 int
 addr_is_a_configured_bridge(const tor_addr_t *addr,
-                                uint16_t port,
-                                const char *digest)
+                            uint16_t port,
+                            const char *digest)
 {
   tor_assert(addr);
   return get_configured_bridge_by_addr_port_digest(addr, port, digest) ? 1 : 0;
@@ -596,7 +596,7 @@ find_transport_name_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
  */
 int
 get_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
-                                  const transport_t **transport)
+                                 const transport_t **transport)
 {
   *transport = NULL;
   if (!bridge_list)
