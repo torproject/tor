@@ -93,6 +93,11 @@ update_intro_circuits(void)
   smartlist_t *intro_circs = hs_circuitmap_get_all_intro_circ_relay_side();
 
   SMARTLIST_FOREACH_BEGIN(intro_circs, circuit_t *, circ) {
+    /* Ignore circuit if the defenses were set explicitly through the
+     * ESTABLISH_INTRO cell DoS extension. */
+    if (TO_OR_CIRCUIT(circ)->introduce2_dos_defense_explicit) {
+      continue;
+    }
     /* Defenses might have been enabled or disabled. */
     TO_OR_CIRCUIT(circ)->introduce2_dos_defense_enabled =
       consensus_param_introduce_defense_enabled;
