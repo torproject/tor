@@ -43,6 +43,7 @@
 #include "ed25519-randombytes.h"
 #include "ed25519-hash.h"
 
+#include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 
 typedef unsigned char ed25519_signature[64];
