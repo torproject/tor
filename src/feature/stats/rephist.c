@@ -2474,44 +2474,44 @@ rep_hist_log_circuit_handshake_stats(time_t now)
 
 /** Start of the current hidden service stats interval or 0 if we're
  * not collecting hidden service statistics. */
-static time_t start_of_hs_stats_interval;
+static time_t start_of_hs_v2_stats_interval;
 
 /** Our statistics structure singleton. */
-static hs_stats_t *hs_stats = NULL;
+static hs_v2_stats_t *hs_v2_stats = NULL;
 
-/** Allocate, initialize and return an hs_stats_t structure. */
-static hs_stats_t *
-hs_stats_new(void)
+/** Allocate, initialize and return an hs_v2_stats_t structure. */
+static hs_v2_stats_t *
+hs_v2_stats_new(void)
 {
-  hs_stats_t *new_hs_stats = tor_malloc_zero(sizeof(hs_stats_t));
-  new_hs_stats->v2_onions_seen_this_period = digestmap_new();
-  new_hs_stats->v3_onions_seen_this_period = digestmap_new();
+  hs_v2_stats_t *new_hs_v2_stats = tor_malloc_zero(sizeof(hs_v2_stats_t));
+  new_hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
+  new_hs_v2_stats->v3_onions_seen_this_period = digestmap_new();
 
-  return new_hs_stats;
+  return new_hs_v2_stats;
 }
 
-#define hs_stats_free(val) \
-  FREE_AND_NULL(hs_stats_t, hs_stats_free_, (val))
+#define hs_v2_stats_free(val) \
+  FREE_AND_NULL(hs_v2_stats_t, hs_v2_stats_free_, (val))
 
-/** Free an hs_stats_t structure. */
+/** Free an hs_v2_stats_t structure. */
 static void
-hs_stats_free_(hs_stats_t *victim_hs_stats)
+hs_v2_stats_free_(hs_v2_stats_t *victim_hs_v2_stats)
 {
-  if (!victim_hs_stats) {
+  if (!victim_hs_v2_stats) {
     return;
   }
 
-  digestmap_free(victim_hs_stats->v2_onions_seen_this_period, NULL);
-  digestmap_free(victim_hs_stats->v3_onions_seen_this_period, NULL);
-  tor_free(victim_hs_stats);
+  digestmap_free(victim_hs_v2_stats->v2_onions_seen_this_period, NULL);
+  digestmap_free(victim_hs_v2_stats->v3_onions_seen_this_period, NULL);
+  tor_free(victim_hs_v2_stats);
 }
 
 /** Initialize hidden service statistics. */
 void
-rep_hist_hs_stats_init(time_t now)
+rep_hist_hs_v2_stats_init(time_t now)
 {
-  if (!hs_stats) {
-    hs_stats = hs_stats_new();
+  if (!hs_v2_stats) {
+    hs_v2_stats = hs_v2_stats_new();
   }
 
   start_of_hs_stats_interval = now;
@@ -2520,29 +2520,29 @@ rep_hist_hs_stats_init(time_t now)
 /** Clear history of hidden service statistics and set the measurement
  * interval start to <b>now</b>. */
 static void
-rep_hist_reset_hs_stats(time_t now)
+rep_hist_reset_hs_v2_stats(time_t now)
 {
-  if (!hs_stats) {
-    hs_stats = hs_stats_new();
+  if (!hs_v2_stats) {
+    hs_v2_stats = hs_v2_stats_new();
   }
 
-  hs_stats->rp_relay_cells_seen = 0;
+  hs_v2_stats->rp_relay_cells_seen = 0;
 
-  digestmap_free(hs_stats->v2_onions_seen_this_period, NULL);
-  hs_stats->v2_onions_seen_this_period = digestmap_new();
+  digestmap_free(hs_v2_stats->v2_onions_seen_this_period, NULL);
+  hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
 
-  digestmap_free(hs_stats->v3_onions_seen_this_period, NULL);
-  hs_stats->v3_onions_seen_this_period = digestmap_new();
+  digestmap_free(hs_v2_stats->v3_onions_seen_this_period, NULL);
+  hs_v2_stats->v3_onions_seen_this_period = digestmap_new();
 
-  start_of_hs_stats_interval = now;
+  start_of_hs_v2_stats_interval = now;
 }
 
 /** Stop collecting hidden service stats in a way that we can re-start
  * doing so in rep_hist_buffer_stats_init(). */
 void
-rep_hist_hs_stats_term(void)
+rep_hist_hs_v2_stats_term(void)
 {
-  rep_hist_reset_hs_stats(0);
+  rep_hist_reset_hs_v2_stats(0);
 }
 
 /** We saw a new HS relay cell, Count it! */
@@ -2553,7 +2553,7 @@ rep_hist_seen_new_rp_cell(void)
     return; // We're not collecting stats
   }
 
-  hs_stats->rp_relay_cells_seen++;
+  hs_v2_stats->rp_relay_cells_seen++;
 }
 
 /** As HSDirs, we saw another v2 onion with public key <b>pubkey</b>. Check
@@ -2567,7 +2567,7 @@ rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
     return; // We're not collecting stats
   }
 
-  bool seen_before = !!digestmap_get(hs_stats->v2_onions_seen_this_period,
+  bool seen_before = !!digestmap_get(hs_v2_stats->v2_onions_seen_this_period,
                                      pubkey_hash);
 
   /* Get the digest of the pubkey which will be used to detect whether
@@ -2584,7 +2584,7 @@ rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
   /* Check if this is the first time we've seen this hidden
      service. If it is, count it as new. */
   if (!seen_before) {
-    digestmap_set(hs_stats->v2_onions_seen_this_period,
+    digestmap_set(hs_v2_stats->v2_onions_seen_this_period,
                   pubkey_hash, (void*)(uintptr_t)1);
   }
 }
@@ -2598,7 +2598,7 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
     return; // We're not collecting stats
   }
 
-  bool seen_before = !!digestmap_get(hs_stats->v3_onions_seen_this_period,
+  bool seen_before = !!digestmap_get(hs_v2_stats->v3_onions_seen_this_period,
                                      (char*)blinded_key);
 
   log_warn(LD_GENERAL, "Considering v3 descriptor with %s (%sseen before)",
@@ -2607,7 +2607,7 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
 
   /* Count it if we haven't seen it before. */
   if (!seen_before) {
-    digestmap_set(hs_stats->v3_onions_seen_this_period,
+    digestmap_set(hs_v2_stats->v3_onions_seen_this_period,
                   (char*)blinded_key, (void*)(uintptr_t)1);
   }
 }
@@ -2638,16 +2638,16 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
 /** Allocate and return a string containing hidden service stats that
  *  are meant to be placed in the extra-info descriptor. */
 STATIC char *
-rep_hist_format_hs_stats(time_t now)
+rep_hist_format_hs_v2_stats(time_t now)
 {
   char t[ISO_TIME_LEN+1];
-  char *hs_stats_string;
+  char *hs_v2_stats_string;
   int64_t obfuscated_cells_seen;
   int64_t obfuscated_v2_onions_seen;
   int64_t v3_onions_seen, v2_onions_seen;
 
   uint64_t rounded_cells_seen
-    = round_uint64_to_next_multiple_of(hs_stats->rp_relay_cells_seen,
+    = round_uint64_to_next_multiple_of(hs_v2_stats->rp_relay_cells_seen,
                                        REND_CELLS_BIN_SIZE);
   rounded_cells_seen = MIN(rounded_cells_seen, INT64_MAX);
   obfuscated_cells_seen = add_laplace_noise((int64_t)rounded_cells_seen,
@@ -2656,25 +2656,25 @@ rep_hist_format_hs_stats(time_t now)
 
   uint64_t rounded_v2_onions_seen =
     round_uint64_to_next_multiple_of((size_t)digestmap_size(
-                                        hs_stats->v2_onions_seen_this_period),
+                                        hs_v2_stats->v2_onions_seen_this_period),
                                      ONIONS_SEEN_BIN_SIZE);
   rounded_v2_onions_seen = MIN(rounded_v2_onions_seen, INT64_MAX);
   obfuscated_v2_onions_seen = add_laplace_noise((int64_t)rounded_v2_onions_seen,
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
 
-  v2_onions_seen = (int64_t)digestmap_size(hs_stats->v2_onions_seen_this_period);
-  v3_onions_seen = (int64_t)digestmap_size(hs_stats->v3_onions_seen_this_period);
+  v2_onions_seen = (int64_t)digestmap_size(hs_v2_stats->v2_onions_seen_this_period);
+  v3_onions_seen = (int64_t)digestmap_size(hs_v2_stats->v3_onions_seen_this_period);
 
   format_iso_time(t, now);
-  tor_asprintf(&hs_stats_string, "hidserv-stats-end %s (%d s)\n"
+  tor_asprintf(&hs_v2_stats_string, "hidserv-stats-end %s (%d s)\n"
                "hidserv-rend-relayed-cells %"PRId64" delta_f=%d "
                                            "epsilon=%.2f bin_size=%d\n"
                "hidserv-dir-onions-seen %"PRId64" delta_f=%d "
                                         "epsilon=%.2f bin_size=%d\n"
                "hidserv-dir-v2-onions-seen-unobfuscated %"PRId64"\n"
                "hidserv-dir-v3-onions-seen %"PRId64"\n",
-               t, (unsigned) (now - start_of_hs_stats_interval),
+               t, (unsigned) (now - start_of_hs_v2_stats_interval),
                (obfuscated_cells_seen), REND_CELLS_DELTA_F,
                REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
                (obfuscated_v2_onions_seen),
@@ -2682,7 +2682,7 @@ rep_hist_format_hs_stats(time_t now)
                ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE,
                v2_onions_seen, v3_onions_seen);
 
-  return hs_stats_string;
+  return hs_v2_stats_string;
 }
 
 /** If 24 hours have passed since the beginning of the current HS
@@ -2691,23 +2691,23 @@ rep_hist_format_hs_stats(time_t now)
  * when we would next want to write buffer stats or 0 if we never want to
  * write. */
 time_t
-rep_hist_hs_stats_write(time_t now)
+rep_hist_hs_v2_stats_write(time_t now)
 {
   char *str = NULL;
 
-  if (!start_of_hs_stats_interval) {
+  if (!start_of_hs_v2_stats_interval) {
     return 0; /* Not initialized. */
   }
 
-  if (start_of_hs_stats_interval + WRITE_STATS_INTERVAL > now) {
+  if (start_of_hs_v2_stats_interval + WRITE_STATS_INTERVAL > now) {
     goto done; /* Not ready to write */
   }
 
   /* Generate history string. */
-  str = rep_hist_format_hs_stats(now);
+  str = rep_hist_format_hs_v2_stats(now);
 
   /* Reset HS history. */
-  rep_hist_reset_hs_stats(now);
+  rep_hist_reset_hs_v2_stats(now);
 
   /* Try to write to disk. */
   if (!check_or_create_data_subdir("stats")) {
@@ -2729,7 +2729,7 @@ rep_hist_hs_stats_write(time_t now)
 
  done:
   tor_free(str);
-  return start_of_hs_stats_interval + WRITE_STATS_INTERVAL;
+  return start_of_hs_v2_stats_interval + WRITE_STATS_INTERVAL;
 }
 
 static uint64_t link_proto_count[MAX_LINK_PROTO+1][2];
@@ -2938,7 +2938,7 @@ rep_hist_log_link_protocol_counts(void)
 void
 rep_hist_free_all(void)
 {
-  hs_stats_free(hs_stats);
+  hs_v2_stats_free(hs_v2_stats);
   digestmap_free(history_map, free_or_history);
 
   bw_array_free(read_array);
@@ -2974,9 +2974,9 @@ rep_hist_free_all(void)
 
 #ifdef TOR_UNIT_TESTS
 /* only exists for unit tests: get HS stats object */
-const hs_stats_t *
-rep_hist_get_hs_stats(void)
+const hs_v2_stats_t *
+rep_hist_get_hs_v2_stats(void)
 {
-  return hs_stats;
+  return hs_v2_stats;
 }
 #endif /* defined(TOR_UNIT_TESTS) */
