@@ -259,18 +259,18 @@ test_rephist_v3_onions(void *arg)
   hs_descriptor_t *desc1 = NULL;
   char *stats_string = NULL;
 
-  const hs_stats_t *hs_stats = NULL;
+  const hs_v3_stats_t *hs_v3_stats = NULL;
 
   (void) arg;
 
   /* Initialize the subsystems */
   hs_cache_init();
   rep_hist_hs_stats_init(0);
-  update_approx_time(1010101010);
+  update_approx_time(10101010101);
 
   /* HS stats should be zero here */
-  hs_stats = rep_hist_get_hs_stats();
-  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 0);
+  hs_v3_stats = rep_hist_get_hs_v3_stats();
+  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 0);
 
   /* Generate a valid descriptor */
   ret = ed25519_keypair_generate(&signing_kp1, 0);
@@ -283,8 +283,8 @@ test_rephist_v3_onions(void *arg)
   /* Store descriptor and check that stats got updated */
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
-  hs_stats = rep_hist_get_hs_stats();
-  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 1);
+  hs_v3_stats = rep_hist_get_hs_v3_stats();
+  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 1);
 
   /* cleanup */
   hs_descriptor_free(desc1);
@@ -301,8 +301,8 @@ test_rephist_v3_onions(void *arg)
   /* Store descriptor and check that stats are updated */
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
-  hs_stats = rep_hist_get_hs_stats();
-  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 2);
+  hs_v3_stats = rep_hist_get_hs_v3_stats();
+  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 2);
 
   /* Check that storing the same descriptor twice does not work */
   ret = hs_cache_store_as_dir(desc1_str);
@@ -322,7 +322,7 @@ test_rephist_v3_onions(void *arg)
   /* Store descriptor and check that stats are updated */
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 2);
+  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 2);
 
   /* cleanup */
   hs_descriptor_free(desc1);
@@ -342,14 +342,14 @@ test_rephist_v3_onions(void *arg)
   /* Store descriptor and check that stats are updated */
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(digestmap_size(hs_stats->v3_onions_seen_this_period), OP_EQ, 3);
+  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 3);
 
   /* cleanup */
   hs_descriptor_free(desc1);
   tor_free(desc1_str);
 
-  stats_string = rep_hist_format_hs_stats(approx_time());
-  tt_assert(strstr(stats_string, "hidserv-dir-v3-onions-seen 3"));
+  stats_string = rep_hist_format_hs_v3_stats(approx_time());
+  tt_assert(strstr(stats_string, "hidserv-dir-v3-onions-seen-unobfuscated 3"));
 
  done:
   tor_free(stats_string);

@@ -77,12 +77,16 @@ void rep_hist_note_circuit_handshake_requested(uint16_t type);
 void rep_hist_note_circuit_handshake_assigned(uint16_t type);
 void rep_hist_log_circuit_handshake_stats(time_t now);
 
-void rep_hist_hs_v2_stats_init(time_t now);
-void rep_hist_hs_v2_stats_term(void);
+void rep_hist_hs_stats_init(time_t now);
+void rep_hist_hs_stats_term(void);
+
 time_t rep_hist_hs_v2_stats_write(time_t now);
 char *rep_hist_get_hs_v2_stats_string(void);
 void rep_hist_seen_new_rp_cell(void);
 void rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey);
+
+time_t rep_hist_hs_v3_stats_write(time_t now);
+char *rep_hist_get_hs_v3_stats_string(void);
 void rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key);
 
 void rep_hist_free_all(void);
@@ -109,15 +113,20 @@ typedef struct hs_v2_stats_t {
   /** Set of unique public key digests we've seen this stat period
    * (could also be implemented as sorted smartlist). */
   digestmap_t *v2_onions_seen_this_period;
-
-  digestmap_t *v3_onions_seen_this_period;
 } hs_v2_stats_t;
+
+/** DOCDOCDOC */
+typedef struct hs_v3_stats_t {
+  /* DOCDOCDOC */
+  digestmap_t *v3_onions_seen_this_period;
+} hs_v3_stats_t;
 
 typedef struct bw_array_t bw_array_t;
 STATIC uint64_t find_largest_max(bw_array_t *b);
 STATIC void commit_max(bw_array_t *b);
 STATIC void advance_obs(bw_array_t *b);
 STATIC char *rep_hist_format_hs_v2_stats(time_t now);
+STATIC char *rep_hist_format_hs_v3_stats(time_t now);
 #endif /* defined(REPHIST_PRIVATE) */
 
 /**
@@ -148,6 +157,8 @@ void rep_hist_padding_count_timers(uint64_t num_timers);
 #ifdef TOR_UNIT_TESTS
 typedef struct hs_v2_stats_t hs_v2_stats_t;
 const hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);
+typedef struct hs_v3_stats_t hs_v3_stats_t;
+const hs_v3_stats_t *rep_hist_get_hs_v3_stats(void);
 #endif
 
 #endif /* !defined(TOR_REPHIST_H) */
