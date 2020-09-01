@@ -1639,6 +1639,24 @@ router_upload_dir_desc_to_dirservers(int force)
   }
   msg[desc_len+extra_len] = 0;
 
+  /* here is the ei upload */
+  if (ei) {
+    char formatted_time[ISO_TIME_LEN+1];
+    char *perma_fname = NULL;
+    char *perma_path = NULL;
+
+    format_iso_time_nospace(formatted_time, approx_time());
+
+    tor_asprintf(&perma_fname, "extrainfo-%s", formatted_time);
+    perma_path = get_cachedir_fname(perma_fname);
+
+    write_bytes_to_file(perma_path,
+                        ei->cache_info.signed_descriptor_body, extra_len, 1);
+
+    tor_free(perma_fname);
+    tor_free(perma_path);
+  }
+
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR,
                                (auth & BRIDGE_DIRINFO) ?
                                  ROUTER_PURPOSE_BRIDGE :

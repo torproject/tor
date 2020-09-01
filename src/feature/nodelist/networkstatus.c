@@ -2167,6 +2167,15 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (!from_cache) {
+    /* Write consensus on disk for ever */
+    char formatted_time[ISO_TIME_LEN+1];
+    char *perma_fname = NULL;
+    format_iso_time_nospace(formatted_time, approx_time());
+    tor_asprintf(&perma_fname, "%s-%s", consensus_fname, formatted_time);
+    write_bytes_to_file(perma_fname, consensus, consensus_len, 1);
+    tor_free(perma_fname);
+
+    /* Write consensus on disk once */
     write_bytes_to_file(consensus_fname, consensus, consensus_len, 1);
   }
 
