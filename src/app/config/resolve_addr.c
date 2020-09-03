@@ -787,7 +787,8 @@ MOCK_IMPL(bool,
 is_local_to_resolve_addr, (const tor_addr_t *addr))
 {
   const int family = tor_addr_family(addr);
-  const tor_addr_t *last_resolved_addr = &last_resolved_addrs[family];
+  const tor_addr_t *last_resolved_addr =
+    &last_resolved_addrs[af_to_idx(family)];
 
   /* Internal address is always local. */
   if (tor_addr_is_internal(addr, 0)) {
