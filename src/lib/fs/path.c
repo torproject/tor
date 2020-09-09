@@ -532,7 +532,7 @@ unglob_win32(const char *pattern, int prev_sep, int next_sep)
   tor_free(path_until_glob);
   return result;
 }
-#else /* !defined(_WIN32) */
+#elif HAVE_GLOB
 /** Same as opendir but calls sandbox_intern_string before */
 static DIR *
 prot_opendir(const char *name)
@@ -559,7 +559,7 @@ wrap_closedir(void *arg)
 {
   closedir(arg);
 }
-#endif /* defined(_WIN32) */
+#endif /* defined(HAVE_GLOB) */
 
 /** Return a new list containing the paths that match the pattern
  * <b>pattern</b>. Return NULL on error. On POSIX systems, errno is set by the
@@ -568,14 +568,15 @@ wrap_closedir(void *arg)
 struct smartlist_t *
 tor_glob(const char *pattern)
 {
-  smartlist_t *result;
+  smartlist_t *result = NULL;
+
 #ifdef _WIN32
   // PathMatchSpec does not support forward slashes, change them to backslashes
   char *pattern_normalized = tor_strdup(pattern);
   tor_strreplacechar(pattern_normalized, '/', *PATH_SEPARATOR);
   result = get_glob_paths(pattern_normalized, unglob_win32, true);
   tor_free(pattern_normalized);
-#else /* !(defined(_WIN32)) */
+#elif HAVE_GLOB /* !(defined(_WIN32)) */
   glob_t matches;
   int flags = GLOB_ERR | GLOB_NOSORT;
 #ifdef GLOB_ALTDIRFUNC
@@ -608,7 +609,11 @@ tor_glob(const char *pattern)
     smartlist_add(result, match);
   }
   globfree(&matches);
-#endif /* defined(_WIN32) */
+#else
+  (void)pattern;
+  return result;
+#endif /* !defined(HAVE_GLOB) */
+
   return result;
 }
 

@@ -4440,6 +4440,7 @@ test_util_glob(void *ptr)
 {
   (void)ptr;
 
+#ifdef HAVE_GLOB
   smartlist_t *results = NULL;
   int r, i;
   char *dir1 = NULL, *dir2 = NULL, *forbidden = NULL, *dirname = NULL;
@@ -4656,6 +4657,11 @@ test_util_glob(void *ptr)
     SMARTLIST_FOREACH(results, char *, f, tor_free(f));
     smartlist_free(results);
   }
+#else
+  tt_skip();
+ done:
+  return;
+#endif
 }
 
 static void
@@ -4663,6 +4669,7 @@ test_util_get_glob_opened_files(void *ptr)
 {
   (void)ptr;
 
+#ifdef HAVE_GLOB
   smartlist_t *results = NULL;
   int r, i;
   char *dir1 = NULL, *dir2 = NULL, *forbidden = NULL, *dirname = NULL;
@@ -4843,6 +4850,11 @@ test_util_get_glob_opened_files(void *ptr)
     SMARTLIST_FOREACH(results, char *, f, tor_free(f));
     smartlist_free(results);
   }
+#else
+  tt_skip();
+ done:
+  return;
+#endif
 }
 
 static void

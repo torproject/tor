@@ -845,6 +845,8 @@ fi
 AM_CONDITIONAL(BUILD_READPASSPHRASE_C,
   test "x$ac_cv_func_readpassphrase" = "xno" && test "$bwin32" = "false")
 
+AC_CHECK_FUNCS(glob)
+
 AC_MSG_CHECKING([whether free(NULL) works])
 AC_RUN_IFELSE([AC_LANG_PROGRAM([
   #include <stdlib.h>
