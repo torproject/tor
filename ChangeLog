@@ -1,6 +1,10 @@
 Changes in version 0.4.4.5 - 2020-09-15
-  Tor 0.4.4.5 is the first stable release in the 0.4.4.x series. SERIES
-  BLURB GOES HERE.
+  Tor 0.4.4.5 is the first stable release in the 0.4.4.x series. This
+  series improves our guard selection algorithms, adds v3 onion balance
+  support, improves the amount of code that can be disabled when running
+  without relay support, and includes numerous small bugfixes and
+  enhancements. It also lays the ground for some IPv6 features that
+  we'll be developing more in the next (0.4.5) series.
 
   Per our support policy, we support each stable release series for nine
   months after its first stable release, or three months after the first
@@ -13,7 +17,7 @@ Changes in version 0.4.4.5 - 2020-09-15
   0.3.5.x, our long-term stable series, until Feb 2022.
 
   Below are the changes since 0.4.4.4-rc. For a complete list of changes
-  since 0.4.3.5, see the ReleaseNotes file.
+  since 0.4.3.6, see the ReleaseNotes file.
 
   o Major bugfixes (onion services, DoS):
     - Correct handling of parameters for the onion service DoS defense.
