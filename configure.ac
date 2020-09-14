@@ -873,6 +873,8 @@ if test "$bwin32" = "true"; then
   # think it's actually necessary.
   TOR_LIB_GDI=-lgdi32
   TOR_LIB_USERENV=-luserenv
+  TOR_LIB_BCRYPT=-lbcrypt
+  TOR_LIB_CRYPT32=-lcrypt32
 else
   TOR_LIB_WS32=
   TOR_LIB_GDI=
@@ -881,6 +883,8 @@ fi
 AC_SUBST(TOR_LIB_WS32)
 AC_SUBST(TOR_LIB_GDI)
 AC_SUBST(TOR_LIB_IPHLPAPI)
+AC_SUBST(TOR_LIB_BCRYPT)
+AC_SUBST(TOR_LIB_CRYPT32)
 AC_SUBST(TOR_LIB_SHLWAPI)
 AC_SUBST(TOR_LIB_USERENV)
 
@@ -898,7 +902,7 @@ if test "$enable_static_libevent" = "yes"; then
     fi
 fi
 
-TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32], [
+TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_IPHLPAPI $TOR_LIB_BCRYPT $TOR_LIB_WS32], [
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
@@ -1029,7 +1033,7 @@ AC_ARG_WITH(ssl-dir,
   ])
 
 AC_MSG_NOTICE([Now, we'll look for OpenSSL >= 1.0.1])
-TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS32],
+TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS32 $TOR_LIB_CRYPT32],
     [#include <openssl/ssl.h>
      char *getenv(const char *);],
     [struct ssl_cipher_st;
@@ -1050,7 +1054,7 @@ if test "$enable_static_openssl" = "yes"; then
    if test "$tor_cv_library_openssl_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-openssl-dir=x option when using --enable-static-openssl")
    else
-     TOR_OPENSSL_LIBS="$TOR_LIBDIR_openssl/libssl.a $TOR_LIBDIR_openssl/libcrypto.a"
+     TOR_OPENSSL_LIBS="$TOR_LIBDIR_openssl/libssl.a $TOR_LIBDIR_openssl/libcrypto.a $TOR_LIB_WS32 $TOR_LIB_CRYPT32 $TOR_LIB_BCRYPT"
    fi
 else
      TOR_OPENSSL_LIBS="-lssl -lcrypto"
