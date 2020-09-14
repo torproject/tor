@@ -67,8 +67,8 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
              "Tor only an IP address. Applications that do DNS resolves "
              "themselves may leak information. Consider using Socks4A "
              "(e.g. via privoxy or socat) instead. For more information, "
-             "please see https://wiki.torproject.org/TheOnionRouter/"
-             "TorFAQ#SOCKSAndDNS.%s",
+             "please see https://2019.www.torproject.org/docs/faq.html.en"
+             "#WarningsAboutSOCKSandDNSInformationLeaks.%s",
              socks_protocol,
              (int)port,
              safe_socks ? " Rejecting." : "");

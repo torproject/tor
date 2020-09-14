@@ -2642,7 +2642,7 @@ other kinds of attacks easier. A Tor instance build with this option will be
 somewhat less vulnerable to remote code execution, arithmetic overflow, or
 out-of-bounds read/writes... but at the cost of becoming more vulnerable to
 denial of service attacks. For more information, see
-https://trac.torproject.org/projects/tor/wiki/doc/TorFragileHardening
+https://gitlab.torproject.org/tpo/core/team/-/wikis/TorFragileHardening
 ============
   ])
 fi

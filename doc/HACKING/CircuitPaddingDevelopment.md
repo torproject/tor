@@ -150,7 +150,7 @@ might be recognized on the wire.
 The problem of differentiating Tor traffic from non-Tor traffic based on
 TCP/TLS packet sizes, initial handshake patterns, and DPI characteristics is the
 domain of [pluggable
-transports](https://trac.torproject.org/projects/tor/wiki/doc/AChildsGardenOfPluggableTransports),
+transports](https://gitlab.torproject.org/tpo/anti-censorship/team/-/wikis/AChildsGardenOfPluggableTransports),
 which may optionally be used in conjunction with this framework (or without
 it).
 
