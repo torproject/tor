@@ -1,5 +1,0 @@
-  o Major bugfixes (stats, onion services):
-    - Fix a bug where we were undercounting the Tor network's total onion
-      service traffic, by only counting rendezvous traffic originating from
-      services and ignoring any traffic originating from clients. Fixes bug
-      40117; bugfix on 0.2.6.2-alpha.
