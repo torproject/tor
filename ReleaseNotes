@@ -3,6 +3,448 @@ release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
 
+Changes in version 0.4.4.5 - 2020-09-15
+  Tor 0.4.4.5 is the first stable release in the 0.4.4.x series. This
+  series improves our guard selection algorithms, adds v3 onion balance
+  support, improves the amount of code that can be disabled when running
+  without relay support, and includes numerous small bugfixes and
+  enhancements. It also lays the ground for some IPv6 features that
+  we'll be developing more in the next (0.4.5) series.
+
+  Per our support policy, we support each stable release series for nine
+  months after its first stable release, or three months after the first
+  stable release of the next series: whichever is longer. This means
+  that 0.4.4.x will be supported until around June 2021--or later, if
+  0.4.5.x is later than anticipated.
+
+  Note also that support for 0.4.2.x has just ended; support for 0.4.3
+  will continue until Feb 15, 2021. We still plan to continue supporting
+  0.3.5.x, our long-term stable series, until Feb 2022.
+
+  Below are the changes since 0.4.3.6-rc. For a complete list of changes
+  since 0.4.4.4-rc, see the ChangeLog file.
+
+  o Major features (Proposal 310, performance + security):
+    - Implements Proposal 310, "Bandaid on guard selection". Proposal
+      310 solves load-balancing issues with older versions of the guard
+      selection algorithm, and improves its security. Under this new
+      algorithm, a newly selected guard never becomes Primary unless all
+      previously sampled guards are unreachable. Implements
+      recommendation from 32088. (Proposal 310 is linked to the CLAPS
+      project researching optimal client location-aware path selections.
+      This project is a collaboration between the UCLouvain Crypto Group,
+      the U.S. Naval Research Laboratory, and Princeton University.)
+
+  o Major features (fallback directory list):
+    - Replace the 148 fallback directories originally included in Tor
+      0.4.1.4-rc (of which around 105 are still functional) with a list
+      of 144 fallbacks generated in July 2020. Closes ticket 40061.
+
+  o Major features (IPv6, relay):
+    - Consider IPv6-only EXTEND2 cells valid on relays. Log a protocol
+      warning if the IPv4 or IPv6 address is an internal address, and
+      internal addresses are not allowed. But continue to use the other
+      address, if it is valid. Closes ticket 33817.
+    - If a relay can extend over IPv4 and IPv6, and both addresses are
+      provided, it chooses between them uniformly at random. Closes
+      ticket 33817.
+    - Re-use existing IPv6 connections for circuit extends. Closes
+      ticket 33817.
+    - Relays may extend circuits over IPv6, if the relay has an IPv6
+      ORPort, and the client supplies the other relay's IPv6 ORPort in
+      the EXTEND2 cell. IPv6 extends will be used by the relay IPv6
+      ORPort self-tests in 33222. Closes ticket 33817.
+
+  o Major features (v3 onion services):
+    - Allow v3 onion services to act as OnionBalance backend instances,
+      by using the HiddenServiceOnionBalanceInstance torrc option.
+      Closes ticket 32709.
+
+  o Major bugfixes (NSS):
+    - When running with NSS enabled, make sure that NSS knows to expect
+      nonblocking sockets. Previously, we set our TCP sockets as
+      nonblocking, but did not tell NSS, which in turn could lead to
+      unexpected blocking behavior. Fixes bug 40035; bugfix
+      on 0.3.5.1-alpha.
+
+  o Major bugfixes (onion services, DoS):
+    - Correct handling of parameters for the onion service DoS defense.
+      Previously, the consensus parameters for the onion service DoS
+      defenses were overwriting the parameters set by the service
+      operator using HiddenServiceEnableIntroDoSDefense. Fixes bug
+      40109; bugfix on 0.4.2.1-alpha.
+
+  o Major bugfixes (stats, onion services):
+    - Fix a bug where we were undercounting the Tor network's total
+      onion service traffic, by ignoring any traffic originating from
+      clients. Now we count traffic from both clients and services.
+      Fixes bug 40117; bugfix on 0.2.6.2-alpha.
+
+  o Minor features (security):
+    - Channels using obsolete versions of the Tor link protocol are no
+      longer allowed to circumvent address-canonicity checks. (This is
+      only a minor issue, since such channels have no way to set ed25519
+      keys, and therefore should always be rejected for circuits that
+      specify ed25519 identities.) Closes ticket 40081.
+
+  o Minor features (bootstrap reporting):
+    - Report more detailed reasons for bootstrap failure when the
+      failure happens due to a TLS error. Previously we would just call
+      these errors "MISC" when they happened during read, and "DONE"
+      when they happened during any other TLS operation. Closes
+      ticket 32622.
+
+  o Minor features (client-only compilation):
+    - Disable more code related to the ext_orport protocol when
+      compiling without support for relay mode. Closes ticket 33368.
+    - Disable more of our self-testing code when support for relay mode
+      is disabled. Closes ticket 33370.
+    - Most server-side DNS code is now disabled when building without
+      support for relay mode. Closes ticket 33366.
+
+  o Minor features (code safety):
+    - Check for failures of tor_inet_ntop() and tor_inet_ntoa()
+      functions in DNS and IP address processing code, and adjust
+      codepaths to make them less likely to crash entire Tor instances.
+      Resolves issue 33788.
+
+  o Minor features (continuous integration):
+    - Run unit-test and integration test (Stem, Chutney) jobs with
+      ALL_BUGS_ARE_FATAL macro being enabled on Travis and Appveyor.
+      Resolves ticket 32143.
+
+  o Minor features (control port):
+    - If a ClientName was specified in ONION_CLIENT_AUTH_ADD for an
+      onion service, display it when we use ONION_CLIENT_AUTH_VIEW.
+      Closes ticket 40089. Patch by Neel Chauhan.
+    - Return a descriptive error message from the 'GETINFO status/fresh-
+      relay-descs' command on the control port. Previously, we returned
+      a generic error of "Error generating descriptor". Closes ticket
+      32873. Patch by Neel Chauhan.
+
+  o Minor features (defense in depth):
+    - Wipe more data from connection address fields before returning
+      them to the memory heap. Closes ticket 6198.
+
+  o Minor features (denial-of-service memory limiter):
+    - Allow the user to configure even lower values for the
+      MaxMemInQueues parameter. Relays now enforce a minimum of 64 MB,
+      when previously the minimum was 256 MB. On clients, there is no
+      minimum. Relays and clients will both warn if the value is set so
+      low that Tor is likely to stop working. Closes ticket 24308.
+
+  o Minor features (developer tooling):
+    - Add a script to help check the alphabetical ordering of option
+      names in the manual page. Closes ticket 33339.
+    - Refrain from listing all .a files that are generated by the Tor
+      build in .gitignore. Add a single wildcard *.a entry that covers
+      all of them for present and future. Closes ticket 33642.
+    - Add a script ("git-install-tools.sh") to install git hooks and
+      helper scripts. Closes ticket 33451.
+
+  o Minor features (directory authority):
+    - Authorities now recommend the protocol versions that are supported
+      by Tor 0.3.5 and later. (Earlier versions of Tor have been
+      deprecated since January of this year.) This recommendation will
+      cause older clients and relays to give a warning on startup, or
+      when they download a consensus directory. Closes ticket 32696.
+
+  o Minor features (directory authority, shared random):
+    - Refactor more authority-only parts of the shared-random scheduling
+      code to reside in the dirauth module, and to be disabled when
+      compiling with --disable-module-dirauth. Closes ticket 33436.
+
+  o Minor features (directory):
+    - Remember the number of bytes we have downloaded for each directory
+      purpose while bootstrapping, and while fully bootstrapped. Log
+      this information as part of the heartbeat message. Closes
+      ticket 32720.
+
+  o Minor features (entry guards):
+    - Reinstate support for GUARD NEW/UP/DOWN control port events.
+      Closes ticket 40001.
+
+  o Minor features (IPv6 support):
+    - Adds IPv6 support to tor_addr_is_valid(). Adds tests for the above
+      changes and tor_addr_is_null(). Closes ticket 33679. Patch
+      by MrSquanchee.
+    - Allow clients and relays to send dual-stack and IPv6-only EXTEND2
+      cells. Parse dual-stack and IPv6-only EXTEND2 cells on relays.
+      Closes ticket 33901.
+
+  o Minor features (linux seccomp2 sandbox, portability):
+    - Allow Tor to build on platforms where it doesn't know how to
+      report which syscall caused the linux seccomp2 sandbox to fail.
+      This change should make the sandbox code more portable to less
+      common Linux architectures. Closes ticket 34382.
+    - Permit the unlinkat() syscall, which some Libc implementations use
+      to implement unlink(). Closes ticket 33346.
+
+  o Minor features (logging):
+    - When trying to find our own address, add debug-level logging to
+      report the sources of candidate addresses. Closes ticket 32888.
+
+  o Minor features (onion service client, SOCKS5):
+    - Add 3 new SocksPort ExtendedErrors (F2, F3, F7) that reports back
+      new type of onion service connection failures. The semantics of
+      these error codes are documented in proposal 309. Closes
+      ticket 32542.
+
+  o Minor features (onion service v3):
+    - If a service cannot upload its descriptor(s), log why at INFO
+      level. Closes ticket 33400; bugfix on 0.3.2.1-alpha.
+
+  o Minor features (python scripts):
+    - Stop assuming that /usr/bin/python exists. Instead of using a
+      hardcoded path in scripts that still use Python 2, use
+      /usr/bin/env, similarly to the scripts that use Python 3. Fixes
+      bug 33192; bugfix on 0.4.2.
+
+  o Minor features (testing, architecture):
+    - Our test scripts now double-check that subsystem initialization
+      order is consistent with the inter-module dependencies established
+      by our .may_include files. Implements ticket 31634.
+    - Initialize all subsystems at the beginning of our unit test
+      harness, to avoid crashes due to uninitialized subsystems. Follow-
+      up from ticket 33316.
+    - Our "make check" target now runs the unit tests in 8 parallel
+      chunks. Doing this speeds up hardened CI builds by more than a
+      factor of two. Closes ticket 40098.
+
+  o Minor features (v3 onion services):
+    - Add v3 onion service status to the dumpstats() call which is
+      triggered by a SIGUSR1 signal. Previously, we only did v2 onion
+      services. Closes ticket 24844. Patch by Neel Chauhan.
+
+  o Minor features (windows):
+    - Add support for console control signals like Ctrl+C in Windows.
+      Closes ticket 34211. Patch from Damon Harris (TheDcoder).
+
+  o Minor bugfixes (control port, onion service):
+    - Consistently use 'address' in "Invalid v3 address" response to
+      ONION_CLIENT_AUTH commands. Previously, we would sometimes say
+      'addr'. Fixes bug 40005; bugfix on 0.4.3.1-alpha.
+
+  o Minor bugfixes (correctness, buffers):
+    - Fix a correctness bug that could cause an assertion failure if we
+      ever tried using the buf_move_all() function with an empty input
+      buffer. As far as we know, no released versions of Tor do this.
+      Fixes bug 40076; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (directory authorities):
+    - Directory authorities now reject votes that arrive too late. In
+      particular, once an authority has started fetching missing votes,
+      it no longer accepts new votes posted by other authorities. This
+      change helps prevent a consensus split, where only some authorities
+      have the late vote. Fixes bug 4631; bugfix on 0.2.0.5-alpha.
+
+  o Minor bugfixes (git scripts):
+    - Stop executing the checked-out pre-commit hook from the pre-push
+      hook. Instead, execute the copy in the user's git directory. Fixes
+      bug 33284; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (initialization):
+    - Initialize the subsystems in our code in an order more closely
+      corresponding to their dependencies, so that every system is
+      initialized before the ones that (theoretically) depend on it.
+      Fixes bug 33316; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (IPv4, relay):
+    - Check for invalid zero IPv4 addresses and ports when sending and
+      receiving extend cells. Fixes bug 33900; bugfix on 0.2.4.8-alpha.
+
+  o Minor bugfixes (IPv6, relay):
+    - Consider IPv6 addresses when checking if a connection is
+      canonical. In 17604, relays assumed that a remote relay could
+      consider an IPv6 connection canonical, but did not set the
+      canonical flag on their side of the connection. Fixes bug 33899;
+      bugfix on 0.3.1.1-alpha.
+    - Log IPv6 addresses on connections where this relay is the
+      responder. Previously, responding relays would replace the remote
+      IPv6 address with the IPv4 address from the consensus. Fixes bug
+      33899; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Fix a regression on sandboxing rules for the openat() syscall. The
+      fix for bug 25440 fixed the problem on systems with glibc >= 2.27
+      but broke with versions of glibc. We now choose a rule based on
+      the glibc version. Patch from Daniel Pinto. Fixes bug 27315;
+      bugfix on 0.3.5.11.
+    - Makes the seccomp sandbox allow the correct syscall for opendir
+      according to the running glibc version. This fixes crashes when
+      reloading torrc with sandbox enabled when running on glibc 2.15 to
+      2.21 and 2.26. Patch from Daniel Pinto. Fixes bug 40020; bugfix
+      on 0.3.5.11.
+
+  o Minor bugfixes (logging, testing):
+    - Make all of tor's assertion macros support the ALL_BUGS_ARE_FATAL
+      and DISABLE_ASSERTS_IN_UNIT_TESTS debugging modes. (IF_BUG_ONCE()
+      used to log a non-fatal warning, regardless of the debugging
+      mode.) Fixes bug 33917; bugfix on 0.2.9.1-alpha.
+    - Remove surprising empty line in the INFO-level log about circuit
+      build timeout. Fixes bug 33531; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (mainloop):
+    - Better guard against growing a buffer past its maximum 2GB in
+      size. Fixes bug 33131; bugfix on 0.3.0.4-rc.
+
+  o Minor bugfixes (onion service v3 client):
+    - Remove a BUG() warning that could occur naturally. Fixes bug
+      34087; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion service, logging):
+    - Fix a typo in a log message PublishHidServDescriptors is set to 0.
+      Fixes bug 33779; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion services v3):
+    - Avoid a non-fatal assertion failure in certain edge-cases when
+      opening an intro circuit as a client. Fixes bug 34084; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (protocol versions):
+    - Sort tor's supported protocol version lists, as recommended by the
+      tor directory specification. Fixes bug 33285; bugfix
+      on 0.4.0.1-alpha.
+
+  o Minor bugfixes (rate limiting, bridges, pluggable transports):
+    - On a bridge, treat all connections from an ExtORPort as remote by
+      default for the purposes of rate-limiting. Previously, bridges
+      would treat the connection as local unless they explicitly
+      received a "USERADDR" command. ExtORPort connections still count
+      as local if there is a USERADDR command with an explicit local
+      address. Fixes bug 33747; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (refactoring):
+    - Lift circuit_build_times_disabled() out of the
+      circuit_expire_building() loop, to save CPU time when there are
+      many circuits open. Fixes bug 33977; bugfix on 0.3.5.9.
+
+  o Minor bugfixes (relay, self-testing):
+    - When starting up as a relay, if we haven't been able to verify
+      that we're reachable, only launch reachability tests at most once
+      a minute. Previously, we had been launching tests up to once a
+      second, which was needlessly noisy. Fixes bug 40083; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (relay, usability):
+    - Adjust the rules for when to warn about having too many
+      connections to other relays. Previously we'd tolerate up to 1.5
+      connections per relay on average. Now we tolerate more connections
+      for directory authorities, and raise the number of total
+      connections we need to see before we warn. Fixes bug 33880; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (SOCKS, onion service client):
+    - Detect v3 onion service addresses of the wrong length when
+      returning the F6 ExtendedErrors code. Fixes bug 33873; bugfix
+      on 0.4.3.1-alpha.
+
+  o Minor bugfixes (tests):
+    - Fix the behavior of the rend_cache/clean_v2_descs_as_dir when run
+      on its own. Previously, it would exit with an error. Fixes bug
+      40099; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (v3 onion services):
+    - Remove a BUG() warning that could trigger in certain unlikely
+      edge-cases. Fixes bug 34086; bugfix on 0.3.2.1-alpha.
+    - Remove a BUG() that was causing a stacktrace when a descriptor
+      changed at an unexpected time. Fixes bug 28992; bugfix
+      on 0.3.2.1-alpha.
+
+  o Minor bugfixes (windows):
+    - Fix a bug that prevented Tor from starting if its log file grew
+      above 2GB. Fixes bug 31036; bugfix on 0.2.1.8-alpha.
+
+  o Code simplification and refactoring:
+    - Define and use a new constant TOR_ADDRPORT_BUF_LEN which is like
+      TOR_ADDR_BUF_LEN but includes enough space for an IP address,
+      brackets, separating colon, and port number. Closes ticket 33956.
+      Patch by Neel Chauhan.
+    - Merge the orconn and ocirc events into the "core" subsystem, which
+      manages or connections and origin circuits. Previously they were
+      isolated in subsystems of their own.
+    - Move LOG_PROTOCOL_WARN to app/config. Resolves a dependency
+      inversion. Closes ticket 33633.
+    - Move the circuit extend code to the relay module. Split the
+      circuit extend function into smaller functions. Closes
+      ticket 33633.
+    - Rewrite port_parse_config() to use the default port flags from
+      port_cfg_new(). Closes ticket 32994. Patch by MrSquanchee.
+    - Updated comments in 'scheduler.c' to reflect old code changes, and
+      simplified the scheduler channel state change code. Closes
+      ticket 33349.
+    - Refactor configuration parsing to use the new config subsystem
+      code. Closes ticket 33014.
+    - Move a series of functions related to address resolving into their
+      own files. Closes ticket 33789.
+
+  o Documentation:
+    - Replace most http:// URLs in our code and documentation with
+      https:// URLs. (We have left unchanged the code in src/ext/, and
+      the text in LICENSE.) Closes ticket 31812. Patch from Jeremy Rand.
+    - Document the limitations of using %include on config files with
+      seccomp sandbox enabled. Fixes documentation bug 34133; bugfix on
+      0.3.1.1-alpha. Patch by Daniel Pinto.
+
+  o Removed features:
+    - Our "check-local" test target no longer tries to use the
+      Coccinelle semantic patching tool parse all the C files. While it
+      is a good idea to try to make sure Coccinelle works on our C
+      before we run a Coccinelle patch, doing so on every test run has
+      proven to be disruptive. You can still run this tool manually with
+      "make check-cocci". Closes ticket 40030.
+    - Remove the ClientAutoIPv6ORPort option. This option attempted to
+      randomly choose between IPv4 and IPv6 for client connections, and
+      wasn't a true implementation of Happy Eyeballs. Often, this option
+      failed on IPv4-only or IPv6-only connections. Closes ticket 32905.
+      Patch by Neel Chauhan.
+    - Stop shipping contrib/dist/rc.subr file, as it is not being used
+      on FreeBSD anymore. Closes issue 31576.
+
+  o Testing:
+    - Add a basic IPv6 test to "make test-network". This test only runs
+      when the local machine has an IPv6 stack. Closes ticket 33300.
+    - Add test-network-ipv4 and test-network-ipv6 jobs to the Makefile.
+      These jobs run the IPv4-only and dual-stack chutney flavours from
+      test-network-all. Closes ticket 33280.
+    - Remove a redundant distcheck job. Closes ticket 33194.
+    - Run the test-network-ipv6 Makefile target in the Travis CI IPv6
+      chutney job. This job runs on macOS, so it's a bit slow. Closes
+      ticket 33303.
+    - Sort the Travis jobs in order of speed. Putting the slowest jobs
+      first takes full advantage of Travis job concurrency. Closes
+      ticket 33194.
+    - Stop allowing the Chutney IPv6 Travis job to fail. This job was
+      previously configured to fast_finish (which requires
+      allow_failure), to speed up the build. Closes ticket 33195.
+    - Test v3 onion services to tor's mixed IPv4 chutney network. And
+      add a mixed IPv6 chutney network. These networks are used in the
+      test-network-all, test-network-ipv4, and test-network-ipv6 make
+      targets. Closes ticket 33334.
+    - Use the "bridges+hs-v23" chutney network flavour in "make test-
+      network". This test requires a recent version of chutney (mid-
+      February 2020). Closes ticket 28208.
+    - When a Travis chutney job fails, use chutney's new "diagnostics.sh"
+      tool to produce detailed diagnostic output. Closes ticket 32792.
+
+  o Deprecated features (onion service v2):
+    - Add a deprecation warning for version 2 onion services. Closes
+      ticket 40003.
+
+  o Documentation (manual page):
+    - Add cross reference links and a table of contents to the HTML tor
+      manual page. Closes ticket 33369. Work by Swati Thacker as part of
+      Google Season of Docs.
+    - Alphabetize the Denial of Service Mitigation Options, Directory
+      Authority Server Options, Hidden Service Options, and Testing
+      Network Options sections of the tor(1) manual page. Closes ticket
+      33275. Work by Swati Thacker as part of Google Season of Docs.
+    - Refrain from mentioning nicknames in manpage section for MyFamily
+      torrc option. Resolves issue 33417.
+    - Updated the options set by TestingTorNetwork in the manual page.
+      Closes ticket 33778.
+
+
 Changes in version 0.3.5.11 - 2020-07-09
   Tor 0.3.5.11 backports fixes from later tor releases, including several
   usability, portability, and reliability fixes.

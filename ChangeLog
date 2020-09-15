@@ -1,3 +1,64 @@
+Changes in version 0.4.4.5 - 2020-09-15
+  Tor 0.4.4.5 is the first stable release in the 0.4.4.x series. This
+  series improves our guard selection algorithms, adds v3 onion balance
+  support, improves the amount of code that can be disabled when running
+  without relay support, and includes numerous small bugfixes and
+  enhancements. It also lays the ground for some IPv6 features that
+  we'll be developing more in the next (0.4.5) series.
+
+  Per our support policy, we support each stable release series for nine
+  months after its first stable release, or three months after the first
+  stable release of the next series: whichever is longer. This means
+  that 0.4.4.x will be supported until around June 2021--or later, if
+  0.4.5.x is later than anticipated.
+
+  Note also that support for 0.4.2.x has just ended; support for 0.4.3
+  will continue until Feb 15, 2021. We still plan to continue supporting
+  0.3.5.x, our long-term stable series, until Feb 2022.
+
+  Below are the changes since 0.4.4.4-rc. For a complete list of changes
+  since 0.4.3.6, see the ReleaseNotes file.
+
+  o Major bugfixes (onion services, DoS):
+    - Correct handling of parameters for the onion service DoS defense.
+      Previously, the consensus parameters for the onion service DoS
+      defenses were overwriting the parameters set by the service
+      operator using HiddenServiceEnableIntroDoSDefense. Fixes bug
+      40109; bugfix on 0.4.2.1-alpha.
+
+  o Major bugfixes (stats, onion services):
+    - Fix a bug where we were undercounting the Tor network's total
+      onion service traffic, by ignoring any traffic originating from
+      clients. Now we count traffic from both clients and services.
+      Fixes bug 40117; bugfix on 0.2.6.2-alpha.
+
+  o Minor features (control port):
+    - If a ClientName was specified in ONION_CLIENT_AUTH_ADD for an
+      onion service, display it when we use ONION_CLIENT_AUTH_VIEW.
+      Closes ticket 40089. Patch by Neel Chauhan.
+
+  o Minor features (denial-of-service memory limiter):
+    - Allow the user to configure even lower values for the
+      MaxMemInQueues parameter. Relays now enforce a minimum of 64 MB,
+      when previously the minimum was 256 MB. On clients, there is no
+      minimum. Relays and clients will both warn if the value is set so
+      low that Tor is likely to stop working. Closes ticket 24308.
+
+  o Minor features (tests):
+    - Our "make check" target now runs the unit tests in 8 parallel
+      chunks. Doing this speeds up hardened CI builds by more than a
+      factor of two. Closes ticket 40098.
+
+  o Minor bugfixes (guard selection algorithm):
+    - Avoid needless guard-related warning when upgrading from 0.4.3 to
+      0.4.4. Fixes bug 40105; bugfix on 0.4.4.1-alpha.
+
+  o Minor bugfixes (tests):
+    - Fix the behavior of the rend_cache/clean_v2_descs_as_dir when run
+      on its own. Previously, it would exit with an error. Fixes bug
+      40099; bugfix on 0.2.8.1-alpha.
+
+
 Changes in version 0.4.4.3-alpha - 2020-07-27
   Tor 0.4.4.3-alpha fixes several annoyances in previous versions,
   including one affecting NSS users, and several affecting the Linux
