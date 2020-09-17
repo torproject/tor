@@ -1,0 +1,4 @@
+  o Testing (onion service v2):
+    - Fix another rendezvous cache unit test that was triggering an underflow on the
+      global rend cache allocation. Fixes bug 40126; bugfix on
+      0.2.8.1-alpha.
