@@ -387,12 +387,10 @@ generate_ed_link_cert(const or_options_t *options, time_t now,
     return 0;
   }
 
-  ed25519_public_key_t dummy_key;
-  memcpy(dummy_key.pubkey, digests->d[DIGEST_SHA256], DIGEST256_LEN);
-
-  link_cert = tor_cert_create_ed25519(get_master_signing_keypair(),
+  link_cert = tor_cert_create_raw(get_master_signing_keypair(),
                               CERT_TYPE_SIGNING_LINK,
-                              &dummy_key,
+                              SIGNED_KEY_TYPE_SHA256_OF_X509,
+                              (const uint8_t*)digests->d[DIGEST_SHA256],
                               now,
                               options->TestingLinkCertLifetime, 0);
 
