@@ -974,11 +974,13 @@ test_rend_cache_entry_free(void *data)
 
   // Handles NULL descriptor correctly
   e = tor_malloc_zero(sizeof(rend_cache_entry_t));
+  rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   rend_cache_entry_free(e);
 
   // Handles non-NULL descriptor correctly
   e = tor_malloc_zero(sizeof(rend_cache_entry_t));
   e->desc = tor_malloc(10);
+  rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   rend_cache_entry_free(e);
 
  /* done: */
