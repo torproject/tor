@@ -1717,7 +1717,8 @@ build_desc_signing_key_cert(hs_service_descriptor_t *desc, time_t now)
                     CERT_FLAG_INCLUDE_SIGNING_KEY);
   /* If the cert creation fails, the descriptor encoding will fail and thus
    * ultimately won't be uploaded. We'll get a stack trace to help us learn
-   * where the call came from and the tor_cert_create_ed25519() will log the error. */
+   * where the call came from and the tor_cert_create_ed25519() will log the
+   * error. */
   tor_assert_nonfatal(plaintext->signing_key_cert);
 }
 

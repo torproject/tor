@@ -726,8 +726,9 @@ test_validate_cert(void *arg)
   tor_cert_free(cert);
 
   /* Try a cert without including the signing key. */
-  cert = tor_cert_create_ed25519(&kp, CERT_TYPE_AUTH_HS_IP_KEY, &kp.pubkey, now,
-                         3600, 0);
+  cert = tor_cert_create_ed25519(&kp, CERT_TYPE_AUTH_HS_IP_KEY,
+                                 &kp.pubkey, now, 3600, 0);
+
   tt_assert(cert);
   /* Test with a bad type. */
   ret = cert_is_valid(cert, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");

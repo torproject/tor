@@ -466,7 +466,7 @@ init_mock_ed_keys(const crypto_pk_t *rsa_identity_key)
   MAKEKEY(master_signing_key);
   MAKEKEY(current_auth_key);
 #define MAKECERT(cert, signing, signed_, type, flags)            \
-  cert = tor_cert_create_ed25519(signing,                                \
+  cert = tor_cert_create_ed25519(signing,                        \
                          type,                                   \
                          &signed_->pubkey,                       \
                          time(NULL), 86400,                      \
@@ -699,8 +699,8 @@ make_ntor_onion_key_crosscert(const curve25519_keypair_t *onion_key,
                                               onion_key) < 0)
     goto end;
 
-  cert = tor_cert_create_ed25519(&ed_onion_key, CERT_TYPE_ONION_ID, master_id_key,
-      now, lifetime, 0);
+  cert = tor_cert_create_ed25519(&ed_onion_key, CERT_TYPE_ONION_ID,
+                                  master_id_key, now, lifetime, 0);
 
  end:
   memwipe(&ed_onion_key, 0, sizeof(ed_onion_key));
