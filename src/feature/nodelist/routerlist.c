@@ -89,6 +89,7 @@
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
 #include "feature/relay/routermode.h"
+#include "feature/relay/relay_find_addr.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -2772,12 +2773,27 @@ launch_dummy_descriptor_download_as_needed(time_t now,
                                            const or_options_t *options)
 {
   static time_t last_dummy_download = 0;
+  bool have_addr;
+  tor_addr_t addr_out;
+
+  /* This dummy fetch only matter for relays. */
+  if (!server_mode(options)) {
+    return;
+  }
+
+  /* Lookup the address cache to learn if we have a good usable address. We
+   * still force relays to have an IPv4 so that alone is enough to learn if we
+   * need a lookup. In case we don't have one, we might want to attempt a
+   * dummy fetch to learn our address as a suggestion from an authority. */
+  have_addr = relay_find_addr_to_publish(options, AF_INET,
+                                         RELAY_FIND_ADDR_CACHE_ONLY,
+                                         &addr_out);
+
   /* XXXX+ we could be smarter here; see notes on bug 652. */
-  /* If we're a server that doesn't have a configured address, we rely on
-   * directory fetches to learn when our address changes.  So if we haven't
-   * tried to get any routerdescs in a long time, try a dummy fetch now. */
-  if (!options->Address &&
-      server_mode(options) &&
+  /* If we're a server that doesn't have an address, we rely on directory
+   * fetches to learn when our address changes.  So if we haven't tried to get
+   * any routerdescs in a long time, try a dummy fetch now. */
+  if (!have_addr &&
       last_descriptor_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
       last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
     last_dummy_download = now;
