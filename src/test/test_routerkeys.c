@@ -151,7 +151,7 @@ test_routerkeys_ed_certs(void *args)
   for (int i = 0; i <= 1; ++i) {
     uint32_t flags = i ? CERT_FLAG_INCLUDE_SIGNING_KEY : 0;
 
-    cert[i] = tor_cert_create(&kp1, 5, &kp2.pubkey, now, 10000, flags);
+    cert[i] = tor_cert_create_ed25519(&kp1, 5, &kp2.pubkey, now, 10000, flags);
     tt_assert(cert[i]);
 
     tt_uint_op(cert[i]->sig_bad, OP_EQ, 0);

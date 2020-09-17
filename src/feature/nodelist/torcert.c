@@ -37,7 +37,7 @@
 
 #include "core/or/or_handshake_certs_st.h"
 
-/** Helper for tor_cert_create(): signs any 32 bytes, not just an ed25519
+/** Helper for tor_cert_create_ed25519(): signs any 32 bytes, not just an ed25519
  * key.
  */
 static tor_cert_t *
@@ -128,7 +128,7 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
  * the public part of <b>signing_key</b> in the certificate.
  */
 tor_cert_t *
-tor_cert_create(const ed25519_keypair_t *signing_key,
+tor_cert_create_ed25519(const ed25519_keypair_t *signing_key,
                 uint8_t cert_type,
                 const ed25519_public_key_t *signed_key,
                 time_t now, time_t lifetime,

@@ -56,7 +56,7 @@ typedef struct tor_cert_st {
 
 struct tor_tls_t;
 
-tor_cert_t *tor_cert_create(const ed25519_keypair_t *signing_key,
+tor_cert_t *tor_cert_create_ed25519(const ed25519_keypair_t *signing_key,
                             uint8_t cert_type,
                             const ed25519_public_key_t *signed_key,
                             time_t now, time_t lifetime,

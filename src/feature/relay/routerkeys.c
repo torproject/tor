@@ -390,7 +390,7 @@ generate_ed_link_cert(const or_options_t *options, time_t now,
   ed25519_public_key_t dummy_key;
   memcpy(dummy_key.pubkey, digests->d[DIGEST_SHA256], DIGEST256_LEN);
 
-  link_cert = tor_cert_create(get_master_signing_keypair(),
+  link_cert = tor_cert_create_ed25519(get_master_signing_keypair(),
                               CERT_TYPE_SIGNING_LINK,
                               &dummy_key,
                               now,
@@ -466,7 +466,7 @@ init_mock_ed_keys(const crypto_pk_t *rsa_identity_key)
   MAKEKEY(master_signing_key);
   MAKEKEY(current_auth_key);
 #define MAKECERT(cert, signing, signed_, type, flags)            \
-  cert = tor_cert_create(signing,                                \
+  cert = tor_cert_create_ed25519(signing,                                \
                          type,                                   \
                          &signed_->pubkey,                       \
                          time(NULL), 86400,                      \
@@ -699,7 +699,7 @@ make_ntor_onion_key_crosscert(const curve25519_keypair_t *onion_key,
                                               onion_key) < 0)
     goto end;
 
-  cert = tor_cert_create(&ed_onion_key, CERT_TYPE_ONION_ID, master_id_key,
+  cert = tor_cert_create_ed25519(&ed_onion_key, CERT_TYPE_ONION_ID, master_id_key,
       now, lifetime, 0);
 
  end:
