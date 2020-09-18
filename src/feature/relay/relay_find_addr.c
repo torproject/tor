@@ -12,10 +12,16 @@
 #include "app/config/resolve_addr.h"
 
 #include "core/mainloop/mainloop.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuituse.h"
+#include "core/or/extendinfo.h"
 
 #include "feature/control/control_events.h"
 #include "feature/dircommon/dir_connection_st.h"
 #include "feature/nodelist/dirlist.h"
+#include "feature/nodelist/node_select.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerstatus_st.h"
 #include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
@@ -150,4 +156,66 @@ relay_has_address_set(int family)
   tor_addr_t addr;
   return relay_find_addr_to_publish(get_options(), family,
                                     RELAY_FIND_ADDR_CACHE_ONLY, &addr);
+}
+
+/** How often should we launch a circuit to an authority to be sure of getting
+ * a guess for our IP? */
+#define DUMMY_DOWNLOAD_INTERVAL (20*60)
+
+void
+relay_addr_learn_from_dirauth(void)
+{
+  static time_t last_dummy_circuit = 0;
+  const or_options_t *options = get_options();
+  time_t now = time(NULL);
+  bool have_addr;
+  tor_addr_t addr_out;
+
+  /* This dummy circuit only matter for relays. */
+  if (BUG(!server_mode(options))) {
+    return;
+  }
+
+  /* Lookup the address cache to learn if we have a good usable address. We
+   * still force relays to have an IPv4 so that alone is enough to learn if we
+   * need a lookup. In case we don't have one, we might want to attempt a
+   * dummy circuit to learn our address as a suggestion from an authority. */
+  have_addr = relay_find_addr_to_publish(options, AF_INET,
+                                         RELAY_FIND_ADDR_CACHE_ONLY,
+                                         &addr_out);
+
+  /* If we're a relay or bridge for which we were unable to discover our
+   * public address, we rely on learning our address from a directory
+   * authority from the NETINFO cell. */
+  if (!have_addr && last_dummy_circuit + DUMMY_DOWNLOAD_INTERVAL < now) {
+    last_dummy_circuit = now;
+
+    const routerstatus_t *rs = router_pick_trusteddirserver(V3_DIRINFO, 0);
+    if (BUG(!rs)) {
+      /* We should really always have trusted directories configured at this
+       * stage. They are loaded early either from default list or the one
+       * given in the configuration file. */
+      return;
+    }
+    const node_t *node = node_get_by_id(rs->identity_digest);
+    if (BUG(!node)) {
+      /* If there is a routerstatus_t, there is a node_t thus this should
+       * never fail. */
+      return;
+    }
+    extend_info_t *ei = extend_info_from_node(node, 1);
+    if (BUG(!ei)) {
+      return;
+    }
+
+    log_debug(LD_GENERAL, "Attempting dummy testing circuit to an authority "
+                          "in order to learn our address.");
+
+    /* Launch a one-hop testing circuit to a trusted authority so we can learn
+     * our address through the NETINFO cell. */
+    circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
+                                  CIRCLAUNCH_IS_INTERNAL |
+                                  CIRCLAUNCH_ONEHOP_TUNNEL);
+    extend_info_free(ei);
+  }
 }
