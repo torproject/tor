@@ -24,6 +24,8 @@ MOCK_DECL(bool, relay_find_addr_to_publish,
 
 bool relay_has_address_set(int family);
 
+void relay_addr_learn_from_dirauth(void);
+
 #ifdef RELAY_FIND_ADDR_PRIVATE
 
 #endif /* RELAY_FIND_ADDR_PRIVATE */

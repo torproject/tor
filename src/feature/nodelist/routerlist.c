@@ -140,8 +140,6 @@ static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
                                               int with_annotations);
-static void launch_dummy_circuit_as_needed(time_t now,
-                                   const or_options_t *options);
 
 /****************************************************************************/
 
@@ -2309,7 +2307,6 @@ update_all_descriptor_downloads(time_t now)
     return;
   update_router_descriptor_downloads(now);
   update_microdesc_downloads(now);
-  launch_dummy_circuit_as_needed(now, get_options());
 }
 
 /** Clear all our timeouts for fetching v3 directory stuff, and then
@@ -2761,68 +2758,6 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
  done:
   smartlist_free(downloadable);
   smartlist_free(no_longer_old);
-}
-
-/** How often should we launch a circuit to an authority to be sure of getting
- * a guess for our IP? */
-#define DUMMY_DOWNLOAD_INTERVAL (20*60)
-
-/** As needed, launch a dummy router descriptor fetch to see if our
- * address has changed. */
-static void
-launch_dummy_circuit_as_needed(time_t now, const or_options_t *options)
-{
-  static time_t last_dummy_circuit = 0;
-  bool have_addr;
-  tor_addr_t addr_out;
-
-  /* This dummy circuit only matter for relays. */
-  if (!server_mode(options)) {
-    return;
-  }
-
-  /* Lookup the address cache to learn if we have a good usable address. We
-   * still force relays to have an IPv4 so that alone is enough to learn if we
-   * need a lookup. In case we don't have one, we might want to attempt a
-   * dummy circuit to learn our address as a suggestion from an authority. */
-  have_addr = relay_find_addr_to_publish(options, AF_INET,
-                                         RELAY_FIND_ADDR_CACHE_ONLY,
-                                         &addr_out);
-
-  /* If we're a relay or bridge for which we were unable to discover our
-   * public address, we rely on learning our address from a directory
-   * authority from the NETINFO cell. */
-  if (!have_addr && last_dummy_circuit + DUMMY_DOWNLOAD_INTERVAL < now) {
-    last_dummy_circuit = now;
-
-    const routerstatus_t *rs = router_pick_trusteddirserver(V3_DIRINFO, 0);
-    if (BUG(!rs)) {
-      /* We should really always have trusted directories configured at this
-       * stage. They are loaded early either from default list or the one
-       * given in the configuration file. */
-      return;
-    }
-    const node_t *node = node_get_by_id(rs->identity_digest);
-    if (BUG(!node)) {
-      /* If there is a routerstatus_t, there is a node_t thus this should
-       * never fail. */
-      return;
-    }
-    extend_info_t *ei = extend_info_from_node(node, 1);
-    if (BUG(!ei)) {
-      return;
-    }
-
-    log_debug(LD_GENERAL, "Attempting dummy testing circuit to an authority "
-                          "in order to learn our address.");
-
-    /* Launch a one-hop testing circuit to a trusted authority so we can learn
-     * our address through the NETINFO cell. */
-    circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
-                                  CIRCLAUNCH_IS_INTERNAL |
-                                  CIRCLAUNCH_ONEHOP_TUNNEL);
-    extend_info_free(ei);
-  }
 }
 
 /** Launch downloads for router status as needed. */

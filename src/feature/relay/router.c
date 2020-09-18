@@ -2071,7 +2071,9 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
 
   /* Tor requires a relay to have an IPv4 so bail if we can't find it. */
   if (!have_v4) {
-    log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
+    log_info(LD_CONFIG, "Don't know my address while generating descriptor. "
+                        "Launching circuit to authority to learn it.");
+    relay_addr_learn_from_dirauth();
     result = TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
     goto err;
   }
