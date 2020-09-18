@@ -2679,8 +2679,21 @@ check_descriptor_ipaddress_changed(time_t now)
 
     /* Ignore returned value because we want to notice not only an address
      * change but also if an address is lost (current == UNSPEC). */
-    find_my_address(get_options(), family, LOG_INFO, &current, &method,
-                    &hostname);
+    bool found = find_my_address(get_options(), family, LOG_INFO, &current,
+                                 &method, &hostname);
+    if (!found) {
+      /* Address was possibly not found because it is simply not configured or
+       * discoverable. Fallback to our cache, which includes any suggestion
+       * sent by a trusted directory server. */
+      found = relay_find_addr_to_publish(get_options(), family,
+                                         RELAY_FIND_ADDR_CACHE_ONLY,
+                                         &current);
+    }
+
+    /* The "current" address might be UNSPEC meaning it was not discovered nor
+     * found in our current cache. If we had an address before and we have
+     * none now, we consider this an IP change since it appears the relay lost
+     * its address. */
 
     if (!tor_addr_eq(previous, &current)) {
       char *source;
