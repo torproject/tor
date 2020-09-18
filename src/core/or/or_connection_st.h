@@ -74,6 +74,11 @@ struct or_connection_t {
   unsigned int is_outgoing:1;
   unsigned int proxy_type:3; /**< One of PROXY_NONE...PROXY_HAPROXY */
   unsigned int wide_circ_ids:1;
+  /** True iff a failure on this connection indicates a posssible
+   * bootstrapping problem.  We set this as true if we notice that this
+   * connection could handle a pending origin circuit, or if we launch it to
+   * handle an origin circuit. */
+  unsigned int potentially_used_for_bootstrapping:1;
   /** True iff this connection has had its bootstrap failure logged with
    * control_event_bootstrap_problem. */
   unsigned int have_noted_bootstrap_problem:1;

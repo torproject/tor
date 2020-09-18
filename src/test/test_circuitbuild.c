@@ -1214,6 +1214,7 @@ mock_channel_get_for_extend(const char *rsa_id_digest,
                             const ed25519_public_key_t *ed_id,
                             const tor_addr_t *target_ipv4_addr,
                             const tor_addr_t *target_ipv6_addr,
+                            bool for_origin_circ,
                             const char **msg_out,
                             int *launch_out)
 {
@@ -1221,6 +1222,7 @@ mock_channel_get_for_extend(const char *rsa_id_digest,
   (void)ed_id;
   (void)target_ipv4_addr;
   (void)target_ipv6_addr;
+  (void)for_origin_circ;
 
   /* channel_get_for_extend() requires non-NULL arguments */
   tt_ptr_op(msg_out, OP_NE, NULL);

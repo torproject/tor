@@ -348,6 +348,9 @@ control_event_bootstrap_prob_or, (const char *warn, int reason,
 {
   int dowarn = 0;
 
+  if (! or_conn->potentially_used_for_bootstrapping)
+    return;
+
   if (or_conn->have_noted_bootstrap_problem)
     return;
 

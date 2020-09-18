@@ -475,6 +475,7 @@ circuit_extend(struct cell_t *cell, struct circuit_t *circ)
                                   &ec.ed_pubkey,
                                   ipv4_valid ? &ec.orport_ipv4.addr : NULL,
                                   ipv6_valid ? &ec.orport_ipv6.addr : NULL,
+                                  false,
                                   &msg,
                                   &should_launch);
 

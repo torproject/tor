@@ -574,6 +574,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
                           &firsthop->extend_info->ed_identity,
                           orport4 ? &orport4->addr : NULL,
                           orport6 ? &orport6->addr : NULL,
+                          true,
                           &msg,
                           &should_launch);
 
@@ -590,6 +591,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -END_CIRC_REASON_CONNECTFAILED;
       }
+      channel_mark_as_used_for_origin_circuit(n_chan);
       circuit_chan_publish(circ, n_chan);
     }
 
@@ -602,6 +604,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   } else { /* it's already open. use it. */
     tor_assert(!circ->base_.n_hop);
     circ->base_.n_chan = n_chan;
+    channel_mark_as_used_for_origin_circuit(n_chan);
     circuit_chan_publish(circ, n_chan);
     log_debug(LD_CIRC,"Conn open for %s. Delivering first onion skin.",
               safe_str_client(extend_info_describe(firsthop->extend_info)));
