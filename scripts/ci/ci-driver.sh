@@ -33,6 +33,7 @@ COVERAGE="${COVERAGE:-no}"
 RUST="${RUST:-no}"
 DOXYGEN="${DOXYGEN:-no}"
 ASCIIDOC="${ASCIIDOC:-no}"
+TRACING="${TRACING:-no}"
 
 # Options for which tests to run.   All should be yes/no.
 CHECK="${CHECK:-yes}"
@@ -191,6 +192,7 @@ yes_or_no COVERAGE
 yes_or_no RUST
 yes_or_no DOXYGEN
 yes_or_no ASCIIDOC
+yes_or_no TRACING
 
 yes_or_no RUN_STAGE_CONFIGURE
 yes_or_no RUN_STAGE_BUILD
@@ -240,6 +242,9 @@ if [[ "$RUST" == "yes" ]]; then
 fi
 if [[ "$ASCIIDOC" != "yes" ]]; then
     configure_options+=("--disable-asciidoc")
+fi
+if [[ "$TRACING" == "yes" ]]; then
+    configure_options+=("--enable-tracing-instrumentation-lttng")
 fi
 
 #############################################################################
