@@ -37,7 +37,7 @@ variables:
     paths:
       - artifacts/
 
-# This template
+# This template should be usable on any system that's based on apt.
 .apt-template: &apt-template |
       export LC_ALL=C.UTF-8
       echo Etc/UTC > /etc/timezone
@@ -54,6 +54,7 @@ variables:
       apt-get update -qq
       apt-get upgrade -qy
 
+# This template sets us up for Debian system in particular.
 .debian-template: &debian-template
   <<: *artifacts-template
   variables:
@@ -167,3 +168,15 @@ debian-tracing:
     CHECK: "no"
   script:
     - ./scripts/ci/ci-driver.sh
+  # Ensure that we only run tracing when it's implemented.
+  #
+  # Once versions before 0.4.5 are obsolete, we can remove this test.
+  rules:
+    # This first "if" check prevents us from running a duplicate version of
+    # this pipeline whenever we push and create an MR.  I don't understand why
+    # it is necessary, though the following URL purports to explain:
+    #
+    # https://docs.gitlab.com/ee/ci/yaml/#prevent-duplicate-pipelines
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      exists:
+        - src/lib/trace/trace_sys.c
