@@ -34,6 +34,10 @@ RUST="${RUST:-no}"
 DOXYGEN="${DOXYGEN:-no}"
 ASCIIDOC="${ASCIIDOC:-no}"
 TRACING="${TRACING:-no}"
+ALL_BUGS_ARE_FATAL="${ALL_BUGS_ARE_FATAL:-no}"
+DISABLE_DIRAUTH="${DISABLE_DIRAUTH:-no}"
+DISABLE_RELAY="${DISABLE_RELAY:-no}"
+NSS="${NSS:-no}"
 
 # Options for which tests to run.   All should be yes/no.
 CHECK="${CHECK:-yes}"
@@ -193,6 +197,10 @@ yes_or_no RUST
 yes_or_no DOXYGEN
 yes_or_no ASCIIDOC
 yes_or_no TRACING
+yes_or_no ALL_BUGS_ARE_FATAL
+yes_or_no DISABLE_DIRAUTH
+yes_or_no DISABLE_RELAY
+yes_or_no NSS
 
 yes_or_no RUN_STAGE_CONFIGURE
 yes_or_no RUN_STAGE_BUILD
@@ -245,6 +253,18 @@ if [[ "$ASCIIDOC" != "yes" ]]; then
 fi
 if [[ "$TRACING" == "yes" ]]; then
     configure_options+=("--enable-tracing-instrumentation-lttng")
+fi
+if [[ "$ALL_BUGS_ARE_FATAL" == "yes" ]]; then
+    configure_options+=("--enable-all-bugs-are-fatal")
+fi
+if [[ "$DISABLE_DIRAUTH" == "yes" ]]; then
+    configure_options+=("--disable-module-dirauth")
+fi
+if [[ "$DISABLE_RELAY" == "yes" ]]; then
+    configure_options+=("--disable-module-relay")
+fi
+if [[ "$NSS" == "yes" ]]; then
+    configure_options+=("--enable-nss")
 fi
 
 #############################################################################
