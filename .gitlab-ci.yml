@@ -156,6 +156,7 @@ debian-integration:
   variables:
     CHECK: "no"
     CHUTNEY: "yes"
+    CHUTNEY_MAKE_TARGET: "test-network-all"
     STEM: "yes"
     ALL_BUGS_ARE_FATAL: "yes"
   script:
