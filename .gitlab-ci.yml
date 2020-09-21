@@ -112,6 +112,7 @@ debian-hardened:
   image: debian:testing
   <<: *debian-template
   variables:
+    ALL_BUGS_ARE_FATAL: "yes"
     HARDENING: "yes"
     CC: "clang"
   script:
@@ -155,6 +156,7 @@ debian-integration:
     CHECK: "no"
     CHUTNEY: "yes"
     STEM: "yes"
+    ALL_BUGS_ARE_FATAL: "yes"
   script:
     - ./scripts/ci/ci-driver.sh
 
@@ -190,7 +192,6 @@ debian-disable-dirauth:
     DISABLE_DIRAUTH: "yes"
   script:
     - ./scripts/ci/ci-driver.sh
-
 
 #####
 # No-relay mode
