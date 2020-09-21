@@ -180,3 +180,36 @@ debian-tracing:
     - if: '$CI_PIPELINE_SOURCE == "push"'
       exists:
         - src/lib/trace/trace_sys.c
+
+#####
+# No-authority mode
+debian-disable-dirauth:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    DISABLE_DIRAUTH: "yes"
+  script:
+    - ./scripts/ci/ci-driver.sh
+
+
+#####
+# No-relay mode
+debian-disable-relay:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    DISABLE_RELAY: "yes"
+  script:
+    - ./scripts/ci/ci-driver.sh
+  # Ensure that we only run tracing when it's implemented.
+  #
+  # Once versions before 0.4.3 are obsolete, we can remove this test.
+  rules:
+    # This first "if" check prevents us from running a duplicate version of
+    # this pipeline whenever we push and create an MR.  I don't understand why
+    # it is necessary, though the following URL purports to explain:
+    #
+    # https://docs.gitlab.com/ee/ci/yaml/#prevent-duplicate-pipelines
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      exists:
+        - src/feature/relay/relay_stub.c
