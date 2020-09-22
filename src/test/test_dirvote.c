@@ -357,34 +357,40 @@ test_dirvote_get_sybil_by_ip_version_ipv4(void *arg)
   smartlist_add(routers_ipv4, bbbb_ri);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   tt_assert(digestmap_isempty(omit_as_sybil) == 1);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("cccc", cccc, 123, AF_INET);
   smartlist_add(routers_ipv4, cccc_ri);
   digestmap_set(true_sybil_routers, cccc_digest, cccc_digest);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("dddd", dddd, 123, AF_INET);
   smartlist_add(routers_ipv4, dddd_ri);
   digestmap_set(true_sybil_routers, dddd_digest, dddd_digest);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("eeee", eeee, 456, AF_INET);
   smartlist_add(routers_ipv4, eeee_ri);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("ffff", ffff, 456, AF_INET);
   smartlist_add(routers_ipv4, ffff_ri);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("gggg", gggg, 456, AF_INET);
   smartlist_add(routers_ipv4, gggg_ri);
   digestmap_set(true_sybil_routers, gggg_digest, gggg_digest);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("hhhh", hhhh, 456, AF_INET);
   smartlist_add(routers_ipv4, hhhh_ri);
@@ -433,34 +439,40 @@ test_dirvote_get_sybil_by_ip_version_ipv6(void *arg)
   smartlist_add(routers_ipv6, bbbb_ri);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("cccc", cccc, 123, AF_INET6);
   smartlist_add(routers_ipv6, cccc_ri);
   digestmap_set(true_sybil_routers, cccc_digest, cccc_digest);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("dddd", dddd, 123, AF_INET6);
   smartlist_add(routers_ipv6, dddd_ri);
   digestmap_set(true_sybil_routers, dddd_digest, dddd_digest);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("eeee", eeee, 456, AF_INET6);
   smartlist_add(routers_ipv6, eeee_ri);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("ffff", ffff, 456, AF_INET6);
   smartlist_add(routers_ipv6, ffff_ri);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("gggg", gggg, 456, AF_INET6);
   smartlist_add(routers_ipv6, gggg_ri);
   digestmap_set(true_sybil_routers, gggg_digest, gggg_digest);
   omit_as_sybil = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("hhhh", hhhh, 456, AF_INET6);
   smartlist_add(routers_ipv6, hhhh_ri);
@@ -508,40 +520,47 @@ test_dirvote_get_all_possible_sybil(void *arg)
   smartlist_add(routers, bbbb_ri);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("cccc", cccc, 123, AF_INET);
   smartlist_add(routers, cccc_ri);
   digestmap_set(true_sybil_routers, cccc_digest, cccc_digest);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("dddd", dddd, 123, AF_INET);
   smartlist_add(routers, dddd_ri);
   digestmap_set(true_sybil_routers, dddd_digest, dddd_digest);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("eeee", eeee, 456, AF_INET);
   smartlist_add(routers, eeee_ri);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("ffff", ffff, 456, AF_INET);
   smartlist_add(routers, ffff_ri);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("gggg", gggg, 456, AF_INET);
   smartlist_add(routers, gggg_ri);
   digestmap_set(true_sybil_routers, gggg_digest, gggg_digest);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("hhhh", hhhh, 456, AF_INET);
   smartlist_add(routers, hhhh_ri);
   digestmap_set(true_sybil_routers, hhhh_digest, hhhh_digest);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("iiii", iiii, 123, AF_INET6);
   smartlist_add(routers, iiii_ri);
@@ -549,34 +568,40 @@ test_dirvote_get_all_possible_sybil(void *arg)
   smartlist_add(routers, jjjj_ri);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("kkkk", kkkk, 123, AF_INET6);
   smartlist_add(routers, kkkk_ri);
   digestmap_set(true_sybil_routers, kkkk_digest, kkkk_digest);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil,NULL);
 
   CREATE_ROUTER("llll", llll, 123, AF_INET6);
   smartlist_add(routers, llll_ri);
   digestmap_set(true_sybil_routers, llll_digest, llll_digest);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil,NULL);
 
   CREATE_ROUTER("mmmm", mmmm, 456, AF_INET6);
   smartlist_add(routers, mmmm_ri);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("nnnn", nnnn, 456, AF_INET6);
   smartlist_add(routers, nnnn_ri);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("oooo", oooo, 456, AF_INET6);
   smartlist_add(routers, oooo_ri);
   digestmap_set(true_sybil_routers, oooo_digest, oooo_digest);
   omit_as_sybil = get_all_possible_sybil(routers);
   TEST_SYBIL(true_sybil_routers, omit_as_sybil);
+  digestmap_free(omit_as_sybil, NULL);
 
   CREATE_ROUTER("pppp", pppp, 456, AF_INET6);
   smartlist_add(routers, pppp_ri);
