@@ -274,10 +274,6 @@ sr_state_get_start_time_of_current_protocol_run(void)
      protocol run */
   time_t time_elapsed_since_start_of_run = curr_round_slot * voting_interval;
 
-  log_debug(LD_GENERAL, "Current SRV proto run: Start of current round: %u. "
-            "Time elapsed: %u (%d)", (unsigned) beginning_of_curr_round,
-            (unsigned) time_elapsed_since_start_of_run, voting_interval);
-
   return beginning_of_curr_round - time_elapsed_since_start_of_run;
 }
 
