@@ -91,9 +91,24 @@ Recognized fields are:
   TotalBuildTimes
   CircuitBuildAbandonedCount
   CircuitBuildTimeBin
-  BuildTimeHistorgram
 
-      XXXX writeme.
+      These fields are used by the Circuit Build Timeout code, which
+      tries to learn what times are reasonable for circuit construction,
+      so that it can reject circuits that take too long to build.
+
+      CircuitBuildTimeBin is a count of circuits that were build
+      successfully in some timeframe. This entry can repeat; each of
+      these represents some bar on a histogram. The first integer is a
+      number of milliseconds; it tells the position of the center of the
+      histogram bin on the time axis. The second number is a count of
+      circuits in that bin.
+
+      CircuitBuildTimeAbandonedCount is a count of circuits that we
+      simply gave up on building because they were taking far too long.
+
+      TotalBuildTimes is the number of circuit build times that we
+      observed in order to build the above measurements fields.  If it
+      reaches a cap, then older measurements get thrown away.
 
   Guard [key=value] [key=value]...
 
