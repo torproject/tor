@@ -1587,7 +1587,7 @@ setup_desc_intro_point(const ed25519_keypair_t *signing_kp,
   memcpy(&desc_ip->onion_key, &ip->onion_key, sizeof(desc_ip->onion_key));
 
   /* Key and certificate material. */
-  desc_ip->auth_key_cert = tor_cert_create(signing_kp,
+  desc_ip->auth_key_cert = tor_cert_create_ed25519(signing_kp,
                                            CERT_TYPE_AUTH_HS_IP_KEY,
                                            &ip->auth_key_kp.pubkey,
                                            nearest_hour,
@@ -1638,7 +1638,7 @@ setup_desc_intro_point(const ed25519_keypair_t *signing_kp,
     ed25519_public_key_from_curve25519_public_key(&ed25519_pubkey,
                                                   &ip->enc_key_kp.pubkey,
                                                   0);
-    desc_ip->enc_key_cert = tor_cert_create(signing_kp,
+    desc_ip->enc_key_cert = tor_cert_create_ed25519(signing_kp,
                                             CERT_TYPE_CROSS_HS_IP_KEYS,
                                             &ed25519_pubkey, nearest_hour,
                                             HS_DESC_CERT_LIFETIME,
@@ -1712,12 +1712,13 @@ build_desc_signing_key_cert(hs_service_descriptor_t *desc, time_t now)
 
   /* Fresh certificate for the signing key. */
   plaintext->signing_key_cert =
-    tor_cert_create(&desc->blinded_kp, CERT_TYPE_SIGNING_HS_DESC,
+    tor_cert_create_ed25519(&desc->blinded_kp, CERT_TYPE_SIGNING_HS_DESC,
                     &desc->signing_kp.pubkey, now, HS_DESC_CERT_LIFETIME,
                     CERT_FLAG_INCLUDE_SIGNING_KEY);
   /* If the cert creation fails, the descriptor encoding will fail and thus
    * ultimately won't be uploaded. We'll get a stack trace to help us learn
-   * where the call came from and the tor_cert_create() will log the error. */
+   * where the call came from and the tor_cert_create_ed25519() will log the
+   * error. */
   tor_assert_nonfatal(plaintext->signing_key_cert);
 }
 

@@ -661,7 +661,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   uint32_t cert_flags = 0;
   if (flags & INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT)
     cert_flags |= CERT_FLAG_INCLUDE_SIGNING_KEY;
-  cert = tor_cert_create(signing_key, cert_type,
+  cert = tor_cert_create_ed25519(signing_key, cert_type,
                          &keypair->pubkey,
                          now, lifetime,
                          cert_flags);
@@ -739,7 +739,7 @@ ed_key_new(const ed25519_keypair_t *signing_key,
   uint32_t cert_flags = 0;
   if (flags & INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT)
     cert_flags |= CERT_FLAG_INCLUDE_SIGNING_KEY;
-  tor_cert_t *cert = tor_cert_create(signing_key, cert_type,
+  tor_cert_t *cert = tor_cert_create_ed25519(signing_key, cert_type,
                                      &keypair->pubkey,
                                      now, lifetime,
                                      cert_flags);

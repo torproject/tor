@@ -75,7 +75,8 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
     ret = ed25519_keypair_generate(&auth_kp, 0);
     tt_int_op(ret, OP_EQ, 0);
   }
-  ip->auth_key_cert = tor_cert_create(signing_kp, CERT_TYPE_AUTH_HS_IP_KEY,
+  ip->auth_key_cert = tor_cert_create_ed25519(signing_kp,
+                                      CERT_TYPE_AUTH_HS_IP_KEY,
                                       &auth_kp.pubkey, now,
                                       HS_DESC_CERT_LIFETIME,
                                       CERT_FLAG_INCLUDE_SIGNING_KEY);
@@ -110,7 +111,8 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
     }
     ed25519_keypair_from_curve25519_keypair(&ed25519_kp, &signbit,
                                             &curve25519_kp);
-    cross_cert = tor_cert_create(signing_kp, CERT_TYPE_CROSS_HS_IP_KEYS,
+    cross_cert = tor_cert_create_ed25519(signing_kp,
+                                 CERT_TYPE_CROSS_HS_IP_KEYS,
                                  &ed25519_kp.pubkey, time(NULL),
                                  HS_DESC_CERT_LIFETIME,
                                  CERT_FLAG_INCLUDE_SIGNING_KEY);
@@ -155,7 +157,7 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
          sizeof(ed25519_public_key_t));
 
   desc->plaintext_data.signing_key_cert =
-    tor_cert_create(&blinded_kp, CERT_TYPE_SIGNING_HS_DESC,
+    tor_cert_create_ed25519(&blinded_kp, CERT_TYPE_SIGNING_HS_DESC,
                     &signing_kp->pubkey, now, 3600,
                     CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(desc->plaintext_data.signing_key_cert);

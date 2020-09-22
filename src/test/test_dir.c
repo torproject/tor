@@ -943,7 +943,7 @@ test_dir_formats_rsa_ed25519(void *arg)
   ed25519_secret_key_from_seed(&kp2.seckey,
                           (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
   ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
-  r2->cache_info.signing_key_cert = tor_cert_create(&kp1,
+  r2->cache_info.signing_key_cert = tor_cert_create_ed25519(&kp1,
                                          CERT_TYPE_ID_SIGNING,
                                          &kp2.pubkey,
                                          now, 86400,
@@ -7290,7 +7290,7 @@ test_dir_dirserv_router_get_status(void *arg)
   ed25519_secret_key_from_seed(&kp2.seckey,
                           (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
   ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
-  ri->cache_info.signing_key_cert = tor_cert_create(&kp1,
+  ri->cache_info.signing_key_cert = tor_cert_create_ed25519(&kp1,
                                          CERT_TYPE_ID_SIGNING,
                                          &kp2.pubkey,
                                          now, 86400,
