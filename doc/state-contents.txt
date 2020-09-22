@@ -198,7 +198,7 @@ Recognized fields are:
               after having been built, but before sending traffic.
 
               "unusable_circuits" is a count of circuits that we
-              launched as path-bias probes but which failed to build,
+              built, but where streams or probes but which failed,
               or which encountered questionable errors.
 
               "timeouts" is a count of circuits that encountered a
