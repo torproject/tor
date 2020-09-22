@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Fix compiler warnings that would occur when building with
+      "--enable-all-bugs-are-fatal" and "--disable-module-relay"
+      at the same time. Fixes bug 40129; bugfix on 0.4.4.1-alpha.
