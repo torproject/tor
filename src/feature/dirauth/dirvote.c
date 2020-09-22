@@ -4360,8 +4360,8 @@ get_all_possible_sybil(const smartlist_t *routers)
   smartlist_t  *routers_ipv6, *routers_ipv4;
   routers_ipv6 = smartlist_new();
   routers_ipv4 = smartlist_new();
-  digestmap_t *omit_as_sybil_ipv4 = digestmap_new();
-  digestmap_t *omit_as_sybil_ipv6 = digestmap_new();
+  digestmap_t *omit_as_sybil_ipv4;
+  digestmap_t *omit_as_sybil_ipv6;
   digestmap_t *omit_as_sybil = digestmap_new();
   // Sort the routers in two lists depending on their IP version
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
