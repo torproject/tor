@@ -155,8 +155,39 @@ Recognized fields are:
          pb_circ_attempts
          pb_successful_circuits_closed
          pb_collapsed_circuits
+         pb_unusable_circuits
          pb_timeouts
 
+              Used by the pathbias subsystem to keep a record of the
+              behavior of circuits built through this guard, in hopes of
+              detecting guards try to that interfere with traffic.
+
+              All of these fields are floating-point integers which
+              represent a count of circuits that have been trated in
+              various ways.  These counts decay with time.
+
+              "use_attempts" is a count of the circuits that we've built
+              and tried to use for traffic.
+
+              "successful_circuits_closed" is a count of circuits that
+              have closed "naturally" without timeout or error.
+
+              "use_successes" is a count of circuits that we've sent
+              traffic on, and which closed "naturally" without timeout
+              or error.
+
+              "circ_attempts" is a count of circuits we've tried to
+              build through this guard.
+
+              "collapsed_circuits" is a count of circuits that failed
+              after having been built, but before sending traffic.
+
+              "unusable_circuits" is a count of circuits that we
+              launched as path-bias probes but which failed to build,
+              or which encountered questionable errors.
+
+              "timeouts" is a count of circuits that encountered a
+              timeout while we were building them.
 
 Obsolete fields include:
 
