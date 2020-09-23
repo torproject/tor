@@ -769,6 +769,7 @@ struct testgroup_t testgroups[] = {
   { "sendme/", sendme_tests },
   { "shared-random/", sr_tests },
   { "socks/", socks_tests },
+  { "statefile/", statefile_tests },
   { "stats/", stats_tests },
   { "status/" , status_tests },
   { "storagedir/", storagedir_tests },

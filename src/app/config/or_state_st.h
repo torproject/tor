@@ -38,16 +38,10 @@ struct or_state_t {
   uint64_t AccountingBytesAtSoftLimit;
   uint64_t AccountingExpectedUsage;
 
-  /** A list of Entry Guard-related configuration lines. (pre-prop271) */
-  struct config_line_t *EntryGuards;
-
-  /** A list of guard-related configuration lines. (post-prop271) */
+  /** A list of guard-related configuration lines. */
   struct config_line_t *Guard;
 
   struct config_line_t *TransportProxies;
-
-  /** Cached revision counters for active hidden services on this host */
-  struct config_line_t *HidServRevCounter;
 
   /** These fields hold information on the history of bandwidth usage for
    * servers.  The "Ends" fields hold the time when we last updated the
