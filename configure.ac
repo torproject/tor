@@ -1094,7 +1094,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 dnl Let's see if we have a version mismatch between includes and libs.
 AC_MSG_CHECKING([for significant mismatch between openssl headers and libraries])
 ac_retval=foo
-AC_RUN_IFELSE(AC_LANG_PROGRAM([[
+AC_RUN_IFELSE([AC_LANG_SOURCE([AC_LANG_PROGRAM([[
  #include <openssl/opensslv.h>
  #include <openssl/crypto.h>
 ]], [[
@@ -1103,7 +1103,7 @@ AC_RUN_IFELSE(AC_LANG_PROGRAM([[
   unsigned long linking = OpenSSL_version_num() & mask;
   unsigned long running = OPENSSL_VERSION_NUMBER & mask;
   return !(linking==running);
-]]), [openssl_ver_mismatch=no], [
+]])])], [openssl_ver_mismatch=no], [
    # This is a kludge to figure out whether compilation failed, or whether
    # running the program failed.
    if test "$ac_retval" == "1"; then
