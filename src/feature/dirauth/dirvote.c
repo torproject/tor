@@ -4208,6 +4208,20 @@ MOCK_IMPL(uint32_t,dirserv_get_bandwidth_for_router_kb,
   return bw_kb;
 }
 
+/**
+ * Helper: compare the address of family `family` in `a` with the address in
+ * `b`.  The family must be one of `AF_INET` and `AF_INET6`.
+ **/
+static int
+compare_routerinfo_addrs_by_family(const routerinfo_t *a,
+                                   const routerinfo_t *b,
+                                   int family)
+{
+  const tor_addr_t *addr1 = (family==AF_INET) ? &a->ipv4_addr : &a->ipv6_addr;
+  const tor_addr_t *addr2 = (family==AF_INET) ? &b->ipv4_addr : &b->ipv6_addr;
+  return tor_addr_compare(addr1, addr2, CMP_EXACT);
+}
+
 /** Helper for sorting: compares two ipv4 routerinfos first by ipv4 address,
  * and then by descending order of "usefulness"
  * (see compare_routerinfo_usefulness)
@@ -4217,9 +4231,7 @@ compare_routerinfo_by_ipv4(const void **a, const void **b)
 {
   const routerinfo_t *first = *(const routerinfo_t **)a;
   const routerinfo_t *second = *(const routerinfo_t **)b;
-  const tor_addr_t *first_ipv4 = &first->ipv4_addr;
-  const tor_addr_t *second_ipv4 = &first->ipv4_addr;
-  int comparison = tor_addr_compare(first_ipv4, second_ipv4, CMP_EXACT);
+  int comparison = compare_routerinfo_addrs_by_family(first, second, AF_INET);
   if (comparison == 0) {
     // If addresses are equal, use other comparison criteria
     return compare_routerinfo_usefulness(first, second);
@@ -4237,9 +4249,7 @@ compare_routerinfo_by_ipv6(const void **a, const void **b)
 {
   const routerinfo_t *first = *(const routerinfo_t **)a;
   const routerinfo_t *second = *(const routerinfo_t **)b;
-  const tor_addr_t *first_ipv6 = &(first->ipv6_addr);
-  const tor_addr_t *second_ipv6 = &(second->ipv6_addr);
-  int comparison = tor_addr_compare(first_ipv6, second_ipv6, CMP_EXACT);
+  int comparison = compare_routerinfo_addrs_by_family(first, second, AF_INET6);
   // If addresses are equal, use other comparison criteria
   if (comparison == 0)
     return compare_routerinfo_usefulness(first, second);
@@ -4309,10 +4319,8 @@ get_sybil_list_by_ip_version(const smartlist_t *routers, sa_family_t family)
   const dirauth_options_t *options = dirauth_get_options();
   digestmap_t *omit_as_sybil = digestmap_new();
   smartlist_t *routers_by_ip = smartlist_new();
-  int ipv4_addr_count = 0;
-  int ipv6_addr_count = 0;
-  tor_addr_t last_ipv6_addr, last_ipv4_addr;
-  int addr_comparison = 0;
+  int addr_count = 0;
+  routerinfo_t *last_ri = NULL;
   /* Allow at most this number of Tor servers on a single IP address, ... */
   int max_with_same_addr = options->AuthDirMaxServersPerAddr;
   if (max_with_same_addr <= 0)
@@ -4325,24 +4333,17 @@ get_sybil_list_by_ip_version(const smartlist_t *routers, sa_family_t family)
     smartlist_sort(routers_by_ip, compare_routerinfo_by_ipv4);
 
   SMARTLIST_FOREACH_BEGIN(routers_by_ip, routerinfo_t *, ri) {
-    if (family == AF_INET6) {
-      addr_comparison = tor_addr_compare(&last_ipv6_addr, &(ri->ipv6_addr),
-              CMP_EXACT);
-      if (addr_comparison != 0) {
-        tor_addr_copy(&last_ipv6_addr, &(ri->ipv6_addr));
-        ipv6_addr_count = 1;
-      } else if (++ipv6_addr_count > max_with_same_addr) {
-        digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
-      }
-    } else {
-      addr_comparison = tor_addr_compare(&last_ipv4_addr, &(ri->ipv4_addr),
-                                         CMP_EXACT);
-      if (addr_comparison != 0) {
-        tor_addr_copy(&last_ipv4_addr, &(ri->ipv4_addr));
-        ipv4_addr_count = 1;
-      } else if (++ipv4_addr_count > max_with_same_addr) {
-        digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
-      }
+    bool addrs_equal;
+    if (last_ri)
+      addrs_equal = !compare_routerinfo_addrs_by_family(last_ri, ri, family);
+    else
+      addrs_equal = false;
+
+    if (! addrs_equal) {
+      last_ri = ri;
+      addr_count = 1;
+    } else if (++addr_count > max_with_same_addr) {
+      digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
     }
   } SMARTLIST_FOREACH_END(ri);
   smartlist_free(routers_by_ip);
