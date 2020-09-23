@@ -4219,7 +4219,8 @@ compare_routerinfo_addrs_by_family(const routerinfo_t *a,
 {
   const tor_addr_t *addr1 = (family==AF_INET) ? &a->ipv4_addr : &a->ipv6_addr;
   const tor_addr_t *addr2 = (family==AF_INET) ? &b->ipv4_addr : &b->ipv6_addr;
-  return tor_addr_compare(addr1, addr2, CMP_EXACT);
+  const int maskbits = (family==AF_INET) ? 32 : 64;
+  return tor_addr_compare_masked(addr1, addr2, maskbits, CMP_EXACT);
 }
 
 /** Helper for sorting: compares two ipv4 routerinfos first by ipv4 address,
