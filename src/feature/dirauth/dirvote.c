@@ -4566,7 +4566,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   networkstatus_voter_info_t *voter = NULL;
   vote_timing_t timing;
-  digestmap_t *omit_as_sybil = digestmap_new();
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
   smartlist_t *microdescriptors = NULL;
   smartlist_t *bw_file_headers = NULL;
@@ -4637,7 +4636,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   /* After this point, don't use rl->routers; use 'routers' instead. */
   routers_sort_by_identity(routers);
   /* Get a digestmap of possible sybil routers, IPv4 or IPv6 */
-  omit_as_sybil = get_all_possible_sybil(routers);
+  digestmap_t *omit_as_sybil = get_all_possible_sybil(routers);
   DIGESTMAP_FOREACH (omit_as_sybil, sybil_id, void *, ignore) {
     (void)ignore;
     rep_hist_make_router_pessimal(sybil_id, now);
