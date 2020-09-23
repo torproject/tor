@@ -1,0 +1,6 @@
+  o Minor features (build):
+    - When running the configure script, try to detect version mismatches
+      between the openssl headers and libraries, and suggest that the
+      user should try "--with-openssl-dir". Closes 40138.
+    - If the configure script has given any warnings, remind the user about
+      them at the end of the script. Related to 40138.
