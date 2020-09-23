@@ -183,6 +183,8 @@ dirvote_add_signatures(const char *detached_signatures_body,
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,
           (consensus_flavor_t flav));
+MOCK_DECL(uint32_t,dirserv_get_bandwidth_for_router_kb,
+        (const routerinfo_t *ri));
 MOCK_DECL(const char*, dirvote_get_pending_detached_signatures, (void));
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
 
@@ -234,6 +236,22 @@ int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           const char *source,
                                           int severity,
                                           const char **msg_out);
+STATIC int
+compare_routerinfo_usefulness(const routerinfo_t *first,
+                              const routerinfo_t *second);
+STATIC
+int compare_routerinfo_by_ipv4(const void **a, const void **b);
+
+STATIC
+int compare_routerinfo_by_ipv6(const void **a, const void **b);
+
+STATIC
+digestmap_t * get_sybil_list_by_ip_version(
+    const smartlist_t *routers, sa_family_t family);
+
+STATIC
+digestmap_t * get_all_possible_sybil(const smartlist_t *routers);
+
 STATIC
 char *networkstatus_get_detached_signatures(smartlist_t *consensuses);
 STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,

@@ -236,8 +236,8 @@ mark_all_dirservers_up(smartlist_t *server_list)
 /** Return true iff <b>digest</b> is the digest of the identity key of a
  * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
  * is zero (NO_DIRINFO), or ALL_DIRINFO, any authority is okay. */
-int
-router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
+MOCK_IMPL(int, router_digest_is_trusted_dir_type,
+        (const char *digest, dirinfo_type_t type))
 {
   if (!trusted_dir_servers)
     return 0;
