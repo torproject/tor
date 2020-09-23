@@ -175,10 +175,6 @@ MOCK_DECL(int, add_file_log,(const log_severity_list_t *severity,
 int add_syslog_log(const log_severity_list_t *severity,
                    const char* syslog_identity_tag);
 #endif // HAVE_SYSLOG_H.
-#ifdef HAVE_ANDROID_LOG_H
-int add_android_log(const log_severity_list_t *severity,
-                    const char *android_identity_tag);
-#endif // HAVE_ANDROID_LOG_H.
 int add_callback_log(const log_severity_list_t *severity, log_callback cb);
 typedef void (*pending_callback_callback)(void);
 void logs_set_pending_callback_callback(pending_callback_callback cb);
