@@ -1094,7 +1094,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 dnl Let's see if we have a version mismatch between includes and libs.
 AC_MSG_CHECKING([for significant mismatch between openssl headers and libraries])
 ac_retval=foo
-AC_TRY_RUN(AC_LANG_PROGRAM([[
+AC_RUN_IFELSE(AC_LANG_PROGRAM([[
  #include <openssl/opensslv.h>
  #include <openssl/crypto.h>
 ]], [[
