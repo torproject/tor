@@ -4362,34 +4362,32 @@ get_all_possible_sybil(const smartlist_t *routers)
   digestmap_t *omit_as_sybil_ipv6;
   digestmap_t *omit_as_sybil = digestmap_new();
   // Sort the routers in two lists depending on their IP version
-  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
-      // If the router is IPv6
-      if (tor_addr_family(&(ri->ipv6_addr)) == AF_INET6){
-        smartlist_add(routers_ipv6, ri);
-      }
-      // If the router is IPv4
-      if (tor_addr_family(&(ri->ipv4_addr)) == AF_INET){
-        smartlist_add(routers_ipv4, ri);
-      }
-  });
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+    // If the router has an IPv6 address
+    if (tor_addr_family(&(ri->ipv6_addr)) == AF_INET6) {
+      smartlist_add(routers_ipv6, ri);
+    }
+    // If the router has an IPv4 address
+    if (tor_addr_family(&(ri->ipv4_addr)) == AF_INET) {
+      smartlist_add(routers_ipv4, ri);
+    }
+  } SMARTLIST_FOREACH_END(ri);
   omit_as_sybil_ipv4 = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   omit_as_sybil_ipv6 = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
 
   // Add all possible sybils to the common digestmap
-    DIGESTMAP_FOREACH (omit_as_sybil_ipv4, sybil_id, routerinfo_t *, ri) {
-      digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
-    }
-    DIGESTMAP_FOREACH_END
-    DIGESTMAP_FOREACH (omit_as_sybil_ipv6, sybil_id, routerinfo_t *, ri) {
-      digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
-    }
-    DIGESTMAP_FOREACH_END
+  DIGESTMAP_FOREACH (omit_as_sybil_ipv4, sybil_id, routerinfo_t *, ri) {
+    digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+  } DIGESTMAP_FOREACH_END;
+  DIGESTMAP_FOREACH (omit_as_sybil_ipv6, sybil_id, routerinfo_t *, ri) {
+    digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+  } DIGESTMAP_FOREACH_END;
   // Clean the temp variables
   smartlist_free(routers_ipv4);
   smartlist_free(routers_ipv6);
   digestmap_free(omit_as_sybil_ipv4, NULL);
   digestmap_free(omit_as_sybil_ipv6, NULL);
-  // Return the digestmap : it now contains all the possible sybils
+  // Return the digestmap: it now contains all the possible sybils
   return omit_as_sybil;
 }
 /** Given a platform string as in a routerinfo_t (possibly null), return a
