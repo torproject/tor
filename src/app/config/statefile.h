@@ -33,6 +33,7 @@ STATIC void or_state_free_(or_state_t *state);
 STATIC or_state_t *or_state_new(void);
 struct config_mgr_t;
 STATIC const struct config_mgr_t *get_state_mgr(void);
+STATIC void or_state_remove_obsolete_lines(struct config_line_t **extra_lines);
 #endif /* defined(STATEFILE_PRIVATE) */
 
 #endif /* !defined(TOR_STATEFILE_H) */

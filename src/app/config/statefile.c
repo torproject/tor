@@ -58,14 +58,36 @@
 
 /** A list of state-file "abbreviations," for compatibility. */
 static config_abbrev_t state_abbrevs_[] = {
-  { "AccountingBytesReadInterval", "AccountingBytesReadInInterval", 0, 0 },
-  { "HelperNode", "EntryGuard", 0, 0 },
-  { "HelperNodeDownSince", "EntryGuardDownSince", 0, 0 },
-  { "HelperNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0 },
-  { "EntryNode", "EntryGuard", 0, 0 },
-  { "EntryNodeDownSince", "EntryGuardDownSince", 0, 0 },
-  { "EntryNodeUnlistedSince", "EntryGuardUnlistedSince", 0, 0 },
   { NULL, NULL, 0, 0},
+};
+
+/** A list of obsolete keys that we do not and should not preserve.
+ *
+ * We could just let these live in ExtraLines indefinitely, but they're
+ * never going to be used again, and every version that used them
+ * has been obsolete for a long time.
+ * */
+static const char *obsolete_state_keys[] = {
+  /* These were renamed in 0.1.1.11-alpha */
+  "AccountingBytesReadInterval",
+  "HelperNode",
+  "HelperNodeDownSince",
+  "HelperNodeUnlistedSince",
+  "EntryNode",
+  "HelperNodeDownSince",
+  "EntryNodeUnlistedSince",
+  /* These were replaced by "Guard" in 0.3.0.1-alpha. */
+  "EntryGuard",
+  "EntryGuardDownSince",
+  "EntryGuardUnlistedSince",
+  "EntryGuardAddedBy",
+  "EntryGuardPathBias",
+  "EntryGuardPathUseBias",
+  /* This was replaced by OPE-based revision numbers in 0.3.5.1-alpha,
+   * and was never actually used in a released version. */
+  "HidServRevCounter",
+
+  NULL,
 };
 
 /** dummy instance of or_state_t, used for type-checking its
@@ -91,18 +113,8 @@ static const config_var_t state_vars_[] = {
   V(AccountingSoftLimitHitAt,         ISOTIME,  NULL),
   V(AccountingBytesAtSoftLimit,       MEMUNIT,  NULL),
 
-  VAR("EntryGuard",              LINELIST_S,  EntryGuards,             NULL),
-  VAR("EntryGuardDownSince",     LINELIST_S,  EntryGuards,             NULL),
-  VAR("EntryGuardUnlistedSince", LINELIST_S,  EntryGuards,             NULL),
-  VAR("EntryGuardAddedBy",       LINELIST_S,  EntryGuards,             NULL),
-  VAR("EntryGuardPathBias",      LINELIST_S,  EntryGuards,             NULL),
-  VAR("EntryGuardPathUseBias",   LINELIST_S,  EntryGuards,             NULL),
-  V(EntryGuards,                 LINELIST_V,  NULL),
-
   VAR("TransportProxy",               LINELIST_S, TransportProxies, NULL),
   V(TransportProxies,                 LINELIST_V, NULL),
-
-  V(HidServRevCounter,            LINELIST, NULL),
 
   V(BWHistoryReadEnds,                ISOTIME,  NULL),
   V(BWHistoryReadInterval,            POSINT,     "900"),
@@ -475,6 +487,7 @@ or_state_load(void)
   } else {
     log_info(LD_GENERAL, "Initialized state");
   }
+  or_state_remove_obsolete_lines(&new_state->ExtraLines);
   if (or_state_set(new_state) == -1) {
     or_state_save_broken(fname);
   }
@@ -492,6 +505,36 @@ or_state_load(void)
     config_free(get_state_mgr(), new_state);
 
   return r;
+}
+
+/** Remove from `extra_lines` every element whose key appears in
+ * `obsolete_state_keys`. */
+STATIC void
+or_state_remove_obsolete_lines(config_line_t **extra_lines)
+{
+  /* make a strmap for the obsolete state names, so we can have O(1)
+     lookup. */
+  strmap_t *bad_keys = strmap_new();
+  for (unsigned i = 0; obsolete_state_keys[i] != NULL; ++i) {
+    strmap_set_lc(bad_keys, obsolete_state_keys[i], (void*)"rmv");
+  }
+
+  config_line_t **line = extra_lines;
+  while (*line) {
+    if (strmap_get_lc(bad_keys, (*line)->key) != NULL) {
+      /* This key is obsolete; remove it. */
+      config_line_t *victim = *line;
+      *line = (*line)->next;
+
+      victim->next = NULL; // prevent double-free.
+      config_free_lines(victim);
+    } else {
+      /* This is just an unrecognized key; keep it. */
+      line = &(*line)->next;
+    }
+  }
+
+  strmap_free(bad_keys, NULL);
 }
 
 /** Did the last time we tried to write the state file fail? If so, we
