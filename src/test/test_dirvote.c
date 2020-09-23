@@ -22,16 +22,16 @@
  * comparison. Each router in the test function has one, and they are all
  * put in a global digestmap, router_properties
  */
-typedef struct router_values {
+typedef struct router_values_t {
   int is_running;
   int is_auth;
   int bw_kb;
   char digest[DIGEST_LEN];
-} router_values;
+} router_values_t;
 /**
  * This typedef makes declaring digests easier and less verbose
  */
-typedef char tor_digest[DIGEST_LEN];
+typedef char sha1_digest_t[DIGEST_LEN];
 
 // Use of global variable is justified because the functions that have to be
 // mocked take as arguments objects we have no control over
@@ -56,12 +56,11 @@ static node_t *non_running_node;
   tor_free(running_node); \
   tor_free(non_running_node);
 
-int mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type);
-int
+static int
 mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type)
 {
   (void)type;
-  router_values *mock_status;
+  router_values_t *mock_status;
   mock_status = digestmap_get(router_properties, digest);
   if (!mock_status) {
     return -1;
@@ -69,11 +68,10 @@ mock_router_digest_is_trusted(const char *digest, dirinfo_type_t type)
   return mock_status->is_auth;
 }
 
-const node_t *mock_node_get_by_id(const char *identity_digest);
-const node_t *
+static const node_t *
 mock_node_get_by_id(const char *identity_digest)
 {
-  router_values *status;
+  router_values_t *status;
   status = digestmap_get(router_properties, identity_digest);
   if (!status) {
     return NULL;
@@ -84,12 +82,11 @@ mock_node_get_by_id(const char *identity_digest)
     return non_running_node;
 }
 
-uint32_t mock_dirserv_get_bw(const routerinfo_t *ri);
-uint32_t
+static uint32_t
 mock_dirserv_get_bw(const routerinfo_t *ri)
 {
   const char *digest = ri->cache_info.identity_digest;
-  router_values *status;
+  router_values_t *status;
   status = digestmap_get(router_properties, digest);
   if (!status) {
     return -1;
@@ -97,15 +94,14 @@ mock_dirserv_get_bw(const routerinfo_t *ri)
   return status->bw_kb;
 }
 
-router_values *router_values_new(int running, int auth, int bw, char *digest);
-/** Generate a pointer to a router_values struct with the arguments as
+/** Generate a pointer to a router_values_t struct with the arguments as
  * field values, and return it
  * The returned pointer has to be freed by the caller.
  */
-router_values *
+static router_values_t *
 router_values_new(int running, int auth, int bw, char *digest)
 {
-  router_values *status = tor_malloc(sizeof(router_values));
+  router_values_t *status = tor_malloc(sizeof(router_values_t));
   memcpy(status->digest, digest, sizeof(status->digest));
   status->is_running = running;
   status->bw_kb = bw;
@@ -113,14 +109,13 @@ router_values_new(int running, int auth, int bw, char *digest)
   return status;
 }
 
-routerinfo_t *routerinfo_new(router_values *status, int family, int addr);
-/** Given a router_values struct, generate a pointer to a routerinfo struct.
+/** Given a router_values_t struct, generate a pointer to a routerinfo struct.
  * In the cache_info member, put the identity digest, and depending on
  * the family argument, fill the IPv4 or IPv6 address. Return the pointer.
  * The returned pointer has to be freed by the caller.
  */
-routerinfo_t *
-routerinfo_new(router_values *status, int family, int addr)
+static routerinfo_t *
+routerinfo_new(router_values_t *status, int family, int addr)
 {
   routerinfo_t *ri = tor_malloc(sizeof(routerinfo_t));
   signed_descriptor_t cache_info;
@@ -159,20 +154,20 @@ test_dirvote_compare_routerinfo_usefulness(void *arg)
 
   // The router one is the "least useful" router, every router is compared to
   // it
-  tor_digest digest_one = "aaaa";
-  router_values *status_one = router_values_new(0, 0, 0, digest_one);
+  sha1_digest_t digest_one = "aaaa";
+  router_values_t *status_one = router_values_new(0, 0, 0, digest_one);
   digestmap_set(router_properties, status_one->digest, status_one);
-  tor_digest digest_two = "bbbb";
-  router_values *status_two = router_values_new(0, 1, 0, digest_two);
+  sha1_digest_t digest_two = "bbbb";
+  router_values_t *status_two = router_values_new(0, 1, 0, digest_two);
   digestmap_set(router_properties, status_two->digest, status_two);
-  tor_digest digest_three = "cccc";
-  router_values *status_three = router_values_new(1, 0, 0, digest_three);
+  sha1_digest_t digest_three = "cccc";
+  router_values_t *status_three = router_values_new(1, 0, 0, digest_three);
   digestmap_set(router_properties, status_three->digest, status_three);
-  tor_digest digest_four = "dddd";
-  router_values *status_four = router_values_new(0, 0, 128, digest_four);
+  sha1_digest_t digest_four = "dddd";
+  router_values_t *status_four = router_values_new(0, 0, 128, digest_four);
   digestmap_set(router_properties, status_four->digest, status_four);
-  tor_digest digest_five = "9999";
-  router_values *status_five = router_values_new(0, 0, 0, digest_five);
+  sha1_digest_t digest_five = "9999";
+  router_values_t *status_five = router_values_new(0, 0, 0, digest_five);
   digestmap_set(router_properties, status_five->digest, status_five);
 
   // A router that has auth status is more useful than a non-auth one
@@ -224,11 +219,11 @@ test_dirvote_compare_routerinfo_by_ipv4(void *arg)
 
   ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
-  tor_digest digest_one = "aaaa";
-  router_values *status_one = router_values_new(0, 0, 0, digest_one);
+  sha1_digest_t digest_one = "aaaa";
+  router_values_t *status_one = router_values_new(0, 0, 0, digest_one);
   digestmap_set(router_properties, status_one->digest, status_one);
-  tor_digest digest_two = "bbbb";
-  router_values *status_two = router_values_new(0, 1, 0, digest_two);
+  sha1_digest_t digest_two = "bbbb";
+  router_values_t *status_two = router_values_new(0, 1, 0, digest_two);
   digestmap_set(router_properties, status_two->digest, status_two);
 
   // Both routers have an IPv4 address
@@ -272,10 +267,10 @@ test_dirvote_compare_routerinfo_by_ipv6(void *arg)
   ALLOCATE_MOCK_NODES();
   router_properties = digestmap_new();
   char digest_one[DIGEST_LEN] = "aaaa";
-  router_values *status_one = router_values_new(0, 0, 0, digest_one);
+  router_values_t *status_one = router_values_new(0, 0, 0, digest_one);
   digestmap_set(router_properties, status_one->digest, status_one);
   char digest_two[DIGEST_LEN] = "bbbb";
-  router_values *status_two = router_values_new(0, 1, 0, digest_two);
+  router_values_t *status_two = router_values_new(0, 1, 0, digest_two);
   digestmap_set(router_properties, status_two->digest, status_two);
 
   // Both routers have an IPv6 address
@@ -315,10 +310,10 @@ done:
  * be freed in the macro as it causes a heap-after-free error)
  */
 #define CREATE_ROUTER(digest, name, addr, ip_version)                    \
-  tor_digest name##_digest = digest;                                     \
-  router_values *name##_val = router_values_new(1, 1, 1, name##_digest); \
+  sha1_digest_t name##_digest = digest;                                  \
+  name##_val = router_values_new(1, 1, 1, name##_digest);               \
   digestmap_set(router_properties, name##_digest, name##_val);           \
-  routerinfo_t *name##_ri = routerinfo_new(name##_val, ip_version, addr);
+  name##_ri = routerinfo_new(name##_val, ip_version, addr);
 
 #define ROUTER_FREE(name) \
   tor_free(name##_val);   \
@@ -340,6 +335,13 @@ test_dirvote_get_sybil_by_ip_version_ipv4(void *arg)
 {
   // It is assumed that global_dirauth_options.AuthDirMaxServersPerAddr == 2
   (void)arg;
+  router_values_t *aaaa_val=NULL, *bbbb_val=NULL, *cccc_val=NULL,
+    *dddd_val=NULL, *eeee_val=NULL, *ffff_val=NULL, *gggg_val=NULL,
+    *hhhh_val=NULL;
+  routerinfo_t *aaaa_ri=NULL, *bbbb_ri=NULL, *cccc_ri=NULL,
+    *dddd_ri=NULL, *eeee_ri=NULL, *ffff_ri=NULL, *gggg_ri=NULL,
+    *hhhh_ri=NULL;
+
   MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
   MOCK(node_get_by_id, mock_node_get_by_id);
   MOCK(dirserv_get_bandwidth_for_router_kb, mock_dirserv_get_bw);
@@ -420,6 +422,13 @@ done:
 static void
 test_dirvote_get_sybil_by_ip_version_ipv6(void *arg)
 {
+  router_values_t *aaaa_val=NULL, *bbbb_val=NULL, *cccc_val=NULL,
+    *dddd_val=NULL, *eeee_val=NULL, *ffff_val=NULL, *gggg_val=NULL,
+    *hhhh_val=NULL;
+  routerinfo_t *aaaa_ri=NULL, *bbbb_ri=NULL, *cccc_ri=NULL,
+    *dddd_ri=NULL, *eeee_ri=NULL, *ffff_ri=NULL, *gggg_ri=NULL,
+    *hhhh_ri=NULL;
+
   // It is assumed that global_dirauth_options.AuthDirMaxServersPerAddr == 2
   (void)arg;
   MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
@@ -501,6 +510,17 @@ done:
 static void
 test_dirvote_get_all_possible_sybil(void *arg)
 {
+  router_values_t *aaaa_val=NULL, *bbbb_val=NULL, *cccc_val=NULL,
+    *dddd_val=NULL, *eeee_val=NULL, *ffff_val=NULL, *gggg_val=NULL,
+    *hhhh_val=NULL, *iiii_val=NULL, *jjjj_val=NULL, *kkkk_val=NULL,
+    *llll_val=NULL, *mmmm_val=NULL, *nnnn_val=NULL, *oooo_val=NULL,
+    *pppp_val=NULL;
+  routerinfo_t *aaaa_ri=NULL, *bbbb_ri=NULL, *cccc_ri=NULL,
+    *dddd_ri=NULL, *eeee_ri=NULL, *ffff_ri=NULL, *gggg_ri=NULL,
+    *hhhh_ri=NULL, *iiii_ri=NULL, *jjjj_ri=NULL, *kkkk_ri=NULL,
+    *llll_ri=NULL, *mmmm_ri=NULL, *nnnn_ri=NULL, *oooo_ri=NULL,
+    *pppp_ri=NULL;
+
   // It is assumed that global_dirauth_options.AuthDirMaxServersPerAddr == 2
   (void)arg;
   MOCK(router_digest_is_trusted_dir_type, mock_router_digest_is_trusted);
