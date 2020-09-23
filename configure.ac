@@ -1044,8 +1044,6 @@ TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS
     [if (getenv("THIS_SHOULDNT_BE_SET_X201803")) SSL_CIPHER_get_id((void *)0);], [],
     [/usr/local/opt/openssl /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /opt/openssl])
 
-dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
-
 if test "$enable_static_openssl" = "yes"; then
    if test "$tor_cv_library_openssl_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-openssl-dir=x option when using --enable-static-openssl")
@@ -1057,7 +1055,7 @@ else
 fi
 AC_SUBST(TOR_OPENSSL_LIBS)
 
-dnl Now check for particular openssl functions.
+dnl Now validate openssl, and check for particular openssl functions.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
 save_CPPFLAGS="$CPPFLAGS"
@@ -1086,6 +1084,28 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    ]], [[]])],
    [ : ],
    [ AC_MSG_ERROR([OpenSSL is built without full ECC support, including curves P256 and P224. You can specify a path to one with ECC support with --with-openssl-dir.]) ])
+
+dnl Let's see if we have a version mismatch between includes and libs.
+AC_MSG_CHECKING([for significant mismatch between openssl headers and libraries])
+ac_retval=foo
+AC_TRY_RUN(AC_LANG_PROGRAM([[
+ #include <openssl/opensslv.h>
+ #include <openssl/crypto.h>
+]], [[
+  /* Include major, minor, and fix, but not patch or status. */
+  unsigned long mask = 0xfffff000;
+  unsigned long linking = OpenSSL_version_num() & mask;
+  unsigned long running = OPENSSL_VERSION_NUMBER & mask;
+  return !(linking==running);
+]]), [openssl_ver_mismatch=no], [
+   # This is a kludge to figure out whether compilation failed, or whether
+   # running the program failed.
+   if test "$ac_retval" == "1"; then
+      openssl_ver_mismatch=inconclusive
+   else
+      openssl_ver_mismatch=yes
+   fi], [openssl_ver_mismatch=cross])
+AC_MSG_RESULT([$openssl_ver_mismatch])
 
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
@@ -2648,6 +2668,19 @@ https://gitlab.torproject.org/tpo/core/team/-/wikis/TorFragileHardening
 fi
 
 AC_OUTPUT
+
+if test "$openssl_ver_mismatch" = "yes"; then
+   AC_MSG_WARN([
+============
+Warning! The version OpenSSL headers we get from compiling with
+    "${TOR_CPPFLAGS_OPENSSL:-(no extra options)}"
+do not match version of the OpenSSL library we get when linking with
+    "$TOR_LDFLAGS_OPENSSL $TOR_OPENSSL_LIBS".
+This might cause compilation to fail. Try using --with-openssl-dir to specify
+the exact OpenSSL path you want.
+============
+])
+fi
 
 #
 # Mini-report on what will be built.
