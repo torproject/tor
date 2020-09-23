@@ -4372,8 +4372,6 @@ get_all_possible_sybil(const smartlist_t *routers)
         smartlist_add(routers_ipv4, ri);
       }
   });
-  routers_sort_by_identity(routers_ipv4);
-  routers_sort_by_identity(routers_ipv6);
   omit_as_sybil_ipv4 = get_sybil_list_by_ip_version(routers_ipv4, AF_INET);
   omit_as_sybil_ipv6 = get_sybil_list_by_ip_version(routers_ipv6, AF_INET6);
 
