@@ -4641,8 +4641,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   DIGESTMAP_FOREACH (omit_as_sybil, sybil_id, void *, ignore) {
     (void)ignore;
     rep_hist_make_router_pessimal(sybil_id, now);
-  }
-  DIGESTMAP_FOREACH_END
+  } DIGESTMAP_FOREACH_END
   /* Count how many have measured bandwidths so we know how to assign flags;
    * this must come before dirserv_compute_performance_thresholds() */
   dirserv_count_measured_bws(routers);
