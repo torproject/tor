@@ -73,6 +73,7 @@ include src/feature/hibernate/include.am
 include src/feature/hs_common/include.am
 include src/feature/hs/include.am
 include src/feature/keymgt/include.am
+include src/feature/metrics/include.am
 include src/feature/nodelist/include.am
 include src/feature/relay/include.am
 include src/feature/rend/include.am
