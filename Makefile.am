@@ -72,7 +72,8 @@ TOR_UTIL_LIBS = \
 	src/lib/libtor-version.a \
 	src/lib/libtor-llharden.a \
 	src/lib/libtor-intmath.a \
-	src/lib/libtor-ctime.a
+	src/lib/libtor-ctime.a \
+	src/lib/libtor-metrics.a
 
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
@@ -107,7 +108,8 @@ TOR_UTIL_TESTING_LIBS = \
 	src/lib/libtor-version-testing.a \
 	src/lib/libtor-llharden-testing.a \
 	src/lib/libtor-intmath.a \
-	src/lib/libtor-ctime-testing.a
+	src/lib/libtor-ctime-testing.a \
+	src/lib/libtor-metrics-testing.a
 endif
 
 # Internal crypto libraries used in Tor
