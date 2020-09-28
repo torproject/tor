@@ -37,7 +37,7 @@ variables:
     paths:
       - artifacts/
 
-# This template
+# This template should be usable on any system that's based on apt.
 .apt-template: &apt-template |
       export LC_ALL=C.UTF-8
       echo Etc/UTC > /etc/timezone
@@ -54,6 +54,7 @@ variables:
       apt-get update -qq
       apt-get upgrade -qy
 
+# This template sets us up for Debian system in particular.
 .debian-template: &debian-template
   <<: *artifacts-template
   variables:
@@ -88,10 +89,12 @@ variables:
     - if [ "$DOXYGEN" = yes ]; then apt-get install doxygen; fi
     - if [ "$STEM" = yes ]; then apt-get install timelimit; fi
     - if [ "$CC" = clang ]; then apt-get install clang; fi
+    - if [ "$NSS" = yes ]; then apt-get install libnss3 libnss3-dev; fi
     # TODO: This next line should not be debian-only.
     - if [ "$STEM" = yes ]; then git clone --depth 1 https://git.torproject.org/stem.git ; export STEM_PATH="$(pwd)/stem"; fi
     # TODO: This next line should not be debian-only.
     - if [ "$CHUTNEY" = yes ]; then git clone --depth 1 https://git.torproject.org/chutney.git ;  export CHUTNEY_PATH="$(pwd)/chutney"; fi
+    - if [ "$TRACING" = yes ]; then apt install liblttng-ust-dev; fi
 
 # Minmal check on debian: just make, make check.
 #
@@ -110,6 +113,7 @@ debian-hardened:
   image: debian:testing
   <<: *debian-template
   variables:
+    ALL_BUGS_ARE_FATAL: "yes"
     HARDENING: "yes"
     CC: "clang"
   script:
@@ -152,6 +156,73 @@ debian-integration:
   variables:
     CHECK: "no"
     CHUTNEY: "yes"
+    CHUTNEY_MAKE_TARGET: "test-network-all"
     STEM: "yes"
+    ALL_BUGS_ARE_FATAL: "yes"
+  script:
+    - ./scripts/ci/ci-driver.sh
+
+#####
+# Tracing build on Debian stable.
+debian-tracing:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    TRACING: "yes"
+    CHECK: "no"
+  script:
+    - ./scripts/ci/ci-driver.sh
+  # Ensure that we only run tracing when it's implemented.
+  #
+  # Once versions before 0.4.5 are obsolete, we can remove this test.
+  rules:
+    # This first "if" check prevents us from running a duplicate version of
+    # this pipeline whenever we push and create an MR.  I don't understand why
+    # it is necessary, though the following URL purports to explain:
+    #
+    # https://docs.gitlab.com/ee/ci/yaml/#prevent-duplicate-pipelines
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      exists:
+        - src/lib/trace/trace_sys.c
+
+#####
+# No-authority mode
+debian-disable-dirauth:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    DISABLE_DIRAUTH: "yes"
+  script:
+    - ./scripts/ci/ci-driver.sh
+
+#####
+# No-relay mode
+debian-disable-relay:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    DISABLE_RELAY: "yes"
+  script:
+    - ./scripts/ci/ci-driver.sh
+  # Ensure that we only run tracing when it's implemented.
+  #
+  # Once versions before 0.4.3 are obsolete, we can remove this test.
+  rules:
+    # This first "if" check prevents us from running a duplicate version of
+    # this pipeline whenever we push and create an MR.  I don't understand why
+    # it is necessary, though the following URL purports to explain:
+    #
+    # https://docs.gitlab.com/ee/ci/yaml/#prevent-duplicate-pipelines
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      exists:
+        - src/feature/relay/relay_stub.c
+
+#####
+# NSS check on debian
+debian-nss:
+  image: debian:stable
+  <<: *debian-template
+  variables:
+    NSS: "yes"
   script:
     - ./scripts/ci/ci-driver.sh

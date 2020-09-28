@@ -954,6 +954,7 @@ test_rend_cache_free_all(void *data)
   one->parsed = desc_one;
   desc_one->timestamp = time(NULL) + TIME_IN_THE_PAST;
   desc_one->pk = pk_generate(0);
+  rend_cache_increment_allocation(rend_cache_entry_allocation(one));
   strmap_set_lc(rend_cache, "foo1", one);
 
   rend_cache_free_all();
@@ -978,11 +979,13 @@ test_rend_cache_entry_free(void *data)
 
   // Handles NULL descriptor correctly
   e = tor_malloc_zero(sizeof(rend_cache_entry_t));
+  rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   rend_cache_entry_free(e);
 
   // Handles non-NULL descriptor correctly
   e = tor_malloc_zero(sizeof(rend_cache_entry_t));
   e->desc = tor_malloc(10);
+  rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   rend_cache_entry_free(e);
 
  /* done: */
