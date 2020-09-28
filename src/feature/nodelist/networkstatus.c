@@ -2444,7 +2444,12 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   return answer;
 }
 
-/* DOCDOC get_net_param_from_list */
+/**
+ * Search through a smartlist of "key=int32" strings for a value beginning
+ * with "param_name=". If one is found, clip it to be between min_val and
+ * max_val inclusive and return it.  If one is not found, return
+ * default_val.
+ ***/
 static int32_t
 get_net_param_from_list(smartlist_t *net_params, const char *param_name,
                         int32_t default_val, int32_t min_val, int32_t max_val)
