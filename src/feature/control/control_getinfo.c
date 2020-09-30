@@ -287,6 +287,8 @@ getinfo_helper_listeners(control_connection_t *control_conn,
     type = CONN_TYPE_AP_DNS_LISTENER;
   else if (!strcmp(question, "net/listeners/control"))
     type = CONN_TYPE_CONTROL_LISTENER;
+  else if (!strcmp(question, "net/listeners/metrics"))
+    type = CONN_TYPE_METRICS_LISTENER;
   else
     return 0; /* unknown key */
 

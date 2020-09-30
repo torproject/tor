@@ -88,6 +88,7 @@
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
+#include "feature/metrics/metrics.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
@@ -160,6 +161,7 @@
 #define SOCKS4_GRANTED          90
 #define SOCKS4_REJECT           91
 
+static int connection_ap_process_metrics(entry_connection_t *conn);
 static int connection_ap_handshake_process_socks(entry_connection_t *conn);
 static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
@@ -252,7 +254,8 @@ connection_mark_unattached_ap_,(entry_connection_t *conn, int endreason,
 {
   connection_t *base_conn = ENTRY_TO_CONN(conn);
   edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
-  tor_assert(base_conn->type == CONN_TYPE_AP);
+  tor_assert(base_conn->type == CONN_TYPE_AP ||
+             base_conn->type == CONN_TYPE_METRICS);
   ENTRY_TO_EDGE_CONN(conn)->edge_has_sent_end = 1; /* no circ yet */
 
   /* If this is a rendezvous stream and it is failing without ever
@@ -338,6 +341,11 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
   tor_assert(conn);
 
   switch (conn->base_.state) {
+    case AP_CONN_STATE_METRICS_WAIT:
+      if (connection_ap_process_metrics(EDGE_TO_ENTRY_CONN(conn)) < 0) {
+        return -1;
+      }
+      return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
       if (connection_ap_handshake_process_socks(EDGE_TO_ENTRY_CONN(conn)) <0) {
         /* already marked */
@@ -868,6 +876,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
     case AP_CONN_STATE_CONTROLLER_WAIT:
     case AP_CONN_STATE_RESOLVE_WAIT:
     case AP_CONN_STATE_HTTP_CONNECT_WAIT:
+    case AP_CONN_STATE_METRICS_WAIT:
       return 0;
     default:
       log_warn(LD_BUG, "Called in unexpected state %d.",conn->base_.state);
@@ -2809,6 +2818,121 @@ connection_ap_get_original_destination(entry_connection_t *conn,
            "transparent proxy method was configured.");
   return -1;
 #endif /* defined(TRANS_NETFILTER) || ... */
+}
+
+/** Return true iff the given peer address is allowed by our MetricsPortACL
+ * option that is is in that list. */
+static bool
+metrics_request_allowed(const tor_addr_t *peer_addr)
+{
+  tor_assert(peer_addr);
+
+  const or_options_t *options = get_options();
+  const char *addr_str = fmt_addr(peer_addr);
+
+  return smartlist_contains_string(options->MetricsPortACL, addr_str);
+}
+
+/** Helper: For a metrics port connection, write the HTTP response header
+ * using the data length passed. */
+static void
+write_metrics_http_response(const size_t data_len, connection_t *conn)
+{
+  char date[RFC1123_TIME_LEN+1];
+  buf_t *buf = buf_new_with_capacity(1024);
+
+  format_rfc1123_time(date, approx_time());
+  buf_add_printf(buf, "HTTP/1.0 200 OK\r\nDate: %s\r\n", date);
+  buf_add_printf(buf, "Content-Type: text/plain; charset=utf-8\r\n");
+  buf_add_printf(buf, "Content-Length: %ld\r\n", data_len);
+  buf_add_string(buf, "\r\n");
+
+  connection_buf_add_buf(conn, buf);
+  buf_free(buf);
+}
+
+/** Process the request on a MetricsPort that is the entry_conn. If the
+ * request is valid, send back the entire metrics page.
+ *
+ * Connection peer address must be in the MetricsPortACL option.
+ *
+ * Return 0 on success else -1 on error for which an HTTP error was sent back
+ * by this function on the connection. */
+static int
+connection_ap_process_metrics(entry_connection_t *entry_conn)
+{
+  tor_assert(entry_conn);
+
+  int ret = 0;
+  char *headers = NULL, *command = NULL, *url = NULL;
+  connection_t *conn = ENTRY_TO_CONN(entry_conn);
+  const char *errmsg = NULL;
+
+  if (BUG(conn->state != AP_CONN_STATE_METRICS_WAIT)) {
+    return -1;
+  }
+
+  if (!metrics_request_allowed(&conn->addr)) {
+    /* Close connection. Don't bother returning anything if you are not
+     * allowed by being on the ACL list. */
+    errmsg = NULL;
+    goto err;
+  }
+
+  const int http_status = fetch_from_buf_http(conn->inbuf, &headers, 1024,
+                                              NULL, NULL, 1024, 0);
+  if (http_status < 0) {
+    errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
+    goto err;
+  } else if (http_status == 0) {
+    /* no HTTP request yet. */
+    goto done;
+  }
+
+  const int cmd_status = parse_http_command(headers, &command, &url);
+  if (cmd_status < 0) {
+    errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
+    goto err;
+  } else if (strcmpstart(command, "GET")) {
+    errmsg = "HTTP/1.0 405 Method Not Allowed\r\n\r\n";
+    goto err;
+  }
+  tor_assert(url);
+
+  /* Where we expect the query to come for. */
+#define EXPECTED_URL_PATH "/metrics"
+#define EXPECTED_URL_PATH_LEN (sizeof(EXPECTED_URL_PATH) - 1) /* No NUL */
+
+  if (!strcmpstart(url, EXPECTED_URL_PATH) &&
+      strlen(url) == EXPECTED_URL_PATH_LEN) {
+    char *data = metrics_get_output();
+    size_t data_len = strlen(data);
+
+    write_metrics_http_response(data_len, conn);
+    connection_buf_add(data, data_len, conn);
+    tor_free(data);
+  } else {
+    errmsg = "HTTP/1.0 404 Not Found\r\n\r\n";
+    goto err;
+  }
+
+  goto done;
+
+ err:
+  if (errmsg) {
+    log_info(LD_EDGE, "HTTP metrics error: saying %s", escaped(errmsg));
+    connection_buf_add(errmsg, strlen(errmsg), conn);
+  }
+  ret = -1;
+
+ done:
+  tor_free(headers);
+  tor_free(command);
+  tor_free(url);
+
+  /* Always unattached, this is a one time HTTP connection. */
+  connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_DONE);
+  return ret;
 }
 
 /** connection_edge_process_inbuf() found a conn in state

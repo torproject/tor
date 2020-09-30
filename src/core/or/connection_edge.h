@@ -58,7 +58,9 @@ const entry_connection_t *CONST_EDGE_TO_ENTRY_CONN(const edge_connection_t *);
 #define AP_CONN_STATE_NATD_WAIT 12
 /** State for an HTTP tunnel: waiting for an HTTP CONNECT command. */
 #define AP_CONN_STATE_HTTP_CONNECT_WAIT 13
-#define AP_CONN_STATE_MAX_ 13
+/** State for a metrics port waiting for a connection. */
+#define AP_CONN_STATE_METRICS_WAIT 14
+#define AP_CONN_STATE_MAX_ 14
 
 #define EXIT_PURPOSE_MIN_ 1
 /** This exit stream wants to do an ordinary connect. */

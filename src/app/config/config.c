@@ -560,6 +560,8 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
+  VPORT(MetricsPort),
+  V(MetricsPortACL,              CSV,   "127.0.0.1"),
   VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
@@ -6457,6 +6459,13 @@ parse_ports(or_options_t *options, int validate_only,
     *msg = tor_strdup("Invalid HTTPTunnelPort configuration");
     goto err;
   }
+  if (port_parse_config(ports, options->MetricsPort_lines,
+                        "Metrics", CONN_TYPE_METRICS_LISTENER,
+                        "127.0.0.1", 0, 0) < 0) {
+    *msg = tor_strdup("Invalid MetricsPort configuration");
+    goto err;
+  }
+
   {
     unsigned control_port_flags = CL_PORT_NO_STREAM_OPTIONS |
       CL_PORT_WARN_NONLOCAL;
@@ -6509,6 +6518,8 @@ parse_ports(or_options_t *options, int validate_only,
     !! port_count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER, 0);
   options->DNSPort_set =
     !! port_count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER, 1);
+  options->MetricsPort_set =
+    !! port_count_real_listeners(ports, CONN_TYPE_METRICS_LISTENER, 1);
 
   if (world_writable_control_socket) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p,

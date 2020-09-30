@@ -217,7 +217,8 @@ static smartlist_t *outgoing_addrs = NULL;
     case CONN_TYPE_AP_TRANS_LISTENER: \
     case CONN_TYPE_AP_NATD_LISTENER: \
     case CONN_TYPE_AP_DNS_LISTENER: \
-    case CONN_TYPE_AP_HTTP_CONNECT_LISTENER
+    case CONN_TYPE_AP_HTTP_CONNECT_LISTENER: \
+    case CONN_TYPE_METRICS_LISTENER
 
 /**************************************************************/
 
@@ -282,6 +283,8 @@ conn_type_to_string(int type)
     case CONN_TYPE_EXT_OR: return "Extended OR";
     case CONN_TYPE_EXT_OR_LISTENER: return "Extended OR listener";
     case CONN_TYPE_AP_HTTP_CONNECT_LISTENER: return "HTTP tunnel listener";
+    case CONN_TYPE_METRICS_LISTENER: return "Metrics listener";
+    case CONN_TYPE_METRICS: return "Metrics";
     default:
       log_warn(LD_BUG, "unknown connection type %d", type);
       tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
@@ -365,6 +368,11 @@ conn_state_to_string(int type, int state)
         case CONTROL_CONN_STATE_OPEN: return "open (protocol v1)";
         case CONTROL_CONN_STATE_NEEDAUTH:
           return "waiting for authentication (protocol v1)";
+      }
+      break;
+    case CONN_TYPE_METRICS:
+      switch (state) {
+        case AP_CONN_STATE_METRICS_WAIT: return "waiting for metrics";
       }
       break;
   }
@@ -589,7 +597,7 @@ entry_connection_t *
 entry_connection_new(int type, int socket_family)
 {
   entry_connection_t *entry_conn = tor_malloc_zero(sizeof(entry_connection_t));
-  tor_assert(type == CONN_TYPE_AP);
+  tor_assert(type == CONN_TYPE_AP || type == CONN_TYPE_METRICS);
   connection_init(time(NULL), ENTRY_TO_CONN(entry_conn), type, socket_family);
   entry_conn->socks_request = socks_request_new();
   /* If this is coming from a listener, we'll set it up based on the listener
@@ -650,6 +658,7 @@ connection_new(int type, int socket_family)
     case CONN_TYPE_EXIT:
       return TO_CONN(edge_connection_new(type, socket_family));
 
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
       return ENTRY_TO_CONN(entry_connection_new(type, socket_family));
 
@@ -693,6 +702,7 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
     case CONN_TYPE_EXIT:
       conn->magic = EDGE_CONNECTION_MAGIC;
       break;
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
       conn->magic = ENTRY_CONNECTION_MAGIC;
       break;
@@ -775,6 +785,7 @@ connection_free_minimal(connection_t *conn)
       mem = TO_OR_CONN(conn);
       memlen = sizeof(or_connection_t);
       break;
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
       tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
       mem = TO_ENTRY_CONN(conn);
@@ -870,7 +881,7 @@ connection_free_minimal(connection_t *conn)
       or_conn->chan = NULL;
     }
   }
-  if (conn->type == CONN_TYPE_AP) {
+  if (conn->type == CONN_TYPE_AP || conn->type == CONN_TYPE_METRICS) {
     entry_connection_t *entry_conn = TO_ENTRY_CONN(conn);
     tor_str_wipe_and_free(entry_conn->chosen_exit_name);
     tor_str_wipe_and_free(entry_conn->original_dest_address);
@@ -1011,6 +1022,7 @@ connection_about_to_close_connection(connection_t *conn)
     case CONN_TYPE_EXT_OR:
       connection_or_about_to_close(TO_OR_CONN(conn));
       break;
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
       connection_ap_about_to_close(TO_ENTRY_CONN(conn));
       break;
@@ -2078,6 +2090,7 @@ connection_init_accepted_conn(connection_t *conn,
       }
       return rv;
       break;
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
       memcpy(&TO_ENTRY_CONN(conn)->entry_cfg, &listener->entry_cfg,
              sizeof(entry_port_cfg_t));
@@ -2104,6 +2117,9 @@ connection_init_accepted_conn(connection_t *conn,
         case CONN_TYPE_AP_NATD_LISTENER:
           TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_NATD_WAIT;
+          break;
+        case CONN_TYPE_METRICS_LISTENER:
+          conn->state = AP_CONN_STATE_METRICS_WAIT;
           break;
         case CONN_TYPE_AP_HTTP_CONNECT_LISTENER:
           conn->state = AP_CONN_STATE_HTTP_CONNECT_WAIT;
@@ -3295,6 +3311,7 @@ connection_mark_all_noncontrol_connections(void)
       case CONN_TYPE_CONTROL_LISTENER:
       case CONN_TYPE_CONTROL:
         break;
+      case CONN_TYPE_METRICS:
       case CONN_TYPE_AP:
         connection_mark_unattached_ap(TO_ENTRY_CONN(conn),
                                       END_STREAM_REASON_HIBERNATING);
@@ -3884,6 +3901,8 @@ connection_handle_read_impl(connection_t *conn)
       return connection_handle_listener_read(conn, CONN_TYPE_DIR);
     case CONN_TYPE_CONTROL_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_CONTROL);
+    case CONN_TYPE_METRICS_LISTENER:
+      return connection_handle_listener_read(conn, CONN_TYPE_METRICS);
     case CONN_TYPE_AP_DNS_LISTENER:
       /* This should never happen; eventdns.c handles the reads here. */
       tor_fragile_assert();
@@ -4916,7 +4935,8 @@ connection_is_listener(connection_t *conn)
       conn->type == CONN_TYPE_AP_NATD_LISTENER ||
       conn->type == CONN_TYPE_AP_HTTP_CONNECT_LISTENER ||
       conn->type == CONN_TYPE_DIR_LISTENER ||
-      conn->type == CONN_TYPE_CONTROL_LISTENER)
+      conn->type == CONN_TYPE_CONTROL_LISTENER ||
+      conn->type == CONN_TYPE_METRICS_LISTENER)
     return 1;
   return 0;
 }
@@ -5092,6 +5112,7 @@ connection_process_inbuf(connection_t *conn, int package_partial)
     case CONN_TYPE_EXT_OR:
       return connection_ext_or_process_inbuf(TO_OR_CONN(conn));
     case CONN_TYPE_EXIT:
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
       return connection_edge_process_inbuf(TO_EDGE_CONN(conn),
                                            package_partial);
@@ -5150,6 +5171,7 @@ connection_finished_flushing(connection_t *conn)
       return connection_or_finished_flushing(TO_OR_CONN(conn));
     case CONN_TYPE_EXT_OR:
       return connection_ext_or_finished_flushing(TO_OR_CONN(conn));
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
       return connection_edge_finished_flushing(TO_EDGE_CONN(conn));
@@ -5205,6 +5227,7 @@ connection_reached_eof(connection_t *conn)
     case CONN_TYPE_OR:
     case CONN_TYPE_EXT_OR:
       return connection_or_reached_eof(TO_OR_CONN(conn));
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
       return connection_edge_reached_eof(TO_EDGE_CONN(conn));
@@ -5546,6 +5569,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_EXT_OR:
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
       break;
+    case CONN_TYPE_METRICS:
     case CONN_TYPE_AP:
       tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
       break;
@@ -5646,6 +5670,9 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->state <= EXIT_CONN_STATE_MAX_);
       tor_assert(conn->purpose >= EXIT_PURPOSE_MIN_);
       tor_assert(conn->purpose <= EXIT_PURPOSE_MAX_);
+      break;
+    case CONN_TYPE_METRICS:
+      tor_assert(conn->state == AP_CONN_STATE_METRICS_WAIT);
       break;
     case CONN_TYPE_AP:
       tor_assert(conn->state >= AP_CONN_STATE_MIN_);
