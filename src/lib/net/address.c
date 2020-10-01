@@ -1731,8 +1731,8 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
   /* Get a list of public or internal IPs in arbitrary order */
   addrs = get_interface_address6_list(severity, family, 1);
 
-  /* Find the first non-internal address, or the last internal address
-   * Ideally, we want the default route, see #12377 for details */
+  /* Find the first non-internal address, or the last internal address.
+   * Ideally, we want the default route; see #12377 for details. */
   SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
     tor_addr_copy(addr, a);
     const bool is_internal = tor_addr_is_internal(a, 0);

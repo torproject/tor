@@ -275,7 +275,7 @@ hs_circuitmap_get_or_circuit(hs_token_type_t type,
 
 /** Public function: Return v2 and v3 introduction circuit to this relay.
  * Always return a newly allocated list for which it is the caller's
- * responsability to free it. */
+ * responsibility to free it. */
 smartlist_t *
 hs_circuitmap_get_all_intro_circ_relay_side(void)
 {

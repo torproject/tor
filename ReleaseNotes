@@ -22188,7 +22188,7 @@ Changes in version 0.2.0.33 - 2009-01-21
     - Implement the 0x20 hack to better resist DNS poisoning: set the
       case on outgoing DNS requests randomly, and reject responses that do
       not match the case correctly. This logic can be disabled with the
-      ServerDNSRamdomizeCase setting, if you are using one of the 0.3%
+      ServerDNSRandomizeCase setting, if you are using one of the 0.3%
       of servers that do not reliably preserve case in replies. See
       "Increased DNS Forgery Resistance through 0x20-Bit Encoding"
       for more info.

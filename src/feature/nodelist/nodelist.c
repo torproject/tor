@@ -1947,7 +1947,7 @@ node_get_curve25519_onion_key(const node_t *node)
 /* Return a newly allocacted RSA onion public key taken from the given node.
  *
  * Return NULL if node is NULL or no RSA onion public key can be found. It is
- * the caller responsability to free the returned object. */
+ * the caller responsibility to free the returned object. */
 crypto_pk_t *
 node_get_rsa_onion_key(const node_t *node)
 {

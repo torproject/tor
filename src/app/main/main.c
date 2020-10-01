@@ -298,7 +298,7 @@ process_signal(int sig)
 }
 
 #ifdef _WIN32
-/** Activate SIGINT on reciving a control signal in console */
+/** Activate SIGINT on receiving a control signal in console. */
 static BOOL WINAPI
 process_win32_console_ctrl(DWORD ctrl_type)
 {
