@@ -6,7 +6,6 @@
 :man manual:   Tor Manual
 tor-gencert(1)
 ==============
-Nick Mathewson
 
 NAME
 ----
@@ -14,7 +13,7 @@ tor-gencert - Generate certs and keys for Tor directory authorities
 
 SYNOPSIS
 --------
-**tor-gencert** [-h|--help] [-v] [-r|--reuse] [--create-identity-key] [-i __id_file__] [-c 
+**tor-gencert** [-h|--help] [-v] [-r|--reuse] [--create-identity-key] [-i __id_file__] [-c
 __cert_file__] [-m __num__] [-a __address__:__port__]
 
 DESCRIPTION
@@ -89,4 +88,4 @@ See also the "dir-spec.txt" file, distributed with Tor.
 
 AUTHORS
 -------
-    Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.
+Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.
