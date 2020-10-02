@@ -374,6 +374,7 @@ hs_circuit_id_protocol_t
 hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 void hs_service_dump_stats(int severity);
+void hs_service_circuit_cleanup_on_close(const circuit_t *circ);
 
 #ifdef HS_SERVICE_PRIVATE
 

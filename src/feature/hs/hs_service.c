@@ -3396,6 +3396,15 @@ service_rendezvous_circ_has_opened(origin_circuit_t *circ)
   /* If the cell can't be sent, the circuit will be closed within this
    * function. */
   hs_circ_service_rp_has_opened(service, circ);
+
+  /* Update metrics that we have an established rendezvous circuit. It is not
+   * entirely true until the client receives the RENDEZVOUS2 cell and starts
+   * sending but if that circuit collapes, we'll decrement the counter thus it
+   * will even out the metric. */
+  if (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
+    metrics_hs_established_rdv_inc(&circ->hs_ident->identity_pk);
+  }
+
   goto done;
 
  err:
@@ -3581,6 +3590,26 @@ service_encode_descriptor(const hs_service_t *service,
 /* ========== */
 /* Public API */
 /* ========== */
+
+/** Called when a circuit was just cleaned up. This is done right before the
+ * circuit is marked for close. */
+void
+hs_service_circuit_cleanup_on_close(const circuit_t *circ)
+{
+  tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_S_REND_JOINED:
+    /* About to close an established rendezvous circuit. Update the metrics to
+     * reflect how many we have at the moment. */
+    metrics_hs_established_rdv_dec(
+      &CONST_TO_ORIGIN_CIRCUIT(circ)->hs_ident->identity_pk);
+    break;
+  default:
+    break;
+  }
+}
 
 /** This is called everytime the service map (v2 or v3) changes that is if an
  * element is added or removed. */
@@ -3975,6 +4004,7 @@ hs_service_receive_introduce2(origin_circuit_t *circ, const uint8_t *payload,
   if (circ->hs_ident) {
     ret = service_handle_introduce2(circ, payload, payload_len);
     hs_stats_note_introduce2_cell(1);
+    metrics_hs_new_introduction(&circ->hs_ident->identity_pk);
   } else {
     ret = rend_service_receive_introduction(circ, payload, payload_len);
     hs_stats_note_introduce2_cell(0);

@@ -99,6 +99,7 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ident.h"
+#include "feature/metrics/metrics.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/dns.h"
@@ -4148,6 +4149,14 @@ connection_buf_read_from_socket(connection_t *conn, ssize_t *max_to_read,
   if (n_read > 0) {
      /* change *max_to_read */
     *max_to_read = at_most - n_read;
+
+    /* Onion service application connection. Note read bytes for metrics. */
+    if (CONN_IS_EDGE(conn) && TO_EDGE_CONN(conn)->hs_ident) {
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      metrics_hs_app_read_bytes(&edge_conn->hs_ident->identity_pk,
+                                edge_conn->hs_ident->orig_virtual_port,
+                                n_read);
+    }
 
     /* Update edge_conn->n_read */
     if (conn->type == CONN_TYPE_AP) {
