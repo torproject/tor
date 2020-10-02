@@ -23,6 +23,7 @@
 #include "feature/dircommon/directory.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/keymgt/loadkey.h"
+#include "feature/metrics/metrics.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
@@ -196,6 +197,10 @@ register_service(hs_service_ht *map, hs_service_t *service)
     hs_service_map_has_changed();
   }
 
+  /* Register service to the metrics subsystem for monitoring. */
+  metrics_hs_new(&service->keys.identity_pk, service->onion_address,
+                 service->config.ports);
+
   return 0;
 }
 
@@ -227,6 +232,9 @@ remove_service(hs_service_ht *map, hs_service_t *service)
   if (map == hs_service_map) {
     hs_service_map_has_changed();
   }
+
+  /* Remove this service from metrics tracking. */
+  metrics_hs_remove(&service->keys.identity_pk);
 }
 
 /** Set the default values for a service configuration object <b>c</b>. */
