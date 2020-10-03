@@ -598,6 +598,12 @@ tor_glob(const char *pattern)
     return NULL;
   }
 
+  // #40141: workaround for bug in glibc < 2.19 where patterns ending in path
+  // separator match files and folders instead of folders only
+  size_t pattern_len = strlen(pattern);
+  bool dir_only = has_glob(pattern) &&
+                  pattern_len > 0 && pattern[pattern_len-1] == *PATH_SEPARATOR;
+
   result = smartlist_new();
   size_t i;
   for (i = 0; i < matches.gl_pathc; i++) {
@@ -606,7 +612,12 @@ tor_glob(const char *pattern)
     if (len > 0 && match[len-1] == *PATH_SEPARATOR) {
       match[len-1] = '\0';
     }
-    smartlist_add(result, match);
+
+    if (!dir_only || (dir_only && is_dir(file_status(match)))) {
+      smartlist_add(result, match);
+    } else {
+      tor_free(match);
+    }
   }
   globfree(&matches);
 #else
