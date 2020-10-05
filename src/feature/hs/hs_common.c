@@ -887,12 +887,8 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
   chosen_port = smartlist_choose(matching_ports);
   smartlist_free(matching_ports);
   if (chosen_port) {
+    conn->hs_ident->orig_virtual_port = chosen_port->virtual_port;
     if (!(chosen_port->is_unix_addr)) {
-      /* save the original destination before we overwrite it */
-      if (conn->hs_ident) {
-        conn->hs_ident->orig_virtual_port = TO_CONN(conn)->port;
-      }
-
       /* Get a non-AF_UNIX connection ready for connection_exit_connect() */
       tor_addr_copy(&TO_CONN(conn)->addr, &chosen_port->real_addr);
       TO_CONN(conn)->port = chosen_port->real_port;
