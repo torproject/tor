@@ -3855,7 +3855,3 @@ https://spec.torproject.org. See also **torsocks**(1) and **torify**(1).
 
 Because Tor is still under development, there may be plenty of bugs. Please
 report them at https://bugs.torproject.org/.
-
-== AUTHORS
-
-Roger Dingledine [arma at mit.edu], Nick Mathewson [nickm at alum.mit.edu].

@@ -48,7 +48,3 @@ SEE ALSO
 **tor**(1), **torify**(1). +
 
 For protocol details, see: https://spec.torproject.org/socks-extensions
-
-AUTHORS
--------
-Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.
