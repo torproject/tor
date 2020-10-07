@@ -106,7 +106,7 @@ channel_tls_get_transport_name_method(channel_t *chan, char **transport_out);
 static const char *
 channel_tls_get_remote_descr_method(channel_t *chan, int flags);
 static int channel_tls_has_queued_writes_method(channel_t *chan);
-static int channel_tls_is_canonical_method(channel_t *chan, int req);
+static int channel_tls_is_canonical_method(channel_t *chan);
 static int
 channel_tls_matches_extend_info_method(channel_t *chan,
                                        extend_info_t *extend_info);
@@ -643,12 +643,11 @@ channel_tls_has_queued_writes_method(channel_t *chan)
 /**
  * Tell the upper layer if we're canonical.
  *
- * This implements the is_canonical method for channel_tls_t; if req is zero,
- * it returns whether this is a canonical channel, and if it is one it returns
- * whether that can be relied upon.
+ * This implements the is_canonical method for channel_tls_t:
+ * it returns whether this is a canonical channel.
  */
 static int
-channel_tls_is_canonical_method(channel_t *chan, int req)
+channel_tls_is_canonical_method(channel_t *chan)
 {
   int answer = 0;
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
@@ -656,24 +655,13 @@ channel_tls_is_canonical_method(channel_t *chan, int req)
   tor_assert(tlschan);
 
   if (tlschan->conn) {
-    switch (req) {
-      case 0:
-        answer = tlschan->conn->is_canonical;
-        break;
-      case 1:
-        /*
-         * Is the is_canonical bit reliable?  In protocols version 2 and up
-         * we get the canonical address from a NETINFO cell, but in older
-         * versions it might be based on an obsolete descriptor.
-         */
-        answer = (tlschan->conn->link_proto >= 2);
-        break;
-      default:
-        /* This shouldn't happen; channel.c is broken if it does */
-        tor_assert_nonfatal_unreached_once();
-    }
+    /* If this bit is set to 0, and link_proto is sufficiently old, then we
+     * can't actually _rely_ on this being a non-canonical channel.
+     * Nonetheless, we're going to believe that this is a non-canonical
+     * channel in this case, since nobody should be using these link protocols
+     * any more. */
+    answer = tlschan->conn->is_canonical;
   }
-  /* else return 0 for tlschan->conn == NULL */
 
   return answer;
 }

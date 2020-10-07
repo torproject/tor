@@ -351,12 +351,10 @@ struct channel_s {
   /** Check if the lower layer has queued writes */
   int (*has_queued_writes)(channel_t *);
   /**
-   * If the second param is zero, ask the lower layer if this is
-   * 'canonical', for a transport-specific definition of canonical; if
-   * it is 1, ask if the answer to the preceding query is safe to rely
-   * on.
+   * Ask the lower layer if this is 'canonical', for a transport-specific
+   * definition of canonical.
    */
-  int (*is_canonical)(channel_t *, int);
+  int (*is_canonical)(channel_t *);
   /** Check if this channel matches a specified extend_info_t */
   int (*matches_extend_info)(channel_t *, extend_info_t *);
   /** Check if this channel matches a target address when extending */
@@ -733,7 +731,6 @@ int channel_has_queued_writes(channel_t *chan);
 int channel_is_bad_for_new_circs(channel_t *chan);
 void channel_mark_bad_for_new_circs(channel_t *chan);
 int channel_is_canonical(channel_t *chan);
-int channel_is_canonical_is_reliable(channel_t *chan);
 int channel_is_client(const channel_t *chan);
 int channel_is_local(channel_t *chan);
 int channel_is_incoming(channel_t *chan);
