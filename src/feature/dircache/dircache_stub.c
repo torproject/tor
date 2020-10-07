@@ -14,6 +14,7 @@
 #include "feature/dircache/dirserv.h"
 #include "feature/dircommon/dir_connection_st.h"
 
+DISABLE_GCC_WARNING("-Wmissing-noreturn")
 int
 directory_handle_command(dir_connection_t *conn)
 {
@@ -29,6 +30,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   tor_assert_nonfatal_unreached_once();
   return -1;
 }
+ENABLE_GCC_WARNING("-Wmissing-noreturn")
 
 void
 dir_conn_clear_spool(dir_connection_t *conn)
