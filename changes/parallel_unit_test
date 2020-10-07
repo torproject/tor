@@ -1,0 +1,4 @@
+  o Minor features (tests):
+    - Our "make check" target now runs the unit tests in 8 parallel chunks.
+      Doing this speeds up hardened CI builds by more than a factor of two.
+      Closes ticket 40098.
