@@ -31,6 +31,8 @@ void metrics_hs_remove(const ed25519_public_key_t *key);
 void metrics_hs_update(const ed25519_public_key_t *ident_key,
                        const unsigned int key, const uint16_t port,
                        const int64_t n);
+void metrics_hs_reset(const ed25519_public_key_t *ident_key,
+                      const unsigned int key, const uint16_t port);
 
 /* Per address only metric helpers. */
 

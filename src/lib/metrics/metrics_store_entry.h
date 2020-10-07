@@ -52,6 +52,7 @@ char *metrics_store_entry_get_output(const metrics_store_entry_t *entry,
                                      const char *label);
 
 /* Modifiers. */
+void metrics_store_entry_reset(metrics_store_entry_t *entry);
 void metrics_store_entry_update(metrics_store_entry_t *entry,
                                 const int64_t value);
 

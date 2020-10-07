@@ -30,6 +30,7 @@ metrics_store_t *metrics_store_new(const metrics_store_type_t type,
 char *metrics_store_get_output(const metrics_store_t *store);
 
 /* Modifiers. */
+void metrics_store_reset(metrics_store_t *store, const unsigned int key);
 void metrics_store_update(metrics_store_t *store, const unsigned int key,
                           const int64_t n);
 

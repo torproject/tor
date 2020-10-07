@@ -232,3 +232,30 @@ metrics_hs_update(const ed25519_public_key_t *ident_key,
   }
   metrics_store_update(store->store, key, n);
 }
+
+/** Reset the onion service metric key data for the store indexed at the given
+ * identity key and possibly port. */
+void
+metrics_hs_reset(const ed25519_public_key_t *ident_key,
+                 const unsigned int key, const uint16_t port)
+{
+  hs_metrics_store_t *store = NULL;
+
+  if (port != 0) {
+    smartlist_t *list =
+      digest256map_get(store_list_per_hs_addr_port, ident_key->pubkey);
+    SMARTLIST_FOREACH_BEGIN(list, hs_metrics_store_t *, s) {
+      if (s->port == port) {
+        store = s;
+        break;
+      }
+    } SMARTLIST_FOREACH_END(s);
+  } else {
+    store = digest256map_get(store_per_hs_addr, ident_key->pubkey);
+  }
+
+  if (store == NULL) {
+    return;
+  }
+  metrics_store_reset(store->store, key);
+}

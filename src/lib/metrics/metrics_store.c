@@ -146,3 +146,20 @@ metrics_store_update(metrics_store_t *store, const unsigned int key,
   tor_assert(store->entries[key]->key == key);
   metrics_store_entry_update(store->entries[key], n);
 }
+
+/** Reset metrics for the given key in the given store. This basically sets
+ * its metrics data to 0 as for example set a counter to 0. */
+void
+metrics_store_reset(metrics_store_t *store, const unsigned int key)
+{
+  tor_assert(store);
+
+  /* Safeguard. */
+  if (BUG(key > store->num_entries)) {
+    return;
+  }
+
+  /* Safety. This should always be true. */
+  tor_assert(store->entries[key]->key == key);
+  metrics_store_entry_reset(store->entries[key]);
+}

@@ -8,6 +8,8 @@
 
 #define METRICS_STORE_ENTRY_PRIVATE
 
+#include <string.h>
+
 #include "orconfig.h"
 
 #include "lib/container/smartlist.h"
@@ -62,6 +64,15 @@ metrics_store_entry_update(metrics_store_entry_t *entry, const int64_t value)
     entry->u.gauge.value += value;
     break;
   }
+}
+
+/** Reset a store entry that is set its metric data to 0. */
+void
+metrics_store_entry_reset(metrics_store_entry_t *entry)
+{
+  tor_assert(entry);
+  /* Everything back to 0. */
+  memset(&entry->u, 0, sizeof(entry->u));
 }
 
 /** Return newly allocated string containing the ouput of the given entry.
