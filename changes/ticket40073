@@ -1,0 +1,3 @@
+  o Minor bugfixes (relay configuration, crash):
+    - Avoid a fatal assert() when failing to create a listener connection for an
+      address that was in use. Fixes bug 40073; bugfix on 0.3.5.1-alpha.
