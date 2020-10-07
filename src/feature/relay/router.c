@@ -2607,6 +2607,10 @@ check_descriptor_bandwidth_changed(time_t now)
   }
 }
 
+// This function can be "noreturn" if relay mode is disabled and
+// ALL_BUGS_ARE_FATAL is set.
+DISABLE_GCC_WARNING("-Wmissing-noreturn")
+
 /** Note at log level severity that our best guess of address has changed from
  * <b>prev</b> to <b>cur</b>. */
 void
@@ -2636,6 +2640,7 @@ log_addr_has_changed(int severity,
              "Guessed our IP address as %s (source: %s).",
              addrbuf_cur, source);
 }
+ENABLE_GCC_WARNING("-Wmissing-noreturn")
 
 /** Check whether our own address has changed versus the one we have in our
  * current descriptor.
