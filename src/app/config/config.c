@@ -809,9 +809,6 @@ static int normalize_nickname_list(config_line_t **normalized_out,
                                    char **msg);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
-static int parse_ports(or_options_t *options, int validate_only,
-                              char **msg_out, int *n_ports_out,
-                              int *world_writable_control_socket);
 static int check_server_ports(const smartlist_t *ports,
                               const or_options_t *options,
                               int *num_low_ports_out);
@@ -7375,7 +7372,7 @@ count_real_listeners(const smartlist_t *ports, int listenertype,
  * If <b>validate_only</b> is false, set configured_client_ports to the
  * new list of ports parsed from <b>options</b>.
  **/
-static int
+STATIC int
 parse_ports(or_options_t *options, int validate_only,
             char **msg, int *n_ports_out,
             int *world_writable_control_socket)
