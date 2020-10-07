@@ -616,7 +616,8 @@ test_conn_download_status(void *arg)
   connection_t *ap_conn = NULL;
 
   const struct testcase_t *tc = arg;
-  consensus_flavor_t usable_flavor = (consensus_flavor_t)tc->setup_data;
+  consensus_flavor_t usable_flavor =
+    networkstatus_parse_flavor_name((const char*) tc->setup_data);
 
   /* The "other flavor" trick only works if there are two flavors */
   tor_assert(N_CONSENSUS_FLAVORS == 2);
@@ -985,17 +986,17 @@ struct testcase_t connection_tests[] = {
   CONNECTION_TESTCASE(get_rend,  TT_FORK, test_conn_get_rend_st),
   CONNECTION_TESTCASE(get_rsrc,  TT_FORK, test_conn_get_rsrc_st),
 
-  CONNECTION_TESTCASE_ARG(download_status,       TT_FORK,
-                          test_conn_download_status_st, FLAV_MICRODESC),
-  CONNECTION_TESTCASE_ARG(download_status,       TT_FORK,
-                          test_conn_download_status_st, FLAV_NS),
+  CONNECTION_TESTCASE_ARG(download_status,  TT_FORK,
+                          test_conn_download_status_st, "microdesc"),
+  CONNECTION_TESTCASE_ARG(download_status,  TT_FORK,
+                          test_conn_download_status_st, "ns"),
 
   CONNECTION_TESTCASE_ARG(https_proxy_connect,   TT_FORK,
                           test_conn_proxy_connect_st, &PROXY_CONNECT_ARG),
   CONNECTION_TESTCASE_ARG(haproxy_proxy_connect, TT_FORK,
                           test_conn_proxy_connect_st, &PROXY_HAPROXY_ARG),
 
-//CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
+  //CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
   { "failed_orconn_tracker", test_failed_orconn_tracker, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
