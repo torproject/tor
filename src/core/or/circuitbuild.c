@@ -707,6 +707,8 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
     goto error;
   }
 
+  tor_assert_nonfatal_once(circ->n_chan->is_canonical);
+
   memset(&cell, 0, sizeof(cell_t));
   r = relayed ? create_cell_format_relayed(&cell, create_cell)
               : create_cell_format(&cell, create_cell);
