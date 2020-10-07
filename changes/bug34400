@@ -1,0 +1,5 @@
+  o Minor bugfixes (v2 onion services):
+    - For HSFETCH commands on v2 onion services addresses, check the length of
+      bytes decoded, not the base32 length. This takes the behavior introduced
+      in commit a517daa56f5848d25ba79617a1a7b82ed2b0a7c0 into consideration.
+      Fixes bug 34400; bugfix on 0.4.1.1-alpha. Patch by Neel Chauhan.
