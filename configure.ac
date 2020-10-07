@@ -24,6 +24,11 @@ AC_DEFINE(APPROX_RELEASE_DATE, ["2020-06-09"], # for 0.4.5.0-alpha-dev
 # "subdir-objects" means put .o files in the same directory as the .c files
 AM_INIT_AUTOMAKE([foreign 1.11 subdir-objects -Wall -Werror])
 
+tor_ac_n_warnings=0
+tor_incr_n_warnings() {
+  tor_ac_n_warnings=`expr $tor_ac_n_warnings + 1`
+}
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
 
@@ -432,6 +437,7 @@ AC_SUBST([PYTHON], [$tor_cv_PYTHON])
 PYTHON="$tor_cv_PYTHON"
 
 if test "x$PYTHON" = "x"; then
+  tor_incr_n_warnings
   AC_MSG_WARN([Python 3 unavailable; some tests will not be run.])
 fi
 
@@ -1044,8 +1050,6 @@ TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI $TOR_LIB_WS
     [if (getenv("THIS_SHOULDNT_BE_SET_X201803")) SSL_CIPHER_get_id((void *)0);], [],
     [/usr/local/opt/openssl /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /opt/openssl])
 
-dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
-
 if test "$enable_static_openssl" = "yes"; then
    if test "$tor_cv_library_openssl_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-openssl-dir=x option when using --enable-static-openssl")
@@ -1057,7 +1061,7 @@ else
 fi
 AC_SUBST(TOR_OPENSSL_LIBS)
 
-dnl Now check for particular openssl functions.
+dnl Now validate openssl, and check for particular openssl functions.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
 save_CPPFLAGS="$CPPFLAGS"
@@ -1086,6 +1090,28 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    ]], [[]])],
    [ : ],
    [ AC_MSG_ERROR([OpenSSL is built without full ECC support, including curves P256 and P224. You can specify a path to one with ECC support with --with-openssl-dir.]) ])
+
+dnl Let's see if we have a version mismatch between includes and libs.
+AC_MSG_CHECKING([for significant mismatch between openssl headers and libraries])
+ac_retval=foo
+AC_RUN_IFELSE([AC_LANG_SOURCE([AC_LANG_PROGRAM([[
+ #include <openssl/opensslv.h>
+ #include <openssl/crypto.h>
+]], [[
+  /* Include major, minor, and fix, but not patch or status. */
+  unsigned long mask = 0xfffff000;
+  unsigned long linking = OpenSSL_version_num() & mask;
+  unsigned long running = OPENSSL_VERSION_NUMBER & mask;
+  return !(linking==running);
+]])])], [openssl_ver_mismatch=no], [
+   # This is a kludge to figure out whether compilation failed, or whether
+   # running the program failed.
+   if test "$ac_retval" == "1"; then
+      openssl_ver_mismatch=inconclusive
+   else
+      openssl_ver_mismatch=yes
+   fi], [openssl_ver_mismatch=cross])
+AC_MSG_RESULT([$openssl_ver_mismatch])
 
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
@@ -1209,6 +1235,7 @@ else
                       have_lzma=no)
 
     if test "x$have_lzma" = "xno" ; then
+        tor_incr_n_warnings
         AC_MSG_WARN([Unable to find liblzma, $pkg_config_user_action, or set LZMA_CFLAGS and LZMA_LIBS.])
     fi
 fi
@@ -1241,6 +1268,7 @@ else
                       have_zstd=no)
 
     if test "x$have_zstd" = "xno" ; then
+        tor_incr_n_warnings
         AC_MSG_WARN([Unable to find libzstd, $pkg_config_user_action, or set ZSTD_CFLAGS and ZSTD_LIBS.])
     fi
 fi
@@ -1345,6 +1373,7 @@ fi
 if test "$fragile_hardening" = "yes"; then
     TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, also_link, CFLAGS_FTRAPV="-ftrapv", true)
    if test "$tor_cv_cflags__ftrapv" = "yes" && test "$tor_can_link__ftrapv" != "yes"; then
+      tor_incr_n_warnings
       AC_MSG_WARN([The compiler supports -ftrapv, but for some reason I was not able to link with -ftrapv. Are you missing run-time support? Run-time hardening will not work as well as it should.])
    fi
 
@@ -1885,6 +1914,7 @@ void try_atomic_init(struct x *xx)
 if test "$tor_cv_stdatomic_works" = "yes"; then
    AC_DEFINE(STDATOMIC_WORKS, 1, [Set to 1 if we can compile a simple stdatomic example.])
 elif test "$ac_cv_header_stdatomic_h" = "yes"; then
+   tor_incr_n_warnings
    AC_MSG_WARN([Your compiler provides the stdatomic.h header, but it doesn't seem to work.  I'll pretend it isn't there. If you are using Clang on Debian, maybe this is because of https://bugs.debian.org/903709 ])
 fi
 
@@ -2068,6 +2098,7 @@ AS_CASE([$malloc],
   ],
 
   [openbsd], [
+    tor_incr_n_warnings
     AC_MSG_WARN([The openbsd malloc port is deprecated in Tor 0.3.5 and will be removed in a future version.])
     enable_openbsd_malloc=yes
   ],
@@ -2596,6 +2627,7 @@ TOR_TRY_COMPILE_WITH_CFLAGS([@warning_flags], [],
 if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then
    case "$host_os" in
     darwin*)
+      tor_incr_n_warnings
       AC_MSG_WARN([Tried to enable coverage on OSX without using the clang compiler. This might not work! If coverage fails, use CC=clang when configuring with --enable-coverage.])
    esac
 fi
@@ -2633,6 +2665,7 @@ if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then
 fi
 
 if test "$fragile_hardening" = "yes"; then
+  tor_incr_n_warnings
   AC_MSG_WARN([
 
 ============
@@ -2648,6 +2681,20 @@ https://gitlab.torproject.org/tpo/core/team/-/wikis/TorFragileHardening
 fi
 
 AC_OUTPUT
+
+if test "$openssl_ver_mismatch" = "yes"; then
+   tor_incr_n_warnings
+   AC_MSG_WARN([
+============
+Warning! The version OpenSSL headers we get from compiling with
+    "${TOR_CPPFLAGS_OPENSSL:-(no extra options)}"
+do not match version of the OpenSSL library we get when linking with
+    "$TOR_LDFLAGS_OPENSSL $TOR_OPENSSL_LIBS".
+This might cause compilation to fail. Try using --with-openssl-dir to specify
+the exact OpenSSL path you want.
+============
+])
+fi
 
 #
 # Mini-report on what will be built.
@@ -2798,3 +2845,10 @@ PPRINT_PROP_STRING([Man Pages], [$report_mandir])
 
 AS_ECHO
 AS_ECHO(["Configure Line: ./configure $configure_flags"])
+
+if test "$tor_ac_n_warnings" != "0"; then
+  AS_ECHO
+  PPRINT_WARN([
+Encountered $tor_ac_n_warnings warning(s). See messages above for more info.
+  ])
+fi
