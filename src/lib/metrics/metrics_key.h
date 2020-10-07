@@ -27,6 +27,10 @@ typedef enum {
   METRICS_HS_NUM_RDV,
   /** Number of established introducton points. */
   METRICS_HS_NUM_ESTABLISHED_INTRO,
+  /** Number of descriptor upload attempt to directory. */
+  METRICS_HS_NUM_DESC_UPLOAD_ATTEMPTED,
+  /** Number of descriptor upload succeeded to directory. */
+  METRICS_HS_NUM_DESC_UPLOAD_SUCCEEDED,
 } metrics_hs_addr_key_t;
 
 #endif /* !defined(TOR_LIB_METRICS_METRICS_KEY_H) */

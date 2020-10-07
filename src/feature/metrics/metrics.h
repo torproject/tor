@@ -58,6 +58,19 @@ void metrics_hs_reset(const ed25519_public_key_t *ident_key,
  * INTRO_ESTABLISHED circuit is marked for close. */
 #define metrics_hs_established_intro_dec(ident_key) \
   metrics_hs_update(ident_key, METRICS_HS_NUM_ESTABLISHED_INTRO, 0, 1)
+/** Descriptor upload attempt and success. Also reset helpers since this
+ * metrics is a gauge, not a counter so they are all reset when it is time to
+ * upload again our descriptors. */
+#define metrics_hs_upload_desc_attempted(ident_key) \
+  metrics_hs_update(ident_key, METRICS_HS_NUM_DESC_UPLOAD_ATTEMPTED, 0, 1)
+#define metrics_hs_upload_desc_succeeded(ident_key) \
+  metrics_hs_update(ident_key, METRICS_HS_NUM_DESC_UPLOAD_SUCCEEDED, 0, 1)
+#define metrics_hs_upload_desc_attempted_reset(ident_key, n) \
+  metrics_hs_update(ident_key, METRICS_HS_NUM_DESC_UPLOAD_ATTEMPTED, 0, \
+                    (n * -1))
+#define metrics_hs_upload_desc_succeeded_reset(ident_key, n) \
+  metrics_hs_update(ident_key, METRICS_HS_NUM_DESC_UPLOAD_SUCCEEDED, 0, \
+                    (n * -1))
 
 /* Per address + port metric helpers. */
 

@@ -41,6 +41,18 @@ const metrics_entry_model_t hs_addr_metrics_model[] =
     .name = "hs_intro_established_count",
     .help = "Total number of established introduction circuit",
   },
+  {
+    .key = METRICS_HS_NUM_DESC_UPLOAD_ATTEMPTED, /* Index */
+    .type = METRICS_TYPE_GAUGE,
+    .name = "hs_desc_upload_attempted_count",
+    .help = "Number of descriptor upload attempted to HS directories",
+  },
+  {
+    .key = METRICS_HS_NUM_DESC_UPLOAD_SUCCEEDED, /* Index */
+    .type = METRICS_TYPE_GAUGE,
+    .name = "hs_desc_upload_succeeded_count",
+    .help = "Number of descriptor upload succeeded to HS directories",
+  },
 };
 const size_t hs_addr_metrics_model_size =
   ARRAY_LENGTH(hs_addr_metrics_model);

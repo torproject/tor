@@ -34,6 +34,7 @@
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_control.h"
+#include "feature/hs/hs_service.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/dirlist.h"
@@ -2965,7 +2966,7 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
   case 200:
     log_info(LD_REND, "Uploading hidden service descriptor: "
                       "finished with status 200 (%s)", escaped(reason));
-    hs_control_desc_event_uploaded(conn->hs_ident, conn->identity_digest);
+    hs_service_desc_uploaded_success(conn);
     break;
   case 400:
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
@@ -2973,8 +2974,7 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
            "status 400 (%s) response from dirserver "
            "%s. Malformed hidden service descriptor?",
            escaped(reason), connection_describe_peer(TO_CONN(conn)));
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "UPLOAD_REJECTED");
+    hs_service_desc_uploaded_failed(conn, "UPLOAD_REJECTED");
     break;
   default:
     log_warn(LD_REND, "Uploading hidden service descriptor: http "
@@ -2982,8 +2982,7 @@ handle_response_upload_hsdesc(dir_connection_t *conn,
                       "%s').",
              status_code, escaped(reason),
              connection_describe_peer(TO_CONN(conn)));
-    hs_control_desc_event_failed(conn->hs_ident, conn->identity_digest,
-                                 "UNEXPECTED");
+    hs_service_desc_uploaded_failed(conn, "UNEXPECTED");
     break;
   }
 

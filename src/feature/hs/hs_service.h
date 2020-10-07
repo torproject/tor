@@ -164,6 +164,13 @@ typedef struct hs_service_descriptor_t {
    *  is different from this list, this means we received new dirinfo and we
    *  need to reupload our descriptor. */
   smartlist_t *previous_hsdirs;
+
+  /** Mutable: Counter of initiated attempt to upload to a directory. It is
+   * reset to 0 if we attempt to re-upload it to the directories. */
+  unsigned int upload_attempt;
+  /** Mutable: Counter of successful directory upload. It is reset to 0 if we
+   * attempt to re-upload it to the directories. */
+  unsigned int upload_success;
 } hs_service_descriptor_t;
 
 /** Service key material. */
@@ -375,6 +382,10 @@ hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 void hs_service_dump_stats(int severity);
 void hs_service_circuit_cleanup_on_close(const circuit_t *circ);
+
+void hs_service_desc_uploaded_success(const dir_connection_t *dir_conn);
+void hs_service_desc_uploaded_failed(const dir_connection_t *dir_conn,
+                                     const char *reason);
 
 #ifdef HS_SERVICE_PRIVATE
 

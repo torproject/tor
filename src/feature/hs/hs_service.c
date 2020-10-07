@@ -610,6 +610,25 @@ service_desc_find_by_intro(const hs_service_t *service,
   return descp;
 }
 
+/** For a given service and blinded public key, return the corresponding
+ * descriptor. NULL is returned if not found. */
+static hs_service_descriptor_t *
+service_desc_find_by_blinded_key(const hs_service_t *service,
+                                 const ed25519_public_key_t *blinded_pk)
+{
+  tor_assert(service);
+  tor_assert(blinded_pk);
+
+  /* Go over descriptors and trigger the events for the right one. */
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    if (ed25519_pubkey_eq(blinded_pk, &desc->blinded_kp.pubkey)) {
+      return desc;
+    }
+  } FOR_EACH_DESCRIPTOR_END;
+
+  return NULL;
+}
+
 /** From a circuit identifier, get all the possible objects associated with the
  * ident. If not NULL, service, ip or desc are set if the object can be found.
  * They are untouched if they can't be found.
@@ -2257,7 +2276,8 @@ service_desc_clear_previous_hsdirs(hs_service_descriptor_t *desc)
 
 /** Note that we attempted to upload <b>desc</b> to <b>hsdir</b>. */
 static void
-service_desc_note_upload(hs_service_descriptor_t *desc, const node_t *hsdir)
+service_desc_note_upload(const hs_service_t *service,
+                         hs_service_descriptor_t *desc, const node_t *hsdir)
 {
   char b64_digest[BASE64_DIGEST_LEN+1] = {0};
   digest_to_base64(b64_digest, hsdir->identity);
@@ -2265,6 +2285,10 @@ service_desc_note_upload(hs_service_descriptor_t *desc, const node_t *hsdir)
   if (BUG(!desc->previous_hsdirs)) {
     return;
   }
+
+  /* Update metrics. */
+  desc->upload_attempt++;
+  metrics_hs_upload_desc_attempted(&service->keys.identity_pk);
 
   if (!smartlist_contains_string(desc->previous_hsdirs, b64_digest)) {
     smartlist_add_strdup(desc->previous_hsdirs, b64_digest);
@@ -2563,6 +2587,13 @@ static void
 rotate_service_descriptors(hs_service_t *service)
 {
   if (service->desc_current) {
+    /* Reset metrics for that descriptor. The state needs to reflect that we
+     * do not rely on this descriptor anymore and thus not considered
+     * successfully uploaded. */
+    metrics_hs_upload_desc_attempted_reset(&service->keys.identity_pk,
+                           service->desc_current->upload_attempt);
+    metrics_hs_upload_desc_succeeded_reset(&service->keys.identity_pk,
+                           service->desc_current->upload_success);
     /* Close all IP circuits for the descriptor. */
     close_intro_circuits(&service->desc_current->intro_points);
     /* We don't need this one anymore, we won't serve any clients coming with
@@ -2874,7 +2905,7 @@ upload_descriptor_to_hsdir(const hs_service_t *service,
                                 &desc->blinded_kp.pubkey, hsdir->rs);
 
   /* Add this node to previous_hsdirs list */
-  service_desc_note_upload(desc, hsdir);
+  service_desc_note_upload(service, desc, hsdir);
 
   /* Logging so we know where it was sent. */
   {
@@ -2998,6 +3029,14 @@ upload_descriptor_to_all(const hs_service_t *service,
    * before the first one leading to a 400 malformed descriptor response from
    * the directory. Closing all pending requests avoids that. */
   close_directory_connections(service, desc);
+
+  /* About to attempt to upload a descriptor so decrement the attempted upload
+   * metrics of the count we had last time so we start back to 0 the data for
+   * this descriptor. */
+  metrics_hs_upload_desc_attempted_reset(&service->keys.identity_pk,
+                                         desc->upload_attempt);
+  metrics_hs_upload_desc_succeeded_reset(&service->keys.identity_pk,
+                                         desc->upload_success);
 
   /* Get our list of responsible HSDir. */
   responsible_dirs = smartlist_new();
@@ -3593,6 +3632,56 @@ service_encode_descriptor(const hs_service_t *service,
 /* ========== */
 /* Public API */
 /* ========== */
+
+/** Called when a descriptor failed to be uploaded on the given directory
+ * connection.
+ *
+ * Emit control port event and update descriptor stats. */
+void
+hs_service_desc_uploaded_failed(const dir_connection_t *dir_conn,
+                                const char *reason)
+{
+  tor_assert(dir_conn);
+
+  /* Emit control port event regardless of if we can find the service or
+   * descriptor. Better to inform that we received something. */
+  hs_control_desc_event_failed(dir_conn->hs_ident, dir_conn->identity_digest,
+                               reason);
+}
+
+/** Called when a descriptor was successfully uploaded on the given directory
+ * connection.
+ *
+ * Emit control port event, update descriptor stats and metrics. */
+void
+hs_service_desc_uploaded_success(const dir_connection_t *dir_conn)
+{
+  const hs_service_t *service;
+  hs_service_descriptor_t *desc;
+
+  tor_assert(dir_conn);
+
+  /* Emit control port event regardless of if we can find the service or
+   * descriptor. Better to inform that we received something. */
+  hs_control_desc_event_uploaded(dir_conn->hs_ident,
+                                 dir_conn->identity_digest);
+
+  service = find_service(hs_service_map, &dir_conn->hs_ident->identity_pk);
+  if (service == NULL) {
+    return;
+  }
+  desc = service_desc_find_by_blinded_key(service,
+                                          &dir_conn->hs_ident->blinded_pk);
+  if (desc == NULL) {
+    return;
+  }
+
+  /* Update counter so we can properly update metrics data later. */
+  desc->upload_success++;
+
+  /* Update metrics. */
+  metrics_hs_upload_desc_succeeded(&dir_conn->hs_ident->identity_pk);
+}
 
 /** Called when a circuit was just cleaned up. This is done right before the
  * circuit is marked for close. */
