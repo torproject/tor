@@ -35,6 +35,12 @@ const metrics_entry_model_t hs_addr_metrics_model[] =
     .name = "hs_rdv_num_total",
     .help = "Total number of rendezvous circuit created",
   },
+  {
+    .key = METRICS_HS_NUM_ESTABLISHED_INTRO, /* Index */
+    .type = METRICS_TYPE_GAUGE,
+    .name = "hs_intro_established_count",
+    .help = "Total number of established introduction circuit",
+  },
 };
 const size_t hs_addr_metrics_model_size =
   ARRAY_LENGTH(hs_addr_metrics_model);

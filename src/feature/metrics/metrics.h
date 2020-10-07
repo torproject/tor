@@ -50,6 +50,14 @@ void metrics_hs_reset(const ed25519_public_key_t *ident_key,
 /** New rendezvous circuit being launched. */
 #define metrics_hs_new_rdv(ident_key) \
   metrics_hs_update(ident_key, METRICS_HS_NUM_RDV, 0, 1)
+/** New introduction circuit has been established. This is called when the
+ * INTRO_ESTABLISHED has been received by the service. */
+#define metrics_hs_established_intro_inc(ident_key) \
+  metrics_hs_update(ident_key, METRICS_HS_NUM_ESTABLISHED_INTRO, 0, 1)
+/** Established introduction circuit closes. This is called when
+ * INTRO_ESTABLISHED circuit is marked for close. */
+#define metrics_hs_established_intro_dec(ident_key) \
+  metrics_hs_update(ident_key, METRICS_HS_NUM_ESTABLISHED_INTRO, 0, 1)
 
 /* Per address + port metric helpers. */
 
