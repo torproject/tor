@@ -540,6 +540,51 @@ bridge_get_advertised_bandwidth_bounded(routerinfo_t *router)
   return result;
 }
 
+/**
+ * We have found an instance of bug 32868: log our best guess about where the
+ * routerstatus was found.
+ **/
+static void
+log_buggy_rs_source(const routerstatus_t *rs)
+{
+  static ratelim_t buggy_rs_ratelim = RATELIM_INIT(1200);
+  char *m;
+  if ((m = rate_limit_log(&buggy_rs_ratelim, approx_time()))) {
+    log_warn(LD_BUG,
+             "Found a routerstatus %p with has_guardfraction=%u "
+             " and guardfraction_percentage=%u, but is_possible_guard=%u.%s",
+             rs,
+             rs->has_guardfraction,
+             rs->guardfraction_percentage,
+             rs->is_possible_guard,
+             m);
+    tor_free(m);
+    networkstatus_t *ns;
+    int in_ns_count = 0;
+    if ((ns = networkstatus_get_latest_consensus_by_flavor(FLAV_NS))) {
+      int pos = smartlist_pos(ns->routerstatus_list, rs);
+      if (pos >= 0) {
+        ++in_ns_count;
+        log_warn(LD_BUG, "Found the routerstatus at position %d of the "
+                 "NS consensus.", pos);
+      }
+    }
+    if ((ns = networkstatus_get_latest_consensus_by_flavor(FLAV_MICRODESC))) {
+      int pos = smartlist_pos(ns->routerstatus_list, rs);
+      if (pos >= 0) {
+        ++in_ns_count;
+        log_warn(LD_BUG, "Found the routerstatus at position %d of the "
+                 "MD consensus.", pos);
+      }
+    }
+    if (in_ns_count == 0) {
+      log_warn(LD_BUG, "Could not find the routerstatus in any "
+               "latest consensus.");
+    }
+    tor_assert_nonfatal_unreached();
+  }
+}
+
 /** Given a list of routers and a weighting rule as in
  * smartlist_choose_node_by_bandwidth_weights, compute weighted bandwidth
  * values for each node and store them in a freshly allocated
@@ -715,10 +760,11 @@ compute_weighted_bandwidths(const smartlist_t *sl,
      *    choose N proportionally to F*Wpf*B + (1-F)*Wpn*B.
      */
     if (node->rs && node->rs->has_guardfraction && rule != WEIGHT_FOR_GUARD) {
-      /* XXX The assert should actually check for is_guard. However,
-       * that crashes dirauths because of #13297. This should be
-       * equivalent: */
-      tor_assert(node->rs->is_possible_guard);
+      /* We should only have guardfraction set if the node has the Guard
+         flag. */
+      if (! node->rs->is_possible_guard) {
+        log_buggy_rs_source(node->rs);
+      }
 
       guard_get_guardfraction_bandwidth(&guardfraction_bw,
                                         this_bw,
