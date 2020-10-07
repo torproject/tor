@@ -494,6 +494,10 @@ connection_ext_or_handle_cmd_useraddr(connection_t *conn,
   }
   conn->address = tor_addr_to_str_dup(&addr);
 
+  /* Now that we know the address, we don't have to manually override rate
+   * limiting. */
+  conn->always_rate_limit_as_remote = 0;
+
   return 0;
 }
 
