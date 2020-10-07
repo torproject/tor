@@ -1430,7 +1430,7 @@ handle_control_hsfetch(control_connection_t *conn,
              rend_valid_descriptor_id(arg1 + v2_str_len) &&
              base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
                            REND_DESC_ID_V2_LEN_BASE32) ==
-                REND_DESC_ID_V2_LEN_BASE32) {
+                sizeof(digest)) {
     /* We have a well formed version 2 descriptor ID. Keep the decoded value
      * of the id. */
     desc_id = digest;
