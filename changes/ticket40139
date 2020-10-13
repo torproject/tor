@@ -1,0 +1,7 @@
+  o Removed features (network parameters):
+     - The "optimistic data" feature is now always on; there is no longer an
+       option to disable it from the torrc file or from the consensus
+       directory.
+       Closes part of 40139.
+     - The "usecreatefast" network parameter is now removed; there is no
+       longer an option for authorities to turn it off. Closes part of 40139.
