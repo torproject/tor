@@ -85,7 +85,3 @@ SEE ALSO
 **tor**(1) +
 
 See also the "dir-spec.txt" file, distributed with Tor.
-
-AUTHORS
--------
-Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.

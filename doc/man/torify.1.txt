@@ -34,7 +34,3 @@ different circuits.
 SEE ALSO
 --------
 **tor**(1), **torsocks**(1)
-
-AUTHORS
--------
-Peter Palfrader and Jacob Appelbaum wrote this manual.

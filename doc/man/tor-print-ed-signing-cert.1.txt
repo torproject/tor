@@ -32,7 +32,3 @@ SEE ALSO
 **tor**(1) +
 
 https://spec.torproject.org/cert-spec
-
-AUTHORS
--------
-Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.
