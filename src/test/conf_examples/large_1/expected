@@ -3,7 +3,6 @@ AccountingRule sum
 AccountingStart day 05:15
 Address 128.66.8.8
 AllowNonRFC953Hostnames 1
-AndroidIdentityTag droidy
 AutomapHostsOnResolve 1
 AutomapHostsSuffixes .onions
 AvoidDiskWrites 1

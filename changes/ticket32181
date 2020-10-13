@@ -1,0 +1,4 @@
+  o Removed features:
+    - We no longer ship support for the Android logging API. Modern
+      versions of Android can use the syslog API instead.
+      Closes ticket 32181.

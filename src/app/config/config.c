@@ -548,7 +548,7 @@ static const config_var_t option_vars_[] = {
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
   V(TruncateLogFile,             BOOL,     "0"),
   V_IMMUTABLE(SyslogIdentityTag, STRING,   NULL),
-  V_IMMUTABLE(AndroidIdentityTag,STRING,   NULL),
+  OBSOLETE("AndroidIdentityTag"),
   V(LongLivedPorts,              CSV,
         "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
@@ -4935,15 +4935,19 @@ options_init_logs(const or_options_t *old_options, const or_options_t *options,
         goto cleanup;
       }
 
+      /* We added this workaround in 0.4.5.x; we can remove it in 0.4.6 or
+       * later */
       if (!strcasecmp(smartlist_get(elts, 0), "android")) {
-#ifdef HAVE_ANDROID_LOG_H
+#ifdef HAVE_SYSLOG_H
+        log_warn(LD_CONFIG, "The android logging API is no longer supported;"
+                            " adding a syslog instead. The 'android' logging "
+                            " type will no longer work in the future.");
         if (!validate_only) {
-          add_android_log(severity, options->AndroidIdentityTag);
+          add_syslog_log(severity, options->SyslogIdentityTag);
         }
 #else
-        log_warn(LD_CONFIG, "Android logging is not supported"
-                            " on this system. Sorry.");
-#endif /* defined(HAVE_ANDROID_LOG_H) */
+        log_warn(LD_CONFIG, "The android logging API is no longer supported.");
+#endif
         goto cleanup;
       }
     }
