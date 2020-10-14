@@ -79,8 +79,8 @@ get_store_output(const metrics_store_t *store)
 metrics_store_t *
 metrics_store_new(const metrics_store_type_t type, const char *label)
 {
-  const metrics_entry_model_t *model;
-  size_t model_size;
+  const metrics_entry_model_t *model = NULL;
+  size_t model_size = 0;
   metrics_store_t *store = tor_malloc_zero(sizeof(*store));
 
   switch (type) {
@@ -97,6 +97,8 @@ metrics_store_new(const metrics_store_type_t type, const char *label)
      * stores allocation are never controlled by an untrusted source. */
     tor_assert_unreached();
   }
+  tor_assert(model);
+  tor_assert(model_size != 0);
 
   init_store(store, label, model, model_size);
 
