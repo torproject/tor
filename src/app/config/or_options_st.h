@@ -868,10 +868,6 @@ struct or_options_t {
    * once. */
   int MaxClientCircuitsPending;
 
-  /** If 1, we always send optimistic data when it's supported.  If 0, we
-   * never use it.  If -1, we do what the consensus says. */
-  int OptimisticData;
-
   /** If 1, we accept and launch no external network connections, except on
    * control ports. */
   int DisableNetwork;

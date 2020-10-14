@@ -770,27 +770,15 @@ circuit_deliver_create_cell,(circuit_t *circ,
   return -1;
 }
 
-/** Return true iff we should send a create_fast cell to start building a given
- * circuit */
-static inline int
+/** Return true iff we should send a create_fast cell to start building a
+ * given circuit */
+static inline bool
 should_use_create_fast_for_circuit(origin_circuit_t *circ)
 {
-  const or_options_t *options = get_options();
   tor_assert(circ->cpath);
   tor_assert(circ->cpath->extend_info);
 
-  if (!circuit_has_usable_onion_key(circ)) {
-    /* We don't have ntor, and we don't have or can't use TAP,
-     * so our hand is forced: only a create_fast will work. */
-    return 1;
-  }
-  if (public_server_mode(options)) {
-    /* We're a server, and we have a usable onion key. We can choose.
-     * Prefer to blend our circuit into the other circuits we are
-     * creating on behalf of others. */
-    return 0;
-  }
-  return networkstatus_get_param(NULL, "usecreatefast", 0, 0, 1);
+  return ! circuit_has_usable_onion_key(circ);
 }
 
 /**

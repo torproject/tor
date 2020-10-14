@@ -109,7 +109,6 @@ NumDirectoryGuards 4
 NumEntryGuards 5
 NumPrimaryGuards 8
 OfflineMasterKey 1
-OptimisticData 1
 ORPort 2222
 OutboundBindAddress 10.0.0.7
 OutboundBindAddressExit 10.0.0.8

@@ -2632,22 +2632,6 @@ cpath_is_on_circuit(origin_circuit_t *circ, crypt_path_t *crypt_path)
   return 0;
 }
 
-/** Return true iff client-side optimistic data is supported. */
-static int
-optimistic_data_enabled(void)
-{
-  const or_options_t *options = get_options();
-  if (options->OptimisticData < 0) {
-    /* Note: this default was 0 before #18815 was merged. We can't take the
-     * parameter out of the consensus until versions before that are all
-     * obsolete. */
-    const int32_t enabled =
-      networkstatus_get_param(NULL, "UseOptimisticData", /*default*/ 1, 0, 1);
-    return (int)enabled;
-  }
-  return options->OptimisticData;
-}
-
 /** Attach the AP stream <b>apconn</b> to circ's linked list of
  * p_streams. Also set apconn's cpath_layer to <b>cpath</b>, or to the last
  * hop in circ's cpath if <b>cpath</b> is NULL.
@@ -2700,11 +2684,10 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
     exitnode = node_get_by_id(cpath->extend_info->identity_digest);
 
   /* See if we can use optimistic data on this circuit */
-  if (optimistic_data_enabled() &&
-      (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
-       circ->base_.purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
-       circ->base_.purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
-       circ->base_.purpose == CIRCUIT_PURPOSE_C_REND_JOINED))
+  if (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+      circ->base_.purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
+      circ->base_.purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
+      circ->base_.purpose == CIRCUIT_PURPOSE_C_REND_JOINED)
     apconn->may_use_optimistic_data = 1;
   else
     apconn->may_use_optimistic_data = 0;

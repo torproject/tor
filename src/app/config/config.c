@@ -610,7 +610,7 @@ static const config_var_t option_vars_[] = {
   V(TestingAuthKeySlop,              INTERVAL, "3 hours"),
   V(TestingSigningKeySlop,           INTERVAL, "1 day"),
 
-  V(OptimisticData,              AUTOBOOL, "auto"),
+  OBSOLETE("OptimisticData"),
   OBSOLETE("PortForwarding"),
   OBSOLETE("PortForwardingHelper"),
   OBSOLETE("PreferTunneledDirConns"),
