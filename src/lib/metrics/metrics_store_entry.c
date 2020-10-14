@@ -56,14 +56,14 @@ metrics_store_entry_update(metrics_store_entry_t *entry, const int64_t value)
 
   switch (entry->type) {
   case METRICS_TYPE_COUNTER:
-    /* Counter type always increment. */
+    /* Counter can ONLY be positive. */
     if (BUG(value < 0)) {
       return;
     }
     entry->u.counter.value += value;
     break;
   case METRICS_TYPE_GAUGE:
-    /* Guage might go down or not. */
+    /* Gauge can increment or decrement. And can be positive or negative. */
     entry->u.gauge.value += value;
     break;
   }
