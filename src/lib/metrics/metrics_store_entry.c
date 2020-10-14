@@ -86,7 +86,7 @@ metrics_store_entry_get_output(const metrics_store_entry_t *entry,
                                const char *label)
 {
   uint64_t value;
-  char *label_formatted, *output = NULL;
+  char *label_formatted = NULL, *output = NULL;
   smartlist_t *lines;
 
   tor_assert(entry);
