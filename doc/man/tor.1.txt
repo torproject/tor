@@ -150,7 +150,7 @@ The following options in this section are only recognized on the
      +
     Use the **`--newpass`** option with **`--keygen`** only when you
     need to add, change, or remove a passphrase on an existing ed25519
-    master identity key. You will be prompted for the old passphase
+    master identity key. You will be prompted for the old passphrase
     (if any), and the new passphrase (if any).
 +
 [NOTE]
@@ -616,7 +616,7 @@ forward slash (/) in the configuration file and on the command line.
     **DirCache** fetches and serves all documents except extrainfo
     descriptors, **DownloadExtraInfo*** fetches extrainfo documents, and serves
     them if **DirCache** is on, and **UseMicrodescriptors** changes the
-    flavour of consensues and descriptors that is fetched and used for
+    flavour of consensuses and descriptors that is fetched and used for
     building circuits. (Default: 0)
 
 [[HardwareAccel]] **HardwareAccel** **0**|**1**::
@@ -1828,7 +1828,7 @@ The following options control when Tor enters and leaves dormant mode:
     this option only with great caution: it has the potential to
     create spurious traffic on the network.  This option should only
     be used if Tor is started by an affirmative user activity (like
-    clicking on an applcation or running a command), and not if Tor
+    clicking on an application or running a command), and not if Tor
     is launched for some other reason (for example, by a startup
     process, or by an application that launches itself on every login.)
 
