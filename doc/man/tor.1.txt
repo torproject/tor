@@ -616,7 +616,7 @@ forward slash (/) in the configuration file and on the command line.
     **DirCache** fetches and serves all documents except extrainfo
     descriptors, **DownloadExtraInfo*** fetches extrainfo documents, and serves
     them if **DirCache** is on, and **UseMicrodescriptors** changes the
-    flavour of consensuses and descriptors that is fetched and used for
+    flavor of consensuses and descriptors that is fetched and used for
     building circuits. (Default: 0)
 
 [[HardwareAccel]] **HardwareAccel** **0**|**1**::
