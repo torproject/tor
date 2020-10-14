@@ -39,53 +39,25 @@ test_protover_parse(void *arg)
   tt_int_op(smartlist_len(elts), OP_EQ, 4);
 
   const proto_entry_t *e;
-  const proto_range_t *r;
   e = smartlist_get(elts, 0);
   tt_str_op(e->name, OP_EQ, "Foo");
-  tt_int_op(smartlist_len(e->ranges), OP_EQ, 2);
-  {
-    r = smartlist_get(e->ranges, 0);
-    tt_int_op(r->low, OP_EQ, 1);
-    tt_int_op(r->high, OP_EQ, 1);
-
-    r = smartlist_get(e->ranges, 1);
-    tt_int_op(r->low, OP_EQ, 3);
-    tt_int_op(r->high, OP_EQ, 3);
-  }
+  tt_int_op(e->bitmask, OP_EQ, 0x0a);
 
   e = smartlist_get(elts, 1);
   tt_str_op(e->name, OP_EQ, "Bar");
-  tt_int_op(smartlist_len(e->ranges), OP_EQ, 1);
-  {
-    r = smartlist_get(e->ranges, 0);
-    tt_int_op(r->low, OP_EQ, 3);
-    tt_int_op(r->high, OP_EQ, 3);
-  }
+  tt_int_op(e->bitmask, OP_EQ, 0x08);
 
   e = smartlist_get(elts, 2);
   tt_str_op(e->name, OP_EQ, "Baz");
-  tt_int_op(smartlist_len(e->ranges), OP_EQ, 0);
+  tt_int_op(e->bitmask, OP_EQ, 0x00);
 
   e = smartlist_get(elts, 3);
   tt_str_op(e->name, OP_EQ, "Quux");
-  tt_int_op(smartlist_len(e->ranges), OP_EQ, 3);
-  {
-    r = smartlist_get(e->ranges, 0);
-    tt_int_op(r->low, OP_EQ, 9);
-    tt_int_op(r->high, OP_EQ, 12);
-
-    r = smartlist_get(e->ranges, 1);
-    tt_int_op(r->low, OP_EQ, 14);
-    tt_int_op(r->high, OP_EQ, 14);
-
-    r = smartlist_get(e->ranges, 2);
-    tt_int_op(r->low, OP_EQ, 15);
-    tt_int_op(r->high, OP_EQ, 16);
-  }
+  tt_int_op(e->bitmask, OP_EQ, 0x1de00);
 
   re_encoded = encode_protocol_list(elts);
   tt_assert(re_encoded);
-  tt_str_op(re_encoded, OP_EQ, orig);
+  tt_str_op(re_encoded, OP_EQ, "Foo=1,3 Bar=3 Baz= Quux=9-12,14-16");
 
  done:
   if (elts)

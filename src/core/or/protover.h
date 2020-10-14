@@ -86,13 +86,6 @@ int protocol_list_supports_protocol_or_later(const char *list,
 void protover_free_all(void);
 
 #ifdef PROTOVER_PRIVATE
-/** Represents a range of subprotocols of a given type. All subprotocols
- * between <b>low</b> and <b>high</b> inclusive are included. */
-typedef struct proto_range_t {
-  uint32_t low;
-  uint32_t high;
-} proto_range_t;
-
 /** Represents a set of ranges of subprotocols of a given type. */
 typedef struct proto_entry_t {
   /** The name of the protocol.
@@ -101,8 +94,9 @@ typedef struct proto_entry_t {
    * we don't recognize yet, so it's a char* rather than a protocol_type_t.)
    */
   char *name;
-  /** Smartlist of proto_range_t */
-  struct smartlist_t *ranges;
+  /** Bitmask of supported protocols.  Version 'x' is included in this
+   * entry if and only if bit '1<<x' is set here. */
+  uint64_t bitmask;
 } proto_entry_t;
 
 #if !defined(HAVE_RUST) && defined(TOR_UNIT_TESTS)
