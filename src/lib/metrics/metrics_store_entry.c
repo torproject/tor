@@ -87,10 +87,11 @@ metrics_store_entry_get_output(const metrics_store_entry_t *entry,
 {
   uint64_t value;
   char *label_formatted, *output = NULL;
-  smartlist_t *lines = smartlist_new();
+  smartlist_t *lines;
 
   tor_assert(entry);
 
+  lines = smartlist_new();
   value = metrics_store_entry_get_value(entry);
 
   if (label) {
