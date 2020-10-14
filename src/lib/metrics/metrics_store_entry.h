@@ -47,7 +47,7 @@ void metrics_store_entry_free_(metrics_store_entry_t *entry);
   FREE_AND_NULL(metrics_store_entry_t, metrics_store_entry_free_, (entry));
 
 /* Accessors. */
-uint64_t metrics_store_entry_get_value(const metrics_store_entry_t *entry);
+int64_t metrics_store_entry_get_value(const metrics_store_entry_t *entry);
 char *metrics_store_entry_get_output(const metrics_store_entry_t *entry,
                                      const char *label);
 

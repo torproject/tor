@@ -116,13 +116,16 @@ metrics_store_entry_get_output(const metrics_store_entry_t *entry,
 }
 
 /** Return store entry value. */
-uint64_t
+int64_t
 metrics_store_entry_get_value(const metrics_store_entry_t *entry)
 {
   tor_assert(entry);
 
   switch (entry->type) {
   case METRICS_TYPE_COUNTER:
+    if (entry->u.counter.value > INT64_MAX) {
+      return INT64_MAX;
+    }
     return entry->u.counter.value;
   case METRICS_TYPE_GAUGE:
     return entry->u.gauge.value;
