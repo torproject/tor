@@ -1049,20 +1049,20 @@ test_conn_describe(void *arg)
   options->SafeLogging_ = SAFELOG_SCRUB_RELAY; // back to safelogging.
   tt_str_op(connection_describe(conn), OP_EQ,
             "OR connection (open) with [ffff:3333:1111::2]:8080 "
-            "ID=0000000700000000000000000000000000000000");
+            "ID=<none> RSA_ID=0000000700000000000000000000000000000000");
   // Add a 'canonical address' that is the same as the one we have.
   tor_addr_parse(&TO_OR_CONN(conn)->canonical_orport.addr,
                  "[ffff:3333:1111::2]");
   TO_OR_CONN(conn)->canonical_orport.port = 8080;
   tt_str_op(connection_describe(conn), OP_EQ,
             "OR connection (open) with [ffff:3333:1111::2]:8080 "
-            "ID=0000000700000000000000000000000000000000");
+            "ID=<none> RSA_ID=0000000700000000000000000000000000000000");
   // Add a different 'canonical address'
   tor_addr_parse(&TO_OR_CONN(conn)->canonical_orport.addr,
                  "[ffff:3333:1111::8]");
   tt_str_op(connection_describe(conn), OP_EQ,
             "OR connection (open) with [ffff:3333:1111::2]:8080 "
-            "ID=0000000700000000000000000000000000000000 "
+            "ID=<none> RSA_ID=0000000700000000000000000000000000000000 "
             "canonical_addr=[ffff:3333:1111::8]:8080");
 
   // Clear identity_digest so that free_minimal won't complain.

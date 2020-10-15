@@ -110,6 +110,7 @@
 #include "feature/stats/rephist.h"
 #include "feature/stats/bwhist.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/geoip/geoip.h"
 
 #include "lib/cc/ctassert.h"
@@ -440,11 +441,19 @@ connection_describe_peer_internal(const connection_t *conn,
       // This could be a client, so scrub it.  No identity to report.
       scrub = true;
     } else {
-      char id_buf[HEX_DIGEST_LEN+1];
-      base16_encode(id_buf, sizeof(id_buf),
+      const ed25519_public_key_t *ed_id =
+        connection_or_get_alleged_ed25519_id(or_conn);
+      char ed_id_buf[ED25519_BASE64_LEN+1];
+      char rsa_id_buf[HEX_DIGEST_LEN+1];
+      if (ed_id) {
+        ed25519_public_to_base64(ed_id_buf, ed_id);
+      } else {
+        strlcpy(ed_id_buf, "<none>", sizeof(ed_id_buf));
+      }
+      base16_encode(rsa_id_buf, sizeof(rsa_id_buf),
                     or_conn->identity_digest, DIGEST_LEN);
       tor_snprintf(extra_buf, sizeof(extra_buf),
-                   " ID=%s", id_buf);
+                   " ID=%s RSA_ID=%s", ed_id_buf, rsa_id_buf);
     }
     if (! scrub && (! tor_addr_eq(addr, &or_conn->canonical_orport.addr) ||
                     conn->port != or_conn->canonical_orport.port)) {

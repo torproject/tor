@@ -73,6 +73,8 @@ void connection_or_init_conn_from_address(or_connection_t *conn,
 int connection_or_client_learned_peer_id(or_connection_t *conn,
                               const uint8_t *rsa_peer_id,
                               const struct ed25519_public_key_t *ed_peer_id);
+const struct ed25519_public_key_t *connection_or_get_alleged_ed25519_id(
+                              const or_connection_t *conn);
 time_t connection_or_client_used(or_connection_t *conn);
 MOCK_DECL(int, connection_or_get_num_circuits, (or_connection_t *conn));
 void or_handshake_state_free_(or_handshake_state_t *state);
