@@ -11,6 +11,7 @@
 
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodefamily.h"
@@ -657,6 +658,7 @@ test_nodelist_format_node_description(void *arg)
   tor_addr_t mock_null_ip;
   tor_addr_t mock_ipv4;
   tor_addr_t mock_ipv6;
+  ed25519_public_key_t ed_id;
 
   char ndesc[NODE_DESC_BUF_LEN];
   const char *rv = NULL;
@@ -685,6 +687,7 @@ test_nodelist_format_node_description(void *arg)
                                mock_digest,
                                NULL,
                                NULL,
+                               NULL,
                                NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(ndesc, OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
@@ -692,6 +695,7 @@ test_nodelist_format_node_description(void *arg)
   /* format node description should use ~ because named is deprecated */
   rv = format_node_description(ndesc,
                                mock_digest,
+                               NULL,
                                mock_nickname,
                                NULL,
                                NULL);
@@ -702,6 +706,7 @@ test_nodelist_format_node_description(void *arg)
   /* Try a null IP address, rather than NULL */
   rv = format_node_description(ndesc,
                                mock_digest,
+                               NULL,
                                mock_nickname,
                                NULL,
                                &mock_null_ip);
@@ -713,6 +718,7 @@ test_nodelist_format_node_description(void *arg)
   rv = format_node_description(ndesc,
                                mock_digest,
                                NULL,
+                               NULL,
                                &mock_ipv4,
                                NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
@@ -721,6 +727,7 @@ test_nodelist_format_node_description(void *arg)
 
   rv = format_node_description(ndesc,
                                mock_digest,
+                               NULL,
                                mock_nickname,
                                NULL,
                                &mock_ipv6);
@@ -731,6 +738,7 @@ test_nodelist_format_node_description(void *arg)
 
   rv = format_node_description(ndesc,
                                mock_digest,
+                               NULL,
                                mock_nickname,
                                &mock_ipv4,
                                &mock_ipv6);
@@ -739,11 +747,26 @@ test_nodelist_format_node_description(void *arg)
             "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 at "
             "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
 
+  /* Try some ed25519 keys. */
+  int n = ed25519_public_from_base64(&ed_id,
+              "+wBP6WVZzqKK+eTdwU7Hhb80xEm40FSZDBMNozTJpDE");
+  tt_int_op(n,OP_EQ,0);
+  rv = format_node_description(ndesc,
+                               mock_digest,
+                               &ed_id,
+                               mock_nickname,
+                               &mock_ipv4,
+                               &mock_ipv6);
+  tt_str_op(ndesc, OP_EQ,
+            "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR7890123456789 "
+            "[+wBP6WVZzqKK+eTdwU7Hhb80xEm40FSZDBMNozTJpDE] at "
+            "111.222.233.244 and [1111:2222:3333:4444:5555:6666:7777:8888]");
+
   /* test NULL handling */
-  rv = format_node_description(NULL, NULL, NULL, NULL, NULL);
+  rv = format_node_description(NULL, NULL, NULL, NULL, NULL, NULL);
   tt_str_op(rv, OP_EQ, "<NULL BUFFER>");
 
-  rv = format_node_description(ndesc, NULL, NULL, NULL, NULL);
+  rv = format_node_description(ndesc, NULL, NULL, NULL, NULL, NULL);
   tt_ptr_op(rv, OP_EQ, ndesc);
   tt_str_op(rv, OP_EQ, "<NULL ID DIGEST>");
 

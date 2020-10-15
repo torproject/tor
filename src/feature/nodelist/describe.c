@@ -14,6 +14,10 @@
 #include "core/or/or.h"
 #include "core/or/extendinfo.h"
 #include "feature/nodelist/describe.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/routerinfo.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
+#include "lib/crypt_ops/crypto_format.h"
 
 #include "core/or/extend_info_st.h"
 #include "feature/nodelist/node_st.h"
@@ -34,7 +38,8 @@
  */
 STATIC const char *
 format_node_description(char *buf,
-                        const char *id_digest,
+                        const char *rsa_id_digest,
+                        const ed25519_public_key_t *ed25519_id,
                         const char *nickname,
                         const tor_addr_t *ipv4_addr,
                         const tor_addr_t *ipv6_addr)
@@ -48,7 +53,7 @@ format_node_description(char *buf,
 
   memset(buf, 0, NODE_DESC_BUF_LEN);
 
-  if (!id_digest) {
+  if (!rsa_id_digest) {
     /* strlcpy() returns the length of the source string it attempted to copy,
      * ignoring any required truncation due to the buffer length. */
     rv = strlcpy(buf, "<NULL ID DIGEST>", NODE_DESC_BUF_LEN);
@@ -66,7 +71,7 @@ format_node_description(char *buf,
     memset(hex_digest, 0, sizeof(hex_digest));
 
     base16_encode(hex_digest, sizeof(hex_digest),
-                  id_digest, DIGEST_LEN);
+                  rsa_id_digest, DIGEST_LEN);
     rv = strlcat(buf, hex_digest, NODE_DESC_BUF_LEN);
     tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
   }
@@ -75,6 +80,16 @@ format_node_description(char *buf,
     rv = strlcat(buf, "~", NODE_DESC_BUF_LEN);
     tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
     rv = strlcat(buf, nickname, NODE_DESC_BUF_LEN);
+    tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
+  }
+  if (ed25519_id) {
+    char ed_base64[ED25519_BASE64_LEN+1];
+    ed25519_public_to_base64(ed_base64, ed25519_id);
+    rv = strlcat(buf, " [", NODE_DESC_BUF_LEN);
+    tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
+    rv = strlcat(buf, ed_base64, NODE_DESC_BUF_LEN);
+    tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
+    rv = strlcat(buf, "]", NODE_DESC_BUF_LEN);
     tor_assert_nonfatal(rv < NODE_DESC_BUF_LEN);
   }
   if (ipv4_addr || has_ipv6) {
@@ -126,8 +141,11 @@ router_describe(const routerinfo_t *ri)
   if (!ri)
     return "<null>";
 
+  const ed25519_public_key_t *ed25519_id = routerinfo_get_ed25519_id(ri);
+
   return format_node_description(buf,
                                  ri->cache_info.identity_digest,
+                                 ed25519_id,
                                  ri->nickname,
                                  &ri->ipv4_addr,
                                  &ri->ipv6_addr);
@@ -166,8 +184,11 @@ node_describe(const node_t *node)
     return "<null rs and ri>";
   }
 
+  const ed25519_public_key_t *ed25519_id = node_get_ed25519_id(node);
+
   return format_node_description(buf,
                                  node->identity,
+                                 ed25519_id,
                                  nickname,
                                  ipv4_addr,
                                  ipv6_addr);
@@ -188,6 +209,7 @@ routerstatus_describe(const routerstatus_t *rs)
 
   return format_node_description(buf,
                                  rs->identity_digest,
+                                 NULL,
                                  rs->nickname,
                                  &rs->ipv4_addr,
                                  &rs->ipv6_addr);
@@ -211,8 +233,13 @@ extend_info_describe(const extend_info_t *ei)
   const tor_addr_t *addr4 = ap4 ? &ap4->addr : NULL;
   const tor_addr_t *addr6 = ap6 ? &ap6->addr : NULL;
 
+  const ed25519_public_key_t *ed25519_id = &ei->ed_identity;
+  if (ed25519_public_key_is_zero(ed25519_id))
+    ed25519_id = NULL;
+
   return format_node_description(buf,
                                  ei->identity_digest,
+                                 ed25519_id,
                                  ei->nickname,
                                  addr4,
                                  addr6);
