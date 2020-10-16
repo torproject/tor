@@ -345,14 +345,15 @@ def emit_ri(name, body):
     body = info.sign_desc(body)
     print_c_string("EX_RI_%s"%name.upper(), body)
 
-def emit_ei(name, body):
+def emit_ei(name, body, fields):
     info = OnDemandKeys()
     body = body.format(d=info)
     body = info.sign_desc(body)
     print_c_string("EX_EI_%s"%name.upper(), body)
 
-    print('const char EX_EI_{NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
+    print('ATTR_UNUSED static const char EX_EI_{NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
         d=info, NAME=name.upper()))
+    print("ATTR_UNUSED")
     print_c_string("EX_EI_%s_KEY"%name.upper(), info.RSA_IDENTITY)
 
 def analyze(s):
@@ -387,7 +388,7 @@ def emit_entry(fields, s):
         raise ValueError("missing required field")
 
     if tp == 'ei':
-        emit_ei(name, s)
+        emit_ei(name, s, fields)
     elif tp == 'ri':
         emit_ri(name, s)
     else:

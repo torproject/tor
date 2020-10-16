@@ -101,6 +101,14 @@
 #include <unistd.h>
 #endif
 
+static void setup_ei_digests(void);
+static uint8_t digest_ei_minimal[20];
+static uint8_t digest_ei_bad_nickname[20];
+static uint8_t digest_ei_maximal[20];
+static uint8_t digest_ei_bad_tokens[20];
+static uint8_t digest_ei_bad_sig2[20];
+static uint8_t digest_ei_bad_published[20];
+
 static networkstatus_t *
 networkstatus_parse_vote_from_string_(const char *s,
                                       const char **eos_out,
@@ -1139,14 +1147,10 @@ test_dir_extrainfo_parsing(void *arg)
   tt_assert(ei->pending_sig);
   CHECK_OK(EX_EI_MAXIMAL);
   tt_assert(ei->pending_sig);
-  CHECK_OK(EX_EI_GOOD_ED_EI);
-  tt_assert(ei->pending_sig);
 
   map = (struct digest_ri_map_t *)digestmap_new();
   ADD(EX_EI_MINIMAL);
   ADD(EX_EI_MAXIMAL);
-  ADD(EX_EI_GOOD_ED_EI);
-  ADD(EX_EI_BAD_FP);
   ADD(EX_EI_BAD_NICKNAME);
   ADD(EX_EI_BAD_TOKENS);
   ADD(EX_EI_BAD_START);
@@ -1156,8 +1160,6 @@ test_dir_extrainfo_parsing(void *arg)
   ADD(EX_EI_ED_MISSING_CERT);
   ADD(EX_EI_ED_BAD_CERT1);
   ADD(EX_EI_ED_BAD_CERT2);
-  ADD(EX_EI_ED_BAD_SIG1);
-  ADD(EX_EI_ED_BAD_SIG2);
   ADD(EX_EI_ED_MISPLACED_CERT);
   ADD(EX_EI_ED_MISPLACED_SIG);
 
@@ -1165,13 +1167,9 @@ test_dir_extrainfo_parsing(void *arg)
   tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
   CHECK_OK(EX_EI_MAXIMAL);
   tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
-  CHECK_OK(EX_EI_GOOD_ED_EI);
-  tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
 
   CHECK_FAIL(EX_EI_BAD_SIG1,1);
-  CHECK_FAIL(EX_EI_BAD_SIG2,1);
-  CHECK_FAIL(EX_EI_BAD_SIG3,1);
-  CHECK_FAIL(EX_EI_BAD_FP,0);
+  CHECK_FAIL(EX_EI_BAD_SIG2,0);
   CHECK_FAIL(EX_EI_BAD_NICKNAME,0);
   CHECK_FAIL(EX_EI_BAD_TOKENS,0);
   CHECK_FAIL(EX_EI_BAD_START,0);
@@ -1181,8 +1179,6 @@ test_dir_extrainfo_parsing(void *arg)
   CHECK_FAIL(EX_EI_ED_MISSING_CERT,0);
   CHECK_FAIL(EX_EI_ED_BAD_CERT1,0);
   CHECK_FAIL(EX_EI_ED_BAD_CERT2,0);
-  CHECK_FAIL(EX_EI_ED_BAD_SIG1,0);
-  CHECK_FAIL(EX_EI_ED_BAD_SIG2,0);
   CHECK_FAIL(EX_EI_ED_MISPLACED_CERT,0);
   CHECK_FAIL(EX_EI_ED_MISPLACED_SIG,0);
 
@@ -1239,7 +1235,10 @@ test_dir_parse_router_list(void *arg)
   tt_mem_op(r->cache_info.signed_descriptor_body, OP_EQ,
             EX_RI_MAXIMAL, strlen(EX_RI_MAXIMAL));
 
+  setup_ei_digests();
+
   tt_int_op(2, OP_EQ, smartlist_len(invalid));
+
   test_memeq_hex(smartlist_get(invalid, 0),
                  "10F951AF93AED0D3BC7FA5FFA232EB8C17747ACE");
   test_memeq_hex(smartlist_get(invalid, 1),
@@ -1258,6 +1257,7 @@ test_dir_parse_router_list(void *arg)
   ADD(EX_EI_MAXIMAL);
   ADD(EX_EI_BAD_NICKNAME);
   ADD(EX_EI_BAD_PUBLISHED);
+  ADD(EX_EI_BAD_SIG2);
   cp = list;
   tt_int_op(0,OP_EQ,
             router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE,
@@ -1270,11 +1270,16 @@ test_dir_parse_router_list(void *arg)
   tt_mem_op(e->cache_info.signed_descriptor_body, OP_EQ,
             EX_EI_MINIMAL, strlen(EX_EI_MINIMAL));
 
-  tt_int_op(2, OP_EQ, smartlist_len(invalid));
-  test_memeq_hex(smartlist_get(invalid, 0),
-                 "d5df4aa62ee9ffc9543d41150c9864908e0390af");
-  test_memeq_hex(smartlist_get(invalid, 1),
-                 "f61efd2a7f4531f3687a9043e0de90a862ec64ba");
+  tt_int_op(3, OP_EQ, smartlist_len(invalid));
+  tt_mem_op(smartlist_get(invalid, 0),
+            OP_EQ,
+            digest_ei_bad_sig2, DIGEST_LEN);
+  tt_mem_op(smartlist_get(invalid, 1),
+            OP_EQ,
+            digest_ei_bad_nickname, DIGEST_LEN);
+  tt_mem_op(smartlist_get(invalid, 2),
+            OP_EQ,
+            digest_ei_bad_published, DIGEST_LEN);
 
  done:
   tor_free(list);
@@ -1326,6 +1331,7 @@ setup_dls_digests(void)
   SETUP(EX_RI_BAD_SIG1, bad_sig1);
   SETUP(EX_RI_BAD_PORTS, bad_ports);
   SETUP(EX_RI_BAD_TOKENS, bad_tokens);
+#undef SETUP
 }
 
 static int mock_router_get_dl_status_unrecognized = 0;
@@ -1350,6 +1356,7 @@ mock_router_get_dl_status(const char *d)
 
   ++mock_router_get_dl_status_unrecognized;
   return NULL;
+#undef CHECK
 }
 
 static void
@@ -1439,38 +1446,51 @@ static signed_descriptor_t sd_ei_maximal;
 static signed_descriptor_t sd_ei_bad_tokens;
 static signed_descriptor_t sd_ei_bad_sig2;
 
+static void
+setup_ei_digests(void)
+{
+#define SETUP(string, name)                                             \
+  do {                                                                  \
+    router_get_extrainfo_hash(string, strlen(string),                   \
+                              (char*)digest_ei_##name);                 \
+  } while (0)
+
+  SETUP(EX_EI_MINIMAL, minimal);
+  SETUP(EX_EI_MAXIMAL, maximal);
+  SETUP(EX_EI_BAD_NICKNAME, bad_nickname);
+  SETUP(EX_EI_BAD_TOKENS, bad_tokens);
+  SETUP(EX_EI_BAD_SIG2, bad_sig2);
+  SETUP(EX_EI_BAD_PUBLISHED, bad_published);
+
+#undef SETUP
+}
+
 static signed_descriptor_t *
 mock_get_by_ei_desc_digest(const char *d)
 {
-
   ++mock_get_by_ei_dd_calls;
-  char hex[HEX_DIGEST_LEN+1];
-  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
+#define CHECK(name)                                         \
+  do {                                                      \
+    if (fast_memeq(d, digest_ei_##name, DIGEST_LEN))        \
+      return &sd_ei_##name;                                 \
+  } while (0)
 
-  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
-    return &sd_ei_minimal;
-  } else if (!strcmp(hex, "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF")) {
-    return &sd_ei_maximal;
-  } else if (!strcmp(hex, "D5DF4AA62EE9FFC9543D41150C9864908E0390AF")) {
-    return &sd_ei_bad_nickname;
-  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
-    return &sd_ei_bad_sig2;
-  } else if (!strcmp(hex, "9D90F8C42955BBC57D54FB05E54A3F083AF42E8B")) {
-    return &sd_ei_bad_tokens;
-  } else {
-    ++mock_get_by_ei_dd_unrecognized;
-    return NULL;
-  }
+  CHECK(minimal);
+  CHECK(maximal);
+  CHECK(bad_nickname);
+  CHECK(bad_sig2);
+  CHECK(bad_tokens);
+  ++mock_get_by_ei_dd_unrecognized;
+  return NULL;
+#undef CHECK
 }
 
 static signed_descriptor_t *
 mock_ei_get_by_ei_digest(const char *d)
 {
-  char hex[HEX_DIGEST_LEN+1];
-  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
   signed_descriptor_t *sd = &sd_ei_minimal;
 
-  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
+  if (fast_memeq(d, digest_ei_minimal, DIGEST_LEN)) {
     sd->signed_descriptor_body = (char *)EX_EI_MINIMAL;
     sd->signed_descriptor_len = sizeof(EX_EI_MINIMAL);
     sd->annotations_len = 0;
@@ -1506,6 +1526,7 @@ test_dir_load_extrainfo(void *arg)
     smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
   } while (0)
 
+  setup_ei_digests();
   mock_ei_insert_list = smartlist_new();
   MOCK(router_get_by_extrainfo_digest, mock_get_by_ei_desc_digest);
   MOCK(extrainfo_insert, mock_ei_insert);
@@ -1532,12 +1553,12 @@ test_dir_load_extrainfo(void *arg)
   tt_int_op(smartlist_len(mock_ei_insert_list),OP_EQ,2);
 
   extrainfo_t *e = smartlist_get(mock_ei_insert_list, 0);
-  test_memeq_hex(e->cache_info.signed_descriptor_digest,
-                 "11E0EDF526950739F7769810FCACAB8C882FAEEE");
+  tt_mem_op(e->cache_info.signed_descriptor_digest, OP_EQ,
+            digest_ei_minimal, DIGEST_LEN);
 
   e = smartlist_get(mock_ei_insert_list, 1);
-  test_memeq_hex(e->cache_info.signed_descriptor_digest,
-                 "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF");
+  tt_mem_op(e->cache_info.signed_descriptor_digest, OP_EQ,
+            digest_ei_maximal, DIGEST_LEN);
   tt_int_op(dls_minimal.n_download_failures, OP_EQ, 0);
   tt_int_op(dls_maximal.n_download_failures, OP_EQ, 0);
 
@@ -1553,8 +1574,11 @@ test_dir_load_extrainfo(void *arg)
 
   /* Wanted still contains "BAD_SIG2" */
   tt_int_op(smartlist_len(wanted), OP_EQ, 1);
-  tt_str_op(smartlist_get(wanted, 0), OP_EQ,
-            "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C");
+  const char *got_wanted =smartlist_get(wanted, 0);
+  tt_int_op(strlen(got_wanted), OP_EQ, HEX_DIGEST_LEN);
+  char d[DIGEST_LEN];
+  base16_decode(d, DIGEST_LEN, got_wanted, strlen(got_wanted));
+  tt_mem_op(d, OP_EQ, digest_ei_bad_sig2, DIGEST_LEN);
 
 #undef ADD
 
@@ -1574,12 +1598,17 @@ test_dir_getinfo_extra(void *arg)
   int r;
   char *answer = NULL;
   const char *errmsg = NULL;
-
+  char buf[128];
+  char hexdigest[HEX_DIGEST_LEN+1];
   (void)arg;
+
+  setup_ei_digests();
+  base16_encode(hexdigest, sizeof(hexdigest),
+                (const char*)digest_ei_minimal, DIGEST_LEN);
+  tor_snprintf(buf, sizeof(buf), "extra-info/digest/%s", hexdigest);
+
   MOCK(extrainfo_get_by_descriptor_digest, mock_ei_get_by_ei_digest);
-  r = getinfo_helper_dir(NULL, "extra-info/digest/"
-                         "11E0EDF526950739F7769810FCACAB8C882FAEEE", &answer,
-                         &errmsg);
+  r = getinfo_helper_dir(NULL, buf, &answer, &errmsg);
   tt_int_op(0, OP_EQ, r);
   tt_ptr_op(NULL, OP_EQ, errmsg);
   tt_str_op(answer, OP_EQ, EX_EI_MINIMAL);

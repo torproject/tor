@@ -1,0 +1,182 @@
+:::comment=this file is to be used with the makedescs.py utility
+:::name=minimal
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=maximal
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+opt foobarbaz
+read-history 900 1,2,3
+write-history 900 1,2,3
+dirreq-v2-ips 1
+dirreq-v3-ips 100
+dirreq-v3-reqs blahblah
+dirreq-v2-share blahblah
+dirreq-v3-share blahblah
+dirreq-v2-resp djfkdj
+dirreq-v3-resp djfkdj
+dirreq-v2-direct-dl djfkdj
+dirreq-v3-direct-dl djfkdj
+dirreq-v2-tunneled-dl djfkdj
+dirreq-v3-tunneled-dl djfkdj
+dirreq-stats-end foobar
+entry-ips jfsdfds
+entry-stats-end ksdflkjfdkf
+cell-stats-end FOO
+cell-processed-cells FOO
+cell-queued-cells FOO
+cell-time-in-queue FOO
+cell-circuits-per-decile FOO
+exit-stats-end FOO
+exit-kibibytes-written FOO
+exit-kibibytes-read FOO
+exit-streams-opened FOO
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=bad_sig1
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+-----BEGIN SIGNATURE-----
+V3l9u1uUdGiUPOl8j+hXXw4z/ODeCj/24r2+L32MTjyfUhK49Ld2IlK9iZKlgKYi
+zyoatxdAjU8Xc5WPX692HO4/R9CGLsUfYcEEFU2R3EA=
+-----END SIGNATURE-----
+
+:::name=bad_sig2
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+router-sig-ed25519 X{d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=bad_nickname
+:::type=ei
+extra-info bobhasaverylongnameandidontthinkweshouldlethim {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=bad_tokens
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=bad_start
+:::type=ei
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_published
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-99-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=ed_missing_sig
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+published 2020-10-14 20:58:04
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_missing_cert
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+
+:::name=ed_bad_cert1
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+-----BEGIN PLAGICAL SPELL-----
+aaaa
+-----END PLAGICAL SPELL-----
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=ed_bad_cert2
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+-----BEGIN ED25519 CERT-----
+AQoABf55Acpw27GZBdwGCgawCj2F/DPadt8F/9DnEWywEew1Yi3qAOtLpCB8KXL7
+4w5deFW2RBg8qTondNSUvAmwYLbLjNXMmgA3+nkoJOP3fcmQMHz1jm5xzgs2lCVP
+t5txApaBIA4=
+-----END ED25519 CERT-----
+published 2020-10-14 20:58:04
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_misplaced_cert
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+published 2020-10-14 20:58:04
+identity-ed25519
+{d.ED_CERT}
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_misplaced_sig
+:::type=ei
+extra-info HomersRelay {d.RSA_FINGERPRINT_NOSPACE}
+identity-ed25519
+{d.ED_CERT}
+router-sig-ed25519 {d.ED_SIGNATURE}
+published 2020-10-14 20:58:04
+router-signature
+{d.RSA_SIGNATURE}
