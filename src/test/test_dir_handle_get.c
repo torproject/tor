@@ -518,7 +518,8 @@ static const char microdesc[] =
   "MIGJAoGBAMjlHH/daN43cSVRaHBwgUfnszzAhg98EvivJ9Qxfv51mvQUxPjQ07es\n"
   "gV/3n8fyh3Kqr/ehi9jxkdgSRfSnmF7giaHL1SLZ29kA7KtST+pBvmTpDtHa3ykX\n"
   "Xorc7hJvIyTZoc1HU+5XSynj3gsBE5IGK1ZRzrNS688LnuZMVp1tAgMBAAE=\n"
-  "-----END RSA PUBLIC KEY-----\n";
+  "-----END RSA PUBLIC KEY-----\n"
+  "ntor-onion-key QlrOXAa8j3LD31LESsPm/lIKFBwevk2oXdqJcd9SEUc=\n";
 
 static void
 test_dir_handle_get_micro_d(void *data)
