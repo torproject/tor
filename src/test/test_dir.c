@@ -29,6 +29,7 @@
 #include "lib/confmgt/confmgt.h"
 #include "core/mainloop/connection.h"
 #include "core/or/relay.h"
+#include "core/or/protover.h"
 #include "core/or/versions.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
@@ -216,6 +217,7 @@ basic_routerinfo_new(const char *nickname, uint32_t ipv4_addr,
   r1->bandwidthcapacity = bandwidthcapacity;
 
   r1->cache_info.published_on = published_on;
+  r1->protocol_list = tor_strdup(protover_get_supported_protocols());
 
   if (rsa_onion_keypair_out) {
     *rsa_onion_keypair_out = pk1;
@@ -431,13 +433,6 @@ static const smartlist_t *
 mock_get_configured_ports(void)
 {
   return mocked_configured_ports;
-}
-
-static tor_cert_t *
-mock_tor_cert_dup_null(const tor_cert_t *cert)
-{
-  (void)cert;
-  return NULL;
 }
 
 static crypto_pk_t *mocked_server_identitykey = NULL;
@@ -664,211 +659,6 @@ STMT_BEGIN \
   tt_str_op(e1->nickname, OP_EQ, r1->nickname); \
 STMT_END
 
-/** Run unit tests for router descriptor generation logic for a RSA-only
- * router. Tor versions without ed25519 (0.2.6 and earlier) are no longer
- * officially supported, but the authorities still accept their descriptors.
- */
-static void
-test_dir_formats_rsa(void *arg)
-{
-  char *buf = NULL;
-  char *buf2 = NULL;
-  char *cp = NULL;
-
-  uint8_t *rsa_cc = NULL;
-
-  routerinfo_t *r1 = NULL;
-  extrainfo_t *e1 = NULL;
-  routerinfo_t *rp1 = NULL;
-  extrainfo_t *ep1 = NULL;
-
-  smartlist_t *chunks = NULL;
-  const char *msg = NULL;
-  int rv = -1;
-
-  or_options_t *options = get_options_mutable();
-  setup_dir_formats_options((const char *)arg, options);
-
-  hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
-
-  /* r1 is a minimal, RSA-only descriptor, with DirPort and IPv6 */
-  r1 = basic_routerinfo_new("Magri", 0xc0a80001u /* 192.168.0.1 */,
-                            9000, 9003,
-                            1000, 5000, 10000,
-                            0,
-                            NULL);
-
- /* Fake just enough of an ntor key to get by */
-  curve25519_keypair_t r1_onion_keypair;
-  curve25519_keypair_generate(&r1_onion_keypair, 0);
-  r1->onion_curve25519_pkey = tor_memdup(&r1_onion_keypair.pubkey,
-                                         sizeof(curve25519_public_key_t));
-
-  /* Now add IPv6 */
-  tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
-  r1->ipv6_orport = 9999;
-
-  r1->exit_policy = NULL;
-
-  /* XXXX+++ router_dump_to_string should really take this from ri. */
-  options->ContactInfo = tor_strdup("Magri White "
-                                    "<magri@elsewhere.example.com>");
-
-  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
-
-  buf = router_dump_router_to_string(r1, r1->identity_pkey, NULL, NULL, NULL);
-  tt_assert(buf);
-
-  tor_free(options->ContactInfo);
-  cleanup_mock_configured_ports();
-
-  /* Synthesise a router descriptor, without the signature */
-  chunks = smartlist_new();
-
-  smartlist_add(chunks, get_new_router_line(r1));
-  smartlist_add_strdup(chunks, "or-address [1:2:3:4::]:9999\n");
-
-  smartlist_add(chunks, get_new_platform_line());
-  smartlist_add(chunks, get_new_published_line(r1));
-  smartlist_add(chunks, get_new_fingerprint_line(r1));
-
-  smartlist_add(chunks, get_new_uptime_line(0));
-  smartlist_add(chunks, get_new_bandwidth_line(r1));
-
-  smartlist_add(chunks, get_new_onion_key_block(r1));
-  smartlist_add(chunks, get_new_signing_key_block(r1));
-
-  smartlist_add_strdup(chunks, "hidden-service-dir\n");
-
-  smartlist_add_strdup(chunks, "contact Magri White "
-                               "<magri@elsewhere.example.com>\n");
-
-  smartlist_add(chunks, get_new_bridge_distribution_request_line(options));
-  smartlist_add(chunks, get_new_ntor_onion_key_line(&r1_onion_keypair.pubkey));
-  smartlist_add_strdup(chunks, "reject *:*\n");
-  smartlist_add_strdup(chunks, "tunnelled-dir-server\n");
-
-  smartlist_add_strdup(chunks, "router-signature\n");
-
-  size_t len_out = 0;
-  buf2 = smartlist_join_strings(chunks, "", 0, &len_out);
-  SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
-  smartlist_free(chunks);
-
-  tt_assert(len_out > 0);
-
-  buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
-                             * twice */
-
-  tt_str_op(buf,OP_EQ, buf2);
-  tor_free(buf);
-
-  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
-
-  buf = router_dump_router_to_string(r1, r1->identity_pkey, NULL, NULL, NULL);
-  tt_assert(buf);
-
-  cleanup_mock_configured_ports();
-
-  /* Now, try to parse buf */
-  cp = buf;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
-
-  CHECK_ROUTERINFO_CONSISTENCY(r1, rp1);
-
-  tt_assert(rp1->policy_is_reject_star);
-
-  tor_free(buf);
-  routerinfo_free(rp1);
-
-  /* Test extrainfo creation.
-   * We avoid calling router_build_fresh_unsigned_routerinfo(), because it's
-   * too complex. Instead, we re-use the manually-created routerinfos.
-   */
-
-  /* Set up standard mocks and data */
-  setup_mocks_for_fresh_descriptor(r1, NULL);
-
-  /* router_build_fresh_signed_extrainfo() passes the result of
-   * get_master_signing_key_cert() directly to tor_cert_dup(), which fails on
-   * NULL. But we want a NULL ei->cache_info.signing_key_cert to test the
-   * non-ed key path.
-   */
-  MOCK(tor_cert_dup, mock_tor_cert_dup_null);
-
-  /* Fake just enough of an ORPort and DirPort to get by */
-  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
-
-  /* Test some of the low-level static functions. */
-  e1 = router_build_fresh_signed_extrainfo(r1);
-  tt_assert(e1);
-  router_update_routerinfo_from_extrainfo(r1, e1);
-  rv = router_dump_and_sign_routerinfo_descriptor_body(r1);
-  tt_assert(rv == 0);
-  msg = "";
-  rv = routerinfo_incompatible_with_extrainfo(r1->identity_pkey, e1,
-                                              &r1->cache_info, &msg);
-  /* If they are incompatible, fail and show the msg string */
-  tt_str_op(msg, OP_EQ, "");
-  tt_assert(rv == 0);
-
-  /* Now cleanup */
-  cleanup_mocks_for_fresh_descriptor();
-
-  UNMOCK(tor_cert_dup);
-
-  cleanup_mock_configured_ports();
-
-  CHECK_EXTRAINFO_CONSISTENCY(r1, e1);
-
-  /* Test that the signed ri is parseable */
-  tt_assert(r1->cache_info.signed_descriptor_body);
-  cp = r1->cache_info.signed_descriptor_body;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
-
-  CHECK_ROUTERINFO_CONSISTENCY(r1, rp1);
-
-  tt_assert(rp1->policy_is_reject_star);
-
-  routerinfo_free(rp1);
-
-  /* Test that the signed ei is parseable */
-  tt_assert(e1->cache_info.signed_descriptor_body);
-  cp = e1->cache_info.signed_descriptor_body;
-  ep1 = extrainfo_parse_entry_from_string((const char*)cp,NULL,1,NULL,NULL);
-
-  CHECK_EXTRAINFO_CONSISTENCY(r1, ep1);
-
-  /* In future tests, we could check the actual extrainfo statistics. */
-
-  extrainfo_free(ep1);
-
- done:
-  dirserv_free_fingerprint_list();
-
-  tor_free(options->ContactInfo);
-  tor_free(options->Nickname);
-
-  cleanup_mock_configured_ports();
-  cleanup_mocks_for_fresh_descriptor();
-
-  if (chunks) {
-    SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
-    smartlist_free(chunks);
-  }
-
-  routerinfo_free(r1);
-  routerinfo_free(rp1);
-
-  extrainfo_free(e1);
-  extrainfo_free(ep1);
-
-  tor_free(rsa_cc);
-
-  tor_free(buf);
-  tor_free(buf2);
-}
-
 /* Check that the exit policy in rp2 is as expected. */
 #define CHECK_PARSED_EXIT_POLICY(rp2) \
 STMT_BEGIN \
@@ -999,6 +789,8 @@ test_dir_formats_rsa_ed25519(void *arg)
   }
 
   smartlist_add(chunks, get_new_platform_line());
+  smartlist_add_asprintf(chunks,
+                         "proto %s\n", protover_get_supported_protocols());
   smartlist_add(chunks, get_new_published_line(r2));
   smartlist_add(chunks, get_new_fingerprint_line(r2));
 
@@ -1064,7 +856,9 @@ test_dir_formats_rsa_ed25519(void *arg)
 
   setup_mock_configured_ports(r2->ipv4_orport, 0);
 
-  buf = router_dump_router_to_string(r2, r2->identity_pkey, NULL, NULL, NULL);
+  buf = router_dump_router_to_string(r2, r2->identity_pkey,
+                                     r2_onion_pkey,
+                                     &r2_onion_keypair, &kp2);
   tt_assert(buf);
 
   cleanup_mock_configured_ports();
@@ -7446,20 +7240,14 @@ test_dir_dirserv_add_own_fingerprint(void *arg)
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
   /* extrainfo without any stats */
-  DIR_ARG(formats_rsa, TT_FORK, ""),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, ""),
   /* on a bridge */
-  DIR_ARG(formats_rsa, TT_FORK, "b"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "b"),
   /* extrainfo with basic stats */
-  DIR_ARG(formats_rsa, TT_FORK, "e"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "e"),
-  DIR_ARG(formats_rsa, TT_FORK, "be"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "be"),
   /* extrainfo with all stats */
-  DIR_ARG(formats_rsa, TT_FORK, "es"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "es"),
-  DIR_ARG(formats_rsa, TT_FORK, "bes"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "bes"),
   DIR(routerinfo_parsing, 0),
   DIR(extrainfo_parsing, 0),
