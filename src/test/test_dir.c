@@ -1011,13 +1011,11 @@ test_dir_routerinfo_parsing(void *arg)
     again = 999;                                                        \
     ri = router_parse_entry_from_string((s), NULL, 0, 0, NULL, &again); \
     tt_assert(ri == NULL);                                              \
-    tt_int_op(again, OP_EQ, (againval));                                   \
+    tt_int_op(again, OP_EQ, (againval));                                \
   } while (0)
 
   CHECK_OK(EX_RI_MINIMAL);
   CHECK_OK(EX_RI_MAXIMAL);
-
-  CHECK_OK(EX_RI_MINIMAL_ED);
 
   /* good annotations prepended */
   routerinfo_free(ri);
@@ -1053,14 +1051,13 @@ test_dir_routerinfo_parsing(void *arg)
   tt_ptr_op(ri, OP_EQ, NULL);
 
   CHECK_FAIL(EX_RI_BAD_SIG1, 1);
-  CHECK_FAIL(EX_RI_BAD_SIG2, 1);
   CHECK_FAIL(EX_RI_BAD_TOKENS, 0);
   CHECK_FAIL(EX_RI_BAD_PUBLISHED, 0);
   CHECK_FAIL(EX_RI_NEG_BANDWIDTH, 0);
   CHECK_FAIL(EX_RI_BAD_BANDWIDTH, 0);
   CHECK_FAIL(EX_RI_BAD_BANDWIDTH2, 0);
-  CHECK_FAIL(EX_RI_BAD_ONIONKEY1, 0);
-  CHECK_FAIL(EX_RI_BAD_ONIONKEY2, 0);
+  CHECK_FAIL(EX_RI_BAD_BANDWIDTH3, 0);
+  CHECK_FAIL(EX_RI_BAD_ONIONKEY, 0);
   CHECK_FAIL(EX_RI_BAD_PORTS, 0);
   CHECK_FAIL(EX_RI_BAD_IP, 0);
   CHECK_FAIL(EX_RI_BAD_DIRPORT, 0);
@@ -1083,22 +1080,10 @@ test_dir_routerinfo_parsing(void *arg)
   CHECK_FAIL(EX_RI_ED_BAD_SIG1, 0);
   CHECK_FAIL(EX_RI_ED_BAD_SIG2, 0);
   CHECK_FAIL(EX_RI_ED_BAD_SIG3, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_SIG4, 0);
   CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT1, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT3, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT4, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT5, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT6, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT7, 0);
   CHECK_FAIL(EX_RI_ED_MISPLACED1, 0);
   CHECK_FAIL(EX_RI_ED_MISPLACED2, 0);
   CHECK_FAIL(EX_RI_ED_BAD_CERT1, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CERT2, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CERT3, 0);
-
-  /* This is allowed; we just ignore it. */
-  CHECK_OK(EX_RI_BAD_EI_DIGEST);
-  CHECK_OK(EX_RI_BAD_EI_DIGEST2);
 
 #undef CHECK_FAIL
 #undef CHECK_OK
@@ -1256,9 +1241,9 @@ test_dir_parse_router_list(void *arg)
 
   tt_int_op(2, OP_EQ, smartlist_len(invalid));
   test_memeq_hex(smartlist_get(invalid, 0),
-                 "ab9eeaa95e7d45740185b4e519c76ead756277a9");
+                 "10F951AF93AED0D3BC7FA5FFA232EB8C17747ACE");
   test_memeq_hex(smartlist_get(invalid, 1),
-                 "9a651ee03b64325959e8f1b46f2b689b30750b4c");
+                 "41D8723CDD4B1AADCCE538C28CDE7F69828C73D0");
 
   /* Now tidy up */
   SMARTLIST_FOREACH(dest, routerinfo_t *, rinfo, routerinfo_free(rinfo));
@@ -1316,9 +1301,32 @@ test_dir_parse_router_list(void *arg)
 static download_status_t dls_minimal;
 static download_status_t dls_maximal;
 static download_status_t dls_bad_fingerprint;
-static download_status_t dls_bad_sig2;
+static download_status_t dls_bad_sig1;
 static download_status_t dls_bad_ports;
 static download_status_t dls_bad_tokens;
+
+static uint8_t digest_minimal[20];
+static uint8_t digest_maximal[20];
+static uint8_t digest_bad_fingerprint[20];
+static uint8_t digest_bad_sig1[20];
+static uint8_t digest_bad_ports[20];
+static uint8_t digest_bad_tokens[20];
+
+static void
+setup_dls_digests(void)
+{
+#define SETUP(string, name)                                             \
+  do {                                                                  \
+    router_get_router_hash(string, strlen(string), (char*)digest_##name); \
+  } while (0)
+
+  SETUP(EX_RI_MINIMAL, minimal);
+  SETUP(EX_RI_MAXIMAL, maximal);
+  SETUP(EX_RI_BAD_FINGERPRINT, bad_fingerprint);
+  SETUP(EX_RI_BAD_SIG1, bad_sig1);
+  SETUP(EX_RI_BAD_PORTS, bad_ports);
+  SETUP(EX_RI_BAD_TOKENS, bad_tokens);
+}
 
 static int mock_router_get_dl_status_unrecognized = 0;
 static int mock_router_get_dl_status_calls = 0;
@@ -1327,24 +1335,21 @@ static download_status_t *
 mock_router_get_dl_status(const char *d)
 {
   ++mock_router_get_dl_status_calls;
-  char hex[HEX_DIGEST_LEN+1];
-  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
-  if (!strcmp(hex, "3E31D19A69EB719C00B02EC60D13356E3F7A3452")) {
-    return &dls_minimal;
-  } else if (!strcmp(hex, "581D8A368A0FA854ECDBFAB841D88B3F1B004038")) {
-    return &dls_maximal;
-  } else if (!strcmp(hex, "2578AE227C6116CDE29B3F0E95709B9872DEE5F1")) {
-    return &dls_bad_fingerprint;
-  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
-    return &dls_bad_sig2;
-  } else if (!strcmp(hex, "AB9EEAA95E7D45740185B4E519C76EAD756277A9")) {
-    return &dls_bad_ports;
-  } else if (!strcmp(hex, "A0CC2CEFAD59DBF19F468BFEE60E0868C804B422")) {
-    return &dls_bad_tokens;
-  } else {
-    ++mock_router_get_dl_status_unrecognized;
-    return NULL;
-  }
+#define CHECK(name)                                         \
+  do {                                                      \
+    if (fast_memeq(d, digest_##name, DIGEST_LEN))           \
+      return &dls_##name;                                   \
+  } while (0)
+
+  CHECK(minimal);
+  CHECK(maximal);
+  CHECK(bad_fingerprint);
+  CHECK(bad_sig1);
+  CHECK(bad_ports);
+  CHECK(bad_tokens);
+
+  ++mock_router_get_dl_status_unrecognized;
+  return NULL;
 }
 
 static void
@@ -1363,13 +1368,15 @@ test_dir_load_routers(void *arg)
     smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
   } while (0)
 
+  setup_dls_digests();
+
   MOCK(router_get_dl_status_by_descriptor_digest, mock_router_get_dl_status);
 
   update_approx_time(1412510400);
 
   smartlist_add_strdup(chunks, EX_RI_MINIMAL);
   smartlist_add_strdup(chunks, EX_RI_BAD_FINGERPRINT);
-  smartlist_add_strdup(chunks, EX_RI_BAD_SIG2);
+  smartlist_add_strdup(chunks, EX_RI_BAD_SIG1);
   smartlist_add_strdup(chunks, EX_RI_MAXIMAL);
   smartlist_add_strdup(chunks, EX_RI_BAD_PORTS);
   smartlist_add_strdup(chunks, EX_RI_BAD_TOKENS);
@@ -1377,7 +1384,7 @@ test_dir_load_routers(void *arg)
   /* not ADDing MINIMIAL */
   ADD(EX_RI_MAXIMAL);
   ADD(EX_RI_BAD_FINGERPRINT);
-  ADD(EX_RI_BAD_SIG2);
+  ADD(EX_RI_BAD_SIG1);
   /* Not ADDing BAD_PORTS */
   ADD(EX_RI_BAD_TOKENS);
 
@@ -1391,7 +1398,7 @@ test_dir_load_routers(void *arg)
   tt_int_op(smartlist_len(router_get_routerlist()->routers),OP_EQ,1);
   routerinfo_t *r = smartlist_get(router_get_routerlist()->routers, 0);
   test_memeq_hex(r->cache_info.signed_descriptor_digest,
-                 "581D8A368A0FA854ECDBFAB841D88B3F1B004038");
+                 "1F437798ACD1FC9CBD1C3C04DBF80F7E9F819C3F");
   tt_int_op(dls_minimal.n_download_failures, OP_EQ, 0);
   tt_int_op(dls_maximal.n_download_failures, OP_EQ, 0);
 
@@ -1404,13 +1411,12 @@ test_dir_load_routers(void *arg)
 
   /* bad_sig2 and bad ports" are retriable -- one since only the signature
    * was bad, and one because we didn't ask for it. */
-  tt_int_op(dls_bad_sig2.n_download_failures, OP_EQ, 0);
+  tt_int_op(dls_bad_sig1.n_download_failures, OP_EQ, 0);
   tt_int_op(dls_bad_ports.n_download_failures, OP_EQ, 0);
 
-  /* Wanted still contains "BAD_SIG2" */
   tt_int_op(smartlist_len(wanted), OP_EQ, 1);
   tt_str_op(smartlist_get(wanted, 0), OP_EQ,
-            "E0A3753CEFD54128EAB239F294954121DB23D2EF");
+            "3BB7D03C1C4DBC1DDE840096FF3C330914757B77");
 
 #undef ADD
 
