@@ -4157,6 +4157,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = rs->bandwidth_kb = max_unmeasured_bw_kb / 2;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 1:
       /* Generate the second routerstatus. */
@@ -4183,6 +4184,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = rs->bandwidth_kb = 2 * max_unmeasured_bw_kb;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 2:
       /* Generate the third routerstatus. */
@@ -4208,6 +4210,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = 0;
       rs->bandwidth_kb = 2 * max_unmeasured_bw_kb;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 3:
       /* Generate a fourth routerstatus that is not running. */
@@ -4233,6 +4236,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = 0;
       rs->bandwidth_kb = max_unmeasured_bw_kb / 2;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 4:
       /* No more for this test; return NULL */
