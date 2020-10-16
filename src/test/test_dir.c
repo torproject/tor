@@ -6906,7 +6906,8 @@ test_dir_matching_flags(void *arg)
     "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
        "192.168.0.1 9001 0\n"
     "m thisoneislongerbecauseitisa256bitmddigest33\n"
-    "s\n";
+    "s\n"
+    "pr Link=4\n";
   const char *cp = ex_noflags;
   rs_noflags = routerstatus_parse_entry_from_string(
          area, &cp,
@@ -6920,6 +6921,7 @@ test_dir_matching_flags(void *arg)
                  "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 " \
                  "192.168.0.1 9001 0\n"                                 \
                  "m thisoneislongerbecauseitisa256bitmddigest33\n"      \
+                 "pr Link=4\n"                                          \
                  "s %s\n", string);                                     \
     cp = s;                                                             \
     rs =  routerstatus_parse_entry_from_string(                         \
@@ -6977,7 +6979,8 @@ test_dir_assumed_flags(void *arg)
     "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
        "192.168.0.1 9001 0\n"
     "m thisoneislongerbecauseitisa256bitmddigest33\n"
-    "s Fast Guard Stable\n";
+    "s Fast Guard Stable\n"
+    "pr Link=4\n";
   const char *eos = str1 + strlen(str1);
 
   const char *cp = str1;
