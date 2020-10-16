@@ -139,13 +139,13 @@ signed_digest_equals, (const uint8_t *d1, const uint8_t *d2, size_t len))
  * the document when generating log messages.  Return 0 on success, negative
  * on failure.
  */
-int
-check_signature_token(const char *digest,
+MOCK_IMPL(int,
+check_signature_token,(const char *digest,
                       ssize_t digest_len,
                       directory_token_t *tok,
                       crypto_pk_t *pkey,
                       int flags,
-                      const char *doctype)
+                      const char *doctype))
 {
   char *signed_digest;
   size_t keysize;
