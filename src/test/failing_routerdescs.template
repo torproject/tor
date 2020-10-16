@@ -1,0 +1,91 @@
+:::comment=this file is to be used with the makedescs.py utility
+:::name=MINIMAL
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+
+:::name=MAXIMAL
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject 127.0.0.1:*
+accept *:80
+reject *:*
+ipv6-policy accept 80,100,101
+uptime 1000
+hibernating 0
+unrecognized-keywords are just dandy in this format
+platform Tor 0.2.4.23 on a Banana PC Jr 6000 Series
+contact O.W.Jones
+fingerprint {d.RSA_FINGERPRINT}
+read-history 900 1,2,3,4
+write-history 900 1,2,3,4
+extra-info-digest AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+hidden-service-dir
+allow-single-hop-exits
+family $AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA $BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+caches-extra-info
+or-address [::1:2:3:4]:9999
+or-address 127.0.0.99:10000
+opt fred is a fine router
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::comment=this file is to be used with the makedescs.py utility
+:::name=MINIMAL
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
