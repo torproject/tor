@@ -104,6 +104,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
       rs->is_flagged_running = 1;
       rs->is_v2_dir = 1;
       rs->is_valid = 1; /* xxxxx */
+      vrs->protocols = tor_strdup("Link=7 HSDir=3");
       break;
     case 1:
       /* Generate the second routerstatus. */
@@ -122,6 +123,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
       rs->ipv6_orport = 4711;
       rs->is_exit = rs->is_stable = rs->is_fast = rs->is_flagged_running =
         rs->is_valid = rs->is_possible_guard = rs->is_v2_dir = 1;
+      vrs->protocols = tor_strdup("Link=3,4 HSDir=2,3");
       break;
     case 2:
       /* Generate the third routerstatus. */
@@ -138,6 +140,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
       rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
         rs->is_flagged_running = rs->is_valid = rs->is_v2_dir =
         rs->is_possible_guard = 1;
+      vrs->protocols = tor_strdup("Link=3,4 HSDir=2,3");
       break;
     case 3:
       /* Generate a fourth routerstatus that is not running. */
@@ -152,6 +155,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
       rs->ipv4_orport = 500;
       rs->ipv4_dirport = 1999;
       rs->is_v2_dir = 1;
+      vrs->protocols = tor_strdup("Link=3,4 HSDir=3");
       /* Running flag (and others) cleared */
       break;
     case 4:
