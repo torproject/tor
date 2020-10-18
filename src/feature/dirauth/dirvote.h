@@ -253,8 +253,8 @@ STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
  * Recommending a new protocol causes old tor versions to log a warning.
  */
 #define DIRVOTE_RECOMMEND_CLIENT_PROTO \
-  "Cons=1-2 "                          \
-  "Desc=1-2 "                          \
+  "Cons=2 "                            \
+  "Desc=2 "                            \
   "DirCache=2 "                        \
   "HSDir=2 "                           \
   "HSIntro=4 "                         \
@@ -270,14 +270,14 @@ STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
  * See Proposal 303: When and how to remove support for protocol versions.
  */
 #define DIRVOTE_REQUIRE_RELAY_PROTO             \
-  "Cons=1 "                                     \
-  "Desc=1 "                                     \
+  "Cons=2 "                                     \
+  "Desc=2 "                                     \
   "DirCache=1 "                                 \
   "HSDir=1 "                                    \
   "HSIntro=3 "                                  \
   "HSRend=1 "                                   \
   "Link=3-4 "                                   \
-  "Microdesc=1 "                                \
+  "Microdesc=2 "                                \
   "Relay=1-2"                                   \
 
 /** The required relay protocols for this authority's votes.
@@ -286,14 +286,14 @@ STATIC microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri,
  * See Proposal 303: When and how to remove support for protocol versions.
  */
 #define DIRVOTE_REQUIRE_CLIENT_PROTO \
-  "Cons=1-2 "                        \
-  "Desc=1-2 "                        \
+  "Cons=2 "                          \
+  "Desc=2 "                          \
   "DirCache=1 "                      \
   "HSDir=1 "                         \
   "HSIntro=3 "                       \
   "HSRend=1 "                        \
   "Link=4 "                          \
-  "Microdesc=1-2 "                   \
+  "Microdesc=2 "                     \
   "Relay=2"
 
 #endif /* defined(DIRVOTE_PRIVATE) */
