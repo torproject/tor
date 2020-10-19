@@ -31,6 +31,7 @@
 #include "lib/evloop/evloop_sys.h"
 
 #include "feature/dirauth/dirauth_sys.h"
+#include "feature/metrics/metrics_sys.h"
 #include "feature/relay/relay_sys.h"
 
 #include <stddef.h>
@@ -68,6 +69,7 @@ const subsys_fns_t *tor_subsystems[] = {
   &sys_btrack,
 
   &sys_dirauth,
+  &sys_metrics,
 };
 
 const unsigned n_tor_subsystems = ARRAY_LENGTH(tor_subsystems);

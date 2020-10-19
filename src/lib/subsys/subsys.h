@@ -15,6 +15,7 @@
 
 struct pubsub_connector_t;
 struct config_format_t;
+struct smartlist_t;
 
 /**
  * A subsystem is a part of Tor that is initialized, shut down, configured,
@@ -190,6 +191,17 @@ typedef struct subsys_fns_t {
    * to disk.
    **/
   int (*flush_state)(void *);
+
+  /**
+   * Return a list of metrics store of this subsystem. This is called
+   * everytime a request arrives on the MetricsPort.
+   *
+   * The list MUST contain metrics_store_t object and contains entries so it
+   * can be formatted for the metrics port.
+   *
+   * This can return NULL or be NULL.
+   **/
+  const struct smartlist_t *(*get_metrics)(void);
 } subsys_fns_t;
 
 #ifndef COCCI
