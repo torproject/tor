@@ -1995,9 +1995,8 @@ dirclient_dump_total_dls(void)
       if (options->SafeLogging_ != SAFELOG_SCRUB_NONE &&
           purpose_needs_anonymity(i, ROUTER_PURPOSE_GENERAL, NULL))
         continue;
-      char *line = NULL;
-      tor_asprintf(&line, "%"PRIu64" (%s)", n, dir_conn_purpose_to_string(i));
-      smartlist_add(lines, line);
+      smartlist_add_asprintf(lines, "%"PRIu64" (%s)",
+                             n, dir_conn_purpose_to_string(i));
     }
 
     if (smartlist_len(lines) > 0) {
