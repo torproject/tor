@@ -1987,7 +1987,7 @@ dirclient_dump_total_dls(void)
 {
   const or_options_t *options = get_options();
   for (int bootstrapped = 0; bootstrapped < 2; ++bootstrapped) {
-    bool first_time = true;
+    smartlist_t *lines = smartlist_new();
     for (int i=0; i < DIR_PURPOSE_MAX_; ++i) {
       uint64_t n = total_dl[i][bootstrapped];
       if (n == 0)
@@ -1995,15 +1995,20 @@ dirclient_dump_total_dls(void)
       if (options->SafeLogging_ != SAFELOG_SCRUB_NONE &&
           purpose_needs_anonymity(i, ROUTER_PURPOSE_GENERAL, NULL))
         continue;
-      if (first_time) {
-        log_notice(LD_NET,
-                   "While %sbootstrapping, fetched this many bytes: ",
-                   bootstrapped?"not ":"");
-        first_time = false;
-      }
-      log_notice(LD_NET, "    %"PRIu64" (%s)",
-                 n, dir_conn_purpose_to_string(i));
+      char *line = NULL;
+      tor_asprintf(&line, "%"PRIu64" (%s)", n, dir_conn_purpose_to_string(i));
+      smartlist_add(lines, line);
     }
+
+    if (smartlist_len(lines) > 0) {
+      char *log_line = smartlist_join_strings(lines, "; ", 0, NULL);
+      log_notice(LD_NET, "While %sbootstrapping, fetched this many bytes: %s",
+                 bootstrapped?"not ":"", log_line);
+      tor_free(log_line);
+
+      SMARTLIST_FOREACH(lines, char *, s, tor_free(s));
+    }
+    smartlist_free(lines);
   }
 }
 
