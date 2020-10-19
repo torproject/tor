@@ -2447,6 +2447,9 @@ channel_get_for_extend,(const char *rsa_id_digest,
       if (matches_target) {
         ++n_inprogress_goodaddr;
         if (for_origin_circ) {
+          /* We were looking for a connection for an origin circuit; this one
+           * matches, so we'll note that we decided to use it for an origin
+           * circuit. */
           channel_mark_as_used_for_origin_circuit(chan);
         }
       }

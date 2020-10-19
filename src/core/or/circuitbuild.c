@@ -591,6 +591,10 @@ circuit_handle_first_hop(origin_circuit_t *circ)
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -END_CIRC_REASON_CONNECTFAILED;
       }
+      /* We didn't find a channel, but we're launching one for an origin
+       * circuit.  (If we decided not to launch a channel, then we found at
+       * least one once good in-progress channel use for this circuit, and
+       * marked it in channel_get_for_extend().) */
       channel_mark_as_used_for_origin_circuit(n_chan);
       circuit_chan_publish(circ, n_chan);
     }
@@ -604,6 +608,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   } else { /* it's already open. use it. */
     tor_assert(!circ->base_.n_hop);
     circ->base_.n_chan = n_chan;
+    /* We found a channel, and we're using it for an origin circuit. */
     channel_mark_as_used_for_origin_circuit(n_chan);
     circuit_chan_publish(circ, n_chan);
     log_debug(LD_CIRC,"Conn open for %s. Delivering first onion skin.",

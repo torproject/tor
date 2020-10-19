@@ -365,7 +365,10 @@ channel_tls_handle_incoming(or_connection_t *orconn)
  * corresponding to the provided channel.
  *
  * This flag indicates that if the connection fails, it might be interesting
- * to the bootstrapping subsystem.
+ * to the bootstrapping subsystem.  (The bootstrapping system only cares about
+ * channels that we have tried to use for our own circuits.  Other channels
+ * may have been launched in response to EXTEND cells from somebody else, and
+ * if they fail, it won't necessarily indicate a bootstrapping problem.)
  **/
 void
 channel_mark_as_used_for_origin_circuit(channel_t *chan)
