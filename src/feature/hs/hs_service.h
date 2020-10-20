@@ -11,12 +11,13 @@
 
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
-#include "feature/hs_common/replaycache.h"
+#include "lib/metrics/metrics_store.h"
 
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_intropoint.h"
+#include "feature/hs_common/replaycache.h"
 
 /* Trunnel */
 #include "trunnel/hs/cell_establish_intro.h"
@@ -33,6 +34,12 @@
 #define HS_SERVICE_NEXT_UPLOAD_TIME_MIN (60 * 60)
 /** Maximum interval for uploading next descriptor (in seconds). */
 #define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (120 * 60)
+
+/** Collected metrics for a specific service. */
+typedef struct hs_service_metrics_t {
+  /** Store containing the metrics values. */
+  metrics_store_t *store;
+} hs_service_metrics_t;
 
 /** Service side introduction point. */
 typedef struct hs_service_intro_point_t {
@@ -312,6 +319,9 @@ typedef struct hs_service_t {
   hs_service_descriptor_t *desc_current;
   /** Next descriptor. */
   hs_service_descriptor_t *desc_next;
+
+  /** Metrics. */
+  hs_service_metrics_t metrics;
 } hs_service_t;
 
 /** For the service global hash map, we define a specific type for it which
@@ -335,6 +345,7 @@ void hs_service_free_(hs_service_t *service);
  **/
 #define hs_service_free(s) FREE_AND_NULL(hs_service_t, hs_service_free_, (s))
 
+hs_service_t *hs_service_find(const ed25519_public_key_t *ident_pk);
 MOCK_DECL(unsigned int, hs_service_get_num_services,(void));
 void hs_service_stage_services(const smartlist_t *service_list);
 int hs_service_load_all_keys(void);
@@ -343,6 +354,7 @@ void hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
                                          smartlist_t *dir_list);
 int hs_service_set_conn_addr_port(const origin_circuit_t *circ,
                                   edge_connection_t *conn);
+smartlist_t *hs_service_get_metrics_stores(void);
 
 void hs_service_map_has_changed(void);
 void hs_service_dir_info_changed(void);

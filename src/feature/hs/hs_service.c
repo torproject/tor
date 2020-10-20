@@ -40,6 +40,7 @@
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_intropoint.h"
+#include "feature/hs/hs_metrics.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs/hs_stats.h"
 #include "feature/hs/hs_ob.h"
@@ -195,6 +196,8 @@ register_service(hs_service_ht *map, hs_service_t *service)
   if (map == hs_service_map) {
     hs_service_map_has_changed();
   }
+  /* Setup metrics. */
+  hs_metrics_service_init(service);
 
   return 0;
 }
@@ -3491,6 +3494,8 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
                                 payload, payload_len) < 0) {
     goto err;
   }
+  /* Update metrics that a new introduction was successful. */
+  hs_metrics_new_introduction(service);
 
   return 0;
  err:
@@ -4169,6 +4174,34 @@ hs_service_stage_services(const smartlist_t *service_list)
   smartlist_add_all(hs_service_staging_list, service_list);
 }
 
+/** Return a newly allocated list of all the service's metrics store. */
+smartlist_t *
+hs_service_get_metrics_stores(void)
+{
+  smartlist_t *list = smartlist_new();
+
+  if (hs_service_map) {
+    FOR_EACH_SERVICE_BEGIN(service) {
+      smartlist_add(list, service->metrics.store);
+    } FOR_EACH_SERVICE_END;
+  }
+
+  return list;
+}
+
+/** Lookup the global service map for the given identitiy public key and
+ * return the service object if found, NULL if not. */
+hs_service_t *
+hs_service_find(const ed25519_public_key_t *identity_pk)
+{
+  tor_assert(identity_pk);
+
+  if (!hs_service_map) {
+    return NULL;
+  }
+  return find_service(hs_service_map, identity_pk);
+}
+
 /** Allocate and initilize a service object. The service configuration will
  * contain the default values. Return the newly allocated object pointer. This
  * function can't fail. */
@@ -4214,6 +4247,9 @@ hs_service_free_(hs_service_t *service)
   if (service->state.ob_subcreds) {
     tor_free(service->state.ob_subcreds);
   }
+
+  /* Free metrics object. */
+  hs_metrics_service_free(service);
 
   /* Wipe service keys. */
   memwipe(&service->keys.identity_sk, 0, sizeof(service->keys.identity_sk));
