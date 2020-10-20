@@ -384,7 +384,6 @@ test_circuit_timeout(void *arg)
   double timeout1, timeout2;
   or_state_t *state=NULL;
   int i, runs;
-  double close_ms;
   (void)arg;
 
   initialize_periodic_events();
@@ -406,18 +405,11 @@ test_circuit_timeout(void *arg)
   circuit_build_times_initial_alpha(&initial,
                                     CBT_DEFAULT_QUANTILE_CUTOFF/100.0,
                                     timeout0);
-  close_ms = MAX(circuit_build_times_calculate_timeout(&initial,
-                             CBT_DEFAULT_CLOSE_QUANTILE/100.0),
-                 CBT_DEFAULT_TIMEOUT_INITIAL_VALUE);
   do {
     for (i=0; i < CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE; i++) {
       build_time_t sample = circuit_build_times_generate_sample(&initial,0,1);
 
-      if (sample > close_ms) {
-        circuit_build_times_add_time(&estimate, CBT_BUILD_ABANDONED);
-      } else {
-        circuit_build_times_add_time(&estimate, sample);
-      }
+      circuit_build_times_add_time(&estimate, sample);
     }
     circuit_build_times_update_alpha(&estimate);
     timeout1 = circuit_build_times_calculate_timeout(&estimate,
