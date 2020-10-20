@@ -35,4 +35,12 @@ void hs_metrics_update_by_service(const hs_metrics_key_t key,
 #define hs_metrics_new_introduction(s) \
   hs_metrics_update_by_service(HS_METRICS_NUM_INTRODUCTIONS, (s), 0, 1)
 
+/** Number of bytes written to the application from the service. */
+#define hs_metrics_app_write_bytes(i, port, n) \
+  hs_metrics_update_by_ident(HS_METRICS_APP_WRITE_BYTES, (i), (port), (n))
+
+/** Number of bytes read from the application to the service. */
+#define hs_metrics_app_read_bytes(i, port, n) \
+  hs_metrics_update_by_ident(HS_METRICS_APP_READ_BYTES, (i), (port), (n))
+
 #endif /* !defined(TOR_FEATURE_HS_HS_METRICS_H) */

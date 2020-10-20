@@ -17,6 +17,10 @@
 typedef enum {
   /** Number of introduction requests. */
   HS_METRICS_NUM_INTRODUCTIONS = 0,
+  /** Number of bytes written from onion service to application. */
+  HS_METRICS_APP_WRITE_BYTES = 1,
+  /** Number of bytes read from application to onion service. */
+  HS_METRICS_APP_READ_BYTES = 2,
 } hs_metrics_key_t;
 
 /** The metadata of an HS metrics. */

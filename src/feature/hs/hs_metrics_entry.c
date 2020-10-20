@@ -27,6 +27,20 @@ const hs_metrics_entry_t base_metrics[] =
     .help = "Total number of introduction received",
     .port_as_label = false,
   },
+  {
+    .key = HS_METRICS_APP_WRITE_BYTES,
+    .type = METRICS_TYPE_COUNTER,
+    .name = "hs_app_write_bytes_total",
+    .help = "Total number of bytes written to the application",
+    .port_as_label = true,
+  },
+  {
+    .key = HS_METRICS_APP_READ_BYTES,
+    .type = METRICS_TYPE_COUNTER,
+    .name = "hs_app_read_bytes_total",
+    .help = "Total number of bytes read from the application",
+    .port_as_label = true,
+  },
 };
 
 /** Size of base_metrics array that is number of entries. */
