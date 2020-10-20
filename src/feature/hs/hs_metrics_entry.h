@@ -21,6 +21,10 @@ typedef enum {
   HS_METRICS_APP_WRITE_BYTES = 1,
   /** Number of bytes read from application to onion service. */
   HS_METRICS_APP_READ_BYTES = 2,
+  /** Number of established rendezsvous. */
+  HS_METRICS_NUM_ESTABLISHED_RDV = 3,
+  /** Number of rendezsvous circuits created. */
+  HS_METRICS_NUM_RDV = 4,
 } hs_metrics_key_t;
 
 /** The metadata of an HS metrics. */

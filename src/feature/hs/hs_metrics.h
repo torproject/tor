@@ -43,4 +43,18 @@ void hs_metrics_update_by_service(const hs_metrics_key_t key,
 #define hs_metrics_app_read_bytes(i, port, n) \
   hs_metrics_update_by_ident(HS_METRICS_APP_READ_BYTES, (i), (port), (n))
 
+/** Newly established rendezvous. This is called as soon as the circuit purpose
+ * is REND_JOINED which is when the RENDEZVOUS2 cell is sent. */
+#define hs_metrics_new_established_rdv(s) \
+  hs_metrics_update_by_service(HS_METRICS_NUM_ESTABLISHED_RDV, (s), 0, 1)
+
+/** Established rendezvous closed. This is called when the circuit in
+ * REND_JOINED state is marked for close. */
+#define hs_metrics_close_established_rdv(i) \
+  hs_metrics_update_by_ident(HS_METRICS_NUM_ESTABLISHED_RDV, (i), 0, -1)
+
+/** New rendezvous circuit being launched. */
+#define hs_metrics_new_rdv(i) \
+  hs_metrics_update_by_ident(HS_METRICS_NUM_RDV, (i), 0, 1)
+
 #endif /* !defined(TOR_FEATURE_HS_HS_METRICS_H) */
