@@ -2395,12 +2395,16 @@ channel_is_better(channel_t *a, channel_t *b)
  * *msg_out to a message describing the channel's state and our next action,
  * and set *launch_out to a boolean indicated whether the caller should try to
  * launch a new channel with channel_connect().
+ *
+ * If `for_origin_circ` is set, mark the channel as interesting for origin
+ * circuits, and therefore interesting for our bootstrapping reports.
  */
 MOCK_IMPL(channel_t *,
 channel_get_for_extend,(const char *rsa_id_digest,
                         const ed25519_public_key_t *ed_id,
                         const tor_addr_t *target_ipv4_addr,
                         const tor_addr_t *target_ipv6_addr,
+                        bool for_origin_circ,
                         const char **msg_out,
                         int *launch_out))
 {
@@ -2440,8 +2444,15 @@ channel_get_for_extend,(const char *rsa_id_digest,
     if (!CHANNEL_IS_OPEN(chan)) {
       /* If the address matches, don't launch a new connection for this
        * circuit. */
-      if (matches_target)
+      if (matches_target) {
         ++n_inprogress_goodaddr;
+        if (for_origin_circ) {
+          /* We were looking for a connection for an origin circuit; this one
+           * matches, so we'll note that we decided to use it for an origin
+           * circuit. */
+          channel_mark_as_used_for_origin_circuit(chan);
+        }
+      }
       continue;
     }
 

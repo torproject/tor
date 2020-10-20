@@ -526,6 +526,7 @@ void channel_mark_for_close(channel_t *chan);
 int channel_write_packed_cell(channel_t *chan, packed_cell_t *cell);
 
 void channel_listener_mark_for_close(channel_listener_t *chan_l);
+void channel_mark_as_used_for_origin_circuit(channel_t *chan);
 
 /* Channel callback registrations */
 
@@ -661,6 +662,7 @@ MOCK_DECL(channel_t *, channel_get_for_extend,(
                                    const struct ed25519_public_key_t *ed_id,
                                    const tor_addr_t *target_ipv4_addr,
                                    const tor_addr_t *target_ipv6_addr,
+                                   bool for_origin_circ,
                                    const char **msg_out,
                                    int *launch_out));
 

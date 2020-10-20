@@ -348,6 +348,18 @@ control_event_bootstrap_prob_or, (const char *warn, int reason,
 {
   int dowarn = 0;
 
+  if (! or_conn->potentially_used_for_bootstrapping) {
+    /* We never decided that this channel was a good match for one of our
+     * origin_circuit_t objects.  That means that we probably launched it
+     * for somebody else, most likely in response to an EXTEND cell.
+     *
+     * Since EXTEND cells can contain arbitrarily broken descriptions of
+     * relays, a failure on this connection here won't necessarily indicate a
+     * bootstrapping problem.
+     */
+    return;
+  }
+
   if (or_conn->have_noted_bootstrap_problem)
     return;
 
