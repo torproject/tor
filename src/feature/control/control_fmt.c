@@ -206,6 +206,8 @@ entry_connection_describe_status_for_controller(const entry_connection_t *conn)
       case CONN_TYPE_AP_DNS_LISTENER: client_protocol = "DNS"; break;
       case CONN_TYPE_AP_HTTP_CONNECT_LISTENER:
         client_protocol = "HTTPCONNECT"; break;
+      case CONN_TYPE_METRICS_LISTENER:
+        client_protocol = "METRICS"; break;
       default: client_protocol = "UNKNOWN";
       }
     smartlist_add_asprintf(descparts, "CLIENT_PROTOCOL=%s",

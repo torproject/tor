@@ -99,6 +99,7 @@
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ident.h"
+#include "feature/metrics/metrics.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/dns.h"
@@ -218,7 +219,8 @@ static smartlist_t *outgoing_addrs = NULL;
     case CONN_TYPE_AP_TRANS_LISTENER: \
     case CONN_TYPE_AP_NATD_LISTENER: \
     case CONN_TYPE_AP_DNS_LISTENER: \
-    case CONN_TYPE_AP_HTTP_CONNECT_LISTENER
+    case CONN_TYPE_AP_HTTP_CONNECT_LISTENER: \
+    case CONN_TYPE_METRICS_LISTENER
 
 /**************************************************************/
 
@@ -283,6 +285,8 @@ conn_type_to_string(int type)
     case CONN_TYPE_EXT_OR: return "Extended OR";
     case CONN_TYPE_EXT_OR_LISTENER: return "Extended OR listener";
     case CONN_TYPE_AP_HTTP_CONNECT_LISTENER: return "HTTP tunnel listener";
+    case CONN_TYPE_METRICS_LISTENER: return "Metrics listener";
+    case CONN_TYPE_METRICS: return "Metrics";
     default:
       log_warn(LD_BUG, "unknown connection type %d", type);
       tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
@@ -2024,6 +2028,10 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     if (new_type == CONN_TYPE_CONTROL) {
       log_notice(LD_CONTROL, "New control connection opened from %s.",
                  fmt_and_decorate_addr(&addr));
+    }
+    if (new_type == CONN_TYPE_METRICS) {
+      log_info(LD_CONTROL, "New metrics connection opened from %s.",
+               fmt_and_decorate_addr(&addr));
     }
 
   } else if (conn->socket_family == AF_UNIX && conn->type != CONN_TYPE_AP) {
@@ -3893,6 +3901,8 @@ connection_handle_read_impl(connection_t *conn)
       return connection_handle_listener_read(conn, CONN_TYPE_DIR);
     case CONN_TYPE_CONTROL_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_CONTROL);
+    case CONN_TYPE_METRICS_LISTENER:
+      return connection_handle_listener_read(conn, CONN_TYPE_METRICS);
     case CONN_TYPE_AP_DNS_LISTENER:
       /* This should never happen; eventdns.c handles the reads here. */
       tor_fragile_assert();
@@ -5108,6 +5118,8 @@ connection_process_inbuf(connection_t *conn, int package_partial)
       return connection_dir_process_inbuf(TO_DIR_CONN(conn));
     case CONN_TYPE_CONTROL:
       return connection_control_process_inbuf(TO_CONTROL_CONN(conn));
+    case CONN_TYPE_METRICS:
+      return metrics_connection_process_inbuf(conn);
     default:
       log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
@@ -5670,6 +5682,9 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_CONTROL:
       tor_assert(conn->state >= CONTROL_CONN_STATE_MIN_);
       tor_assert(conn->state <= CONTROL_CONN_STATE_MAX_);
+      break;
+    case CONN_TYPE_METRICS:
+      /* No state. */
       break;
     default:
       tor_assert(0);

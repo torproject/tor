@@ -164,6 +164,8 @@ struct or_options_t {
   struct config_line_t *ORPort_lines;
   /** Ports to listen on for extended OR connections. */
   struct config_line_t *ExtORPort_lines;
+  /** Ports to listen on for Metrics connections. */
+  struct config_line_t *MetricsPort_lines;
   /** Ports to listen on for SOCKS connections. */
   struct config_line_t *SocksPort_lines;
   /** Ports to listen on for transparent pf/netfilter connections. */
@@ -223,6 +225,7 @@ struct or_options_t {
   unsigned int DNSPort_set : 1;
   unsigned int ExtORPort_set : 1;
   unsigned int HTTPTunnelPort_set : 1;
+  unsigned int MetricsPort_set : 1;
   /**@}*/
 
   /** Whether to publish our descriptor regardless of all our self-tests
@@ -1075,6 +1078,9 @@ struct or_options_t {
    * a possible previous dormant state.
    **/
   int DormantCanceledByStartup;
+
+  /** List of policy allowed to query the Metrics port. */
+  struct config_line_t *MetricsPortPolicy;
 
   /**
    * Configuration objects for individual modules.

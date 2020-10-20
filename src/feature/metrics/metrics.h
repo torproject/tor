@@ -9,13 +9,27 @@
 #ifndef TOR_FEATURE_METRICS_METRICS_H
 #define TOR_FEATURE_METRICS_METRICS_H
 
+#include "lib/buf/buffers.h"
+#include "lib/container/smartlist.h"
+
+#include "app/config/or_options_st.h"
+
 #include "lib/metrics/metrics_common.h"
+
+struct connection_t;
 
 /* Initializer / Cleanup. */
 void metrics_init(void);
 void metrics_cleanup(void);
 
 /* Accessors. */
-char *metrics_get_output(const metrics_format_t fmt);
+buf_t *metrics_get_output(const metrics_format_t fmt);
+
+/* Connection. */
+int metrics_connection_process_inbuf(struct connection_t *conn);
+
+/* Configuration. */
+int metrics_parse_ports(or_options_t *options, smartlist_t *ports,
+                        char **err_msg_out);
 
 #endif /* !defined(TOR_FEATURE_METRICS_METRICS_H) */

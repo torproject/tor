@@ -91,6 +91,7 @@
 #include "feature/dirclient/dirclient_modes.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_config.h"
+#include "feature/metrics/metrics.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
@@ -560,6 +561,8 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
+  VPORT(MetricsPort),
+  V(MetricsPortPolicy,           LINELIST, NULL),
   VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
@@ -6461,6 +6464,10 @@ parse_ports(or_options_t *options, int validate_only,
     *msg = tor_strdup("Invalid HTTPTunnelPort configuration");
     goto err;
   }
+  if (metrics_parse_ports(options, ports, msg) < 0) {
+    goto err;
+  }
+
   {
     unsigned control_port_flags = CL_PORT_NO_STREAM_OPTIONS |
       CL_PORT_WARN_NONLOCAL;

@@ -48,6 +48,8 @@
 static smartlist_t *socks_policy = NULL;
 /** Policy that addresses for incoming directory connections must match. */
 static smartlist_t *dir_policy = NULL;
+/** Policy for incoming MetricsPort connections that must match. */
+static smartlist_t *metrics_policy = NULL;
 /** Policy that addresses for incoming router descriptors must match in order
  * to be published by us. */
 static smartlist_t *authdir_reject_policy = NULL;
@@ -1060,6 +1062,15 @@ socks_policy_permits_address(const tor_addr_t *addr)
   return addr_policy_permits_tor_addr(addr, 1, socks_policy);
 }
 
+/** Return 1 if <b>addr</b> is permitted to connect to our metrics port,
+ * based on <b>socks_policy</b>. Else return 0.
+ */
+int
+metrics_policy_permits_address(const tor_addr_t *addr)
+{
+  return addr_policy_permits_tor_addr(addr, 1, metrics_policy);
+}
+
 /** Return true iff the address <b>addr</b> is in a country listed in the
  * case-insensitive list of country codes <b>cc_list</b>. */
 static int
@@ -1218,6 +1229,22 @@ load_policy_from_option(config_line_t *config, const char *option_name,
   return 0;
 }
 
+/** Helper: Parse the MetricsPortPolicy option into the metrics_policy and set
+ * the reject all by default.
+ *
+ * Return 0 on success else -1. */
+static int
+parse_metrics_port_policy(const or_options_t *options)
+{
+  if (load_policy_from_option(options->MetricsPortPolicy, "MetricsPortPolicy",
+                              &metrics_policy, -1) < 0) {
+    return -1;
+  }
+  /* It is a reject all by default. */
+  append_exit_policy_string(&metrics_policy, "reject *:*");
+  return 0;
+}
+
 /** Set all policies based on <b>options</b>, which should have been validated
  * first by validate_addr_policies. */
 int
@@ -1239,6 +1266,9 @@ policies_parse_from_options(const or_options_t *options)
   if (load_policy_from_option(options->AuthDirBadExit, "AuthDirBadExit",
                               &authdir_badexit_policy, ADDR_POLICY_REJECT) < 0)
     ret = -1;
+  if (parse_metrics_port_policy(options) < 0) {
+    ret = -1;
+  }
   if (parse_reachable_addresses() < 0)
     ret = -1;
   return ret;
@@ -3074,6 +3104,8 @@ policies_free_all(void)
   socks_policy = NULL;
   addr_policy_list_free(dir_policy);
   dir_policy = NULL;
+  addr_policy_list_free(metrics_policy);
+  metrics_policy = NULL;
   addr_policy_list_free(authdir_reject_policy);
   authdir_reject_policy = NULL;
   addr_policy_list_free(authdir_invalid_policy);

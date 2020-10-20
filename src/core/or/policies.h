@@ -102,6 +102,7 @@ void reachable_addr_choose_from_dir_server(const dir_server_t *ds,
 
 int dir_policy_permits_address(const tor_addr_t *addr);
 int socks_policy_permits_address(const tor_addr_t *addr);
+int metrics_policy_permits_address(const tor_addr_t *addr);
 int authdir_policy_permits_address(const tor_addr_t *addr, uint16_t port);
 int authdir_policy_valid_address(const tor_addr_t *addr, uint16_t port);
 int authdir_policy_badexit_address(const tor_addr_t *addr, uint16_t port);
