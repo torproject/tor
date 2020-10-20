@@ -413,11 +413,7 @@ test_circuit_timeout(void *arg)
     for (i=0; i < CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE; i++) {
       build_time_t sample = circuit_build_times_generate_sample(&initial,0,1);
 
-      if (sample > close_ms) {
-        circuit_build_times_add_time(&estimate, CBT_BUILD_ABANDONED);
-      } else {
-        circuit_build_times_add_time(&estimate, sample);
-      }
+      circuit_build_times_add_time(&estimate, sample);
     }
     circuit_build_times_update_alpha(&estimate);
     timeout1 = circuit_build_times_calculate_timeout(&estimate,

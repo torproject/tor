@@ -1010,43 +1010,6 @@ circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
 }
 
 /**
- * Filter old synthetic timeouts that were created before the
- * new right-censored Pareto calculation was deployed.
- *
- * Once all clients before 0.2.1.13-alpha are gone, this code
- * will be unused.
- */
-static int
-circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
-{
-  int num_filtered=0, i=0;
-  double timeout_rate = 0;
-  build_time_t max_timeout = 0;
-
-  timeout_rate = circuit_build_times_timeout_rate(cbt);
-  max_timeout = (build_time_t)cbt->close_ms;
-
-  for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
-    if (cbt->circuit_build_times[i] > max_timeout) {
-      build_time_t replaced = cbt->circuit_build_times[i];
-      num_filtered++;
-      cbt->circuit_build_times[i] = CBT_BUILD_ABANDONED;
-
-      log_debug(LD_CIRC, "Replaced timeout %d with %d", replaced,
-               cbt->circuit_build_times[i]);
-    }
-  }
-
-  log_info(LD_CIRC,
-           "We had %d timeouts out of %d build times, "
-           "and filtered %d above the max of %u",
-          (int)(cbt->total_build_times*timeout_rate),
-          cbt->total_build_times, num_filtered, max_timeout);
-
-  return num_filtered;
-}
-
-/**
  * Load histogram from <b>state</b>, shuffling the resulting array
  * after we do so. Use this result to estimate parameters and
  * calculate the timeout.
@@ -1171,10 +1134,6 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
 
   circuit_build_times_set_timeout(cbt);
 
-  if (!state->CircuitBuildAbandonedCount && cbt->total_build_times) {
-    circuit_build_times_filter_timeouts(cbt);
-  }
-
  done:
   tor_free(loaded_times);
   return err ? -1 : 0;
@@ -1215,14 +1174,15 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
 
     if (x[i] < cbt->Xm) {
       a += tor_mathlog(cbt->Xm);
+      n++;
     } else if (x[i] == CBT_BUILD_ABANDONED) {
       abandoned_count++;
     } else {
       a += tor_mathlog(x[i]);
       if (x[i] > max_time)
         max_time = x[i];
+      n++;
     }
-    n++;
   }
 
   /*
@@ -1231,11 +1191,11 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
    * performs this same check, and resets state if it hits it. If we
    * hit it at runtime, something serious has gone wrong.
    */
-  if (n!=cbt->total_build_times) {
+  if (n!=cbt->total_build_times-abandoned_count) {
     log_err(LD_CIRC, "Discrepancy in build times count: %d vs %d", n,
             cbt->total_build_times);
   }
-  tor_assert(n==cbt->total_build_times);
+  tor_assert(n==cbt->total_build_times-abandoned_count);
 
   if (max_time <= 0) {
     /* This can happen if Xm is actually the *maximum* value in the set.
@@ -1248,13 +1208,17 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
     return 0;
   }
 
-  a += abandoned_count*tor_mathlog(max_time);
-
+  /* This is the "Maximum Likelihood Estimator" for parameter alpha of a Pareto
+   * Distribution. See:
+   * https://en.wikipedia.org/wiki/Pareto_distribution#Estimation_of_parameters
+   *
+   * The division in the estimator is done with subtraction outside the ln(),
+   * with the sum occurring in the for loop above.
+   *
+   * This done is to avoid the precision issues of logs of small values.
+   */
   a -= n*tor_mathlog(cbt->Xm);
-  // Estimator comes from Eq #4 in:
-  // "Bayesian estimation based on trimmed samples from Pareto populations"
-  // by Arturo J. Fernández. We are right-censored only.
-  a = (n-abandoned_count)/a;
+  a = n/a;
 
   cbt->alpha = a;
 
