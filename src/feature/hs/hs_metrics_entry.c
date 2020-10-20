@@ -53,6 +53,12 @@ const hs_metrics_entry_t base_metrics[] =
     .name = "hs_rdv_num_total",
     .help = "Total number of rendezvous circuit created",
   },
+  {
+    .key = HS_METRICS_NUM_ESTABLISHED_INTRO,
+    .type = METRICS_TYPE_GAUGE,
+    .name = "hs_intro_established_count",
+    .help = "Total number of established introduction circuit",
+  },
 };
 
 /** Size of base_metrics array that is number of entries. */

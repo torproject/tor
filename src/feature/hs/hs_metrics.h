@@ -57,4 +57,14 @@ void hs_metrics_update_by_service(const hs_metrics_key_t key,
 #define hs_metrics_new_rdv(i) \
   hs_metrics_update_by_ident(HS_METRICS_NUM_RDV, (i), 0, 1)
 
+/** New introduction circuit has been established. This is called when the
+ * INTRO_ESTABLISHED has been received by the service. */
+#define hs_metrics_new_established_intro(s) \
+  hs_metrics_update_by_service(HS_METRICS_NUM_ESTABLISHED_INTRO, (s), 0, 1)
+
+/** Established introduction circuit closes. This is called when
+ * INTRO_ESTABLISHED circuit is marked for close. */
+#define hs_metrics_close_established_intro(i) \
+  hs_metrics_update_by_ident(HS_METRICS_NUM_ESTABLISHED_INTRO, (i), 0, 1)
+
 #endif /* !defined(TOR_FEATURE_HS_HS_METRICS_H) */

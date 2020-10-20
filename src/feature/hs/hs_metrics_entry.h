@@ -25,6 +25,8 @@ typedef enum {
   HS_METRICS_NUM_ESTABLISHED_RDV = 3,
   /** Number of rendezsvous circuits created. */
   HS_METRICS_NUM_RDV = 4,
+  /** Number of established introducton points. */
+  HS_METRICS_NUM_ESTABLISHED_INTRO = 5,
 } hs_metrics_key_t;
 
 /** The metadata of an HS metrics. */

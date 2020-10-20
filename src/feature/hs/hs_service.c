@@ -3451,6 +3451,9 @@ service_handle_intro_established(origin_circuit_t *circ,
     goto err;
   }
 
+  /* Update metrics. */
+  hs_metrics_new_established_intro(service);
+
   log_info(LD_REND, "Successfully received an INTRO_ESTABLISHED cell "
                     "on circuit %u for service %s",
            TO_CIRCUIT(circ)->n_circ_id,
@@ -3597,6 +3600,12 @@ hs_service_circuit_cleanup_on_close(const circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_S_INTRO:
+    /* About to close an established introduction circuit. Update the metrics
+     * to reflect how many we have at the moment. */
+    hs_metrics_close_established_intro(
+      &CONST_TO_ORIGIN_CIRCUIT(circ)->hs_ident->identity_pk);
+    break;
   case CIRCUIT_PURPOSE_S_REND_JOINED:
     /* About to close an established rendezvous circuit. Update the metrics to
      * reflect how many we have at the moment. */
