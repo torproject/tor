@@ -91,8 +91,9 @@ The following options in this section are only recognized on the
 [[opt-hash-password]] **`--hash-password`** __PASSWORD__::
     Generate a hashed password for control port access.
 
-[[opt-list-fingerprint]] **`--list-fingerprint`**::
-    Generate your keys and output your nickname and fingerprint.
+[[opt-list-fingerprint]] **`--list-fingerprint`** [__key type__]::
+    Generate your keys and output your nickname and fingerprint. Optionally,
+    you can specify the key type as `rsa` (default) or `ed25519`.
 
 [[opt-verify-config]] **`--verify-config`**::
     Verify whether the configuration file is valid.

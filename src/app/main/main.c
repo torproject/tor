@@ -58,6 +58,7 @@
 #include "feature/stats/rephist.h"
 #include "lib/compress/compress.h"
 #include "lib/buf/buffers.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_s2k.h"
 #include "lib/net/resolve.h"
@@ -735,29 +736,52 @@ tor_remove_file(const char *filename)
 static int
 do_list_fingerprint(void)
 {
-  char buf[FINGERPRINT_LEN+1];
+  const or_options_t *options = get_options();
+  const char *arg = options->command_arg;
+  char rsa[FINGERPRINT_LEN + 1];
   crypto_pk_t *k;
-  const char *nickname = get_options()->Nickname;
+  const ed25519_public_key_t *edkey;
+  const char *nickname = options->Nickname;
   sandbox_disable_getaddrinfo_cache();
-  if (!server_mode(get_options())) {
+
+  bool show_rsa = !strcmp(arg, "") || !strcmp(arg, "rsa");
+  bool show_ed25519 = !strcmp(arg, "ed25519");
+  if (!show_rsa && !show_ed25519) {
+    log_err(LD_GENERAL,
+      "If you give a key type, you must specify 'rsa' or 'ed25519'. Exiting.");
+    return -1;
+  }
+
+  if (!server_mode(options)) {
     log_err(LD_GENERAL,
             "Clients don't have long-term identity keys. Exiting.");
     return -1;
   }
   tor_assert(nickname);
   if (init_keys() < 0) {
-    log_err(LD_GENERAL,"Error initializing keys; exiting.");
+    log_err(LD_GENERAL, "Error initializing keys; exiting.");
     return -1;
   }
   if (!(k = get_server_identity_key())) {
-    log_err(LD_GENERAL,"Error: missing identity key.");
+    log_err(LD_GENERAL, "Error: missing RSA identity key.");
     return -1;
   }
-  if (crypto_pk_get_fingerprint(k, buf, 1)<0) {
-    log_err(LD_BUG, "Error computing fingerprint");
+  if (crypto_pk_get_fingerprint(k, rsa, 1) < 0) {
+    log_err(LD_BUG, "Error computing RSA fingerprint");
     return -1;
   }
-  printf("%s %s\n", nickname, buf);
+  if (!(edkey = get_master_identity_key())) {
+    log_err(LD_GENERAL,"Error: missing ed25519 identity key.");
+    return -1;
+  }
+  if (show_rsa) {
+    printf("%s %s\n", nickname, rsa);
+  }
+  if (show_ed25519) {
+    char ed25519[ED25519_BASE64_LEN + 1];
+    digest256_to_base64(ed25519, (const char *) edkey->pubkey);
+    printf("%s %s\n", nickname, ed25519);
+  }
   return 0;
 }
 

@@ -1,0 +1,5 @@
+  o Minor features (relay fingerprint, command line):
+    - Allow a relay operator to list the ed25519 keys on the command line
+      by adding the `rsa` and `ed25519` arguments to the --list-fingerprint
+      flag to show the respective RSA and ed25519 relay fingerprint. Closes
+      ticket 33632. Patch by Neel Chauhan.

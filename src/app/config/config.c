@@ -2466,6 +2466,7 @@ static const struct {
     .command=CMD_DUMP_CONFIG,
     .quiet=QUIET_SILENT },
   { .name="--list-fingerprint",
+    .takes_argument=ARGUMENT_OPTIONAL,
     .command=CMD_LIST_FINGERPRINT },
   { .name="--keygen",
     .command=CMD_KEYGEN },
