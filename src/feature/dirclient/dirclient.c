@@ -2509,9 +2509,12 @@ handle_response_fetch_desc(dir_connection_t *conn,
   }
   if (status_code != 200) {
     int dir_okay = status_code == 404 ||
-      (status_code == 400 && !strcmp(reason, "Servers unavailable."));
+      (status_code == 400 && !strcmp(reason, "Servers unavailable.")) ||
+       status_code == 301;
     /* 404 means that it didn't have them; no big deal.
-     * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
+     * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead.
+     * 301 is considered as an error since Tor does not follow redirects,
+     * which means we failed to reach the server we wanted. */
     log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
            "Received http status code %d (%s) from server %s "
            "while fetching \"/tor/server/%s\". I'll try again soon.",
