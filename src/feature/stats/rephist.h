@@ -117,6 +117,9 @@ typedef struct hs_v3_stats_t {
 
 STATIC char *rep_hist_format_hs_v2_stats(time_t now);
 STATIC char *rep_hist_format_hs_v3_stats(time_t now);
+
+MOCK_DECL(STATIC bool, should_collect_v3_stats,(void));
+
 #endif /* defined(REPHIST_PRIVATE) */
 
 /**
@@ -145,10 +148,10 @@ void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
 
 #ifdef TOR_UNIT_TESTS
-typedef struct hs_v2_stats_t hs_v2_stats_t;
-const hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);
-typedef struct hs_v3_stats_t hs_v3_stats_t;
-const hs_v3_stats_t *rep_hist_get_hs_v3_stats(void);
+struct hs_v2_stats_t;
+const struct hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);
+struct hs_v3_stats_t;
+const struct hs_v3_stats_t *rep_hist_get_hs_v3_stats(void);
 #endif
 
 #endif /* !defined(TOR_REPHIST_H) */

@@ -1871,8 +1871,8 @@ rep_hist_reset_hs_v3_stats(time_t now)
  *  on the real network) and hence we don't want to collect statistics if it's
  *  not yet the time to do so.
  */
-static bool
-should_collect_v3_stats(void)
+MOCK_IMPL(STATIC bool,
+should_collect_v3_stats,(void))
 {
   return start_of_hs_v3_stats_interval <= approx_time();
 }
@@ -1973,7 +1973,7 @@ rep_hist_hs_stats_term(void)
 
 /** Allocate and return a string containing hidden service stats that
  *  are meant to be placed in the extra-info descriptor. */
-static char *
+STATIC char *
 rep_hist_format_hs_v2_stats(time_t now)
 {
   char t[ISO_TIME_LEN+1];
