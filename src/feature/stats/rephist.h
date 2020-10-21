@@ -116,11 +116,9 @@ typedef struct hs_v3_stats_t {
   digestmap_t *v3_onions_seen_this_period;
 } hs_v3_stats_t;
 
-STATIC char *rep_hist_format_hs_v2_stats(time_t now);
-STATIC char *rep_hist_format_hs_v3_stats(time_t now);
-
 MOCK_DECL(STATIC bool, should_collect_v3_stats,(void));
 
+STATIC char *rep_hist_format_hs_stats(time_t now, bool is_v3);
 #endif /* defined(REPHIST_PRIVATE) */
 
 /**

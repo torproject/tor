@@ -608,7 +608,7 @@ test_rephist_v3_onions(void *arg)
 
   /* Because of differential privacy we can't actually check the stat value,
      but let's just check that it's formatted correctly. */
-  stats_string = rep_hist_format_hs_v3_stats(approx_time(), true);
+  stats_string = rep_hist_format_hs_stats(approx_time(), true);
   tt_assert(strstr(stats_string, "hidserv-dir-v3-onions-seen"));
 
  done:

@@ -1972,86 +1972,53 @@ rep_hist_hs_stats_term(void)
 #define ONIONS_SEEN_BIN_SIZE 8
 
 /** Allocate and return a string containing hidden service stats that
- *  are meant to be placed in the extra-info descriptor. */
+ *  are meant to be placed in the extra-info descriptor.
+ *
+ *  Function works for both v2 and v3 stats depending on <b>is_v3</b>. */
 STATIC char *
-rep_hist_format_hs_v2_stats(time_t now)
+rep_hist_format_hs_stats(time_t now, bool is_v3)
 {
   char t[ISO_TIME_LEN+1];
-  char *hs_v2_stats_string;
-  int64_t obfuscated_cells_seen;
-  int64_t obfuscated_onions_seen;
-
-  uint64_t rounded_cells_seen
-    = round_uint64_to_next_multiple_of(hs_v2_stats->rp_v2_relay_cells_seen,
-                                       REND_CELLS_BIN_SIZE);
-  rounded_cells_seen = MIN(rounded_cells_seen, INT64_MAX);
-  obfuscated_cells_seen = add_laplace_noise((int64_t)rounded_cells_seen,
-                          crypto_rand_double(),
-                          REND_CELLS_DELTA_F, REND_CELLS_EPSILON);
-
-  uint64_t rounded_onions_seen =
-    round_uint64_to_next_multiple_of((size_t)digestmap_size(
-                                        hs_v2_stats->v2_onions_seen_this_period),
-                                     ONIONS_SEEN_BIN_SIZE);
-  rounded_onions_seen = MIN(rounded_onions_seen, INT64_MAX);
-  obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
-                           crypto_rand_double(), ONIONS_SEEN_DELTA_F,
-                           ONIONS_SEEN_EPSILON);
-
-  format_iso_time(t, now);
-  tor_asprintf(&hs_v2_stats_string, "hidserv-stats-end %s (%d s)\n"
-               "hidserv-rend-relayed-cells %"PRId64" delta_f=%d "
-                                           "epsilon=%.2f bin_size=%d\n"
-               "hidserv-dir-onions-seen %"PRId64" delta_f=%d "
-                                        "epsilon=%.2f bin_size=%d\n",
-               t, (unsigned) (now - start_of_hs_v2_stats_interval),
-               (obfuscated_cells_seen), REND_CELLS_DELTA_F,
-               REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
-               (obfuscated_onions_seen), ONIONS_SEEN_DELTA_F,
-               ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
-
-  return hs_v2_stats_string;
-}
-
-/** Allocate and return a string containing hidden service stats that
- *  are meant to be placed in the extra-info descriptor. */
-STATIC char *
-rep_hist_format_hs_v3_stats(time_t now)
-{
-  char t[ISO_TIME_LEN+1];
-  char *hs_v3_stats_string;
+  char *hs_stats_string;
   int64_t obfuscated_onions_seen, obfuscated_cells_seen;
 
+  uint64_t rp_cells_seen = is_v3 ?
+    hs_v3_stats->rp_v3_relay_cells_seen : hs_v2_stats->rp_v2_relay_cells_seen;
+  size_t onions_seen = is_v3 ?
+    digestmap_size(hs_v3_stats->v3_onions_seen_this_period) :
+    digestmap_size(hs_v2_stats->v2_onions_seen_this_period);
+  time_t start_of_hs_stats_interval = is_v3 ?
+    start_of_hs_v3_stats_interval : start_of_hs_v2_stats_interval;
+
   uint64_t rounded_cells_seen
-    = round_uint64_to_next_multiple_of(hs_v3_stats->rp_v3_relay_cells_seen,
-                                       REND_CELLS_BIN_SIZE);
+    = round_uint64_to_next_multiple_of(rp_cells_seen, REND_CELLS_BIN_SIZE);
   rounded_cells_seen = MIN(rounded_cells_seen, INT64_MAX);
   obfuscated_cells_seen = add_laplace_noise((int64_t)rounded_cells_seen,
                           crypto_rand_double(),
                           REND_CELLS_DELTA_F, REND_CELLS_EPSILON);
 
   uint64_t rounded_onions_seen =
-    round_uint64_to_next_multiple_of((size_t)digestmap_size(
-                                        hs_v3_stats->v3_onions_seen_this_period),
-                                     ONIONS_SEEN_BIN_SIZE);
+    round_uint64_to_next_multiple_of(onions_seen, ONIONS_SEEN_BIN_SIZE);
   rounded_onions_seen = MIN(rounded_onions_seen, INT64_MAX);
   obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
 
   format_iso_time(t, now);
-  tor_asprintf(&hs_v3_stats_string, "hidserv-v3-stats-end %s (%d s)\n"
-               "hidserv-rend-v3-relayed-cells %"PRId64" delta_f=%d "
-                                           "epsilon=%.2f bin_size=%d\n"
-               "hidserv-dir-v3-onions-seen %"PRId64" delta_f=%d "
-                                           "epsilon=%.2f bin_size=%d\n",
-               t, (unsigned) (now - start_of_hs_v3_stats_interval),
+  tor_asprintf(&hs_stats_string, "%s %s (%d s)\n"
+               "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n"
+               "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n",
+               is_v3 ? "hidserv-v3-stats-end" : "hidserv-stats-end",
+               t, (unsigned) (now - start_of_hs_stats_interval),
+               is_v3 ?
+                "hidserv-rend-v3-relayed-cells" : "hidserv-rend-relayed-cells",
                (obfuscated_cells_seen), REND_CELLS_DELTA_F,
                REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
+               is_v3 ? "hidserv-dir-v3-onions-seen" :"hidserv-dir-onions-seen",
                (obfuscated_onions_seen), ONIONS_SEEN_DELTA_F,
                ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
 
-  return hs_v3_stats_string;
+  return hs_stats_string;
 }
 
 /** If 24 hours have passed since the beginning of the current HS
@@ -2077,8 +2044,7 @@ rep_hist_hs_stats_write(time_t now, bool is_v3)
   }
 
   /* Generate history string. */
-  str = is_v3 ?
-    rep_hist_format_hs_v3_stats(now) : rep_hist_format_hs_v2_stats(now);
+  str = rep_hist_format_hs_stats(now, is_v3);
 
   /* Reset HS history. */
   if (is_v3) {
