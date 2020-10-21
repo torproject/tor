@@ -1818,6 +1818,96 @@ rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
   }
 }
 
+/*** HSv3 stats ******/
+
+/** Start of the current hidden service stats interval or 0 if we're not
+ *  collecting hidden service statistics.
+ *
+ *  This is particularly important for v3 statistics since this variable
+ *  controls the start time of initial v3 stats collection. It's initialized by
+ *  rep_hist_hs_stats_init() to the next time period start (i.e. 12:00UTC), and
+ *  should_collect_v3_stats() ensures that functions that collect v3 stats do
+ *  not do so sooner than that.
+ *
+ *  Collecting stats from 12:00UTC to 12:00UTC is extremely important for v3
+ *  stats because rep_hist_hsdir_stored_maybe_new_v3_onion() uses the blinded
+ *  key of each onion service as its double-counting index. Onion services
+ *  rotate their descriptor at around 00:00UTC which means that their blinded
+ *  key also changes around that time. However the precise time that onion
+ *  services rotate their descriptors is actually when they fetch a new
+ *  00:00UTC consensus and that happens at a random time (e.g. it can even
+ *  happen at 02:00UTC). This means that if we started keeping v3 stats at
+ *  around 00:00UTC we wouldn't be able to tell when onion services change
+ *  their blinded key and hence we would double count an unpredictable amount
+ *  of them (for example, if an onion service fetches the 00:00UTC consensus at
+ *  01:00UTC it would upload to its old HSDir at 00:45UTC, and then to a
+ *  different HSDir at 01:50UTC).
+ *
+ *  For this reason, we start collecting statistics at 12:00UTC. This way we
+ *  know that by the time we stop collecting statistics for that time period 24
+ *  hours later, all the onion services have switched to their new blinded
+ *  key. This way we can predict much better how much double counting has been
+ *  performed.
+ */
+static time_t start_of_hs_v3_stats_interval;
+
+/** Our v3 statistics structure singleton. */
+static hs_v3_stats_t *hs_v3_stats = NULL;
+
+/** Allocate, initialize and return an hs_v3_stats_t structure. */
+static hs_v3_stats_t *
+hs_v3_stats_new(void)
+{
+  hs_v3_stats_t *new_hs_v3_stats = tor_malloc_zero(sizeof(hs_v3_stats_t));
+  new_hs_v3_stats->v3_onions_seen_this_period = digestmap_new();
+
+  return new_hs_v3_stats;
+}
+
+#define hs_v3_stats_free(val) \
+  FREE_AND_NULL(hs_v3_stats_t, hs_v3_stats_free_, (val))
+
+/** Free an hs_v3_stats_t structure. */
+static void
+hs_v3_stats_free_(hs_v3_stats_t *victim_hs_v3_stats)
+{
+  if (!victim_hs_v3_stats) {
+    return;
+  }
+
+  digestmap_free(victim_hs_v3_stats->v3_onions_seen_this_period, NULL);
+  tor_free(victim_hs_v3_stats);
+}
+
+/** Clear history of hidden service statistics and set the measurement
+ * interval start to <b>now</b>. */
+static void
+rep_hist_reset_hs_v3_stats(time_t now)
+{
+  if (!hs_v3_stats) {
+    hs_v3_stats = hs_v3_stats_new();
+  }
+
+  digestmap_free(hs_v3_stats->v3_onions_seen_this_period, NULL);
+  hs_v3_stats->v3_onions_seen_this_period = digestmap_new();
+
+  hs_v3_stats->rp_v3_relay_cells_seen = 0;
+
+  start_of_hs_v3_stats_interval = now;
+}
+
+/** Return true if it's a good time to collect v3 stats.
+ *
+ *  v3 stats have a strict stats collection period (from 12:00UTC to 12:00UTC
+ *  on the real network) and hence we don't want to collect statistics if it's
+ *  not yet the time to do so.
+ */
+static bool
+should_collect_v3_stats(void)
+{
+  return start_of_hs_v3_stats_interval <= approx_time();
+}
+
 /* The number of cells that are supposed to be hidden from the adversary
  * by adding noise from the Laplace distribution.  This value, divided by
  * EPSILON, is Laplace parameter b. It must be greather than 0. */
@@ -2125,6 +2215,7 @@ void
 rep_hist_free_all(void)
 {
   hs_v2_stats_free(hs_v2_stats);
+  hs_v3_stats_free(hs_v3_stats);
   digestmap_free(history_map, free_or_history);
 
   tor_free(exit_bytes_read);
@@ -2154,3 +2245,10 @@ rep_hist_get_hs_v2_stats(void)
   return hs_v2_stats;
 }
 
+/* only exists for unit tests: get HSv2 stats object */
+const hs_v3_stats_t *
+rep_hist_get_hs_v3_stats(void)
+{
+  return hs_v3_stats;
+}
+#endif /* defined(TOR_UNIT_TESTS) */

@@ -69,6 +69,9 @@ char *rep_hist_get_hs_v2_stats_string(void);
 void rep_hist_seen_new_rp_cell(void);
 void rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey);
 
+time_t rep_hist_hs_v3_stats_write(time_t now);
+char *rep_hist_get_hs_v3_stats_string(void);
+
 void rep_hist_free_all(void);
 
 void rep_hist_note_negotiated_link_proto(unsigned link_proto,
@@ -111,7 +114,8 @@ typedef struct hs_v3_stats_t {
   digestmap_t *v3_onions_seen_this_period;
 } hs_v3_stats_t;
 
-STATIC char *rep_hist_format_hs_v2_stats(time_t now, bool is_v3);
+STATIC char *rep_hist_format_hs_v2_stats(time_t now);
+STATIC char *rep_hist_format_hs_v3_stats(time_t now);
 #endif /* defined(REPHIST_PRIVATE) */
 
 /**
@@ -142,6 +146,8 @@ void rep_hist_padding_count_timers(uint64_t num_timers);
 #ifdef TOR_UNIT_TESTS
 typedef struct hs_v2_stats_t hs_v2_stats_t;
 const hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);
+typedef struct hs_v3_stats_t hs_v3_stats_t;
+const hs_v3_stats_t *rep_hist_get_hs_v3_stats(void);
 #endif
 
 #endif /* !defined(TOR_REPHIST_H) */

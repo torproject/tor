@@ -3288,6 +3288,11 @@ extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
                         "hidserv-stats-end", now, &contents) > 0) {
       smartlist_add(chunks, contents);
     }
+    if (options->HiddenServiceStatistics &&
+        load_stats_file("stats"PATH_SEPARATOR"hidserv-v3-stats",
+                        "hidserv-v3-stats-end", now, &contents) > 0) {
+      smartlist_add(chunks, contents);
+    }
     if (options->EntryStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
                         "entry-stats-end", now, &contents) > 0) {
