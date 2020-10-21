@@ -2013,41 +2013,6 @@ rep_hist_format_hs_v2_stats(time_t now)
   return hs_v2_stats_string;
 }
 
-/** If 24 hours have passed since the beginning of the current HS
- * stats period, write buffer stats to $DATADIR/stats/hidserv-stats
- * (possibly overwriting an existing file) and reset counters.  Return
- * when we would next want to write buffer stats or 0 if we never want to
- * write. */
-time_t
-rep_hist_hs_v2_stats_write(time_t now)
-{
-  char *str = NULL;
-
-  if (!start_of_hs_v2_stats_interval) {
-    return 0; /* Not initialized. */
-  }
-
-  if (start_of_hs_v2_stats_interval + WRITE_STATS_INTERVAL > now) {
-    goto done; /* Not ready to write */
-  }
-
-  /* Generate history string. */
-  str = rep_hist_format_hs_v2_stats(now);
-
-  /* Reset HS history. */
-  rep_hist_reset_hs_v2_stats(now);
-
-  /* Try to write to disk. */
-  if (!check_or_create_data_subdir("stats")) {
-    write_to_data_subdir("stats", "hidserv-stats", str,
-                         "hidden service stats");
-  }
-
- done:
-  tor_free(str);
-  return start_of_hs_v2_stats_interval + WRITE_STATS_INTERVAL;
-}
-
 /** Allocate and return a string containing hidden service stats that
  *  are meant to be placed in the extra-info descriptor. */
 STATIC char *
@@ -2093,35 +2058,45 @@ rep_hist_format_hs_v3_stats(time_t now)
  * stats period, write buffer stats to $DATADIR/stats/hidserv-v3-stats
  * (possibly overwriting an existing file) and reset counters.  Return
  * when we would next want to write buffer stats or 0 if we never want to
- * write. */
+ * write. Function works for both v2 and v3 stats depending on <b>is_v3</b>.
+ */
 time_t
-rep_hist_hs_v3_stats_write(time_t now)
+rep_hist_hs_stats_write(time_t now, bool is_v3)
 {
   char *str = NULL;
 
-  if (!start_of_hs_v3_stats_interval) {
+  time_t start_of_hs_stats_interval = is_v3 ?
+    start_of_hs_v3_stats_interval : start_of_hs_v2_stats_interval;
+
+  if (!start_of_hs_stats_interval) {
     return 0; /* Not initialized. */
   }
 
-  if (start_of_hs_v3_stats_interval + WRITE_STATS_INTERVAL > now) {
+  if (start_of_hs_stats_interval + WRITE_STATS_INTERVAL > now) {
     goto done; /* Not ready to write */
   }
 
   /* Generate history string. */
-  str = rep_hist_format_hs_v3_stats(now);
+  str = is_v3 ?
+    rep_hist_format_hs_v3_stats(now) : rep_hist_format_hs_v2_stats(now);
 
   /* Reset HS history. */
-  rep_hist_reset_hs_v3_stats(now);
+  if (is_v3) {
+    rep_hist_reset_hs_v3_stats(now);
+  } else {
+    rep_hist_reset_hs_v2_stats(now);
+  }
 
   /* Try to write to disk. */
   if (!check_or_create_data_subdir("stats")) {
-    write_to_data_subdir("stats", "hidserv-v3-stats", str,
-                         "hidden service stats");
+    write_to_data_subdir("stats",
+                         is_v3 ? "hidserv-v3-stats" : "hidserv-stats",
+                         str, "hidden service stats");
   }
 
  done:
   tor_free(str);
-  return start_of_hs_v3_stats_interval + WRITE_STATS_INTERVAL;
+  return start_of_hs_stats_interval + WRITE_STATS_INTERVAL;
 }
 
 static uint64_t link_proto_count[MAX_LINK_PROTO+1][2];

@@ -63,13 +63,14 @@ void rep_hist_log_circuit_handshake_stats(time_t now);
 MOCK_DECL(int, rep_hist_get_circuit_handshake_requested, (uint16_t type));
 MOCK_DECL(int, rep_hist_get_circuit_handshake_assigned, (uint16_t type));
 
-void rep_hist_hs_v2_stats_init(time_t now);
-time_t rep_hist_hs_v2_stats_write(time_t now);
+void rep_hist_hs_stats_init(time_t now);
+void rep_hist_hs_stats_term(void);
+time_t rep_hist_hs_stats_write(time_t now, bool is_v3);
+
 char *rep_hist_get_hs_v2_stats_string(void);
 void rep_hist_seen_new_rp_cell(bool is_v2);
 void rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey);
 
-time_t rep_hist_hs_v3_stats_write(time_t now);
 char *rep_hist_get_hs_v3_stats_string(void);
 void rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key);
 
