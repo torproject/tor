@@ -331,6 +331,13 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     return;
   }
 
+  /* Mark whether this circuit used TAP in case we need to use this
+   * information for onion service statistics later on. */
+  if (create_cell->handshake_type == ONION_HANDSHAKE_TYPE_FAST ||
+      create_cell->handshake_type == ONION_HANDSHAKE_TYPE_TAP) {
+    circ->used_legacy_circuit_handshake = true;
+  }
+
   if (!channel_is_client(chan)) {
     /* remember create types we've seen, but don't remember them from
      * clients, to be extra conservative about client statistics. */
@@ -587,11 +594,27 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
   }
 
   /* If this is a cell in an RP circuit, count it as part of the
-     hidden service stats */
+     onion service stats */
   if (options->HiddenServiceStatistics &&
       !CIRCUIT_IS_ORIGIN(circ) &&
       TO_OR_CIRCUIT(circ)->circuit_carries_hs_traffic_stats) {
-    rep_hist_seen_new_rp_cell();
+    /** We need to figure out of this is a v2 or v3 RP circuit to count it
+     *  appropriately. v2 services always use the TAP legacy handshake to
+     *  connect to the RP; we use this feature to distinguish between v2/v3. */
+    bool is_v2 = false;
+    if (TO_OR_CIRCUIT(circ)->used_legacy_circuit_handshake) {
+      is_v2 = true;
+    } else if (TO_OR_CIRCUIT(circ)->rend_splice) {
+      /* If this is a client->RP circuit we need to check the spliced circuit
+       * (which is the service->RP circuit) to see if it was using TAP and
+       * hence if it's a v2 circuit. That's because client->RP circuits can
+       * still use ntor even on v2; but service->RP will always use TAP. */
+      or_circuit_t *splice = TO_OR_CIRCUIT(circ)->rend_splice;
+      if (splice->used_legacy_circuit_handshake) {
+        is_v2 = true;
+      }
+    }
+    rep_hist_seen_new_rp_cell(is_v2);
   }
 }
 

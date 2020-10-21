@@ -1932,6 +1932,20 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
   }
 }
 
+/** We saw a new HS relay cell: count it!
+ *  If <b>is_v2</b> is set then it's a v2 RP cell, otherwise it's a v3. */
+void
+rep_hist_seen_new_rp_cell(bool is_v2)
+{
+  log_debug(LD_GENERAL, "New RP cell (%d)", is_v2);
+
+  if (is_v2 && hs_v2_stats) {
+    hs_v2_stats->rp_v2_relay_cells_seen++;
+  } else if (!is_v2 && hs_v3_stats && should_collect_v3_stats()) {
+    hs_v3_stats->rp_v3_relay_cells_seen++;
+  }
+}
+
 /* The number of cells that are supposed to be hidden from the adversary
  * by adding noise from the Laplace distribution.  This value, divided by
  * EPSILON, is Laplace parameter b. It must be greather than 0. */
