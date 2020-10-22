@@ -744,6 +744,48 @@ forward slash (/) in the configuration file and on the command line.
     total; this is intended to be used to debug problems without opening live
     servers to resource exhaustion attacks. (Default: 10 MBytes)
 
+[[MetricsPort]] **MetricsPort** ['address'**:**]{empty}__port__ [__format__]::
+    WARNING: Before enabling this, it is important to understand that exposing
+    tor metrics publicly is dangerous to the Tor network users. Please take
+    extra precaution and care when opening this port. Set a very strict access
+    policy with MetricsPortPolicy and consider using your operating systems
+    firewall features for defense in depth.
+     +
+    We recommend, for the prometheus __format__, that the only address that
+    can access this port should be the Prometheus server itself. Remember that
+    the connection is unencrypted (HTTP) hence consider using a tool like
+    stunnel to secure the link from this port to the server.
+     +
+    If set, open this port to listen for an HTTP GET request to "/metrics".
+    Upon a request, the collected metrics in the the tor instance are
+    formatted for the given format and then sent back. If this is set,
+    MetricsPortPolicy must be defined else every request will be rejected.
+     +
+    Supported format is "prometheus" which is also the default if not set. The
+    Prometheus data model can be found here:
+    https://prometheus.io/docs/concepts/data_model/
+     +
+    The tor metrics are constantly collected and they solely consists of
+    counters. Thus, asking for those metrics is very lightweight on the tor
+    process. (Default: None)
+     +
+    As an example, here only 5.6.7.8 will be allowed to connect:
+
+        MetricsPort 1.2.3.4:9035
+        MetricsPortPolicy accept 5.6.7.8
+
+[[MetricsPortPolicy]] **MetricsPortPolicy** __policy__,__policy__,__...__::
+    Set an entrance policy for the **MetricsPort**, to limit who can access
+    it. The policies have the same form as exit policies below, except that
+    port specifiers are ignored. For multiple entries, this line can be used
+    multiple times. It is a reject all by default policy.  (Default: None)
+     +
+    Please, keep in mind here that if the server collecting metrics on the
+    MetricsPort is behind a NAT, then everything behind it can access it. This
+    is similar for the case of allowing localhost, every users on the server
+    will be able to access it. Again, strongly consider using a tool like
+    stunnel to secure the link or to strengthen access control.
+
 [[NoExec]] **NoExec** **0**|**1**::
     If this option is set to 1, then Tor will never launch another
     executable, regardless of the settings of ClientTransportPlugin
