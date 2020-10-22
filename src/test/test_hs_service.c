@@ -54,6 +54,7 @@
 #include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_intropoint.h"
+#include "feature/hs/hs_metrics.h"
 #include "feature/hs/hs_service.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
@@ -664,6 +665,7 @@ test_access_service(void *arg)
   tt_mem_op(query, OP_EQ, s, sizeof(hs_service_t));
   /* Remove service, check if it actually works and then put it back. */
   remove_service(global_map, s);
+  hs_metrics_service_free(s);
   tt_int_op(get_hs_service_map_size(), OP_EQ, 0);
   query = find_service(global_map, &s->keys.identity_pk);
   tt_ptr_op(query, OP_EQ, NULL);
@@ -673,6 +675,7 @@ test_access_service(void *arg)
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(get_hs_service_map_size(), OP_EQ, 1);
   /* Twice should fail. */
+  hs_metrics_service_free(s); /* Avoid BUG() on metrics init. */
   ret = register_service(global_map, s);
   tt_int_op(ret, OP_EQ, -1);
   /* Remove service from map so we don't double free on cleanup. */
