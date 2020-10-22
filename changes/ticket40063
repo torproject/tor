@@ -1,0 +1,5 @@
+  o Major features (metrics):
+    - Introduce a new MetricsPort which exposes, through an HTTP GET /metrics, a
+      series of metrics that tor collects at runtime. At the moment, the only
+      supported output format is Prometheus data model. Closes ticket 40063;
+
