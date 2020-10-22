@@ -46,7 +46,7 @@ CONF_VAR(AuthDirTestEd25519LinkKeys, BOOL, 0, "1")
 
 /** Authority only: key=value pairs that we add to our networkstatus
  * consensus vote on the 'params' line. */
-CONF_VAR(ConsensusParams, STRING, 0, NULL)
+CONF_VAR(ConsensusParams, LINELIST, 0, NULL)
 
 /** Authority only: minimum number of measured bandwidths we must see
  * before we only believe measured bandwidths to assign flags. */

@@ -3014,7 +3014,8 @@ on the public Tor network.
 
 [[ConsensusParams]] **ConsensusParams** __STRING__::
     STRING is a space-separated list of key=value pairs that Tor will include
-    in the "params" line of its networkstatus vote.
+    in the "params" line of its networkstatus vote. This directive can be
+    specified multiple times so you don't have to put it all on one line.
 
 [[DirAllowPrivateAddresses]] **DirAllowPrivateAddresses** **0**|**1**::
     If set to 1, Tor will accept server descriptors with arbitrary "Address"
