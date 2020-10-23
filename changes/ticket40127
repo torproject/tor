@@ -1,0 +1,7 @@
+  o Minor features (compilation):
+    - When building Tor, first link all object files into a single
+      static library. This may help with embedding Tor in other
+      programs.  Note that most Tor functions do not constitute a
+      part of a stable or supported API: Only those functions in
+      tor_api.h should be used if embedding Tor.  Closes ticket
+      40127.
