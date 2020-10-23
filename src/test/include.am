@@ -312,7 +312,7 @@ src_test_test_switch_id_LDADD = \
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_test_LDADD = \
-	$(TOR_INTERNAL_TESTING_LIBS) \
+	src/test/libtor-testing.a \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -341,7 +341,7 @@ src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS) @CFLAGS_BUGTRAP@
 src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_bench_LDADD = \
-	$(TOR_INTERNAL_LIBS) \
+        libtor.a \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -351,7 +351,7 @@ src_test_bench_LDADD = \
 src_test_test_workqueue_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_test_workqueue_LDADD = \
-	$(TOR_INTERNAL_TESTING_LIBS) \
+        src/test/libtor-testing.a \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -400,7 +400,7 @@ noinst_PROGRAMS+= src/test/test-hs-ntor-cl
 src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
 src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_ntor_cl_LDADD = \
-	$(TOR_INTERNAL_LIBS) \
+	libtor.a \
 	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
@@ -411,7 +411,7 @@ src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 src_test_test_hs_ntor_cl_SOURCES  = src/test/test_hs_ntor_cl.c
 src_test_test_hs_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_hs_ntor_cl_LDADD = \
-	$(TOR_INTERNAL_LIBS) \
+	libtor.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ \
         @CURVE25519_LIBS@ @TOR_TRACE_LIBS@

@@ -14,6 +14,7 @@ CLEANFILES=
 TESTS=
 noinst_PROGRAMS=
 DISTCLEANFILES=
+MOSTLYCLEANFILES=
 bin_SCRIPTS=
 AM_CPPFLAGS=\
 	-I$(top_srcdir)/src \
@@ -137,6 +138,13 @@ TOR_INTERNAL_LIBS = \
 	src/trunnel/libor-trunnel.a \
 	src/lib/libtor-trace.a
 
+libtor.a: $(TOR_INTERNAL_LIBS)
+	$(AM_V_AR) export AR="$(AR)"; \
+	export ARFLAGS="$(ARFLAGS)"; \
+	$(top_srcdir)/scripts/build/combine_libs libtor.a $(TOR_INTERNAL_LIBS)
+
+MOSTLYCLEANFILES += libtor.a
+
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 if UNITTESTS_ENABLED
@@ -148,6 +156,14 @@ TOR_INTERNAL_TESTING_LIBS = \
 	$(TOR_UTIL_TESTING_LIBS) \
 	src/trunnel/libor-trunnel-testing.a \
 	src/lib/libtor-trace.a
+
+src/test/libtor-testing.a: $(TOR_INTERNAL_TESTING_LIBS)
+	$(AM_V_AR) export AR="$(AR)"; \
+	export ARFLAGS="$(ARFLAGS)"; \
+	export RANLIB="$(RANLIB)"; \
+	$(top_srcdir)/scripts/build/combine_libs src/test/libtor-testing.a $(TOR_INTERNAL_TESTING_LIBS)
+
+MOSTLYCLEANFILES += src/test/libtor-testing.a
 endif
 
 TOR_LDFLAGS_CRYPTLIB=@TOR_LDFLAGS_openssl@
@@ -175,6 +191,7 @@ EXTRA_DIST+= \
 	Makefile.nmake							\
 	README								\
 	ReleaseNotes							\
+	scripts/build/combine_libs					\
 	scripts/maint/checkIncludes.py					\
 	scripts/maint/checkSpace.pl					\
 	scripts/maint/checkSpaceTest.sh					\
@@ -701,7 +718,7 @@ show-distdir-core:
 	  file $(distdir)/_build/core; fi
 
 show-libs:
-	@echo $(TOR_INTERNAL_LIBS)
+	@echo libtor.a
 
 show-testing-libs:
-	@echo $(TOR_INTERNAL_TESTING_LIBS)
+	@echo src/test/libtor-testing.a
