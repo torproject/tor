@@ -1,7 +1,7 @@
   o Minor features (authorities):
-    - Authorities now list the directory formats used by currently supported
-      Tor releases as required.  Previously, they listed only the formats
-      supported by older Tor releases as required.  This change makes
-      the subprotocols "Cons=2 Desc=2 Microdesc=2" required, and makes
-      "Cons=1 Desc=1 Microdesc=1" no longer required or recommended.
+    - Authorities now list a different set of protocols as required and
+      recommended.  These lists are chosen so that only truly recommended
+      and/or required protocols are included, and so that clients using 0.2.9
+      or later will continue to work (even though they are not supported),
+      whereas only relays running 0.3.5 or later will meet the requirements.
       Closes ticket 40162.
