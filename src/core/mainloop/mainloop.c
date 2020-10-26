@@ -1937,7 +1937,7 @@ write_stats_file_callback(time_t now, const or_options_t *options)
       next_time_to_write_stats_files = next_write;
   }
   if (options->HiddenServiceStatistics) {
-    time_t next_write = rep_hist_hs_stats_write(now);
+    time_t next_write = rep_hist_hs_v2_stats_write(now);
     if (next_write && next_write < next_time_to_write_stats_files)
       next_time_to_write_stats_files = next_write;
   }
