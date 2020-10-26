@@ -4709,9 +4709,12 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   smartlist_sort_strings(v3_out->known_flags);
 
   if (d_options->ConsensusParams) {
+    config_line_t *paramline = d_options->ConsensusParams;
     v3_out->net_params = smartlist_new();
-    smartlist_split_string(v3_out->net_params,
-                           d_options->ConsensusParams, NULL, 0, 0);
+    for ( ; paramline; paramline = paramline->next) {
+      smartlist_split_string(v3_out->net_params,
+                             paramline->value, NULL, 0, 0);
+    }
     smartlist_sort_strings(v3_out->net_params);
   }
   v3_out->bw_file_headers = bw_file_headers;
