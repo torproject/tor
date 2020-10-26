@@ -1,0 +1,6 @@
+  o Minor features (directory authority):
+    - Make it possible to specify multiple ConsensusParams torrc lines.
+      Now directory authority operators can for example put the main
+      ConsensusParams config in one torrc file and then add to it from
+      a different torrc file. Closes ticket 40164.
+
