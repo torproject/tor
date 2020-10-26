@@ -1712,19 +1712,10 @@ rep_hist_log_circuit_handshake_stats(time_t now)
  * not collecting hidden service statistics. */
 static time_t start_of_hs_v2_stats_interval;
 
-/** Carries the various hidden service statistics, and any other
- *  information needed. */
-typedef struct hs_v2_stats_t {
-  /** How many relay cells have we seen as rendezvous points? */
-  uint64_t rp_relay_cells_seen;
-
-  /** Set of unique public key digests we've seen this stat period
-   * (could also be implemented as sorted smartlist). */
-  digestmap_t *v2_onions_seen_this_period;
-} hs_v2_stats_t;
-
-/** Our statistics structure singleton. */
+/** Our v2 statistics structure singleton. */
 static hs_v2_stats_t *hs_v2_stats = NULL;
+
+/** HSv2 stats */
 
 /** Allocate, initialize and return an hs_v2_stats_t structure. */
 static hs_v2_stats_t *
@@ -1771,7 +1762,7 @@ rep_hist_reset_hs_v2_stats(time_t now)
     hs_v2_stats = hs_v2_stats_new();
   }
 
-  hs_v2_stats->rp_relay_cells_seen = 0;
+  hs_v2_stats->rp_v2_relay_cells_seen = 0;
 
   digestmap_free(hs_v2_stats->v2_onions_seen_this_period, NULL);
   hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
@@ -1861,7 +1852,7 @@ rep_hist_format_hs_v2_stats(time_t now)
   int64_t obfuscated_onions_seen;
 
   uint64_t rounded_cells_seen
-    = round_uint64_to_next_multiple_of(hs_v2_stats->rp_relay_cells_seen,
+    = round_uint64_to_next_multiple_of(hs_v2_stats->rp_v2_relay_cells_seen,
                                        REND_CELLS_BIN_SIZE);
   rounded_cells_seen = MIN(rounded_cells_seen, INT64_MAX);
   obfuscated_cells_seen = add_laplace_noise((int64_t)rounded_cells_seen,
@@ -1886,8 +1877,7 @@ rep_hist_format_hs_v2_stats(time_t now)
                t, (unsigned) (now - start_of_hs_v2_stats_interval),
                (obfuscated_cells_seen), REND_CELLS_DELTA_F,
                REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
-               (obfuscated_onions_seen),
-               ONIONS_SEEN_DELTA_F,
+               (obfuscated_onions_seen), ONIONS_SEEN_DELTA_F,
                ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
 
   return hs_v2_stats_string;
@@ -2155,3 +2145,12 @@ rep_hist_free_all(void)
   tor_assert_nonfatal(rephist_total_alloc == 0);
   tor_assert_nonfatal_once(rephist_total_num == 0);
 }
+
+#ifdef TOR_UNIT_TESTS
+/* only exists for unit tests: get HSv2 stats object */
+const hs_v2_stats_t *
+rep_hist_get_hs_v2_stats(void)
+{
+  return hs_v2_stats;
+}
+
