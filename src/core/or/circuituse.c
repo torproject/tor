@@ -2693,7 +2693,8 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
     apconn->may_use_optimistic_data = 0;
   log_info(LD_APP, "Looks like completed circuit to %s %s allow "
            "optimistic data for connection to %s",
-           circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ?
+           (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+            circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) ?
              /* node_describe() does the right thing if exitnode is NULL */
              safe_str_client(node_describe(exitnode)) :
              "hidden service",

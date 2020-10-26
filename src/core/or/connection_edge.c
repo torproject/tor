@@ -1205,6 +1205,7 @@ connection_ap_expire_beginning(void)
     }
 
     if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL &&
+        circ->purpose != CIRCUIT_PURPOSE_CONTROLLER &&
         circ->purpose != CIRCUIT_PURPOSE_C_HSDIR_GET &&
         circ->purpose != CIRCUIT_PURPOSE_S_HSDIR_POST &&
         circ->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT &&
@@ -3266,7 +3267,8 @@ connection_ap_handshake_send_begin,(entry_connection_t *ap_conn))
   edge_conn->begincell_flags = connection_ap_get_begincell_flags(ap_conn);
 
   tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:%d",
-               (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
+               (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+                circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) ?
                  ap_conn->socks_request->address : "",
                ap_conn->socks_request->port);
   payload_len = (int)strlen(payload)+1;
