@@ -11,6 +11,15 @@
 
 #include "lib/cc/torint.h"
 
+/** Prefix to every metrics exposed. This is insures that the metrics are
+ * always in the same namespace. */
+#define METRICS_PREFIX tor_
+
+/** Helper macro that must be used to construct the right namespaced metrics
+ * name. A name is a string so stringify the result. */
+#define METRICS_STR(val) #val
+#define METRICS_NAME(name) METRICS_STR(METRICS_PREFIX ## name)
+
 /** Format output type. */
 typedef enum {
   /** Prometheus data output format. */
