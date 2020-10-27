@@ -44,7 +44,7 @@ test_metrics(void *arg)
 
   /* Confirm the entry value. */
   const smartlist_t *entries = metrics_store_get_all(service->metrics.store,
-                                                     "hs_intro_num_total");
+                                                     "tor_hs_intro_num_total");
   tt_assert(entries);
   tt_int_op(smartlist_len(entries), OP_EQ, 1);
   const metrics_store_entry_t *entry = smartlist_get(entries, 0);
