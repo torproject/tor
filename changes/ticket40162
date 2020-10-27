@@ -1,0 +1,7 @@
+  o Minor features (authorities):
+    - Authorities now list a different set of protocols as required and
+      recommended.  These lists are chosen so that only truly recommended
+      and/or required protocols are included, and so that clients using 0.2.9
+      or later will continue to work (even though they are not supported),
+      whereas only relays running 0.3.5 or later will meet the requirements.
+      Closes ticket 40162.
