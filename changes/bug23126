@@ -1,0 +1,4 @@
+  o Major features (statistics):
+    - Relays will now also publish statistics about the number of v3 onion
+      services and volume of v3 onion service traffic, in the same manner they
+      already do for v2 onions.  Closes ticket 23126.
