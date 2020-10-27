@@ -207,6 +207,26 @@ connection_or_set_identity_digest(or_connection_t *conn,
     channel_set_identity_digest(chan, rsa_digest, ed_id);
 }
 
+/**
+ * Return the Ed25519 identity of the peer for this connection (if any).
+ *
+ * Note that this ID may not be the _actual_ identity for the peer if
+ * authentication is not complete.
+ **/
+const struct ed25519_public_key_t *
+connection_or_get_alleged_ed25519_id(const or_connection_t *conn)
+{
+  if (conn && conn->chan) {
+    const channel_t *chan = NULL;
+    chan = TLS_CHAN_TO_BASE(conn->chan);
+    if (!ed25519_public_key_is_zero(&chan->ed25519_identity)) {
+      return &chan->ed25519_identity;
+    }
+  }
+
+  return NULL;
+}
+
 /**************************************************************/
 
 /** Map from a string describing what a non-open OR connection was doing when

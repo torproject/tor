@@ -18,6 +18,10 @@ int router_get_orport(const routerinfo_t *router,
 int router_has_orport(const routerinfo_t *router,
                       const tor_addr_port_t *orport);
 
+struct ed25519_public_key_t;
+const struct ed25519_public_key_t *routerinfo_get_ed25519_id(
+                      const routerinfo_t *ri);
+
 smartlist_t *router_get_all_orports(const routerinfo_t *ri);
 
 const char *router_purpose_to_string(uint8_t p);

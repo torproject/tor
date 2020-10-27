@@ -13,6 +13,7 @@
 
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
+#include "feature/nodelist/torcert.h"
 
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
@@ -73,6 +74,21 @@ router_get_all_orports(const routerinfo_t *ri)
    */
   fake_node.ri = (routerinfo_t *)ri;
   return node_get_all_orports(&fake_node);
+}
+
+/** Return the Ed25519 identity key for this routerinfo, or NULL if it
+ * doesn't have one. */
+const ed25519_public_key_t *
+routerinfo_get_ed25519_id(const routerinfo_t *ri)
+{
+  if (BUG(! ri))
+    return NULL;
+
+  const tor_cert_t *cert = ri->cache_info.signing_key_cert;
+  if (cert && ! ed25519_public_key_is_zero(&cert->signing_key))
+    return &cert->signing_key;
+  else
+    return NULL;
 }
 
 /** Given a router purpose, convert it to a string.  Don't call this on
