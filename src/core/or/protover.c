@@ -118,13 +118,13 @@ proto_entry_free_(proto_entry_t *entry)
 }
 
 /** The largest possible protocol version. */
-#define MAX_PROTOCOL_VERSION (UINT32_MAX-1)
+#define MAX_PROTOCOL_VERSION (63)
 
 /**
  * Given a string <b>s</b> and optional end-of-string pointer
  * <b>end_of_range</b>, parse the protocol range and store it in
  * <b>low_out</b> and <b>high_out</b>.  A protocol range has the format U, or
- * U-U, where U is an unsigned 32-bit integer.
+ * U-U, where U is an unsigned integer between 0 and 63 inclusive.
  */
 static int
 parse_version_range(const char *s, const char *end_of_range,
