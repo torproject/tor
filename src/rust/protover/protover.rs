@@ -874,12 +874,12 @@ mod test {
 
     #[test]
     fn test_protoentry_from_str_allowed_number_of_versions() {
-        assert_protoentry_is_parseable!("Desc=1-4294967294");
+        assert_protoentry_is_parseable!("Desc=1-63");
     }
 
     #[test]
     fn test_protoentry_from_str_too_many_versions() {
-        assert_protoentry_is_unparseable!("Desc=1-4294967295");
+        assert_protoentry_is_unparseable!("Desc=1-64");
     }
 
     #[test]
@@ -918,10 +918,10 @@ mod test {
 
     #[test]
     fn test_protoentry_all_supported_unsupported_high_version() {
-        let protocols: UnvalidatedProtoEntry = "HSDir=12-100".parse().unwrap();
+        let protocols: UnvalidatedProtoEntry = "HSDir=12-60".parse().unwrap();
         let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
         assert_eq!(true, unsupported.is_some());
-        assert_eq!("HSDir=12-100", &unsupported.unwrap().to_string());
+        assert_eq!("HSDir=12-60", &unsupported.unwrap().to_string());
     }
 
     #[test]
@@ -970,7 +970,7 @@ mod test {
             ProtoSet::from_str(&versions).unwrap().to_string()
         );
 
-        versions = "1-3,500";
+        versions = "1-3,50";
         assert_eq!(
             String::from(versions),
             ProtoSet::from_str(&versions).unwrap().to_string()
