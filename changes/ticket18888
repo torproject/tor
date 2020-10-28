@@ -1,0 +1,3 @@
+  o Minor features (safety):
+    - Log a warning at startup if Tor is built with compile-time options that
+      are likely to make it less stable or reliable. Closes ticket 18888.
