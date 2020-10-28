@@ -80,6 +80,7 @@ test_config(void *arg)
   SMARTLIST_FOREACH(ports, port_cfg_t *, c, port_cfg_free(c));
   smartlist_free(ports);
   or_options_free(options);
+  tor_free(err_msg);
 }
 
 static char _c_buf[256];
