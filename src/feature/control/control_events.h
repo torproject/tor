@@ -341,6 +341,8 @@ struct control_event_t {
 
 extern const struct control_event_t control_event_table[];
 
+void control_logmsg_strip_newlines(char *msg);
+
 #ifdef TOR_UNIT_TESTS
 MOCK_DECL(STATIC void,
           send_control_event_string,(uint16_t event, const char *msg));
