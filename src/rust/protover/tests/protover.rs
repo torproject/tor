@@ -98,10 +98,10 @@ fn protocol_all_supported_with_unsupported_protocol() {
 
 #[test]
 fn protocol_all_supported_with_unsupported_versions() {
-    let protocols: UnvalidatedProtoEntry = "Link=3-999".parse().unwrap();
+    let protocols: UnvalidatedProtoEntry = "Link=3-63".parse().unwrap();
     let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
     assert_eq!(true, unsupported.is_some());
-    assert_eq!("Link=6-999", &unsupported.unwrap().to_string());
+    assert_eq!("Link=6-63", &unsupported.unwrap().to_string());
 }
 
 #[test]
@@ -114,10 +114,10 @@ fn protocol_all_supported_with_unsupported_low_version() {
 
 #[test]
 fn protocol_all_supported_with_unsupported_high_version() {
-    let protocols: UnvalidatedProtoEntry = "Cons=1-2,999".parse().unwrap();
+    let protocols: UnvalidatedProtoEntry = "Cons=1-2,60".parse().unwrap();
     let unsupported: Option<UnvalidatedProtoEntry> = protocols.all_supported();
     assert_eq!(true, unsupported.is_some());
-    assert_eq!("Cons=999", &unsupported.unwrap().to_string());
+    assert_eq!("Cons=60", &unsupported.unwrap().to_string());
 }
 
 #[test]
@@ -195,27 +195,27 @@ fn protover_compute_vote_returns_protocols_that_it_doesnt_currently_support() {
 
 #[test]
 fn protover_compute_vote_returns_matching_for_mix() {
-    let protocols: &[UnvalidatedProtoEntry] = &["Link=1-10,500 Cons=1,3-7,8".parse().unwrap()];
+    let protocols: &[UnvalidatedProtoEntry] = &["Link=1-10,50 Cons=1,3-7,8".parse().unwrap()];
     let listed = ProtoverVote::compute(protocols, &1);
-    assert_eq!("Cons=1,3-8 Link=1-10,500", listed.to_string());
+    assert_eq!("Cons=1,3-8 Link=1-10,50", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_matching_for_longer_mix() {
     let protocols: &[UnvalidatedProtoEntry] = &[
-        "Desc=1-10,500 Cons=1,3-7,8".parse().unwrap(),
-        "Link=123-456,78 Cons=2-6,8 Desc=9".parse().unwrap(),
+        "Desc=1-10,50 Cons=1,3-7,8".parse().unwrap(),
+        "Link=12-45,8 Cons=2-6,8 Desc=9".parse().unwrap(),
     ];
 
     let listed = ProtoverVote::compute(protocols, &1);
-    assert_eq!("Cons=1-8 Desc=1-10,500 Link=78,123-456", listed.to_string());
+    assert_eq!("Cons=1-8 Desc=1-10,50 Link=8,12-45", listed.to_string());
 }
 
 #[test]
 fn protover_compute_vote_returns_matching_for_longer_mix_with_threshold_two() {
     let protocols: &[UnvalidatedProtoEntry] = &[
-        "Desc=1-10,500 Cons=1,3-7,8".parse().unwrap(),
-        "Link=123-456,78 Cons=2-6,8 Desc=9".parse().unwrap(),
+        "Desc=1-10,50 Cons=1,3-7,8".parse().unwrap(),
+        "Link=8,12-45 Cons=2-6,8 Desc=9".parse().unwrap(),
     ];
 
     let listed = ProtoverVote::compute(protocols, &2);
@@ -320,30 +320,20 @@ fn protocol_all_supported_with_single_protocol_and_protocol_range() {
     assert_eq!(true, unsupported.is_none());
 }
 
-// By allowing us to add to votes, the C implementation allows us to
-// exceed the limit.
-#[test]
-fn protover_compute_vote_may_exceed_limit() {
-    let proto1: UnvalidatedProtoEntry = "Sleen=1-65535".parse().unwrap();
-    let proto2: UnvalidatedProtoEntry = "Sleen=100000".parse().unwrap();
-
-    let _result: UnvalidatedProtoEntry = ProtoverVote::compute(&[proto1, proto2], &1);
-}
-
 #[test]
 fn protover_all_supported_should_exclude_versions_we_actually_do_support() {
-    let proto: UnvalidatedProtoEntry = "Link=3-999".parse().unwrap();
+    let proto: UnvalidatedProtoEntry = "Link=3-63".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(result, "Link=6-999".to_string());
+    assert_eq!(result, "Link=6-63".to_string());
 }
 
 #[test]
 fn protover_all_supported_should_exclude_versions_we_actually_do_support_complex1() {
-    let proto: UnvalidatedProtoEntry = "Link=1-3,345-666".parse().unwrap();
+    let proto: UnvalidatedProtoEntry = "Link=1-3,30-63".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(result, "Link=345-666".to_string());
+    assert_eq!(result, "Link=30-63".to_string());
 }
 
 #[test]
@@ -356,26 +346,10 @@ fn protover_all_supported_should_exclude_versions_we_actually_do_support_complex
 
 #[test]
 fn protover_all_supported_should_exclude_some_versions_and_entire_protocols() {
-    let proto: UnvalidatedProtoEntry = "Link=1-3,5-12 Quokka=9000-9001".parse().unwrap();
+    let proto: UnvalidatedProtoEntry = "Link=1-3,5-12 Quokka=50-51".parse().unwrap();
     let result: String = proto.all_supported().unwrap().to_string();
 
-    assert_eq!(result, "Link=6-12 Quokka=9000-9001".to_string());
-}
-
-#[test]
-fn protover_all_supported_should_not_dos_anyones_computer() {
-    let proto: UnvalidatedProtoEntry = "Link=1-2147483648".parse().unwrap();
-    let result: String = proto.all_supported().unwrap().to_string();
-
-    assert_eq!(result, "Link=6-2147483648".to_string());
-}
-
-#[test]
-fn protover_all_supported_should_not_dos_anyones_computer_max_versions() {
-    let proto: UnvalidatedProtoEntry = "Link=1-4294967294".parse().unwrap();
-    let result: String = proto.all_supported().unwrap().to_string();
-
-    assert_eq!(result, "Link=6-4294967294".to_string());
+    assert_eq!(result, "Link=6-12 Quokka=50-51".to_string());
 }
 
 #[test]
