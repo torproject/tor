@@ -17,7 +17,7 @@
 
 /** Metrics store entry. They reside in a metrics_store_t object and are
  * opaque to the outside world. */
-typedef struct metrics_store_entry_t {
+struct metrics_store_entry_t {
   /** Type of entry. */
   metrics_type_t type;
 
@@ -38,7 +38,7 @@ typedef struct metrics_store_entry_t {
     metrics_counter_t counter;
     metrics_gauge_t gauge;
   } u;
-} metrics_store_entry_t;
+};
 
 #endif /* METRICS_STORE_ENTRY_PRIVATE */
 
