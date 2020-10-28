@@ -1,0 +1,5 @@
+  o Minor features (protocol simplification):
+    - Tor no longer allows subprotocol versions larger than 63.  Previously
+      versions up to UINT32_MAX were allowed, which significantly complicated
+      our code.
+      Implements proposal 318; closes ticket 40133.
