@@ -1,4 +1,0 @@
-  o Major feature (IPv6, relay):
-    - The torrc option Address now supports IPv6. By doing so, we've also
-      unified the interface to find our address to support IPv4, IPv6 and
-      hostname. Closes ticket 33233;

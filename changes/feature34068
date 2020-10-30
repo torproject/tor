@@ -1,3 +1,0 @@
-  o Minor features (controller, IPv6):
-    - Tor relays now try to report to the controller when they are launching
-      an IPv6 self-test. Closes ticket 34068.

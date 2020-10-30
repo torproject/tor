@@ -1,4 +1,0 @@
-  o Minor feature (relay):
-    - If a relay is unable to discover its address, attempt to learn it from the
-      NETINFO cell. Closes ticket 40022.
-

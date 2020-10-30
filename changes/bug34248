@@ -1,4 +1,0 @@
-  o Minor bugfixes (rust, protocol versions):
-    - Declare support for the onion service introduction point denial of
-      service extensions, when building tor with Rust.
-      Fixes bug 34248; bugfix on 0.4.2.1-alpha.

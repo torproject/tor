@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - When an extend cell is missing an IPv4 or IPv6 address, fill in the address
-      from the extend info. This is similar to what was done in ticket 33633 for
-      ed25519 keys. Closes ticket 33816. Patch by Neel Chauhan.

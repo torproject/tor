@@ -1,8 +1,0 @@
-  o Major features (IPv6, relay):
-    - Launch IPv4 and IPv6 ORPort self-test circuits on relays and bridges.
-      Closes ticket 33222.
-  o Minor features (IPv6, relay):
-    - Allow relays to send IPv6-only extend cells. Closes ticket 33222.
-    - Declare support for the Relay=3 subprotocol version. Closes ticket 33226.
-    - When launching IPv6 ORPort self-test circuits, make sure that the
-      second-last hop can initiate an IPv6 extend. Closes ticket 33222.

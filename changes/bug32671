@@ -1,4 +1,0 @@
-  o Minor bugfixes (circuit padding):
-    - When circpad_send_padding_cell_for_callback is called,
-      `is_padding_timer_scheduled` flag was not reset. Now it is set to 0 at
-      the top of that function. Fixes bug 32671; bugfix on 0.4.0.1-alpha.

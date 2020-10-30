@@ -1,5 +1,0 @@
-  o Minor features (directory authority):
-    - When looking for possible sybil attacks, also consider IPv6 addresses.
-      Two routers are considered to have "the same" address by this metric
-      if they are in the same /64 network. Patch from Maurice Pibouin. Closes
-      ticket 7193.

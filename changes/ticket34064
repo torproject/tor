@@ -1,5 +1,0 @@
-  o Minor features (relay, ipv6):
-    - Add new "assume-reachable" and "assume-reachable-ipv6" parameters
-      to be used in an emergency to tell relays that they should publish
-      even if they cannot complete their ORPort self-checks.
-      Closes ticket 34064 and part of 33224.

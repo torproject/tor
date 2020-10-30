@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor some common node selection code into a single function.
-      Closes ticket 34200.

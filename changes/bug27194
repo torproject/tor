@@ -1,3 +1,0 @@
-  o Minor bugfixes (protover):
-    - Consistently reject extra commas, instead of only rejecting leading commas.
-      Fixes bug 27194; bugfix on 0.2.9.4-alpha.

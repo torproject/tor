@@ -1,3 +1,0 @@
-  o Minor feature (directory authorities):
-    - Create new consensus method that removes the unecessary = padding 
-      from ntor-onion-key. Closes ticket 7869. Patch by Daniel Pinto.

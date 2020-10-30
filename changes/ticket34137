@@ -1,5 +1,0 @@
-  o Minor features (relay):
-    - Log immediately when launching a relay self-check.  Previously
-      we would try to log before launching checks, or approximately
-      when we intended to launch checks, but this tended to be
-      error-prone.  Closes ticket 34137.

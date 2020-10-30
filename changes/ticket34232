@@ -1,5 +1,0 @@
-  o Minor bugfixes (string handling):
-    - In summarize_protover_flags(), treat empty strings the same as NULL.
-      This prevents protocols_known from being set. Previously, we treated
-      empty strings as normal strings, which led to protocols_known being
-      set. Fixes bug 34232; bugfix on 0.3.3.2-alpha. Patch by Neel Chauhan.

@@ -1,3 +1,0 @@
-  o Minor features (logging):
-    - When describing a relay in th elogs, we now include its ed25519 identity.
-      Closes ticket 22668.

@@ -1,3 +1,0 @@
-  o Testing:
-    - Add unit tests for bandwidth statistics manipulation functions.
-      Closes ticket 33812. Patch by MrSquanchee.

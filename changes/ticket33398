@@ -1,4 +1,0 @@
-  o Deprecated features:
-    - The "non-builtin" argument to the "--dump-config" command is now
-      deprecated.  When it works, it behaves the same as "short", which
-      you should use instead. Closes ticket 33398.

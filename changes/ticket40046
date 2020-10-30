@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Add and use a set of functions to perform downcasts on constant
-      connection and channel pointers. Closes ticket 40046.

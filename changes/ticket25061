@@ -1,6 +1,0 @@
-  o Minor features (bootstrap reporting):
-    - When reporting bootstrapping status on a relay, do not consider
-      connections that have never been the target of an origin circuit.
-      Previously, all connection failures were treated as potential
-      bootstrapping failures, including those that had been opened because of
-      client requests. Closes ticket 25061.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (SOCKS, onion services):
-    - Make sure we send the SOCKS request address in relay begin cells when a
-      stream is attached with the purpose CIRCUIT_PURPOSE_CONTROLLER. Fixes bug
-      33124; bugfix on 0.0.5. Patch by Neel Chauhan.

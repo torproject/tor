@@ -1,5 +1,0 @@
-  o Minor features (IPv6, ExcludeNodes):
-    - Make routerset_contains_router() capable of handling IPv6
-      addresses. This makes ExcludeNodes capable of excluding an
-      IPv6 adddress. Previously, ExcludeNodes ignored IPv6
-      addresses. Closes ticket 34065. Patch by Neel Chauhan.

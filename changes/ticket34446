@@ -1,5 +1,0 @@
-  o Minor features (testing configuration):
-    - The TestingTorNetwork no longer implicitly sets AssumeReachable to 1.
-      This change will allow us to test relays' self-testing mechanisms,
-      and eventually to test authorities' relay-testing functionality.
-      Closes ticket 34446.

@@ -1,3 +1,0 @@
-  o Minor features (subprotocol versions):
-    - Use the new limitations on subprotocol versions due to proposal
-      318 to simplify our implementation.  Part of ticket 40133.

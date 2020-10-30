@@ -1,5 +1,0 @@
-  o Minor features (control port, rephist):
-    - Introduce GETINFO "stats/ntor/{assigned/requested}" and
-      "stats/tap/{assigned/requested}" to get the NTorand TAP
-      circuit onion handshake rephist values respectively.
-      Closes ticket 28279. Patch by Neel Chauhan.

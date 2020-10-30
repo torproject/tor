@@ -1,3 +1,0 @@
-  o Minor bugfixes (spec conformance):
-    - Use the correct key type when generating signing->link
-      certificates.  Fixes bug 40124; bugfix on 0.2.7.2-alpha.

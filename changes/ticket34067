@@ -1,4 +1,0 @@
-  o Major features (relay self-testing, IPv6):
-    - Relays now track their IPv6 ORPort separately from the reachability of
-      their IPv4 ORPort.  They will not publish a descriptor unless _both_
-      ports appear to be externally reachable. Closes ticket 34067.

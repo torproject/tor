@@ -1,4 +1,0 @@
-  o Minor bugfixes (configuration):
-    - Fix bug where %including a pattern ending with */ would include files
-      and folders (instead of folders only) in versions of glibc < 2.19.
-      Fixes bug 40141; bugfix on 0.4.5.0-alpha-dev. Patch by Daniel Pinto.

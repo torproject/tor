@@ -1,4 +1,0 @@
-  o Minor bugfixes (rust, protocol versions):
-    - Make Rust protocol version support checks consistent with the
-      undocumented error behaviour of the corresponding C code.
-      Fixes bug 34251; bugfix on 0.3.3.5-rc.

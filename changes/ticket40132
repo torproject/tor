@@ -1,4 +1,0 @@
-  o Minor features (specification update):
-    - Several fields in microdescriptors, router descriptors, and consensus
-      documents that were formerly optional are now required. Implements
-      proposal 315; closes ticket 40132.

@@ -1,5 +1,0 @@
-  o Minor features (directory authority):
-    - The AssumeReachable option no longer stops directory authorities
-      from checking whether other relays are running. A new
-      AuthDirTestReachability option can be used to disable these checks.
-      Closes ticket 34445.

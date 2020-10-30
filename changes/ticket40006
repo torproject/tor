@@ -1,6 +1,0 @@
-  o Major bugfix (TLS, buffer):
-    - When attempting to read N bytes on a TLS connection, really try to read
-      those N bytes. Before that, Tor would stop reading after the first TLS
-      record which can be smaller than N bytes even though more data was waiting
-      on the TLS connection socket. The remaining data would have been read at
-      the next mainloop event. Fixes bug 40006; bugfix on 0.1.0.5-rc.

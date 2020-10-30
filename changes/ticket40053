@@ -1,5 +1,0 @@
-  o Minor features (logging):
-    - Consider 301 as an error like a 404 when processing the response to a
-      request for a group of server descriptors or an extrainfo documents.
-      Closes ticket 40053.
-

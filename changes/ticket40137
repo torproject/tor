@@ -1,6 +1,0 @@
-  o Minor features (state):
-    - When loading the state file, remove entries from the statefile that
-      have been obsolete for a long time.  Ordinarily Tor preserves
-      unrecognized entries in order to keep forward-compatibility, but
-      these statefile entries have not actually been used in any release
-      since before the 0.3.5.x. Closes ticket 40137.

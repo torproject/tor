@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Added unit tests for channel_matches_target_addr_for_extend().
-      Closes Ticket 33919. Patch by MrSquanchee.

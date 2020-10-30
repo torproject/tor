@@ -1,5 +1,0 @@
-  o Minor feature (configuration):
-    - Allows configuration options EntryNodes, ExcludeNodes, 
-      ExcludeExitNodes, ExitNodes, MiddleNodes, HSLayer2Nodes and 
-      HSLayer3Nodes to be specified multiple times. Closes ticket 
-      28361. Patch by Daniel Pinto.
