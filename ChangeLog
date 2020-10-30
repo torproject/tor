@@ -5,38 +5,29 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
 
   Here are the changes since 0.4.4.5.
 
-  - The "optimistic data" feature is now always on; there is no longer
-  an option to disable it from the torrc file or from the consensus
-  directory. Closes part of 40139. - The "usecreatefast" network
-  parameter is now removed; there is no longer an option for authorities
-  to turn it off. Closes part of 40139.
+  o Major features (metrics):
+    - Introduce a new MetricsPort which exposes, through an HTTP GET
+      /metrics request, a series of metrics that tor collects at
+      runtime. At the moment, the only supported output format is
+      Prometheus data model. Closes ticket 40063. See the manual page
+      for more information.
 
-  o Major features (IPv6, relay):
+  o Major features (relay, IPv6):
     - The torrc option Address now supports IPv6. By doing so, we've
       also unified the interface to find our address to support IPv4,
       IPv6 and hostname. Closes ticket 33233.
     - Launch IPv4 and IPv6 ORPort self-test circuits on relays and
       bridges. Closes ticket 33222.
-
-  o Major features (metrics):
-    - Introduce a new MetricsPort which exposes, through an HTTP GET
-      /metrics, a series of metrics that tor collects at runtime. At the
-      moment, the only supported output format is Prometheus data model.
-      Closes ticket 40063;
-
-  o Major features (relay self-testing, IPv6):
-    - Relays now track their IPv6 ORPort separately from the reachability
-      of their IPv4 ORPort. They will not publish a descriptor unless
-      _both_ ports appear to be externally reachable. Closes
-      ticket 34067.
-
-  o Major features (relay, IPv6):
     - Relays now automatically bind on IPv6 for their ORPort unless
       specified otherwise with the IPv4Only flag. Closes ticket 33246.
     - When a relay with IPv6 support opens a connection to another
       relay, and the extend cell lists both IPv4 and IPv6 addresses, the
       first relay now picks randomly which address to use. Closes
       ticket 33220.
+    - Relays now track their IPv6 ORPort separately from the reachability
+      of their IPv4 ORPort. They will not publish a descriptor unless
+      _both_ ports appear to be externally reachable. Closes
+      ticket 34067.
 
   o Major features (tracing):
     - Add a tracing library with USDT and LTTng-UST support. Few
@@ -64,14 +55,6 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       specifying the time format of expiration date. Adds Unix timestamp
       format support. Patch by Daniel Pinto. Closes ticket 30045.
 
-  o Minor features (authorities):
-    - Authorities now list a different set of protocols as required and
-      recommended. These lists are chosen so that only truly recommended
-      and/or required protocols are included, and so that clients using
-      0.2.9 or later will continue to work (even though they are not
-      supported), whereas only relays running 0.3.5 or later will meet
-      the requirements. Closes ticket 40162.
-
   o Minor features (bootstrap reporting):
     - When reporting bootstrapping status on a relay, do not consider
       connections that have never been the target of an origin circuit.
@@ -85,8 +68,6 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - When running the configure script, try to detect version
       mismatches between the openssl headers and libraries, and suggest
       that the user should try "--with-openssl-dir". Closes 40138.
-
-  o Minor features (compilation):
     - When building Tor, first link all object files into a single
       static library. This may help with embedding Tor in other
       programs. Note that most Tor functions do not constitute a part of
@@ -107,15 +88,11 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - When a stream enters the AP_CONN_STATE_CONTROLLER_WAIT status,
       send a control port event CONTROLLER_WAIT. Closes ticket 32190.
       Patch by Neel Chauhan.
-
-  o Minor features (control port, relay):
     - Introduce "GETINFO address/v4" and "GETINFO address/v6" in the
       control port to fetch the Tor host's respective IPv4 or IPv6
       address. We keep "GETINFO address" for backwords-compatibility
       which retains the current behavior. Closes ticket 40039. Patch by
       Neel Chauhan.
-
-  o Minor features (control port, rephist):
     - Introduce GETINFO "stats/ntor/{assigned/requested}" and
       "stats/tap/{assigned/requested}" to get the NTorand TAP circuit
       onion handshake rephist values respectively. Closes ticket 28279.
@@ -126,19 +103,17 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       launching an IPv6 self-test. Closes ticket 34068.
 
   o Minor features (directory authorities):
-    - Create new consensus method that removes the unecessary = padding
+    - Authorities now list a different set of protocols as required and
+      recommended. These lists are chosen so that only truly recommended
+      and/or required protocols are included, and so that clients using
+      0.2.9 or later will continue to work (even though they are not
+      supported), whereas only relays running 0.3.5 or later will meet
+      the requirements. Closes ticket 40162.
+    - Add a new consensus method that removes the unecessary = padding
       from ntor-onion-key. Closes ticket 7869. Patch by Daniel Pinto.
     - Directory authorities now reject descriptors from relays running
       Tor versions from the 0.4.1 series, but still allow the 0.3.5
       series. Resolves ticket 34357. Patch by Neel Chauhan.
-
-  o Minor features (directory authorities, IPv6):
-    - Make authorities add their IPv6 ORPort (if any) to the trusted dir
-      servers list. Authorities currently add themselves to the trusted
-      dir servers list, but they only add their IPv4 address and ports
-      to the list. Closes ticket 32822.
-
-  o Minor features (directory authority):
     - Make it possible to specify multiple ConsensusParams torrc lines.
       Now directory authority operators can for example put the main
       ConsensusParams config in one torrc file and then add to it from a
@@ -151,6 +126,12 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       addresses. Two routers are considered to have "the same" address
       by this metric if they are in the same /64 network. Patch from
       Maurice Pibouin. Closes ticket 7193.
+
+  o Minor features (directory authorities, IPv6):
+    - Make authorities add their IPv6 ORPort (if any) to the trusted dir
+      servers list. Authorities currently add themselves to the trusted
+      dir servers list, but they only add their IPv4 address and ports
+      to the list. Closes ticket 32822.
 
   o Minor features (ed25519, relay):
     - Save a relay's base64-encoded ed25519 identity key to the data
@@ -167,21 +148,14 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       adddress. Previously, ExcludeNodes ignored IPv6 addresses. Closes
       ticket 34065. Patch by Neel Chauhan.
 
-  o Minor features (IPv6, relay):
-    - Allow relays to send IPv6-only extend cells. Closes ticket 33222.
-    - Declare support for the Relay=3 subprotocol version. Closes
-      ticket 33226.
-    - When launching IPv6 ORPort self-test circuits, make sure that the
-      second-last hop can initiate an IPv6 extend. Closes ticket 33222.
-
   o Minor features (logging):
     - Adds the running glibc version to the log. Also adds the running
       and compiled glibc version to the library list returned when using
       the flag --library-versions. Patch from Daniel Pinto. Closes
       ticket 40047; bugfix on 0.4.5.0-alpha-dev.
-    - Consider 301 as an error like a 404 when processing the response
-      to a request for a group of server descriptors or an extrainfo
-      documents. Closes ticket 40053.
+    - Consider an HTTP 301 response as an error (like a 404) when
+      processing the response to a request for a group of server
+      descriptors or an extrainfo documents. Closes ticket 40053.
     - Print directory fetch information a single line. Closes
       ticket 40159.
     - Provide more complete descriptions of our connections when logging
@@ -237,13 +211,18 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       to be used in an emergency to tell relays that they should publish
       even if they cannot complete their ORPort self-checks. Closes
       ticket 34064 and part of 33224.
+    - Allow relays to send IPv6-only extend cells. Closes ticket 33222.
+    - Declare support for the Relay=3 subprotocol version. Closes
+      ticket 33226.
+    - When launching IPv6 ORPort self-test circuits, make sure that the
+      second-last hop can initiate an IPv6 extend. Closes ticket 33222.
 
   o Minor features (specification update):
     - Several fields in microdescriptors, router descriptors, and
       consensus documents that were formerly optional are now required.
       Implements proposal 315; closes ticket 40132.
 
-  o Minor features (state):
+  o Minor features (state management):
     - When loading the state file, remove entries from the statefile
       that have been obsolete for a long time. Ordinarily Tor preserves
       unrecognized entries in order to keep forward-compatibility, but
@@ -415,6 +394,12 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - We no longer ship support for the Android logging API. Modern
       versions of Android can use the syslog API instead. Closes
       ticket 32181.
+    - The "optimistic data" feature is now always on; there is no longer
+      an option to disable it from the torrc file or from the consensus
+      directory. Closes part of 40139.
+    - The "usecreatefast" network parameter is now removed; there is no
+      longer an option for authorities to turn it off. Closes part
+      of 40139.
 
   o Testing:
     - Add unit tests for bandwidth statistics manipulation functions.
@@ -447,8 +432,6 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
   o Documentation (tracing):
     - Document in depth the circuit subsystem trace events in the new
       doc/tracing/EventsCircuit.md. Closes ticket 40036.
-
-  o Removed features (network parameters):
 
   o Testing (CI):
     - Build tracing configure option into our CI. Closes ticket 40038.
