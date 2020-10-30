@@ -3,46 +3,68 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
   improves support for IPv6, address discovery and self-testing, code
   metrics and tracing.
 
+  This release also fixes TROVE-2020-005, a security issue that could be
+  used, under certain cases, by an adversary to observe traffic patterns
+  on a limited number of circuits intended for a different relay. To
+  mount this attack, the adversary would need to actively extend
+  circuits to an incorrect address, as well as compromise a relay's
+  legacy RSA-1024 key. We'll be backporting this fix to other release
+  series soon, after it has had some testing.
+
   Here are the changes since 0.4.4.5.
 
+  o Major features (build):
+    - When building Tor, first link all object files into a single
+      static library. This may help with embedding Tor in other
+      programs. Note that most Tor functions do not constitute a part of
+      a stable or supported API: Only those functions in tor_api.h
+      should be used if embedding Tor. Closes ticket 40127.
+
   o Major features (metrics):
-    - Introduce a new MetricsPort which exposes, through an HTTP GET
-      /metrics request, a series of metrics that tor collects at
-      runtime. At the moment, the only supported output format is
-      Prometheus data model. Closes ticket 40063. See the manual page
-      for more information.
+    - Introduce a new MetricsPort which exposes, through an HTTP
+      interface, a series of metrics that tor collects at runtime. At
+      the moment, the only supported output format is Prometheus data
+      model. Closes ticket 40063. See the manual page for more
+      information and security considerations.
 
   o Major features (relay, IPv6):
-    - The torrc option Address now supports IPv6. By doing so, we've
-      also unified the interface to find our address to support IPv4,
-      IPv6 and hostname. Closes ticket 33233.
+    - The torrc option Address now supports IPv6. This unifies our
+      address discovery interface to support IPv4, IPv6, and hostnames.
+      Closes ticket 33233.
     - Launch IPv4 and IPv6 ORPort self-test circuits on relays and
       bridges. Closes ticket 33222.
-    - Relays now automatically bind on IPv6 for their ORPort unless
+    - Relays now automatically bind on IPv6 for their ORPort, unless
       specified otherwise with the IPv4Only flag. Closes ticket 33246.
-    - When a relay with IPv6 support opens a connection to another
-      relay, and the extend cell lists both IPv4 and IPv6 addresses, the
-      first relay now picks randomly which address to use. Closes
-      ticket 33220.
-    - Relays now track their IPv6 ORPort separately from the reachability
-      of their IPv4 ORPort. They will not publish a descriptor unless
-      _both_ ports appear to be externally reachable. Closes
-      ticket 34067.
+    - When a relay with IPv6 support is told to open a connection to
+      another relay, and the extend cell lists both IPv4 and IPv6
+      addresses, the first relay now picks randomly which address to
+      use. Closes ticket 33220.
+    - Relays now track their IPv6 ORPort reachability separately from
+      the reachability of their IPv4 ORPort. They will not publish a
+      descriptor unless _both_ ports appear to be externally reachable.
+      Closes ticket 34067.
 
   o Major features (tracing):
-    - Add a tracing library with USDT and LTTng-UST support. Few
-      tracepoints were added in the circuit subsystem. More will come
-      incrementally. This feature is compiled out by default. It needs
+    - Add event-tracing library support for USDT and LTTng-UST, and a
+      few tracepoints in the circuit subsystem. More will come
+      incrementally. This feature is compiled out by default: it needs
       to be enabled at configure time. See documentation in
       doc/HACKING/Tracing.md. Closes ticket 32910.
 
-  o Major bugfix (TLS, buffer):
+  o Major bugfixes (security):
+    - When completing a channel, relays now check more thoroughly to
+      make sure that it matches any pending circuits before attaching
+      those circuits. Previously, address correctness and Ed25519
+      identities were not checked in this case, but only when extending
+      circuits on an existing channel. Fixes bug 40080; bugfix on
+      0.2.7.2-alpha. Resolves TROVE-2020-005.
+
+  o Major bugfixes (TLS, buffer):
     - When attempting to read N bytes on a TLS connection, really try to
-      read those N bytes. Before that, Tor would stop reading after the
-      first TLS record which can be smaller than N bytes even though
-      more data was waiting on the TLS connection socket. The remaining
-      data would have been read at the next mainloop event. Fixes bug
-      40006; bugfix on 0.1.0.5-rc.
+      read all N bytes. Previously, Tor would stop reading after the
+      first TLS record, which can be smaller than the N bytes requested,
+      and not check for more data until the next mainloop event. Fixes
+      bug 40006; bugfix on 0.1.0.5-rc.
 
   o Minor features (address discovery):
     - If no Address statements are found, relays now prioritize guessing
@@ -51,69 +73,65 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       hostname is used. Closes ticket 33238.
 
   o Minor features (admin tools):
-    - Add new --format argument to -key-expiration option to allow
-      specifying the time format of expiration date. Adds Unix timestamp
-      format support. Patch by Daniel Pinto. Closes ticket 30045.
+    - Add a new --format argument to -key-expiration option to allow
+      specifying the time format of the expiration date. Adds Unix
+      timestamp format support. Patch by Daniel Pinto. Closes
+      ticket 30045.
 
   o Minor features (bootstrap reporting):
     - When reporting bootstrapping status on a relay, do not consider
       connections that have never been the target of an origin circuit.
       Previously, all connection failures were treated as potential
-      bootstrapping failures, including those that had been opened
+      bootstrapping failures, including connections had been opened
       because of client requests. Closes ticket 25061.
 
   o Minor features (build):
+    - When running the configure script, try to detect version
+      mismatches between the OpenSSL headers and libraries, and suggest
+      that the user should try "--with-openssl-dir". Closes 40138.
     - If the configure script has given any warnings, remind the user
       about them at the end of the script. Related to 40138.
-    - When running the configure script, try to detect version
-      mismatches between the openssl headers and libraries, and suggest
-      that the user should try "--with-openssl-dir". Closes 40138.
-    - When building Tor, first link all object files into a single
-      static library. This may help with embedding Tor in other
-      programs. Note that most Tor functions do not constitute a part of
-      a stable or supported API: Only those functions in tor_api.h
-      should be used if embedding Tor. Closes ticket 40127.
 
   o Minor features (configuration):
     - Allow the using wildcards (* and ?) with the %include option on
       configuration files. Closes ticket 25140. Patch by Daniel Pinto.
-    - Allows configuration options EntryNodes, ExcludeNodes,
+    - Allow the configuration options EntryNodes, ExcludeNodes,
       ExcludeExitNodes, ExitNodes, MiddleNodes, HSLayer2Nodes and
       HSLayer3Nodes to be specified multiple times. Closes ticket 28361.
       Patch by Daniel Pinto.
 
   o Minor features (control port):
-    - Add a DROPTIMEOUTS control port command to drop circuit build
-      timeout history and reset the timeout. Closes ticket 40002.
+    - Add a DROPTIMEOUTS command to drop circuit build timeout history
+      and reset the current timeout. Closes ticket 40002.
     - When a stream enters the AP_CONN_STATE_CONTROLLER_WAIT status,
-      send a control port event CONTROLLER_WAIT. Closes ticket 32190.
-      Patch by Neel Chauhan.
-    - Introduce "GETINFO address/v4" and "GETINFO address/v6" in the
-      control port to fetch the Tor host's respective IPv4 or IPv6
-      address. We keep "GETINFO address" for backwords-compatibility
-      which retains the current behavior. Closes ticket 40039. Patch by
+      send a control port event. Closes ticket 32190. Patch by
       Neel Chauhan.
     - Introduce GETINFO "stats/ntor/{assigned/requested}" and
-      "stats/tap/{assigned/requested}" to get the NTorand TAP circuit
-      onion handshake rephist values respectively. Closes ticket 28279.
-      Patch by Neel Chauhan.
+      "stats/tap/{assigned/requested}" to get the NTor and TAP circuit
+      onion handshake counts respectively. Closes ticket 28279. Patch by
+      Neel Chauhan.
 
-  o Minor features (controller, IPv6):
+  o Minor features (control port, IPv6):
     - Tor relays now try to report to the controller when they are
       launching an IPv6 self-test. Closes ticket 34068.
+    - Introduce "GETINFO address/v4" and "GETINFO address/v6" in the
+      control port to fetch the Tor host's respective IPv4 or IPv6
+      address. We keep "GETINFO address" for backwards-compatibility.
+      Closes ticket 40039. Patch by Neel Chauhan.
 
   o Minor features (directory authorities):
     - Authorities now list a different set of protocols as required and
-      recommended. These lists are chosen so that only truly recommended
-      and/or required protocols are included, and so that clients using
-      0.2.9 or later will continue to work (even though they are not
-      supported), whereas only relays running 0.3.5 or later will meet
-      the requirements. Closes ticket 40162.
-    - Add a new consensus method that removes the unecessary = padding
-      from ntor-onion-key. Closes ticket 7869. Patch by Daniel Pinto.
+      recommended. These lists have been chosen so that only truly
+      recommended and/or required protocols are included, and so that
+      clients using 0.2.9 or later will continue to work (even though
+      they are not supported), whereas only relays running 0.3.5 or
+      later will meet the requirements. Closes ticket 40162.
+    - Add a new consensus method 30 that removes the unnecessary "="
+      padding from ntor-onion-key. Closes ticket 7869. Patch by
+      Daniel Pinto.
     - Directory authorities now reject descriptors from relays running
-      Tor versions from the 0.4.1 series, but still allow the 0.3.5
-      series. Resolves ticket 34357. Patch by Neel Chauhan.
+      Tor versions from the obsolete 0.4.1 series. Resolves ticket
+      34357. Patch by Neel Chauhan.
     - Make it possible to specify multiple ConsensusParams torrc lines.
       Now directory authority operators can for example put the main
       ConsensusParams config in one torrc file and then add to it from a
@@ -122,16 +140,15 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       from checking whether other relays are running. A new
       AuthDirTestReachability option can be used to disable these
       checks. Closes ticket 34445.
-    - When looking for possible sybil attacks, also consider IPv6
+    - When looking for possible Sybil attacks, also consider IPv6
       addresses. Two routers are considered to have "the same" address
       by this metric if they are in the same /64 network. Patch from
       Maurice Pibouin. Closes ticket 7193.
 
   o Minor features (directory authorities, IPv6):
-    - Make authorities add their IPv6 ORPort (if any) to the trusted dir
-      servers list. Authorities currently add themselves to the trusted
-      dir servers list, but they only add their IPv4 address and ports
-      to the list. Closes ticket 32822.
+    - Make authorities add their IPv6 ORPort (if any) to the trusted
+      servers list. Authorities previously added only their IPv4
+      addresses. Closes ticket 32822.
 
   o Minor features (ed25519, relay):
     - Save a relay's base64-encoded ed25519 identity key to the data
@@ -140,54 +157,40 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
 
   o Minor features (heartbeat):
     - Include the total number of inbound and outbound IPv4 and IPv6
-      connections in the heartbeat message . Closes ticket 29113.
+      connections in the heartbeat message. Closes ticket 29113.
 
   o Minor features (IPv6, ExcludeNodes):
-    - Make routerset_contains_router() capable of handling IPv6
-      addresses. This makes ExcludeNodes capable of excluding an IPv6
-      adddress. Previously, ExcludeNodes ignored IPv6 addresses. Closes
-      ticket 34065. Patch by Neel Chauhan.
+    - Handle IPv6 addresses in ExcludeNodes; previously they were
+      ignored. Closes ticket 34065. Patch by Neel Chauhan.
 
   o Minor features (logging):
-    - Adds the running glibc version to the log. Also adds the running
-      and compiled glibc version to the library list returned when using
-      the flag --library-versions. Patch from Daniel Pinto. Closes
-      ticket 40047; bugfix on 0.4.5.0-alpha-dev.
-    - Consider an HTTP 301 response as an error (like a 404) when
-      processing the response to a request for a group of server
-      descriptors or an extrainfo documents. Closes ticket 40053.
-    - Print directory fetch information a single line. Closes
-      ticket 40159.
+    - Add the running glibc version to the log, and the compiled glibc
+      version to the library list returned when using --library-versions.
+      Patch from Daniel Pinto. Closes ticket 40047.
+    - Consider an HTTP 301 response to be an error (like a 404) when
+      processing a directory response. Closes ticket 40053.
+    - Log directory fetch statistics a single line. Closes ticket 40159.
     - Provide more complete descriptions of our connections when logging
       about them. Closes ticket 40041.
-    - When describing a relay in th elogs, we now include its ed25519
+    - When describing a relay in the logs, we now include its ed25519
       identity. Closes ticket 22668.
 
   o Minor features (onion services):
-    - When writing an onion service hostname file, first read it to make
-      sure it contains what we want before attempting to write it. Now
-      onion services can set their existing onion service directories to
-      read-only and Tor will still work. Resolves ticket 40062. Patch by
-      Neel Chauhan.
+    - Only overwrite an onion service's existing hostname file if its
+      contents are wrong. This enables read-only onion-service
+      directories. Resolves ticket 40062. Patch by Neel Chauhan.
 
   o Minor features (pluggable transports):
-    - Added option OutboundBindAddressPT to torrc. This option allows
-      users to specify which IPv4 and IPv6 address they want pluggable
-      transports to use for outgoing IP packets. Tor does not have a way
-      to enforce that the pluggable transport honors this option so each
-      pluggable transport will have to implement support for this
-      feature. Closes ticket 5304.
-
-  o Minor features (protocol simplification):
-    - Tor no longer allows subprotocol versions larger than 63.
-      Previously versions up to UINT32_MAX were allowed, which
-      significantly complicated our code. Implements proposal 318;
-      closes ticket 40133.
+    - Add an OutboundBindAddressPT option to allow users to specify
+      which IPv4 and IPv6 address pluggable transports should use for
+      outgoing IP packets. Tor does not have a way to enforce that the
+      pluggable transport honors this option, so each pluggable transport
+      needs to implement support on its own. Closes ticket 5304.
 
   o Minor features (relay address tracking):
-    - We store relay addresses for OR connections in a more logical way.
-      Previously we would sometimes overwrite the actual address of a
-      connection with a "canonical address", and then store the "real
+    - We now store relay addresses for OR connections in a more logical
+      way. Previously we would sometimes overwrite the actual address of
+      a connection with a "canonical address", and then store the "real
       address" elsewhere to remember it. We now track the "canonical
       address" elsewhere for the cases where we need it, and leave the
       connection's address alone. Closes ticket 33898.
@@ -201,16 +204,17 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       Closes ticket 34137.
 
   o Minor features (relay, address discovery):
-    - If Address is not found in torrc, attempt to learn our address
-      with the configured ORPort address if any. Closes ticket 33236.
+    - If Address option is not found in torrc, attempt to learn our
+      address with the configured ORPort address if any. Closes
+      ticket 33236.
 
   o Minor features (relay, IPv6):
     - Add an AssumeReachableIPv6 option to disable self-checking IPv6
       reachability. Closes part of ticket 33224.
-    - Add new "assume-reachable" and "assume-reachable-ipv6" parameters
-      to be used in an emergency to tell relays that they should publish
-      even if they cannot complete their ORPort self-checks. Closes
-      ticket 34064 and part of 33224.
+    - Add new "assume-reachable" and "assume-reachable-ipv6" consensus
+      parameters to be used in an emergency to tell relays that they
+      should publish even if they cannot complete their ORPort self-
+      checks. Closes ticket 34064 and part of 33224.
     - Allow relays to send IPv6-only extend cells. Closes ticket 33222.
     - Declare support for the Relay=3 subprotocol version. Closes
       ticket 33226.
@@ -226,8 +230,8 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - When loading the state file, remove entries from the statefile
       that have been obsolete for a long time. Ordinarily Tor preserves
       unrecognized entries in order to keep forward-compatibility, but
-      these statefile entries have not actually been used in any release
-      since before the 0.3.5.x. Closes ticket 40137.
+      these entries have not actually been used in any release since
+      before the 0.3.5.x. Closes ticket 40137.
 
   o Minor features (statistics, ipv6):
     - Relays now publish IPv6-specific counts of single-direction versus
@@ -236,26 +240,30 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       if statistics are enabled. Closes ticket 33263.
 
   o Minor features (subprotocol versions):
+    - Tor no longer allows subprotocol versions larger than 63.
+      Previously version numbers up to UINT32_MAX were allowed, which
+      significantly complicated our code. Implements proposal 318;
+      closes ticket 40133.
     - Use the new limitations on subprotocol versions due to proposal
       318 to simplify our implementation. Part of ticket 40133.
 
   o Minor features (testing configuration):
-    - The TestingTorNetwork no longer implicitly sets AssumeReachable to
-      1. This change will allow us to test relays' self-testing
-      mechanisms, and eventually to test authorities' relay-testing
+    - The TestingTorNetwork option no longer implicitly sets
+      AssumeReachable to 1. This change allows us to test relays' self-
+      testing mechanisms, and to test authorities' relay-testing
       functionality. Closes ticket 34446.
 
   o Minor features (testing):
     - Added unit tests for channel_matches_target_addr_for_extend().
       Closes Ticket 33919. Patch by MrSquanchee.
 
-  o Minor bugfixes (security):
-    - When completing a channel, relays now check more thoroughly to
-      make sure that it matches any pending circuits before attaching
-      those circuits. Previously, address correctness and Ed25519
-      identities were not checked in this case, but only when extending
-      circuits on an existing channel. Fixes bug 40080; bugfix
-      on 0.2.7.2-alpha.
+  o Minor features (tests, v2 onion services):
+    - Fix a rendezvous cache unit test that was triggering an underflow
+      on the global rend cache allocation. Fixes bug 40125; bugfix
+      on 0.2.8.1-alpha.
+    - Fix another rendezvous cache unit test that was triggering an
+      underflow on the global rend cache allocation. Fixes bug 40126;
+      bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (circuit padding):
     - When circpad_send_padding_cell_for_callback is called,
@@ -265,7 +273,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - Add a per-circuit padding machine instance counter, so we can
       differentiate between shutdown requests for old machines on a
       circuit; Fixes bug 30992; bugfix on 0.4.1.1-alpha.
-    - Add the abilility to keep circuit padding machines if they match a
+    - Add the ability to keep circuit padding machines if they match a
       set of circuit state or purposes. This allows us to have machines
       that start up under some conditions but don't shut down under
       others. We now use this mask to avoid starting up introduction
@@ -293,6 +301,12 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       2.19. Fixes bug 40141; bugfix on 0.4.5.0-alpha-dev. Patch by
       Daniel Pinto.
 
+  o Minor bugfixes (control port):
+    - Make sure we send the SOCKS request address in relay begin cells
+      when a stream is attached with the purpose
+      CIRCUIT_PURPOSE_CONTROLLER. Fixes bug 33124; bugfix on 0.0.5.
+      Patch by Neel Chauhan.
+
   o Minor bugfixes (logging):
     - Remove a debug logging statement that uselessly spam the logs.
       Fixes bug 40135; bugfix on 0.3.5.0-alpha.
@@ -303,10 +317,6 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       messages started to occur. Fixes bug 19431; bugfix
       on 0.2.2.16-alpha.
 
-  o Minor bugfixes (protover):
-    - Consistently reject extra commas, instead of only rejecting
-      leading commas. Fixes bug 27194; bugfix on 0.2.9.4-alpha.
-
   o Minor bugfixes (relay configuration, crash):
     - Avoid a fatal assert() when failing to create a listener
       connection for an address that was in use. Fixes bug 40073; bugfix
@@ -314,11 +324,11 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
 
   o Minor bugfixes (rust, protocol versions):
     - Declare support for the onion service introduction point denial of
-      service extensions, when building tor with Rust. Fixes bug 34248;
+      service extensions when building with Rust. Fixes bug 34248;
       bugfix on 0.4.2.1-alpha.
     - Make Rust protocol version support checks consistent with the
-      undocumented error behaviour of the corresponding C code. Fixes
-      bug 34251; bugfix on 0.3.3.5-rc.
+      undocumented error behavior of the corresponding C code. Fixes bug
+      34251; bugfix on 0.3.3.5-rc.
 
   o Minor bugfixes (self-testing):
     - When receiving an incoming circuit, only accept it as evidence
@@ -327,17 +337,13 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       evidence that we're reachable on some other address. Fixes bug
       20165; bugfix on 0.1.0.1-rc.
 
-  o Minor bugfixes (SOCKS, onion services):
-    - Make sure we send the SOCKS request address in relay begin cells
-      when a stream is attached with the purpose
-      CIRCUIT_PURPOSE_CONTROLLER. Fixes bug 33124; bugfix on 0.0.5.
-      Patch by Neel Chauhan.
-
   o Minor bugfixes (spec conformance):
     - Use the correct key type when generating signing->link
       certificates. Fixes bug 40124; bugfix on 0.2.7.2-alpha.
 
-  o Minor bugfixes (string handling):
+  o Minor bugfixes (subprotocol versions):
+    - Consistently reject extra commas, instead of only rejecting
+      leading commas. Fixes bug 27194; bugfix on 0.2.9.4-alpha.
     - In summarize_protover_flags(), treat empty strings the same as
       NULL. This prevents protocols_known from being set. Previously, we
       treated empty strings as normal strings, which led to
@@ -346,13 +352,11 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
 
   o Minor bugfixes (v2 onion services):
     - For HSFETCH commands on v2 onion services addresses, check the
-      length of bytes decoded, not the base32 length. This takes the
-      behavior introduced in commit
-      a517daa56f5848d25ba79617a1a7b82ed2b0a7c0 into consideration. Fixes
-      bug 34400; bugfix on 0.4.1.1-alpha. Patch by Neel Chauhan.
+      length of bytes decoded, not the base32 length. Fixes bug 34400;
+      bugfix on 0.4.1.1-alpha. Patch by Neel Chauhan.
 
   o Code simplification and refactoring:
-    - Add and use a set of functions to perform downcasts on constant
+    - Add and use a set of functions to perform down-casts on constant
       connection and channel pointers. Closes ticket 40046.
     - Refactor our code that logs a descriptions of connections,
       channels, and the peers on them, to use a single call path. This
@@ -421,10 +425,8 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       so we can properly integrate IPv6 along IPv4 with common
       interfaces. Closes ticket 40043.
 
-  o Documentation (manpages):
-    - Move them from doc/ to doc/man/. Closes ticket 40044.
-
   o Documentation (manual page):
+    - Move them from doc/ to doc/man/. Closes ticket 40044.
     - Describe the status of the "Sandbox" option more accurately. It is
       no longer "experimental", but it _is_ dependent on kernel and libc
       versions. Closes ticket 23378.
@@ -432,17 +434,6 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
   o Documentation (tracing):
     - Document in depth the circuit subsystem trace events in the new
       doc/tracing/EventsCircuit.md. Closes ticket 40036.
-
-  o Testing (CI):
-    - Build tracing configure option into our CI. Closes ticket 40038.
-
-  o Testing (onion service v2):
-    - Fix a rendezvous cache unit test that was triggering an underflow
-      on the global rend cache allocation. Fixes bug 40125; bugfix
-      on 0.2.8.1-alpha.
-    - Fix another rendezvous cache unit test that was triggering an
-      underflow on the global rend cache allocation. Fixes bug 40126;
-      bugfix on 0.2.8.1-alpha.
 
 
 Changes in version 0.4.4.5 - 2020-09-15
