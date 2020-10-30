@@ -1,0 +1,812 @@
+:::comment=this file is to be used with the makedescs.py utility
+:::name=MINIMAL
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+
+:::name=MAXIMAL
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject 127.0.0.1:*
+accept *:80
+reject *:*
+ipv6-policy accept 80,100,101
+uptime 1000
+hibernating 0
+unrecognized-keywords are just dandy in this format
+platform Tor 0.2.4.23 on a Banana PC Jr 6000 Series
+contact O.W.Jones
+fingerprint {d.RSA_FINGERPRINT}
+read-history 900 1,2,3,4
+write-history 900 1,2,3,4
+extra-info-digest AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+hidden-service-dir
+allow-single-hop-exits
+family $AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA $BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+caches-extra-info
+or-address [::1:2:3:4]:9999
+or-address 127.0.0.99:10000
+opt fred is a fine router
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+
+:::comment=this one has somebody else's signature.
+:::name=BAD_SIG1
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+-----BEGIN SIGNATURE-----
+aV5gqy5fTtsrdntTPRPGdeN376lXK+blHJuqbAL0WQ7XaMB4r+F8/whFu0cObOqD
+AqAhxkcMu721iYCkUNQvhc3FDou2i1mBJFDrhZEtux/2aXODIMG+OPdDUCyBqeQR
+oYLLfLR4ZZic1tlBFRRNdtXGF2SHeIM052F7PbeJz2A=
+-----END SIGNATURE-----
+
+
+:::name=bad_tokens
+:::type=ri
+router bob
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_published
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 99:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_bandwidth
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth why hello there
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=bad_onionkey
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+-----BEGIN RSA PUBLIC KEY-----
+MIGHAoGBANBKlyoqApWzG7UzmXcxhXM4T370FbN1edPbw4WAczBDXJslXCU9Xk1r
+fKfoi/+WiTGvH7RcZWPm7wnThq2u2EAO/IPPcLE9cshLBkK28EvDg5K/WsYedbY9
+1Gou+7ZSwMEPv2b13c7eWnSW1YvFa64pVDKu2sKnIjX6Bm0HZGbXAgED=
+-----END RSA PUBLIC KEY-----
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_ports
+:::type=ri
+router fred 127.0.0.1 900001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=neg_bandwidth
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 -1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=bad_ip
+:::type=ri
+router fred 100.127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_dirport
+:::type=ri
+router fred 127.0.0.1 9001 0 bob
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_name2
+:::type=ri
+router verylongnamethatnevereverendsandgoesontoolong 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_bandwidth2
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 hello 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=bad_uptime
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+uptime forever-and-a-day
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_bandwidth3
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 -1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_ntor_key
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key x{d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_fingerprint
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+fingerprint 5555
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=mismatched_fingerprint
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+fingerprint CC43 DC8E 8C9E 3E6D 59CD 0399 2491 0C8C E1E4 50D2
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_has_accept6
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+accept6 *:80
+reject6 *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_no_exit_policy
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_ipv6_exit_policy
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+ipv6-policy kfdslfdfj sdjfk sdfjsdf
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=bad_family
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+family aaaa,bbbb
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=zero_orport
+:::type=ri
+router fred 127.0.0.1 0 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=ed_missing_crosscert
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=ed_missing_crosscert2
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_missing_crosscert_sign
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+:::name=ed_bad_sig1
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 4DSdPePrToNx3WQ+4GfFelB8IyHu5Z9vTbbLZ02vfYEsCF9QeaeHbYagY/yjdt+9e71jmfM+W5MfRQd8FJ1+Dg
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_bad_sig2
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 X{d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_bad_sig3
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 lemondcustard
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_bad_crosscert1
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert 1
+-----BEGIN ED25519 CERT-----
+AQoABf55AXL4pAregsMa2ovmTBGaMCyWz/4LpICgAAuWXtTvA1IfAKo6ANUq+hi+
+xb3J4aYafnszlj87oi/DR+SDf29wzwNw8gmaqGzJ5GbfISfABuTUCzlilZyVnLxi
+BHcCH6PWiAQ=
+-----END ED25519 CERT-----
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_misplaced1
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+signing-key
+{d.RSA_IDENTITY}
+identity-ed25519
+{d.ED_CERT}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_misplaced2
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+router-sig-ed25519 {d.ED_SIGNATURE}
+proto Link=5
+reject *:*
+router-signature
+{d.RSA_SIGNATURE}
+
+
+:::name=ed_bad_cert1
+:::type=ri
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+-----BEGIN ED25519 CERT-----
+AQoABf55AYf+rX8a5rzdTBGPvLdQIP8XcElDDQnJIruGqfDTj+tjAP+3XOL2UTmn
+Hu39PbLZV+m9DIj/DvG38M0hP4MmHUjP/iZG5PaCX6/aMe+nQSNuTl0IDGpIo1l8
+dZToQTFSzAQ=
+-----END ED25519 CERT-----
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+published 2014-10-05 12:00:00
+bandwidth 1000 1000 1000
+proto Link=5
+reject *:*
+router-sig-ed25519 {d.ED_SIGNATURE}
+router-signature
+{d.RSA_SIGNATURE}

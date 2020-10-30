@@ -23,6 +23,7 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/nodelist/torcert.h"
 #include "feature/relay/router.h"
 #include "feature/stats/bwhist.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
@@ -35,44 +36,34 @@
 #include "test/test.h"
 #include "test/log_test_helpers.h"
 
-static const routerinfo_t * rtr_tests_router_get_my_routerinfo(void);
-ATTR_UNUSED static int rtr_tests_router_get_my_routerinfo_called = 0;
-
-static routerinfo_t* mock_routerinfo;
-
-static const routerinfo_t*
-rtr_tests_router_get_my_routerinfo(void)
+static routerinfo_t *
+rtr_tests_gen_routerinfo(crypto_pk_t *ident_key, crypto_pk_t *tap_key)
 {
-  crypto_pk_t* ident_key;
-  crypto_pk_t* tap_key;
   time_t now;
 
-  if (!mock_routerinfo) {
-    /* Mock the published timestamp, otherwise router_dump_router_to_string()
-     * will poop its pants. */
-    time(&now);
+  routerinfo_t *mock_routerinfo;
 
-    /* We'll need keys, or router_dump_router_to_string() would return NULL. */
-    ident_key = pk_generate(0);
-    tap_key = pk_generate(0);
+  /* Mock the published timestamp, otherwise router_dump_router_to_string()
+   * will poop its pants. */
+  time(&now);
 
-    tor_assert(ident_key != NULL);
-    tor_assert(tap_key != NULL);
+  /* We'll need keys, or router_dump_router_to_string() would return NULL. */
+  tor_assert(ident_key != NULL);
+  tor_assert(tap_key != NULL);
 
-    mock_routerinfo = tor_malloc_zero(sizeof(routerinfo_t));
-    mock_routerinfo->nickname = tor_strdup("ConlonNancarrow");
-    tor_addr_from_ipv4h(&mock_routerinfo->ipv4_addr, 123456789);
-    mock_routerinfo->ipv4_orport = 443;
-    mock_routerinfo->platform = tor_strdup("unittest");
-    mock_routerinfo->cache_info.published_on = now;
-    mock_routerinfo->identity_pkey = crypto_pk_dup_key(ident_key);
-    router_set_rsa_onion_pkey(tap_key, &mock_routerinfo->onion_pkey,
-                              &mock_routerinfo->onion_pkey_len);
-    mock_routerinfo->bandwidthrate = 9001;
-    mock_routerinfo->bandwidthburst = 9002;
-    crypto_pk_free(ident_key);
-    crypto_pk_free(tap_key);
-  }
+  mock_routerinfo = tor_malloc_zero(sizeof(routerinfo_t));
+  mock_routerinfo->nickname = tor_strdup("ConlonNancarrow");
+  tor_addr_from_ipv4h(&mock_routerinfo->ipv4_addr, 123456789);
+  mock_routerinfo->ipv4_orport = 443;
+  mock_routerinfo->platform = tor_strdup("unittest");
+  mock_routerinfo->cache_info.published_on = now;
+  mock_routerinfo->identity_pkey = crypto_pk_dup_key(ident_key);
+  mock_routerinfo->protocol_list =
+    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1-2");
+  router_set_rsa_onion_pkey(tap_key, &mock_routerinfo->onion_pkey,
+                            &mock_routerinfo->onion_pkey_len);
+  mock_routerinfo->bandwidthrate = 9001;
+  mock_routerinfo->bandwidthburst = 9002;
 
   return mock_routerinfo;
 }
@@ -87,12 +78,12 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
   routerinfo_t* router = NULL;
   curve25519_keypair_t ntor_keypair;
   ed25519_keypair_t signing_keypair;
+  ed25519_keypair_t identity_keypair;
   char* desc = NULL;
   char* found = NULL;
   (void)arg;
-
-  MOCK(router_get_my_routerinfo,
-       rtr_tests_router_get_my_routerinfo);
+  crypto_pk_t *ident_key = pk_generate(0);
+  crypto_pk_t *tap_key = pk_generate(0);
 
   options->ORPort_set = 1;
   options->BridgeRelay = 1;
@@ -100,11 +91,20 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
   /* Generate keys which router_dump_router_to_string() expects to exist. */
   tt_int_op(0, OP_EQ, curve25519_keypair_generate(&ntor_keypair, 0));
   tt_int_op(0, OP_EQ, ed25519_keypair_generate(&signing_keypair, 0));
+  tt_int_op(0, OP_EQ, ed25519_keypair_generate(&identity_keypair, 0));
 
   /* Set up part of our routerinfo_t so that we don't trigger any other
    * assertions in router_dump_router_to_string(). */
-  router = (routerinfo_t*)router_get_my_routerinfo();
+  router = rtr_tests_gen_routerinfo(ident_key, tap_key);
   tt_ptr_op(router, OP_NE, NULL);
+
+  router->cache_info.signing_key_cert =
+    tor_cert_create_ed25519(&identity_keypair,
+                            CERT_TYPE_ID_SIGNING,
+                            &signing_keypair.pubkey,
+                            time(NULL),
+                            86400,
+                            CERT_FLAG_INCLUDE_SIGNING_KEY);
 
   /* The real router_get_my_routerinfo() looks up onion_curve25519_pkey using
    * get_current_curve25519_keypair(), but we don't initialise static data in
@@ -113,22 +113,22 @@ test_router_dump_router_to_string_no_bridge_distribution_method(void *arg)
 
   /* Generate our server descriptor and ensure that the substring
    * "bridge-distribution-request any" occurs somewhere within it. */
-  crypto_pk_t *onion_pkey = router_get_rsa_onion_pkey(router->onion_pkey,
-                                                      router->onion_pkey_len);
   desc = router_dump_router_to_string(router,
-                                      router->identity_pkey,
-                                      onion_pkey,
+                                      ident_key,
+                                      tap_key,
                                       &ntor_keypair,
                                       &signing_keypair);
-  crypto_pk_free(onion_pkey);
   tt_ptr_op(desc, OP_NE, NULL);
   found = strstr(desc, needle);
   tt_ptr_op(found, OP_NE, NULL);
 
  done:
-  UNMOCK(router_get_my_routerinfo);
-
+  if (router)
+    router->onion_curve25519_pkey = NULL; // avoid double-free
+  routerinfo_free(router);
   tor_free(desc);
+  crypto_pk_free(ident_key);
+  crypto_pk_free(tap_key);
 }
 
 static routerinfo_t *mock_router_get_my_routerinfo_result = NULL;

@@ -70,19 +70,39 @@ i2d_RSAPublicKey.argtypes = [
 i2d_RSAPublicKey.restype = ctypes.c_int
 
 
+HEADER = """\
+router fred 127.0.0.1 9001 0 9002
+identity-ed25519
+{d.ED_CERT}
+signing-key
+{d.RSA_IDENTITY}
+master-key-ed25519 {d.ED_IDENTITY}
+onion-key
+{d.RSA_ONION_KEY}
+ntor-onion-key {d.NTOR_ONION_KEY}
+ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
+{d.NTOR_CROSSCERT}
+onion-key-crosscert
+{d.RSA_CROSSCERT_ED}
+"""
+
+FOOTER="""
+
+"""
+
 def rsa_sign(msg, rsa):
-    buf = ctypes.create_string_buffer(1024)
+    buf = ctypes.create_string_buffer(2048)
     n = RSA_private_encrypt(len(msg), msg, buf, rsa, 1)
     if n <= 0:
         raise Exception()
     return buf.raw[:n]
 
-def b64(x):
-    x = base64.b64encode(x)
+def b64(x1):
+    x = binascii.b2a_base64(x1)
     res = []
     for i in xrange(0, len(x), 64):
-        res.append(x[i:i+64]+"\n")
-    return "".join(res)
+        res.append((x[i:i+64]).decode("ascii"))
+    return "\n".join(res)
 
 def bio_extract(bio):
     buf = ctypes.c_char_p()
@@ -100,18 +120,19 @@ def make_rsa_key(e=65537):
     n = crypt.i2d_RSAPublicKey(rsa, ctypes.byref(pBuf))
     s = buf.raw[:n]
     digest = hashlib.sha1(s).digest()
+    pem = pem.decode("ascii")
     return (rsa,pem,digest)
 
 def makeEdSigningKeyCert(sk_master, pk_master, pk_signing, date,
                          includeSigning=False, certType=1):
     assert len(pk_signing) == len(pk_master) == 32
-    expiration = struct.pack("!L", date//3600)
+    expiration = struct.pack(b"!L", date//3600)
     if includeSigning:
-        extensions = "\x01\x00\x20\x04\x00%s"%(pk_master)
+        extensions = b"\x01\x00\x20\x04\x00%s"%(pk_master)
     else:
-        extensions = "\x00"
-    signed = "\x01%s%s\x01%s%s" % (
-        chr(certType), expiration, pk_signing, extensions)
+        extensions = b"\x00"
+    signed = b"\x01%s%s\x01%s%s" % (
+        bytes([certType]), expiration, pk_signing, extensions)
     signature = ed25519_exts_ref.signatureWithESK(signed, sk_master, pk_master)
     assert len(signature) == 64
     return signed+signature
@@ -127,7 +148,7 @@ MAGIC2 = "<<<<<!#!#!#XYZZY#!#!#!>>>>>"
 class OnDemandKeys(object):
     def __init__(self, certDate=None):
         if certDate is None:
-            certDate = time.time() + 86400
+            certDate = int(time.time()) + 86400
         self.certDate = certDate
         self.rsa_id = None
         self.rsa_onion_key = None
@@ -151,7 +172,7 @@ class OnDemandKeys(object):
 
     @property
     def RSA_FINGERPRINT_NOSPACE(self):
-        return binascii.b2a_hex(self.RSA_ID_DIGEST).upper()
+        return binascii.b2a_hex(self.RSA_ID_DIGEST).upper().decode("ascii")
 
     @property
     def RSA_ONION_KEY(self):
@@ -162,7 +183,7 @@ class OnDemandKeys(object):
 
     @property
     def RSA_FINGERPRINT(self):
-        hexdigest = self.RSA_FINGERPRINT_NOSPACEK
+        hexdigest = self.RSA_FINGERPRINT_NOSPACE
         return " ".join(hexdigest[i:i+4] for i in range(0,len(hexdigest),4))
 
     @property
@@ -178,7 +199,7 @@ class OnDemandKeys(object):
         if self.ntor_sk is None:
             self.ntor_sk = slownacl_curve25519.Private()
             self.ntor_pk = self.ntor_sk.get_public()
-        return base64.b64encode(self.ntor_pk.serialize())
+        return base64.b64encode(self.ntor_pk.serialize()).decode("ascii")
 
     @property
     def ED_CERT(self):
@@ -192,6 +213,11 @@ class OnDemandKeys(object):
         return objwrap('ED25519 CERT', b64(self.ed_cert))
 
     @property
+    def ED_IDENTITY(self):
+        self.ED_CERT
+        return binascii.b2a_base64(self.ed_id_pk).strip().decode("ascii")
+
+    @property
     def NTOR_CROSSCERT(self):
         if self.ntor_crosscert is None:
             self.ED_CERT
@@ -199,7 +225,7 @@ class OnDemandKeys(object):
 
             ed_privkey = self.ntor_sk.serialize() + os.urandom(32)
             ed_pub0 = ed25519_exts_ref.publickeyFromESK(ed_privkey)
-            sign = (ord(ed_pub0[31]) & 255) >> 7
+            sign = ((ed_pub0[31]) & 255) >> 7
 
             self.ntor_crosscert = makeEdSigningKeyCert(self.ntor_sk.serialize() + os.urandom(32), ed_pub0, self.ed_id_pk, self.certDate, certType=10)
             self.ntor_crosscert_sign = sign
@@ -234,18 +260,19 @@ class OnDemandKeys(object):
             self.ED_CERT
             signed_part = body[:idx+len("\nrouter-sig-ed25519 ")]
             signed_part = "Tor router descriptor signature v1" + signed_part
-            digest = hashlib.sha256(signed_part).digest()
+            digest = hashlib.sha256(signed_part.encode("utf-8")).digest()
             ed_sig = ed25519_exts_ref.signatureWithESK(digest,
                                       self.ed_signing_sk, self.ed_signing_pk)
 
-            body = body.replace(MAGIC2, base64.b64encode(ed_sig).replace("=",""))
+            body = body.replace(MAGIC2, base64.b64encode(ed_sig).decode("ascii").replace("=",""))
 
+        self.RSA_IDENTITY
         idx = body.rindex("\nrouter-signature")
         end_of_sig = body.index("\n", idx+1)
 
         signed_part = body[:end_of_sig+1]
 
-        digest = hashlib.sha1(signed_part).digest()
+        digest = hashlib.sha1(signed_part.encode("utf-8")).digest()
         assert len(digest) == 20
 
         rsasig = rsa_sign(digest, self.rsa_id)
@@ -318,29 +345,42 @@ def emit_ri(name, body):
     body = info.sign_desc(body)
     print_c_string("EX_RI_%s"%name.upper(), body)
 
-def emit_ei(name, body):
+def emit_ei(name, body, fields):
     info = OnDemandKeys()
     body = body.format(d=info)
     body = info.sign_desc(body)
     print_c_string("EX_EI_%s"%name.upper(), body)
 
-    print('const char EX_EI_{NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
+    print('ATTR_UNUSED static const char EX_EI_{NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
         d=info, NAME=name.upper()))
+    print("ATTR_UNUSED")
     print_c_string("EX_EI_%s_KEY"%name.upper(), info.RSA_IDENTITY)
 
 def analyze(s):
-    fields = {}
-    while s.startswith(":::"):
-        first,s=s.split("\n", 1)
-        m = re.match(r'^:::(\w+)=(.*)',first)
-        if not m:
-            raise ValueError(first)
-        k,v = m.groups()
-        fields[k] = v
-    return fields, s
+    while s:
+        fields = {}
+        s_pre = s
+        while s.startswith(":::"):
+            first,s=s.split("\n", 1)
+            m = re.match(r'^:::(\w+)=(.*)',first)
+            if not m:
+                raise ValueError(first)
+            k,v = m.groups()
+            fields[k] = v
+        if "name" not in fields:
+            print(repr(s_pre))
 
-def process_file(s):
-    fields, s = analyze(s)
+        idx = s.find(":::")
+        if idx != -1:
+            body = s[:idx].rstrip()
+            s = s[idx:]
+        else:
+            body = s.rstrip()
+            s = ""
+
+        yield (fields, body)
+
+def emit_entry(fields, s):
     try:
         name = fields['name']
         tp = fields['type']
@@ -348,11 +388,20 @@ def process_file(s):
         raise ValueError("missing required field")
 
     if tp == 'ei':
-        emit_ei(name, s)
+        emit_ei(name, s, fields)
     elif tp == 'ri':
         emit_ri(name, s)
     else:
         raise ValueError("unrecognized type")
+
+def process_file(s):
+    print("""\
+/* These entries are automatically generated by makedesc.py to make sure
+ * that their keys and signatures are right except when otherwise
+ * specified. */
+""")
+    for (fields, s) in analyze(s):
+        emit_entry(fields, s)
 
 if __name__ == '__main__':
     import sys

@@ -20,12 +20,12 @@ int router_get_hash_impl(const char *s, size_t s_len, char *digest,
 
 #define CST_NO_CHECK_OBJTYPE  (1<<0)
 struct directory_token_t;
-int check_signature_token(const char *digest,
-                          ssize_t digest_len,
-                          struct directory_token_t *tok,
-                          crypto_pk_t *pkey,
-                          int flags,
-                          const char *doctype);
+MOCK_DECL(int, check_signature_token,(const char *digest,
+                                     ssize_t digest_len,
+                                     struct directory_token_t *tok,
+                                     crypto_pk_t *pkey,
+                                     int flags,
+                                     const char *doctype));
 
 int router_get_hash_impl_helper(const char *s, size_t s_len,
                             const char *start_str,

@@ -29,6 +29,7 @@
 #include "lib/confmgt/confmgt.h"
 #include "core/mainloop/connection.h"
 #include "core/or/relay.h"
+#include "core/or/protover.h"
 #include "core/or/versions.h"
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
@@ -99,6 +100,14 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+static void setup_ei_digests(void);
+static uint8_t digest_ei_minimal[20];
+static uint8_t digest_ei_bad_nickname[20];
+static uint8_t digest_ei_maximal[20];
+static uint8_t digest_ei_bad_tokens[20];
+static uint8_t digest_ei_bad_sig2[20];
+static uint8_t digest_ei_bad_published[20];
 
 static networkstatus_t *
 networkstatus_parse_vote_from_string_(const char *s,
@@ -216,6 +225,7 @@ basic_routerinfo_new(const char *nickname, uint32_t ipv4_addr,
   r1->bandwidthcapacity = bandwidthcapacity;
 
   r1->cache_info.published_on = published_on;
+  r1->protocol_list = tor_strdup(protover_get_supported_protocols());
 
   if (rsa_onion_keypair_out) {
     *rsa_onion_keypair_out = pk1;
@@ -431,13 +441,6 @@ static const smartlist_t *
 mock_get_configured_ports(void)
 {
   return mocked_configured_ports;
-}
-
-static tor_cert_t *
-mock_tor_cert_dup_null(const tor_cert_t *cert)
-{
-  (void)cert;
-  return NULL;
 }
 
 static crypto_pk_t *mocked_server_identitykey = NULL;
@@ -664,211 +667,6 @@ STMT_BEGIN \
   tt_str_op(e1->nickname, OP_EQ, r1->nickname); \
 STMT_END
 
-/** Run unit tests for router descriptor generation logic for a RSA-only
- * router. Tor versions without ed25519 (0.2.6 and earlier) are no longer
- * officially supported, but the authorities still accept their descriptors.
- */
-static void
-test_dir_formats_rsa(void *arg)
-{
-  char *buf = NULL;
-  char *buf2 = NULL;
-  char *cp = NULL;
-
-  uint8_t *rsa_cc = NULL;
-
-  routerinfo_t *r1 = NULL;
-  extrainfo_t *e1 = NULL;
-  routerinfo_t *rp1 = NULL;
-  extrainfo_t *ep1 = NULL;
-
-  smartlist_t *chunks = NULL;
-  const char *msg = NULL;
-  int rv = -1;
-
-  or_options_t *options = get_options_mutable();
-  setup_dir_formats_options((const char *)arg, options);
-
-  hibernate_set_state_for_testing_(HIBERNATE_STATE_LIVE);
-
-  /* r1 is a minimal, RSA-only descriptor, with DirPort and IPv6 */
-  r1 = basic_routerinfo_new("Magri", 0xc0a80001u /* 192.168.0.1 */,
-                            9000, 9003,
-                            1000, 5000, 10000,
-                            0,
-                            NULL);
-
- /* Fake just enough of an ntor key to get by */
-  curve25519_keypair_t r1_onion_keypair;
-  curve25519_keypair_generate(&r1_onion_keypair, 0);
-  r1->onion_curve25519_pkey = tor_memdup(&r1_onion_keypair.pubkey,
-                                         sizeof(curve25519_public_key_t));
-
-  /* Now add IPv6 */
-  tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
-  r1->ipv6_orport = 9999;
-
-  r1->exit_policy = NULL;
-
-  /* XXXX+++ router_dump_to_string should really take this from ri. */
-  options->ContactInfo = tor_strdup("Magri White "
-                                    "<magri@elsewhere.example.com>");
-
-  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
-
-  buf = router_dump_router_to_string(r1, r1->identity_pkey, NULL, NULL, NULL);
-  tt_assert(buf);
-
-  tor_free(options->ContactInfo);
-  cleanup_mock_configured_ports();
-
-  /* Synthesise a router descriptor, without the signature */
-  chunks = smartlist_new();
-
-  smartlist_add(chunks, get_new_router_line(r1));
-  smartlist_add_strdup(chunks, "or-address [1:2:3:4::]:9999\n");
-
-  smartlist_add(chunks, get_new_platform_line());
-  smartlist_add(chunks, get_new_published_line(r1));
-  smartlist_add(chunks, get_new_fingerprint_line(r1));
-
-  smartlist_add(chunks, get_new_uptime_line(0));
-  smartlist_add(chunks, get_new_bandwidth_line(r1));
-
-  smartlist_add(chunks, get_new_onion_key_block(r1));
-  smartlist_add(chunks, get_new_signing_key_block(r1));
-
-  smartlist_add_strdup(chunks, "hidden-service-dir\n");
-
-  smartlist_add_strdup(chunks, "contact Magri White "
-                               "<magri@elsewhere.example.com>\n");
-
-  smartlist_add(chunks, get_new_bridge_distribution_request_line(options));
-  smartlist_add(chunks, get_new_ntor_onion_key_line(&r1_onion_keypair.pubkey));
-  smartlist_add_strdup(chunks, "reject *:*\n");
-  smartlist_add_strdup(chunks, "tunnelled-dir-server\n");
-
-  smartlist_add_strdup(chunks, "router-signature\n");
-
-  size_t len_out = 0;
-  buf2 = smartlist_join_strings(chunks, "", 0, &len_out);
-  SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
-  smartlist_free(chunks);
-
-  tt_assert(len_out > 0);
-
-  buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
-                             * twice */
-
-  tt_str_op(buf,OP_EQ, buf2);
-  tor_free(buf);
-
-  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
-
-  buf = router_dump_router_to_string(r1, r1->identity_pkey, NULL, NULL, NULL);
-  tt_assert(buf);
-
-  cleanup_mock_configured_ports();
-
-  /* Now, try to parse buf */
-  cp = buf;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
-
-  CHECK_ROUTERINFO_CONSISTENCY(r1, rp1);
-
-  tt_assert(rp1->policy_is_reject_star);
-
-  tor_free(buf);
-  routerinfo_free(rp1);
-
-  /* Test extrainfo creation.
-   * We avoid calling router_build_fresh_unsigned_routerinfo(), because it's
-   * too complex. Instead, we re-use the manually-created routerinfos.
-   */
-
-  /* Set up standard mocks and data */
-  setup_mocks_for_fresh_descriptor(r1, NULL);
-
-  /* router_build_fresh_signed_extrainfo() passes the result of
-   * get_master_signing_key_cert() directly to tor_cert_dup(), which fails on
-   * NULL. But we want a NULL ei->cache_info.signing_key_cert to test the
-   * non-ed key path.
-   */
-  MOCK(tor_cert_dup, mock_tor_cert_dup_null);
-
-  /* Fake just enough of an ORPort and DirPort to get by */
-  setup_mock_configured_ports(r1->ipv4_orport, r1->ipv4_dirport);
-
-  /* Test some of the low-level static functions. */
-  e1 = router_build_fresh_signed_extrainfo(r1);
-  tt_assert(e1);
-  router_update_routerinfo_from_extrainfo(r1, e1);
-  rv = router_dump_and_sign_routerinfo_descriptor_body(r1);
-  tt_assert(rv == 0);
-  msg = "";
-  rv = routerinfo_incompatible_with_extrainfo(r1->identity_pkey, e1,
-                                              &r1->cache_info, &msg);
-  /* If they are incompatible, fail and show the msg string */
-  tt_str_op(msg, OP_EQ, "");
-  tt_assert(rv == 0);
-
-  /* Now cleanup */
-  cleanup_mocks_for_fresh_descriptor();
-
-  UNMOCK(tor_cert_dup);
-
-  cleanup_mock_configured_ports();
-
-  CHECK_EXTRAINFO_CONSISTENCY(r1, e1);
-
-  /* Test that the signed ri is parseable */
-  tt_assert(r1->cache_info.signed_descriptor_body);
-  cp = r1->cache_info.signed_descriptor_body;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
-
-  CHECK_ROUTERINFO_CONSISTENCY(r1, rp1);
-
-  tt_assert(rp1->policy_is_reject_star);
-
-  routerinfo_free(rp1);
-
-  /* Test that the signed ei is parseable */
-  tt_assert(e1->cache_info.signed_descriptor_body);
-  cp = e1->cache_info.signed_descriptor_body;
-  ep1 = extrainfo_parse_entry_from_string((const char*)cp,NULL,1,NULL,NULL);
-
-  CHECK_EXTRAINFO_CONSISTENCY(r1, ep1);
-
-  /* In future tests, we could check the actual extrainfo statistics. */
-
-  extrainfo_free(ep1);
-
- done:
-  dirserv_free_fingerprint_list();
-
-  tor_free(options->ContactInfo);
-  tor_free(options->Nickname);
-
-  cleanup_mock_configured_ports();
-  cleanup_mocks_for_fresh_descriptor();
-
-  if (chunks) {
-    SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
-    smartlist_free(chunks);
-  }
-
-  routerinfo_free(r1);
-  routerinfo_free(rp1);
-
-  extrainfo_free(e1);
-  extrainfo_free(ep1);
-
-  tor_free(rsa_cc);
-
-  tor_free(buf);
-  tor_free(buf2);
-}
-
 /* Check that the exit policy in rp2 is as expected. */
 #define CHECK_PARSED_EXIT_POLICY(rp2) \
 STMT_BEGIN \
@@ -999,6 +797,8 @@ test_dir_formats_rsa_ed25519(void *arg)
   }
 
   smartlist_add(chunks, get_new_platform_line());
+  smartlist_add_asprintf(chunks,
+                         "proto %s\n", protover_get_supported_protocols());
   smartlist_add(chunks, get_new_published_line(r2));
   smartlist_add(chunks, get_new_fingerprint_line(r2));
 
@@ -1064,7 +864,9 @@ test_dir_formats_rsa_ed25519(void *arg)
 
   setup_mock_configured_ports(r2->ipv4_orport, 0);
 
-  buf = router_dump_router_to_string(r2, r2->identity_pkey, NULL, NULL, NULL);
+  buf = router_dump_router_to_string(r2, r2->identity_pkey,
+                                     r2_onion_pkey,
+                                     &r2_onion_keypair, &kp2);
   tt_assert(buf);
 
   cleanup_mock_configured_ports();
@@ -1217,13 +1019,11 @@ test_dir_routerinfo_parsing(void *arg)
     again = 999;                                                        \
     ri = router_parse_entry_from_string((s), NULL, 0, 0, NULL, &again); \
     tt_assert(ri == NULL);                                              \
-    tt_int_op(again, OP_EQ, (againval));                                   \
+    tt_int_op(again, OP_EQ, (againval));                                \
   } while (0)
 
   CHECK_OK(EX_RI_MINIMAL);
   CHECK_OK(EX_RI_MAXIMAL);
-
-  CHECK_OK(EX_RI_MINIMAL_ED);
 
   /* good annotations prepended */
   routerinfo_free(ri);
@@ -1259,14 +1059,13 @@ test_dir_routerinfo_parsing(void *arg)
   tt_ptr_op(ri, OP_EQ, NULL);
 
   CHECK_FAIL(EX_RI_BAD_SIG1, 1);
-  CHECK_FAIL(EX_RI_BAD_SIG2, 1);
   CHECK_FAIL(EX_RI_BAD_TOKENS, 0);
   CHECK_FAIL(EX_RI_BAD_PUBLISHED, 0);
   CHECK_FAIL(EX_RI_NEG_BANDWIDTH, 0);
   CHECK_FAIL(EX_RI_BAD_BANDWIDTH, 0);
   CHECK_FAIL(EX_RI_BAD_BANDWIDTH2, 0);
-  CHECK_FAIL(EX_RI_BAD_ONIONKEY1, 0);
-  CHECK_FAIL(EX_RI_BAD_ONIONKEY2, 0);
+  CHECK_FAIL(EX_RI_BAD_BANDWIDTH3, 0);
+  CHECK_FAIL(EX_RI_BAD_ONIONKEY, 0);
   CHECK_FAIL(EX_RI_BAD_PORTS, 0);
   CHECK_FAIL(EX_RI_BAD_IP, 0);
   CHECK_FAIL(EX_RI_BAD_DIRPORT, 0);
@@ -1289,22 +1088,10 @@ test_dir_routerinfo_parsing(void *arg)
   CHECK_FAIL(EX_RI_ED_BAD_SIG1, 0);
   CHECK_FAIL(EX_RI_ED_BAD_SIG2, 0);
   CHECK_FAIL(EX_RI_ED_BAD_SIG3, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_SIG4, 0);
   CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT1, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT3, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT4, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT5, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT6, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT7, 0);
   CHECK_FAIL(EX_RI_ED_MISPLACED1, 0);
   CHECK_FAIL(EX_RI_ED_MISPLACED2, 0);
   CHECK_FAIL(EX_RI_ED_BAD_CERT1, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CERT2, 0);
-  CHECK_FAIL(EX_RI_ED_BAD_CERT3, 0);
-
-  /* This is allowed; we just ignore it. */
-  CHECK_OK(EX_RI_BAD_EI_DIGEST);
-  CHECK_OK(EX_RI_BAD_EI_DIGEST2);
 
 #undef CHECK_FAIL
 #undef CHECK_OK
@@ -1360,14 +1147,10 @@ test_dir_extrainfo_parsing(void *arg)
   tt_assert(ei->pending_sig);
   CHECK_OK(EX_EI_MAXIMAL);
   tt_assert(ei->pending_sig);
-  CHECK_OK(EX_EI_GOOD_ED_EI);
-  tt_assert(ei->pending_sig);
 
   map = (struct digest_ri_map_t *)digestmap_new();
   ADD(EX_EI_MINIMAL);
   ADD(EX_EI_MAXIMAL);
-  ADD(EX_EI_GOOD_ED_EI);
-  ADD(EX_EI_BAD_FP);
   ADD(EX_EI_BAD_NICKNAME);
   ADD(EX_EI_BAD_TOKENS);
   ADD(EX_EI_BAD_START);
@@ -1377,8 +1160,6 @@ test_dir_extrainfo_parsing(void *arg)
   ADD(EX_EI_ED_MISSING_CERT);
   ADD(EX_EI_ED_BAD_CERT1);
   ADD(EX_EI_ED_BAD_CERT2);
-  ADD(EX_EI_ED_BAD_SIG1);
-  ADD(EX_EI_ED_BAD_SIG2);
   ADD(EX_EI_ED_MISPLACED_CERT);
   ADD(EX_EI_ED_MISPLACED_SIG);
 
@@ -1386,13 +1167,9 @@ test_dir_extrainfo_parsing(void *arg)
   tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
   CHECK_OK(EX_EI_MAXIMAL);
   tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
-  CHECK_OK(EX_EI_GOOD_ED_EI);
-  tt_ptr_op(ei->pending_sig, OP_EQ, NULL);
 
   CHECK_FAIL(EX_EI_BAD_SIG1,1);
-  CHECK_FAIL(EX_EI_BAD_SIG2,1);
-  CHECK_FAIL(EX_EI_BAD_SIG3,1);
-  CHECK_FAIL(EX_EI_BAD_FP,0);
+  CHECK_FAIL(EX_EI_BAD_SIG2,0);
   CHECK_FAIL(EX_EI_BAD_NICKNAME,0);
   CHECK_FAIL(EX_EI_BAD_TOKENS,0);
   CHECK_FAIL(EX_EI_BAD_START,0);
@@ -1402,8 +1179,6 @@ test_dir_extrainfo_parsing(void *arg)
   CHECK_FAIL(EX_EI_ED_MISSING_CERT,0);
   CHECK_FAIL(EX_EI_ED_BAD_CERT1,0);
   CHECK_FAIL(EX_EI_ED_BAD_CERT2,0);
-  CHECK_FAIL(EX_EI_ED_BAD_SIG1,0);
-  CHECK_FAIL(EX_EI_ED_BAD_SIG2,0);
   CHECK_FAIL(EX_EI_ED_MISPLACED_CERT,0);
   CHECK_FAIL(EX_EI_ED_MISPLACED_SIG,0);
 
@@ -1460,11 +1235,14 @@ test_dir_parse_router_list(void *arg)
   tt_mem_op(r->cache_info.signed_descriptor_body, OP_EQ,
             EX_RI_MAXIMAL, strlen(EX_RI_MAXIMAL));
 
+  setup_ei_digests();
+
   tt_int_op(2, OP_EQ, smartlist_len(invalid));
+
   test_memeq_hex(smartlist_get(invalid, 0),
-                 "ab9eeaa95e7d45740185b4e519c76ead756277a9");
+                 "10F951AF93AED0D3BC7FA5FFA232EB8C17747ACE");
   test_memeq_hex(smartlist_get(invalid, 1),
-                 "9a651ee03b64325959e8f1b46f2b689b30750b4c");
+                 "41D8723CDD4B1AADCCE538C28CDE7F69828C73D0");
 
   /* Now tidy up */
   SMARTLIST_FOREACH(dest, routerinfo_t *, rinfo, routerinfo_free(rinfo));
@@ -1479,6 +1257,7 @@ test_dir_parse_router_list(void *arg)
   ADD(EX_EI_MAXIMAL);
   ADD(EX_EI_BAD_NICKNAME);
   ADD(EX_EI_BAD_PUBLISHED);
+  ADD(EX_EI_BAD_SIG2);
   cp = list;
   tt_int_op(0,OP_EQ,
             router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE,
@@ -1491,11 +1270,16 @@ test_dir_parse_router_list(void *arg)
   tt_mem_op(e->cache_info.signed_descriptor_body, OP_EQ,
             EX_EI_MINIMAL, strlen(EX_EI_MINIMAL));
 
-  tt_int_op(2, OP_EQ, smartlist_len(invalid));
-  test_memeq_hex(smartlist_get(invalid, 0),
-                 "d5df4aa62ee9ffc9543d41150c9864908e0390af");
-  test_memeq_hex(smartlist_get(invalid, 1),
-                 "f61efd2a7f4531f3687a9043e0de90a862ec64ba");
+  tt_int_op(3, OP_EQ, smartlist_len(invalid));
+  tt_mem_op(smartlist_get(invalid, 0),
+            OP_EQ,
+            digest_ei_bad_sig2, DIGEST_LEN);
+  tt_mem_op(smartlist_get(invalid, 1),
+            OP_EQ,
+            digest_ei_bad_nickname, DIGEST_LEN);
+  tt_mem_op(smartlist_get(invalid, 2),
+            OP_EQ,
+            digest_ei_bad_published, DIGEST_LEN);
 
  done:
   tor_free(list);
@@ -1522,9 +1306,33 @@ test_dir_parse_router_list(void *arg)
 static download_status_t dls_minimal;
 static download_status_t dls_maximal;
 static download_status_t dls_bad_fingerprint;
-static download_status_t dls_bad_sig2;
+static download_status_t dls_bad_sig1;
 static download_status_t dls_bad_ports;
 static download_status_t dls_bad_tokens;
+
+static uint8_t digest_minimal[20];
+static uint8_t digest_maximal[20];
+static uint8_t digest_bad_fingerprint[20];
+static uint8_t digest_bad_sig1[20];
+static uint8_t digest_bad_ports[20];
+static uint8_t digest_bad_tokens[20];
+
+static void
+setup_dls_digests(void)
+{
+#define SETUP(string, name)                                             \
+  do {                                                                  \
+    router_get_router_hash(string, strlen(string), (char*)digest_##name); \
+  } while (0)
+
+  SETUP(EX_RI_MINIMAL, minimal);
+  SETUP(EX_RI_MAXIMAL, maximal);
+  SETUP(EX_RI_BAD_FINGERPRINT, bad_fingerprint);
+  SETUP(EX_RI_BAD_SIG1, bad_sig1);
+  SETUP(EX_RI_BAD_PORTS, bad_ports);
+  SETUP(EX_RI_BAD_TOKENS, bad_tokens);
+#undef SETUP
+}
 
 static int mock_router_get_dl_status_unrecognized = 0;
 static int mock_router_get_dl_status_calls = 0;
@@ -1533,24 +1341,22 @@ static download_status_t *
 mock_router_get_dl_status(const char *d)
 {
   ++mock_router_get_dl_status_calls;
-  char hex[HEX_DIGEST_LEN+1];
-  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
-  if (!strcmp(hex, "3E31D19A69EB719C00B02EC60D13356E3F7A3452")) {
-    return &dls_minimal;
-  } else if (!strcmp(hex, "581D8A368A0FA854ECDBFAB841D88B3F1B004038")) {
-    return &dls_maximal;
-  } else if (!strcmp(hex, "2578AE227C6116CDE29B3F0E95709B9872DEE5F1")) {
-    return &dls_bad_fingerprint;
-  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
-    return &dls_bad_sig2;
-  } else if (!strcmp(hex, "AB9EEAA95E7D45740185B4E519C76EAD756277A9")) {
-    return &dls_bad_ports;
-  } else if (!strcmp(hex, "A0CC2CEFAD59DBF19F468BFEE60E0868C804B422")) {
-    return &dls_bad_tokens;
-  } else {
-    ++mock_router_get_dl_status_unrecognized;
-    return NULL;
-  }
+#define CHECK(name)                                         \
+  do {                                                      \
+    if (fast_memeq(d, digest_##name, DIGEST_LEN))           \
+      return &dls_##name;                                   \
+  } while (0)
+
+  CHECK(minimal);
+  CHECK(maximal);
+  CHECK(bad_fingerprint);
+  CHECK(bad_sig1);
+  CHECK(bad_ports);
+  CHECK(bad_tokens);
+
+  ++mock_router_get_dl_status_unrecognized;
+  return NULL;
+#undef CHECK
 }
 
 static void
@@ -1569,13 +1375,15 @@ test_dir_load_routers(void *arg)
     smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
   } while (0)
 
+  setup_dls_digests();
+
   MOCK(router_get_dl_status_by_descriptor_digest, mock_router_get_dl_status);
 
   update_approx_time(1412510400);
 
   smartlist_add_strdup(chunks, EX_RI_MINIMAL);
   smartlist_add_strdup(chunks, EX_RI_BAD_FINGERPRINT);
-  smartlist_add_strdup(chunks, EX_RI_BAD_SIG2);
+  smartlist_add_strdup(chunks, EX_RI_BAD_SIG1);
   smartlist_add_strdup(chunks, EX_RI_MAXIMAL);
   smartlist_add_strdup(chunks, EX_RI_BAD_PORTS);
   smartlist_add_strdup(chunks, EX_RI_BAD_TOKENS);
@@ -1583,7 +1391,7 @@ test_dir_load_routers(void *arg)
   /* not ADDing MINIMIAL */
   ADD(EX_RI_MAXIMAL);
   ADD(EX_RI_BAD_FINGERPRINT);
-  ADD(EX_RI_BAD_SIG2);
+  ADD(EX_RI_BAD_SIG1);
   /* Not ADDing BAD_PORTS */
   ADD(EX_RI_BAD_TOKENS);
 
@@ -1597,7 +1405,7 @@ test_dir_load_routers(void *arg)
   tt_int_op(smartlist_len(router_get_routerlist()->routers),OP_EQ,1);
   routerinfo_t *r = smartlist_get(router_get_routerlist()->routers, 0);
   test_memeq_hex(r->cache_info.signed_descriptor_digest,
-                 "581D8A368A0FA854ECDBFAB841D88B3F1B004038");
+                 "1F437798ACD1FC9CBD1C3C04DBF80F7E9F819C3F");
   tt_int_op(dls_minimal.n_download_failures, OP_EQ, 0);
   tt_int_op(dls_maximal.n_download_failures, OP_EQ, 0);
 
@@ -1610,13 +1418,12 @@ test_dir_load_routers(void *arg)
 
   /* bad_sig2 and bad ports" are retriable -- one since only the signature
    * was bad, and one because we didn't ask for it. */
-  tt_int_op(dls_bad_sig2.n_download_failures, OP_EQ, 0);
+  tt_int_op(dls_bad_sig1.n_download_failures, OP_EQ, 0);
   tt_int_op(dls_bad_ports.n_download_failures, OP_EQ, 0);
 
-  /* Wanted still contains "BAD_SIG2" */
   tt_int_op(smartlist_len(wanted), OP_EQ, 1);
   tt_str_op(smartlist_get(wanted, 0), OP_EQ,
-            "E0A3753CEFD54128EAB239F294954121DB23D2EF");
+            "3BB7D03C1C4DBC1DDE840096FF3C330914757B77");
 
 #undef ADD
 
@@ -1639,38 +1446,51 @@ static signed_descriptor_t sd_ei_maximal;
 static signed_descriptor_t sd_ei_bad_tokens;
 static signed_descriptor_t sd_ei_bad_sig2;
 
+static void
+setup_ei_digests(void)
+{
+#define SETUP(string, name)                                             \
+  do {                                                                  \
+    router_get_extrainfo_hash(string, strlen(string),                   \
+                              (char*)digest_ei_##name);                 \
+  } while (0)
+
+  SETUP(EX_EI_MINIMAL, minimal);
+  SETUP(EX_EI_MAXIMAL, maximal);
+  SETUP(EX_EI_BAD_NICKNAME, bad_nickname);
+  SETUP(EX_EI_BAD_TOKENS, bad_tokens);
+  SETUP(EX_EI_BAD_SIG2, bad_sig2);
+  SETUP(EX_EI_BAD_PUBLISHED, bad_published);
+
+#undef SETUP
+}
+
 static signed_descriptor_t *
 mock_get_by_ei_desc_digest(const char *d)
 {
-
   ++mock_get_by_ei_dd_calls;
-  char hex[HEX_DIGEST_LEN+1];
-  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
+#define CHECK(name)                                         \
+  do {                                                      \
+    if (fast_memeq(d, digest_ei_##name, DIGEST_LEN))        \
+      return &sd_ei_##name;                                 \
+  } while (0)
 
-  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
-    return &sd_ei_minimal;
-  } else if (!strcmp(hex, "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF")) {
-    return &sd_ei_maximal;
-  } else if (!strcmp(hex, "D5DF4AA62EE9FFC9543D41150C9864908E0390AF")) {
-    return &sd_ei_bad_nickname;
-  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
-    return &sd_ei_bad_sig2;
-  } else if (!strcmp(hex, "9D90F8C42955BBC57D54FB05E54A3F083AF42E8B")) {
-    return &sd_ei_bad_tokens;
-  } else {
-    ++mock_get_by_ei_dd_unrecognized;
-    return NULL;
-  }
+  CHECK(minimal);
+  CHECK(maximal);
+  CHECK(bad_nickname);
+  CHECK(bad_sig2);
+  CHECK(bad_tokens);
+  ++mock_get_by_ei_dd_unrecognized;
+  return NULL;
+#undef CHECK
 }
 
 static signed_descriptor_t *
 mock_ei_get_by_ei_digest(const char *d)
 {
-  char hex[HEX_DIGEST_LEN+1];
-  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
   signed_descriptor_t *sd = &sd_ei_minimal;
 
-  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
+  if (fast_memeq(d, digest_ei_minimal, DIGEST_LEN)) {
     sd->signed_descriptor_body = (char *)EX_EI_MINIMAL;
     sd->signed_descriptor_len = sizeof(EX_EI_MINIMAL);
     sd->annotations_len = 0;
@@ -1706,6 +1526,7 @@ test_dir_load_extrainfo(void *arg)
     smartlist_add_strdup(wanted, hex_str(buf, DIGEST_LEN));        \
   } while (0)
 
+  setup_ei_digests();
   mock_ei_insert_list = smartlist_new();
   MOCK(router_get_by_extrainfo_digest, mock_get_by_ei_desc_digest);
   MOCK(extrainfo_insert, mock_ei_insert);
@@ -1732,12 +1553,12 @@ test_dir_load_extrainfo(void *arg)
   tt_int_op(smartlist_len(mock_ei_insert_list),OP_EQ,2);
 
   extrainfo_t *e = smartlist_get(mock_ei_insert_list, 0);
-  test_memeq_hex(e->cache_info.signed_descriptor_digest,
-                 "11E0EDF526950739F7769810FCACAB8C882FAEEE");
+  tt_mem_op(e->cache_info.signed_descriptor_digest, OP_EQ,
+            digest_ei_minimal, DIGEST_LEN);
 
   e = smartlist_get(mock_ei_insert_list, 1);
-  test_memeq_hex(e->cache_info.signed_descriptor_digest,
-                 "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF");
+  tt_mem_op(e->cache_info.signed_descriptor_digest, OP_EQ,
+            digest_ei_maximal, DIGEST_LEN);
   tt_int_op(dls_minimal.n_download_failures, OP_EQ, 0);
   tt_int_op(dls_maximal.n_download_failures, OP_EQ, 0);
 
@@ -1753,8 +1574,11 @@ test_dir_load_extrainfo(void *arg)
 
   /* Wanted still contains "BAD_SIG2" */
   tt_int_op(smartlist_len(wanted), OP_EQ, 1);
-  tt_str_op(smartlist_get(wanted, 0), OP_EQ,
-            "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C");
+  const char *got_wanted =smartlist_get(wanted, 0);
+  tt_int_op(strlen(got_wanted), OP_EQ, HEX_DIGEST_LEN);
+  char d[DIGEST_LEN];
+  base16_decode(d, DIGEST_LEN, got_wanted, strlen(got_wanted));
+  tt_mem_op(d, OP_EQ, digest_ei_bad_sig2, DIGEST_LEN);
 
 #undef ADD
 
@@ -1774,12 +1598,17 @@ test_dir_getinfo_extra(void *arg)
   int r;
   char *answer = NULL;
   const char *errmsg = NULL;
-
+  char buf[128];
+  char hexdigest[HEX_DIGEST_LEN+1];
   (void)arg;
+
+  setup_ei_digests();
+  base16_encode(hexdigest, sizeof(hexdigest),
+                (const char*)digest_ei_minimal, DIGEST_LEN);
+  tor_snprintf(buf, sizeof(buf), "extra-info/digest/%s", hexdigest);
+
   MOCK(extrainfo_get_by_descriptor_digest, mock_ei_get_by_ei_digest);
-  r = getinfo_helper_dir(NULL, "extra-info/digest/"
-                         "11E0EDF526950739F7769810FCACAB8C882FAEEE", &answer,
-                         &errmsg);
+  r = getinfo_helper_dir(NULL, buf, &answer, &errmsg);
   tt_int_op(0, OP_EQ, r);
   tt_ptr_op(NULL, OP_EQ, errmsg);
   tt_str_op(answer, OP_EQ, EX_EI_MINIMAL);
@@ -4157,6 +3986,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = rs->bandwidth_kb = max_unmeasured_bw_kb / 2;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 1:
       /* Generate the second routerstatus. */
@@ -4183,6 +4013,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       vrs->has_measured_bw = 1;
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = rs->bandwidth_kb = 2 * max_unmeasured_bw_kb;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 2:
       /* Generate the third routerstatus. */
@@ -4208,6 +4039,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = 0;
       rs->bandwidth_kb = 2 * max_unmeasured_bw_kb;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 3:
       /* Generate a fourth routerstatus that is not running. */
@@ -4233,6 +4065,7 @@ gen_routerstatus_for_umbw(int idx, time_t now)
       rs->has_bandwidth = 1;
       vrs->measured_bw_kb = 0;
       rs->bandwidth_kb = max_unmeasured_bw_kb / 2;
+      vrs->protocols = tor_strdup("Link=2 Wombat=40");
       break;
     case 4:
       /* No more for this test; return NULL */
@@ -6906,7 +6739,8 @@ test_dir_matching_flags(void *arg)
     "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
        "192.168.0.1 9001 0\n"
     "m thisoneislongerbecauseitisa256bitmddigest33\n"
-    "s\n";
+    "s\n"
+    "pr Link=4\n";
   const char *cp = ex_noflags;
   rs_noflags = routerstatus_parse_entry_from_string(
          area, &cp,
@@ -6920,6 +6754,7 @@ test_dir_matching_flags(void *arg)
                  "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 " \
                  "192.168.0.1 9001 0\n"                                 \
                  "m thisoneislongerbecauseitisa256bitmddigest33\n"      \
+                 "pr Link=4\n"                                          \
                  "s %s\n", string);                                     \
     cp = s;                                                             \
     rs =  routerstatus_parse_entry_from_string(                         \
@@ -6977,7 +6812,8 @@ test_dir_assumed_flags(void *arg)
     "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
        "192.168.0.1 9001 0\n"
     "m thisoneislongerbecauseitisa256bitmddigest33\n"
-    "s Fast Guard Stable\n";
+    "s Fast Guard Stable\n"
+    "pr Link=4\n";
   const char *eos = str1 + strlen(str1);
 
   const char *cp = str1;
@@ -7439,20 +7275,14 @@ test_dir_dirserv_add_own_fingerprint(void *arg)
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
   /* extrainfo without any stats */
-  DIR_ARG(formats_rsa, TT_FORK, ""),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, ""),
   /* on a bridge */
-  DIR_ARG(formats_rsa, TT_FORK, "b"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "b"),
   /* extrainfo with basic stats */
-  DIR_ARG(formats_rsa, TT_FORK, "e"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "e"),
-  DIR_ARG(formats_rsa, TT_FORK, "be"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "be"),
   /* extrainfo with all stats */
-  DIR_ARG(formats_rsa, TT_FORK, "es"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "es"),
-  DIR_ARG(formats_rsa, TT_FORK, "bes"),
   DIR_ARG(formats_rsa_ed25519, TT_FORK, "bes"),
   DIR(routerinfo_parsing, 0),
   DIR(extrainfo_parsing, 0),

@@ -31,6 +31,7 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/client/entrynodes.h"
 #include "feature/dirparse/authcert_parse.h"
+#include "feature/dirparse/sigcommon.h"
 #include "feature/nodelist/networkstatus.h"
 #include "core/proto/proto_http.h"
 #include "lib/geoip/geoip.h"
@@ -72,6 +73,23 @@ ENABLE_GCC_WARNING("-Woverlength-strings")
   "Consensus not signed by sufficient number of requested authorities\r\n\r\n"
 
 #define consdiffmgr_add_consensus consdiffmgr_add_consensus_nulterm
+
+static int
+mock_ignore_signature_token(const char *digest,
+                            ssize_t digest_len,
+                            struct directory_token_t *tok,
+                            crypto_pk_t *pkey,
+                            int flags,
+                            const char *doctype)
+{
+  (void)digest;
+  (void)digest_len;
+  (void)tok;
+  (void)pkey;
+  (void)flags;
+  (void)doctype;
+  return 0;
+}
 
 static dir_connection_t *
 new_dir_conn(void)
@@ -500,7 +518,8 @@ static const char microdesc[] =
   "MIGJAoGBAMjlHH/daN43cSVRaHBwgUfnszzAhg98EvivJ9Qxfv51mvQUxPjQ07es\n"
   "gV/3n8fyh3Kqr/ehi9jxkdgSRfSnmF7giaHL1SLZ29kA7KtST+pBvmTpDtHa3ykX\n"
   "Xorc7hJvIyTZoc1HU+5XSynj3gsBE5IGK1ZRzrNS688LnuZMVp1tAgMBAAE=\n"
-  "-----END RSA PUBLIC KEY-----\n";
+  "-----END RSA PUBLIC KEY-----\n"
+  "ntor-onion-key QlrOXAa8j3LD31LESsPm/lIKFBwevk2oXdqJcd9SEUc=\n";
 
 static void
 test_dir_handle_get_micro_d(void *data)
@@ -1976,7 +1995,8 @@ test_dir_handle_get_status_vote_current_not_found(void* data)
     tor_free(header);
 }
 
-#define VOTE_DIGEST "312A4890D4D832597ABBD3089C782DBBFB81E48D"
+/* What vote do we ask for, to get the vote in vote_descriptors.inc ? */
+#define VOTE_DIGEST "78400095d8e834d87135cfc46235c909f0e99911"
 
 static void
 status_vote_current_d_test(char **header, char **body, size_t *body_l)
@@ -2058,6 +2078,7 @@ test_dir_handle_get_status_vote_d(void* data)
   const char digest[DIGEST_LEN] = "";
   (void) data;
 
+  MOCK(check_signature_token, mock_ignore_signature_token);
   clear_dir_servers();
   dirvote_free_all();
 
@@ -2094,7 +2115,7 @@ test_dir_handle_get_status_vote_d(void* data)
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
-  tt_assert(strstr(header, "Content-Length: 4135\r\n"));
+  tt_assert(strstr(header, "Content-Length: 4403\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
 
@@ -2107,11 +2128,12 @@ test_dir_handle_get_status_vote_d(void* data)
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
-  tt_assert(strstr(header, "Content-Length: 4135\r\n"));
+  tt_assert(strstr(header, "Content-Length: 4403\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
 
   done:
+    UNMOCK(check_signature_token);
     tor_free(header);
     tor_free(body);
     or_options_free(mock_options); mock_options = NULL;
@@ -2188,6 +2210,7 @@ test_dir_handle_get_status_vote_current_authority_not_found(void* data)
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
+  MOCK(check_signature_token, mock_ignore_signature_token);
 
   conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
@@ -2199,6 +2222,7 @@ test_dir_handle_get_status_vote_current_authority_not_found(void* data)
   tt_str_op(NOT_FOUND, OP_EQ, header);
 
   done:
+    UNMOCK(check_signature_token);
     UNMOCK(connection_write_to_buf_impl_);
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
@@ -2212,6 +2236,7 @@ test_dir_handle_get_status_vote_next_authority_not_found(void* data)
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
+  MOCK(check_signature_token, mock_ignore_signature_token);
 
   conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
@@ -2223,6 +2248,7 @@ test_dir_handle_get_status_vote_next_authority_not_found(void* data)
   tt_str_op(NOT_FOUND, OP_EQ, header);
 
   done:
+    UNMOCK(check_signature_token);
     UNMOCK(connection_write_to_buf_impl_);
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
@@ -2236,7 +2262,7 @@ test_dir_handle_get_status_vote_next_bandwidth_not_found(void* data)
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
-
+  MOCK(check_signature_token, mock_ignore_signature_token);
   conn = new_dir_conn();
 
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
@@ -2248,6 +2274,7 @@ test_dir_handle_get_status_vote_next_bandwidth_not_found(void* data)
   tt_str_op(NOT_FOUND, OP_EQ, header);
 
   done:
+    UNMOCK(check_signature_token);
     UNMOCK(connection_write_to_buf_impl_);
     connection_free_minimal(TO_CONN(conn));
     tor_free(header);
@@ -2428,6 +2455,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   const char digest[DIGEST_LEN] = "";
   (void) data;
 
+  MOCK(check_signature_token, mock_ignore_signature_token);
   clear_dir_servers();
   routerlist_free_all();
   dirvote_free_all();
@@ -2477,11 +2505,12 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
-  tt_assert(strstr(header, "Content-Length: 4135\r\n"));
+  tt_assert(strstr(header, "Content-Length: 4403\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
 
   done:
+    UNMOCK(check_signature_token);
     UNMOCK(connection_write_to_buf_impl_);
     UNMOCK(get_my_v3_authority_cert);
     connection_free_minimal(TO_CONN(conn));
@@ -2587,6 +2616,7 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   dir_server_t *ds = NULL;
   (void) data;
 
+  MOCK(check_signature_token, mock_ignore_signature_token);
   clear_dir_servers();
   routerlist_free_all();
   dirvote_free_all();
@@ -2640,11 +2670,12 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
-  tt_assert(strstr(header, "Content-Length: 4135\r\n"));
+  tt_assert(strstr(header, "Content-Length: 4403\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
 
   done:
+    UNMOCK(check_signature_token);
     UNMOCK(connection_write_to_buf_impl_);
     UNMOCK(get_my_v3_authority_cert);
     connection_free_minimal(TO_CONN(conn));
@@ -2672,6 +2703,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
   dir_server_t *ds = NULL;
   const char* mode = (const char *)data;
 
+  MOCK(check_signature_token, mock_ignore_signature_token);
   clear_dir_servers();
   routerlist_free_all();
   dirvote_free_all();
@@ -2817,11 +2849,12 @@ test_dir_handle_get_status_vote_too_late(void* data)
   tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
-  tt_assert(strstr(header, "Content-Length: 4135\r\n"));
+  tt_assert(strstr(header, "Content-Length: 4403\r\n"));
 
   tt_str_op(VOTE_BODY_V3, OP_EQ, body);
 
   done:
+    UNMOCK(check_signature_token);
     UNMOCK(connection_write_to_buf_impl_);
     UNMOCK(get_my_v3_authority_cert);
     connection_free_minimal(TO_CONN(conn));
