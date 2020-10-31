@@ -1,0 +1,5 @@
+  o Major bugfixes (relay, windows):
+    - Fix bug where running a relay on Windows would use 100%
+      CPU after some time. Makes Windows >= Vista the required
+      Windows version to build and run tor. Fixes bug 30187;
+      bugfix on 0.4.5.1-alpha. Patch by Daniel Pinto.

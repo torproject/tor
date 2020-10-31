@@ -560,14 +560,14 @@ fi
 
 AH_BOTTOM([
 #ifdef _WIN32
-/* Defined to access windows functions and definitions for >=WinXP */
+/* Defined to access windows functions and definitions for >=WinVista */
 # ifndef WINVER
-#  define WINVER 0x0501
+#  define WINVER 0x0600
 # endif
 
-/* Defined to access _other_ windows functions and definitions for >=WinXP */
+/* Defined to access _other_ windows functions and definitions for >=WinVista */
 # ifndef _WIN32_WINNT
-#  define _WIN32_WINNT 0x0501
+#  define _WIN32_WINNT 0x0600
 # endif
 
 /* Defined to avoid including some windows headers as part of Windows.h */
