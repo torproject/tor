@@ -169,7 +169,8 @@ Changes in version 0.4.5.1-alpha - 2020-11-01
       Patch from Daniel Pinto. Closes ticket 40047.
     - Consider an HTTP 301 response to be an error (like a 404) when
       processing a directory response. Closes ticket 40053.
-    - Log directory fetch statistics as a single line. Closes ticket 40159.
+    - Log directory fetch statistics as a single line. Closes
+      ticket 40159.
     - Provide more complete descriptions of our connections when logging
       about them. Closes ticket 40041.
     - When describing a relay in the logs, we now include its ed25519
@@ -358,10 +359,10 @@ Changes in version 0.4.5.1-alpha - 2020-11-01
   o Code simplification and refactoring:
     - Add and use a set of functions to perform down-casts on constant
       connection and channel pointers. Closes ticket 40046.
-    - Refactor our code that logs descriptions of connections,
-      channels, and the peers on them, to use a single call path. This
-      change enables us to refactor the data types that they use, and
-      eliminates many confusing usages of those types. Closes ticket 40041.
+    - Refactor our code that logs descriptions of connections, channels,
+      and the peers on them, to use a single call path. This change
+      enables us to refactor the data types that they use, and eliminates
+      many confusing usages of those types. Closes ticket 40041.
     - Refactor some common node selection code into a single function.
       Closes ticket 34200.
     - Remove the now-redundant 'outbuf_flushlen' field from our
