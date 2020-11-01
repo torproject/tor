@@ -1,4 +1,4 @@
-Changes in version 0.4.5.1-alpha - 2020-10-30
+Changes in version 0.4.5.1-alpha - 2020-11-01
   Tor 0.4.5.1-alpha is the first alpha release in the 0.4.5.x series. It
   improves support for IPv6, address discovery and self-testing, code
   metrics and tracing.
@@ -17,7 +17,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - When building Tor, first link all object files into a single
       static library. This may help with embedding Tor in other
       programs. Note that most Tor functions do not constitute a part of
-      a stable or supported API: Only those functions in tor_api.h
+      a stable or supported API: only those functions in tor_api.h
       should be used if embedding Tor. Closes ticket 40127.
 
   o Major features (metrics):
@@ -82,7 +82,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - When reporting bootstrapping status on a relay, do not consider
       connections that have never been the target of an origin circuit.
       Previously, all connection failures were treated as potential
-      bootstrapping failures, including connections had been opened
+      bootstrapping failures, including connections that had been opened
       because of client requests. Closes ticket 25061.
 
   o Minor features (build):
@@ -93,7 +93,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       about them at the end of the script. Related to 40138.
 
   o Minor features (configuration):
-    - Allow the using wildcards (* and ?) with the %include option on
+    - Allow using wildcards (* and ?) with the %include option on
       configuration files. Closes ticket 25140. Patch by Daniel Pinto.
     - Allow the configuration options EntryNodes, ExcludeNodes,
       ExcludeExitNodes, ExitNodes, MiddleNodes, HSLayer2Nodes and
@@ -169,7 +169,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       Patch from Daniel Pinto. Closes ticket 40047.
     - Consider an HTTP 301 response to be an error (like a 404) when
       processing a directory response. Closes ticket 40053.
-    - Log directory fetch statistics a single line. Closes ticket 40159.
+    - Log directory fetch statistics as a single line. Closes ticket 40159.
     - Provide more complete descriptions of our connections when logging
       about them. Closes ticket 40041.
     - When describing a relay in the logs, we now include its ed25519
@@ -231,7 +231,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       that have been obsolete for a long time. Ordinarily Tor preserves
       unrecognized entries in order to keep forward-compatibility, but
       these entries have not actually been used in any release since
-      before the 0.3.5.x. Closes ticket 40137.
+      before 0.3.5.x. Closes ticket 40137.
 
   o Minor features (statistics, ipv6):
     - Relays now publish IPv6-specific counts of single-direction versus
@@ -272,9 +272,9 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       on 0.4.0.1-alpha.
     - Add a per-circuit padding machine instance counter, so we can
       differentiate between shutdown requests for old machines on a
-      circuit; Fixes bug 30992; bugfix on 0.4.1.1-alpha.
+      circuit. Fixes bug 30992; bugfix on 0.4.1.1-alpha.
     - Add the ability to keep circuit padding machines if they match a
-      set of circuit state or purposes. This allows us to have machines
+      set of circuit states or purposes. This allows us to have machines
       that start up under some conditions but don't shut down under
       others. We now use this mask to avoid starting up introduction
       circuit padding again after the machines have already completed.
@@ -284,8 +284,8 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - Strip '\r' characters when reading text files on Unix platforms.
       This should resolve an issue where a relay operator migrates a
       relay from Windows to Unix, but does not change the line ending of
-      Tor's various state files to match the platform, the CRLF line
-      endings from Windows ends up leaking into other files such as the
+      Tor's various state files to match the platform, and the CRLF line
+      endings from Windows end up leaking into other files such as the
       extra-info document. Fixes bug 33781; bugfix on 0.0.9pre5.
 
   o Minor bugfixes (compilation):
@@ -308,7 +308,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
       Patch by Neel Chauhan.
 
   o Minor bugfixes (logging):
-    - Remove a debug logging statement that uselessly spam the logs.
+    - Remove a debug logging statement that uselessly spammed the logs.
       Fixes bug 40135; bugfix on 0.3.5.0-alpha.
     - When logging a rate-limited message about how many messages have
       been suppressed in the last N seconds, give an accurate value for
@@ -358,10 +358,10 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
   o Code simplification and refactoring:
     - Add and use a set of functions to perform down-casts on constant
       connection and channel pointers. Closes ticket 40046.
-    - Refactor our code that logs a descriptions of connections,
+    - Refactor our code that logs descriptions of connections,
       channels, and the peers on them, to use a single call path. This
       change enables us to refactor the data types that they use, and
-      eliminate many confusing users of those types. Closes ticket 40041.
+      eliminates many confusing usages of those types. Closes ticket 40041.
     - Refactor some common node selection code into a single function.
       Closes ticket 34200.
     - Remove the now-redundant 'outbuf_flushlen' field from our
@@ -370,7 +370,7 @@ Changes in version 0.4.5.1-alpha - 2020-10-30
     - Rename "fascist_firewall_*" identifiers to "reachable_addr_*"
       instead, for consistency with other code. Closes ticket 18106.
     - Rename functions about "advertised" ports which are not in fact
-      guaranteed to return the ports have been advertised. Closes
+      guaranteed to return the ports that have been advertised. Closes
       ticket 40055.
     - Split implementation of several command line options from
       options_init_from_torrc into smaller isolated functions. Patch by
