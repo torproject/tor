@@ -29,7 +29,6 @@
 #include "feature/control/control_fmt.h"
 #include "feature/control/control_getinfo.h"
 #include "feature/control/control_proto.h"
-#include "feature/control/fmt_serverstatus.h"
 #include "feature/control/getinfo_geoip.h"
 #include "feature/dircache/dirserv.h"
 #include "feature/dirclient/dirclient.h"
@@ -719,18 +718,6 @@ getinfo_helper_dir(control_connection_t *control_conn,
     int consensus_result = getinfo_helper_current_consensus(FLAV_MICRODESC,
                                                             answer, errmsg);
     if (consensus_result < 0) {
-      return -1;
-    }
-  } else if (!strcmp(question, "network-status")) { /* v1 */
-    static int network_status_warned = 0;
-    if (!network_status_warned) {
-      log_warn(LD_CONTROL, "GETINFO network-status is deprecated; it will "
-               "go away in a future version of Tor.");
-      network_status_warned = 1;
-    }
-    routerlist_t *routerlist = router_get_routerlist();
-    if (!routerlist || !routerlist->routers ||
-        list_server_status_v1(routerlist->routers, answer, 1) < 0) {
       return -1;
     }
   } else if (!strcmpstart(question, "extra-info/digest/")) {
