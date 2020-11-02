@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Remove a duplicate typedef in metrics_store.c.  Fixes bug 40177;
+      bugfix on 0.4.5.1-alpha.

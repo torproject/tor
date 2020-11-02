@@ -22,7 +22,7 @@
 #include "lib/metrics/prometheus.h"
 
 /** A metric store which contains a map of entries. */
-typedef struct metrics_store_t {
+struct metrics_store_t {
   /** Indexed by metrics entry name. An entry is a smartlist_t of one or more
    * metrics_store_entry_t allowing for multiple metrics of the same name.
    *
@@ -31,7 +31,7 @@ typedef struct metrics_store_t {
    * One example is an onion service with multiple ports, the port specific
    * metrics will have a port value as a label. */
   strmap_t *entries;
-} metrics_store_t;
+};
 
 /** Function pointer to the format function of a specific driver. */
 typedef void (fmt_driver_fn_t)(const metrics_store_entry_t *, buf_t *);
