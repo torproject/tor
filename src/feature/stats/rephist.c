@@ -1868,8 +1868,11 @@ rep_hist_reset_hs_v3_stats(time_t now)
 /** Return true if it's a good time to collect v3 stats.
  *
  *  v3 stats have a strict stats collection period (from 12:00UTC to 12:00UTC
- *  on the real network) and hence we don't want to collect statistics if it's
- *  not yet the time to do so.
+ *  on the real network). We don't want to collect statistics if (for example)
+ *  we just booted and it's 03:00UTC; we will wait until 12:00UTC before we
+ *  start collecting statistics to make sure that the final result represents
+ *  the whole collection period. This behavior is controlled by
+ *  rep_hist_hs_stats_init().
  */
 MOCK_IMPL(STATIC bool,
 should_collect_v3_stats,(void))
