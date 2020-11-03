@@ -1742,17 +1742,6 @@ hs_v2_stats_free_(hs_v2_stats_t *victim_hs_v2_stats)
   tor_free(victim_hs_v2_stats);
 }
 
-/** Initialize hidden service statistics. */
-void
-rep_hist_hs_v2_stats_init(time_t now)
-{
-  if (!hs_v2_stats) {
-    hs_v2_stats = hs_v2_stats_new();
-  }
-
-  start_of_hs_v2_stats_interval = now;
-}
-
 /** Clear history of hidden service statistics and set the measurement
  * interval start to <b>now</b>. */
 static void
@@ -1768,25 +1757,6 @@ rep_hist_reset_hs_v2_stats(time_t now)
   hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
 
   start_of_hs_v2_stats_interval = now;
-}
-
-/** Stop collecting hidden service stats in a way that we can re-start
- * doing so in rep_hist_buffer_stats_init(). */
-void
-rep_hist_hs_v2_stats_term(void)
-{
-  rep_hist_reset_hs_v2_stats(0);
-}
-
-/** We saw a new HS relay cell, Count it! */
-void
-rep_hist_seen_new_rp_cell(void)
-{
-  if (!hs_v2_stats) {
-    return; // We're not collecting stats
-  }
-
-  hs_v2_stats->rp_relay_cells_seen++;
 }
 
 /** As HSDirs, we saw another v2 onion with public key <b>pubkey</b>. Check
@@ -1945,6 +1915,38 @@ rep_hist_seen_new_rp_cell(bool is_v2)
     hs_v3_stats->rp_v3_relay_cells_seen++;
   }
 }
+
+/** Generic HS stats code */
+
+/** Initialize v2 and v3 hidden service statistics. */
+void
+rep_hist_hs_stats_init(time_t now)
+{
+  if (!hs_v2_stats) {
+    hs_v2_stats = hs_v2_stats_new();
+  }
+
+  /* Start collecting v2 stats straight away */
+  start_of_hs_v2_stats_interval = now;
+
+  if (!hs_v3_stats) {
+    hs_v3_stats = hs_v3_stats_new();
+  }
+
+  /* Start collecting v3 stats at the next 12:00 UTC */
+  start_of_hs_v3_stats_interval = hs_get_start_time_of_next_time_period(now);
+}
+
+/** Stop collecting hidden service stats in a way that we can re-start
+ * doing so in rep_hist_buffer_stats_init(). */
+void
+rep_hist_hs_stats_term(void)
+{
+  rep_hist_reset_hs_v2_stats(0);
+  rep_hist_reset_hs_v3_stats(0);
+}
+
+/** Stats reporting code */
 
 /* The number of cells that are supposed to be hidden from the adversary
  * by adding noise from the Laplace distribution.  This value, divided by
