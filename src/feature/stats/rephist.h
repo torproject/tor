@@ -113,7 +113,7 @@ typedef struct hs_v3_stats_t {
 
   /* The number of unique v3 onion descriptors (actually, unique v3 blind keys)
    * we've seen during the measurement period */
-  digestmap_t *v3_onions_seen_this_period;
+  digest256map_t *v3_onions_seen_this_period;
 } hs_v3_stats_t;
 
 MOCK_DECL(STATIC bool, should_collect_v3_stats,(void));

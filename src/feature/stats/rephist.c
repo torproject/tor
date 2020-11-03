@@ -1828,7 +1828,7 @@ static hs_v3_stats_t *
 hs_v3_stats_new(void)
 {
   hs_v3_stats_t *new_hs_v3_stats = tor_malloc_zero(sizeof(hs_v3_stats_t));
-  new_hs_v3_stats->v3_onions_seen_this_period = digestmap_new();
+  new_hs_v3_stats->v3_onions_seen_this_period = digest256map_new();
 
   return new_hs_v3_stats;
 }
@@ -1844,7 +1844,7 @@ hs_v3_stats_free_(hs_v3_stats_t *victim_hs_v3_stats)
     return;
   }
 
-  digestmap_free(victim_hs_v3_stats->v3_onions_seen_this_period, NULL);
+  digest256map_free(victim_hs_v3_stats->v3_onions_seen_this_period, NULL);
   tor_free(victim_hs_v3_stats);
 }
 
@@ -1857,8 +1857,8 @@ rep_hist_reset_hs_v3_stats(time_t now)
     hs_v3_stats = hs_v3_stats_new();
   }
 
-  digestmap_free(hs_v3_stats->v3_onions_seen_this_period, NULL);
-  hs_v3_stats->v3_onions_seen_this_period = digestmap_new();
+  digest256map_free(hs_v3_stats->v3_onions_seen_this_period, NULL);
+  hs_v3_stats->v3_onions_seen_this_period = digest256map_new();
 
   hs_v3_stats->rp_v3_relay_cells_seen = 0;
 
@@ -1888,8 +1888,9 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
     return;
   }
 
-  bool seen_before = !!digestmap_get(hs_v3_stats->v3_onions_seen_this_period,
-                                     (char*)blinded_key);
+  bool seen_before =
+    !!digest256map_get(hs_v3_stats->v3_onions_seen_this_period,
+                       blinded_key);
 
   log_info(LD_GENERAL, "Considering v3 descriptor with %s (%sseen before)",
            safe_str(hex_str((char*)blinded_key, 32)),
@@ -1897,8 +1898,8 @@ rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
 
   /* Count it if we haven't seen it before. */
   if (!seen_before) {
-    digestmap_set(hs_v3_stats->v3_onions_seen_this_period,
-                  (char*)blinded_key, (void*)(uintptr_t)1);
+    digest256map_set(hs_v3_stats->v3_onions_seen_this_period,
+                  blinded_key, (void*)(uintptr_t)1);
   }
 }
 
@@ -1985,7 +1986,7 @@ rep_hist_format_hs_stats(time_t now, bool is_v3)
   uint64_t rp_cells_seen = is_v3 ?
     hs_v3_stats->rp_v3_relay_cells_seen : hs_v2_stats->rp_v2_relay_cells_seen;
   size_t onions_seen = is_v3 ?
-    digestmap_size(hs_v3_stats->v3_onions_seen_this_period) :
+    digest256map_size(hs_v3_stats->v3_onions_seen_this_period) :
     digestmap_size(hs_v2_stats->v2_onions_seen_this_period);
   time_t start_of_hs_stats_interval = is_v3 ?
     start_of_hs_v3_stats_interval : start_of_hs_v2_stats_interval;

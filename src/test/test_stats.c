@@ -528,7 +528,8 @@ test_rephist_v3_onions(void *arg)
 
   /* HS stats should be zero here */
   hs_v3_stats = rep_hist_get_hs_v3_stats();
-  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 0);
+  tt_int_op(digest256map_size(hs_v3_stats->v3_onions_seen_this_period),
+            OP_EQ, 0);
 
   /* Generate a valid descriptor */
   ret = ed25519_keypair_generate(&signing_kp1, 0);
@@ -542,7 +543,8 @@ test_rephist_v3_onions(void *arg)
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
   hs_v3_stats = rep_hist_get_hs_v3_stats();
-  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 1);
+  tt_int_op(digest256map_size(hs_v3_stats->v3_onions_seen_this_period),
+            OP_EQ, 1);
 
   /* cleanup */
   hs_descriptor_free(desc1);
@@ -560,7 +562,8 @@ test_rephist_v3_onions(void *arg)
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
   hs_v3_stats = rep_hist_get_hs_v3_stats();
-  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 2);
+  tt_int_op(digest256map_size(hs_v3_stats->v3_onions_seen_this_period),
+            OP_EQ, 2);
 
   /* Check that storing the same descriptor twice does not work */
   ret = hs_cache_store_as_dir(desc1_str);
@@ -580,7 +583,8 @@ test_rephist_v3_onions(void *arg)
   /* Store descriptor and check that stats are updated */
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 2);
+  tt_int_op(digest256map_size(hs_v3_stats->v3_onions_seen_this_period),
+            OP_EQ, 2);
 
   /* cleanup */
   hs_descriptor_free(desc1);
@@ -600,7 +604,8 @@ test_rephist_v3_onions(void *arg)
   /* Store descriptor and check that stats are updated */
   ret = hs_cache_store_as_dir(desc1_str);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(digestmap_size(hs_v3_stats->v3_onions_seen_this_period), OP_EQ, 3);
+  tt_int_op(digest256map_size(hs_v3_stats->v3_onions_seen_this_period),
+            OP_EQ, 3);
 
   /* cleanup */
   hs_descriptor_free(desc1);
