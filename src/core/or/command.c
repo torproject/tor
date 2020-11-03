@@ -597,19 +597,19 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
      onion service stats */
   if (options->HiddenServiceStatistics &&
       !CIRCUIT_IS_ORIGIN(circ) &&
-      TO_OR_CIRCUIT(circ)->circuit_carries_hs_traffic_stats) {
+      CONST_TO_OR_CIRCUIT(circ)->circuit_carries_hs_traffic_stats) {
     /** We need to figure out of this is a v2 or v3 RP circuit to count it
      *  appropriately. v2 services always use the TAP legacy handshake to
      *  connect to the RP; we use this feature to distinguish between v2/v3. */
     bool is_v2 = false;
-    if (TO_OR_CIRCUIT(circ)->used_legacy_circuit_handshake) {
+    if (CONST_TO_OR_CIRCUIT(circ)->used_legacy_circuit_handshake) {
       is_v2 = true;
-    } else if (TO_OR_CIRCUIT(circ)->rend_splice) {
+    } else if (CONST_TO_OR_CIRCUIT(circ)->rend_splice) {
       /* If this is a client->RP circuit we need to check the spliced circuit
        * (which is the service->RP circuit) to see if it was using TAP and
        * hence if it's a v2 circuit. That's because client->RP circuits can
        * still use ntor even on v2; but service->RP will always use TAP. */
-      or_circuit_t *splice = TO_OR_CIRCUIT(circ)->rend_splice;
+      or_circuit_t *splice = CONST_TO_OR_CIRCUIT(circ)->rend_splice;
       if (splice->used_legacy_circuit_handshake) {
         is_v2 = true;
       }
