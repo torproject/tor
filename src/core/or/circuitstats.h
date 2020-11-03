@@ -78,7 +78,7 @@ void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
  * How long to wait before actually closing circuits that take too long to
  * build in terms of CDF quantile.
  */
-#define CBT_DEFAULT_CLOSE_QUANTILE 95
+#define CBT_DEFAULT_CLOSE_QUANTILE 99
 #define CBT_MIN_CLOSE_QUANTILE CBT_MIN_QUANTILE_CUTOFF
 #define CBT_MAX_CLOSE_QUANTILE CBT_MAX_QUANTILE_CUTOFF
 
