@@ -2,6 +2,7 @@
 # ADD_C_FILE: INSERT SOURCES HERE.
 LIBTOR_APP_A_SOURCES += 			\
 	src/app/main/main.c			\
+	src/app/main/risky_options.c		\
 	src/app/main/shutdown.c			\
 	src/app/main/subsystem_list.c		\
 	src/app/main/subsysmgr.c
@@ -10,6 +11,7 @@ LIBTOR_APP_A_SOURCES += 			\
 noinst_HEADERS +=					\
 	src/app/main/main.h				\
 	src/app/main/ntmain.h				\
+	src/app/main/risky_options.h			\
 	src/app/main/shutdown.h 			\
 	src/app/main/subsysmgr.h
 

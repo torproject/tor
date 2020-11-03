@@ -16,6 +16,7 @@
 #include "app/config/quiet_level.h"
 #include "app/main/main.h"
 #include "app/main/ntmain.h"
+#include "app/main/risky_options.h"
 #include "app/main/shutdown.h"
 #include "app/main/subsysmgr.h"
 #include "core/mainloop/connection.h"
@@ -539,6 +540,7 @@ tor_init(int argc, char *argv[])
 {
   char progname[256];
   quiet_level_t quiet = QUIET_NONE;
+  bool running_tor = false;
 
   time_of_process_start = time(NULL);
   tor_init_connection_lists();
@@ -562,8 +564,10 @@ tor_init(int argc, char *argv[])
        whether we log anything at all to stdout. */
     parsed_cmdline_t *cmdline;
     cmdline = config_parse_commandline(argc, argv, 1);
-    if (cmdline)
+    if (cmdline) {
       quiet = cmdline->quiet_level;
+      running_tor = (cmdline->command == CMD_RUN_TOR);
+    }
     parsed_cmdline_free(cmdline);
   }
 
@@ -598,6 +602,12 @@ tor_init(int argc, char *argv[])
     if (strstr(version, "alpha") || strstr(version, "beta"))
       log_notice(LD_GENERAL, "This version is not a stable Tor release. "
                  "Expect more bugs than usual.");
+
+    if (strlen(risky_option_list) && running_tor) {
+      log_warn(LD_GENERAL, "This build of Tor has been compiled with one "
+               "or more options that might make it less reliable or secure! "
+               "They are:%s", risky_option_list);
+    }
 
     tor_compress_log_init_warnings();
   }
