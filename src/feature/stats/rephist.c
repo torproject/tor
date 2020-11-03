@@ -2006,17 +2006,17 @@ rep_hist_format_hs_stats(time_t now, bool is_v3)
                            ONIONS_SEEN_EPSILON);
 
   format_iso_time(t, now);
-  tor_asprintf(&hs_stats_string, "%s %s (%d s)\n"
+  tor_asprintf(&hs_stats_string, "%s %s (%ld s)\n"
                "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n"
                "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n",
                is_v3 ? "hidserv-v3-stats-end" : "hidserv-stats-end",
-               t, (unsigned) (now - start_of_hs_stats_interval),
+               t, now - start_of_hs_stats_interval,
                is_v3 ?
                 "hidserv-rend-v3-relayed-cells" : "hidserv-rend-relayed-cells",
-               (obfuscated_cells_seen), REND_CELLS_DELTA_F,
+               obfuscated_cells_seen, REND_CELLS_DELTA_F,
                REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
                is_v3 ? "hidserv-dir-v3-onions-seen" :"hidserv-dir-onions-seen",
-               (obfuscated_onions_seen), ONIONS_SEEN_DELTA_F,
+               obfuscated_onions_seen, ONIONS_SEEN_DELTA_F,
                ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
 
   return hs_stats_string;
