@@ -1626,9 +1626,8 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
 
   log_notice(LD_CIRC,
             "Your network connection speed appears to have changed. Resetting "
-            "timeout to %lds after %d timeouts and %d buildtimes.",
-            tor_lround(cbt->timeout_ms/1000), timeout_count,
-            total_build_times);
+            "timeout to %ldms after %d timeouts and %d buildtimes.",
+            tor_lround(cbt->timeout_ms), timeout_count, total_build_times);
 
   return 1;
 }
@@ -1812,9 +1811,9 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
     log_info(LD_CIRC,
                "Based on %d circuit times, it looks like we don't need to "
                "wait so long for circuits to finish. We will now assume a "
-               "circuit is too slow to use after waiting %ld seconds.",
+               "circuit is too slow to use after waiting %ld milliseconds.",
                cbt->total_build_times,
-               tor_lround(cbt->timeout_ms/1000));
+               tor_lround(cbt->timeout_ms));
     log_info(LD_CIRC,
              "Circuit timeout data: %fms, %fms, Xm: %d, a: %f, r: %f",
              cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha,
@@ -1823,18 +1822,18 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
     log_info(LD_CIRC,
                "Based on %d circuit times, it looks like we need to wait "
                "longer for circuits to finish. We will now assume a "
-               "circuit is too slow to use after waiting %ld seconds.",
+               "circuit is too slow to use after waiting %ld milliseconds.",
                cbt->total_build_times,
-               tor_lround(cbt->timeout_ms/1000));
+               tor_lround(cbt->timeout_ms));
     log_info(LD_CIRC,
              "Circuit timeout data: %fms, %fms, Xm: %d, a: %f, r: %f",
              cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha,
              timeout_rate);
   } else {
     log_info(LD_CIRC,
-             "Set circuit build timeout to %lds (%fms, %fms, Xm: %d, a: %f,"
+             "Set circuit build timeout to %ldms (%fms, %fms, Xm: %d, a: %f,"
              " r: %f) based on %d circuit times",
-             tor_lround(cbt->timeout_ms/1000),
+             tor_lround(cbt->timeout_ms),
              cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha, timeout_rate,
              cbt->total_build_times);
   }
