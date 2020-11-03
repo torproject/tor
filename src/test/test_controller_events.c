@@ -437,6 +437,33 @@ test_cntev_signal(void *arg)
 }
 
 static void
+test_cntev_log_fmt(void *arg)
+{
+  (void) arg;
+  char *result = NULL;
+#define CHECK(pre, post) \
+  do {                                            \
+    result = tor_strdup((pre));                   \
+    control_logmsg_strip_newlines(result);        \
+    tt_str_op(result, OP_EQ, (post));             \
+    tor_free(result);                             \
+  } while (0)
+
+  CHECK("There is a ", "There is a");
+  CHECK("hello", "hello");
+  CHECK("", "");
+  CHECK("Put    spaces at the end   ", "Put    spaces at the end");
+  CHECK("         ", "");
+  CHECK("\n\n\n", "");
+  CHECK("Testing\r\n", "Testing");
+  CHECK("T e s t\ni n g\n", "T e s t i n g");
+
+ done:
+  tor_free(result);
+#undef CHECK
+}
+
+static void
 setup_orconn_state(orconn_state_msg_t *msg, uint64_t gid, uint64_t chan,
                    int proxy_type)
 {
@@ -718,6 +745,7 @@ struct testcase_t controller_event_tests[] = {
   TEST(event_mask, TT_FORK),
   TEST(format_stream, TT_FORK),
   TEST(signal, TT_FORK),
+  TEST(log_fmt, 0),
   T_PUBSUB(dirboot_defer_desc, TT_FORK),
   T_PUBSUB(dirboot_defer_orconn, TT_FORK),
   T_PUBSUB(orconn_state, TT_FORK),

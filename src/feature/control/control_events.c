@@ -1352,6 +1352,27 @@ enable_control_logging(void)
     tor_assert(0);
 }
 
+/** Remove newline and carriage-return characters from @a msg, replacing them
+ * with spaces, and discarding any that appear at the end of the message */
+void
+control_logmsg_strip_newlines(char *msg)
+{
+  char *cp;
+  for (cp = msg; *cp; ++cp) {
+    if (*cp == '\r' || *cp == '\n') {
+      *cp = ' ';
+    }
+  }
+  if (cp == msg)
+    return;
+  /* Remove trailing spaces */
+  for (--cp; *cp == ' '; --cp) {
+    *cp = '\0';
+    if (cp == msg)
+      break;
+  }
+}
+
 /** We got a log message: tell any interested control connections. */
 void
 control_event_logmsg(int severity, log_domain_mask_t domain, const char *msg)
@@ -1380,11 +1401,8 @@ control_event_logmsg(int severity, log_domain_mask_t domain, const char *msg)
     char *b = NULL;
     const char *s;
     if (strchr(msg, '\n')) {
-      char *cp;
       b = tor_strdup(msg);
-      for (cp = b; *cp; ++cp)
-        if (*cp == '\r' || *cp == '\n')
-          *cp = ' ';
+      control_logmsg_strip_newlines(b);
     }
     switch (severity) {
       case LOG_DEBUG: s = "DEBUG"; break;
