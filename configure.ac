@@ -292,11 +292,25 @@ if test "x$enable_tracing_instrumentation_usdt" = "xyes"; then
   AC_CHECK_HEADERS([sys/sdt.h], [],
                    [AC_MSG_ERROR([USDT instrumentation requires sys/sdt.h header.
                                   On Debian, apt install systemtap-sdt-dev])], [])
-  dnl LTTng generates USDT probes if the UST library was built with
-  dnl --with-sdt. There is unfortunately no way to check that so we always
-  dnl build the USDT probes even though LTTng instrumentation was requested.
-  AC_DEFINE([USE_TRACING_INSTRUMENTATION_USDT], [1], [Using USDT instrumentation])
-  have_tracing=1
+  AC_MSG_CHECKING([STAP_PROBEV()])
+  AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+    #define SDT_USE_VARIADIC
+    #include <sys/sdt.h>
+    void test(void)
+    {
+      STAP_PROBEV(p, n, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+    }
+  ]])], [
+    AC_MSG_RESULT([yes])
+    dnl LTTng generates USDT probes if the UST library was built with
+    dnl --with-sdt. There is unfortunately no way to check that so we always
+    dnl build the USDT probes even though LTTng instrumentation was requested.
+    AC_DEFINE([USE_TRACING_INSTRUMENTATION_USDT], [1], [Using USDT instrumentation])
+    have_tracing=1
+  ], [
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([USDT tracing support requires STAP_PROBEV()])
+  ])
 fi
 
 dnl Tracepoints event to debug logs.
