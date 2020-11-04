@@ -55,7 +55,7 @@ void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
 #define CBT_NCIRCUITS_TO_OBSERVE 1000
 
 /** Width of the histogram bins in milliseconds */
-#define CBT_BIN_WIDTH ((build_time_t)50)
+#define CBT_BIN_WIDTH ((build_time_t)10)
 
 /** Number of modes to use in the weighted-avg computation of Xm */
 #define CBT_DEFAULT_NUM_XM_MODES 3
