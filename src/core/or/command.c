@@ -609,7 +609,7 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
        * (which is the service->RP circuit) to see if it was using TAP and
        * hence if it's a v2 circuit. That's because client->RP circuits can
        * still use ntor even on v2; but service->RP will always use TAP. */
-      or_circuit_t *splice = CONST_TO_OR_CIRCUIT(circ)->rend_splice;
+      const or_circuit_t *splice = CONST_TO_OR_CIRCUIT(circ)->rend_splice;
       if (splice->used_legacy_circuit_handshake) {
         is_v2 = true;
       }
