@@ -58,7 +58,7 @@ void circuit_build_times_mark_circ_as_measurement_only(origin_circuit_t *circ);
 #define CBT_BIN_WIDTH ((build_time_t)10)
 
 /** Number of modes to use in the weighted-avg computation of Xm */
-#define CBT_DEFAULT_NUM_XM_MODES 3
+#define CBT_DEFAULT_NUM_XM_MODES 10
 #define CBT_MIN_NUM_XM_MODES 1
 #define CBT_MAX_NUM_XM_MODES 20
 

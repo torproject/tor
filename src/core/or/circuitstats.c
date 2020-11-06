@@ -860,51 +860,41 @@ circuit_build_times_create_histogram(const circuit_build_times_t *cbt,
 static build_time_t
 circuit_build_times_get_xm(circuit_build_times_t *cbt)
 {
-  build_time_t i, nbins;
+  build_time_t nbins = 0;
   build_time_t *nth_max_bin;
-  int32_t bin_counts=0;
-  build_time_t ret = 0;
-  uint32_t *histogram = circuit_build_times_create_histogram(cbt, &nbins);
-  int n=0;
+  build_time_t xm_total = 0;
+  build_time_t Xm = 0;
+  int32_t xm_counts=0;
   int num_modes = circuit_build_times_default_num_xm_modes();
+  uint32_t *histogram = circuit_build_times_create_histogram(cbt, &nbins);
 
   tor_assert(nbins > 0);
   tor_assert(num_modes > 0);
 
-  // Only use one mode if < 1000 buildtimes. Not enough data
-  // for multiple.
-  if (cbt->total_build_times < CBT_NCIRCUITS_TO_OBSERVE)
-    num_modes = 1;
-
   nth_max_bin = tor_calloc(num_modes, sizeof(build_time_t));
 
-  /* Determine the N most common build times */
-  for (i = 0; i < nbins; i++) {
-    if (histogram[i] >= histogram[nth_max_bin[0]]) {
-      nth_max_bin[0] = i;
-    }
-
-    for (n = 1; n < num_modes; n++) {
-      if (histogram[i] >= histogram[nth_max_bin[n]] &&
-           (!histogram[nth_max_bin[n-1]]
-               || histogram[i] < histogram[nth_max_bin[n-1]])) {
+  /* Determine the N most common build times, by selecting the
+   * nth largest mode, counting it, and removing it from the histogram. */
+  for (int n = 0; n < num_modes; n++) {
+    /* Get nth mode */
+    for (build_time_t i = 0; i < nbins; i++) {
+      if (histogram[i] > histogram[nth_max_bin[n]]) {
         nth_max_bin[n] = i;
       }
     }
+
+    /* Update average */
+    xm_counts += histogram[nth_max_bin[n]];
+    xm_total += CBT_BIN_TO_MS(nth_max_bin[n])*histogram[nth_max_bin[n]];
+
+    /* Prevent from re-counting this value */
+    histogram[nth_max_bin[n]] = 0;
   }
 
-  for (n = 0; n < num_modes; n++) {
-    bin_counts += histogram[nth_max_bin[n]];
-    ret += CBT_BIN_TO_MS(nth_max_bin[n])*histogram[nth_max_bin[n]];
-    log_info(LD_CIRC, "Xm mode #%d: %u %u", n, CBT_BIN_TO_MS(nth_max_bin[n]),
-             histogram[nth_max_bin[n]]);
-  }
-
-  /* bin_counts can become zero if all of our last CBT_NCIRCUITS_TO_OBSERVE
+  /* xm_counts can become zero if all of our last CBT_NCIRCUITS_TO_OBSERVE
    * circuits were abandoned before they completed. This shouldn't happen,
    * though. We should have reset/re-learned a lower timeout first. */
-  if (bin_counts == 0) {
-    ret = 0;
+  if (xm_counts == 0) {
     log_warn(LD_CIRC,
                "No valid circuit build time data out of %d times, %u modes, "
                "have_timeout=%d, %lfms", cbt->total_build_times, num_modes,
@@ -912,15 +902,13 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
     goto done;
   }
 
-  tor_assert(bin_counts > 0);
-
-  ret /= bin_counts;
+  Xm = xm_total / xm_counts;
 
  done:
   tor_free(histogram);
   tor_free(nth_max_bin);
 
-  return ret;
+  return Xm;
 }
 
 /**
