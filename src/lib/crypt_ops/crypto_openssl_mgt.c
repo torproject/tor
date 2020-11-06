@@ -222,7 +222,7 @@ crypto_openssl_early_init(void)
 
     setup_openssl_threading();
 
-    unsigned long version_num = OpenSSL_version_num();
+    unsigned long version_num = tor_OpenSSL_version_num();
     const char *version_str = crypto_openssl_get_version_str();
     if (version_num == OPENSSL_VERSION_NUMBER &&
         !strcmp(version_str, OPENSSL_VERSION_TEXT)) {
