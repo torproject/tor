@@ -1,8 +1,16 @@
 Changes in version 0.4.4.6 - 2020-11-12 Tor 0.4.4.6 is the second stable
   release in the 0.4.4.x series. It backports fixes from later releases,
-  including a fix for TROVE-2020-005, a security issue that could be used,
-  under certain cases, by an adversary to observe traffic patterns on a
-  limited number of circuits intended for a different relay.
+  including a fix for TROVE-2020-005, a security issue that could be
+  used, under certain cases, by an adversary to observe traffic patterns
+  on a limited number of circuits intended for a different relay.
+
+  o Major bugfixes (security, backport from 0.4.5.1-alpha):
+    - When completing a channel, relays now check more thoroughly to
+      make sure that it matches any pending circuits before attaching
+      those circuits. Previously, address correctness and Ed25519
+      identities were not checked in this case, but only when extending
+      circuits on an existing channel. Fixes bug 40080; bugfix on
+      0.2.7.2-alpha. Resolves TROVE-2020-005.
 
   o Minor features (directory authorities, backport from 0.4.5.1-alpha):
     - Authorities now list a different set of protocols as required and
@@ -22,9 +30,13 @@ Changes in version 0.4.4.6 - 2020-11-12 Tor 0.4.4.6 is the second stable
       significantly complicated our code. Implements proposal 318;
       closes ticket 40133.
 
-  o Minor bugfixes (logging, backport from 0.4.5.1-alpha):
-    - Remove a debug logging statement that uselessly spammed the logs.
-      Fixes bug 40135; bugfix on 0.3.5.0-alpha.
+  o Minor features (tests, v2 onion services, backport from 0.4.5.1-alpha):
+    - Fix a rendezvous cache unit test that was triggering an underflow
+      on the global rend cache allocation. Fixes bug 40125; bugfix
+      on 0.2.8.1-alpha.
+    - Fix another rendezvous cache unit test that was triggering an
+      underflow on the global rend cache allocation. Fixes bug 40126;
+      bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (compilation, backport from 0.4.5.1-alpha):
     - Fix compiler warnings that would occur when building with
@@ -33,31 +45,19 @@ Changes in version 0.4.4.6 - 2020-11-12 Tor 0.4.4.6 is the second stable
     - Resolve a compilation warning that could occur in
       test_connection.c. Fixes bug 40113; bugfix on 0.2.9.3-alpha.
 
+  o Minor bugfixes (logging, backport from 0.4.5.1-alpha):
+    - Remove a debug logging statement that uselessly spammed the logs.
+      Fixes bug 40135; bugfix on 0.3.5.0-alpha.
+
   o Minor bugfixes (relay configuration, crash, backport from 0.4.5.1-alpha):
     - Avoid a fatal assert() when failing to create a listener
       connection for an address that was in use. Fixes bug 40073; bugfix
       on 0.3.5.1-alpha.
 
-  o Major bugfixes (security, backport from 0.4.5.1-alpha):
-    - When completing a channel, relays now check more thoroughly to
-      make sure that it matches any pending circuits before attaching
-      those circuits. Previously, address correctness and Ed25519
-      identities were not checked in this case, but only when extending
-      circuits on an existing channel. Fixes bug 40080; bugfix on
-      0.2.7.2-alpha. Resolves TROVE-2020-005.
-
   o Minor bugfixes (v2 onion services, backport from 0.4.5.1-alpha):
     - For HSFETCH commands on v2 onion services addresses, check the
       length of bytes decoded, not the base32 length. Fixes bug 34400;
       bugfix on 0.4.1.1-alpha. Patch by Neel Chauhan.
-
-  o Minor features (tests, v2 onion services, backport from 0.4.5.1-alpha):
-    - Fix a rendezvous cache unit test that was triggering an underflow
-      on the global rend cache allocation. Fixes bug 40125; bugfix
-      on 0.2.8.1-alpha.
-    - Fix another rendezvous cache unit test that was triggering an
-      underflow on the global rend cache allocation. Fixes bug 40126;
-      bugfix on 0.2.8.1-alpha.
 
 
 Changes in version 0.4.4.5 - 2020-09-15
