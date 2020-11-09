@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Resolve a compilation warning that could occur in test_connection.c.
-      Fixes bug 40113; bugfix on 0.2.9.3-alpha.
