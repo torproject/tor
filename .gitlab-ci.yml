@@ -170,6 +170,7 @@ debian-tracing:
   variables:
     TRACING: "yes"
     CHECK: "no"
+    DISTCHECK: "yes"
   script:
     - ./scripts/ci/ci-driver.sh
   # Ensure that we only run tracing when it's implemented.
