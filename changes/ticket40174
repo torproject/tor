@@ -1,0 +1,4 @@
+  o Minor bugfixes (configure, build):
+    - With USDT tracing enabled, if STAP_PROBEV() is missing, don't attempt to
+      build. Linux supports that macro but not the BSDs. Fixes bug 40174; bugfix
+      on 0.4.5.1-alpha.
