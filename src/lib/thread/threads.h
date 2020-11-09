@@ -42,12 +42,7 @@ typedef struct tor_cond_t {
 #ifdef USE_PTHREADS
   pthread_cond_t cond;
 #elif defined(USE_WIN32_THREADS)
-  HANDLE event;
-
-  CRITICAL_SECTION lock;
-  int n_waiting;
-  int n_to_wake;
-  int generation;
+  CONDITION_VARIABLE cond;
 #else
 #error no known condition implementation.
 #endif /* defined(USE_PTHREADS) || ... */
