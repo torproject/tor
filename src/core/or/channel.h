@@ -738,6 +738,9 @@ int channel_is_outgoing(channel_t *chan);
 void channel_mark_client(channel_t *chan);
 void channel_clear_client(channel_t *chan);
 int channel_matches_extend_info(channel_t *chan, extend_info_t *extend_info);
+int channel_remote_identity_matches(const channel_t *chan,
+                                    const char *rsa_id_digest,
+                                    const ed25519_public_key_t *ed_id);
 int channel_matches_target_addr_for_extend(channel_t *chan,
                                            const tor_addr_t *target);
 unsigned int channel_num_circuits(channel_t *chan);
