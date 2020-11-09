@@ -1,0 +1,5 @@
+  o Minor bugfixes (circuit, handshake):
+    - In the v3 handshaking code, Use connection_or_change_state() to change
+      the state. Previously, we changed the state directly, but this did not
+      pass a state change to the pubsub or channel object. Fixes bug 32880;
+      bugfix on 0.2.3.6-alpha. Patch by Neel Chauhan.

@@ -414,7 +414,7 @@ connection_or_state_publish(const or_connection_t *conn, uint8_t state)
  * be notified.
  */
 
-MOCK_IMPL(STATIC void,
+MOCK_IMPL(void,
 connection_or_change_state,(or_connection_t *conn, uint8_t state))
 {
   tor_assert(conn);
