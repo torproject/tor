@@ -1,3 +1,110 @@
+Changes in version 0.3.5.12 - 2020-11-12
+  Tor 0.4.3.7 backports several bugfixes from later releases. It
+  includes a fix for TROVE-2020-005, a security issue that could be
+  used, under certain cases, by an adversary to observe traffic patterns
+  on a limited number of circuits intended for a different relay.
+
+  o Major features (fallback directory list, backport form 0.4.4.3-alpha):
+    - Replace the 148 fallback directories originally included in Tor
+      0.4.1.4-rc (of which around 105 are still functional) with a list
+      of 144 fallbacks generated in July 2020. Closes ticket 40061.
+
+  o Major bugfixes (security, backport from 0.4.5.1-alpha):
+    - When completing a channel, relays now check more thoroughly to
+      make sure that it matches any pending circuits before attaching
+      those circuits. Previously, address correctness and Ed25519
+      identities were not checked in this case, but only when extending
+      circuits on an existing channel. Fixes bug 40080; bugfix on
+      0.2.7.2-alpha. Resolves TROVE-2020-005.
+
+  o Major bugfixes (NSS, backport from 0.4.4.3-alpha):
+    - When running with NSS enabled, make sure that NSS knows to expect
+      nonblocking sockets. Previously, we set our TCP sockets as
+      nonblocking, but did not tell NSS, which in turn could lead to
+      unexpected blocking behavior. Fixes bug 40035; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor features (security, backport from 0.4.4.4-rc):
+    - Channels using obsolete versions of the Tor link protocol are no
+      longer allowed to circumvent address-canonicity checks. (This is
+      only a minor issue, since such channels have no way to set ed25519
+      keys, and therefore should always be rejected for circuits that
+      specify ed25519 identities.) Closes ticket 40081.
+
+  o Minor features (debugging, directory system):
+    - Don't crash when we find a non-guard with a guard-fraction value
+      set. Instead, log a bug warning, in an attempt to figure out how
+      this happened. Diagnostic for ticket 32868.
+
+  o Minor features (subprotocol versions, backport from 0.4.5.1-alpha):
+    - Tor no longer allows subprotocol versions larger than 63.
+      Previously version numbers up to UINT32_MAX were allowed, which
+      significantly complicated our code. Implements proposal 318;
+      closes ticket 40133.
+
+  o Minor features (tests, backport from 0.4.4.5):
+    - Our "make check" target now runs the unit tests in 8 parallel
+      chunks. Doing this speeds up hardened CI builds by more than a
+      factor of two. Closes ticket 40098.
+
+  o Minor features (tests, v2 onion services, backport from 0.4.5.1-alpha):
+    - Fix a rendezvous cache unit test that was triggering an underflow
+      on the global rend cache allocation. Fixes bug 40125; bugfix
+      on 0.2.8.1-alpha.
+    - Fix another rendezvous cache unit test that was triggering an
+      underflow on the global rend cache allocation. Fixes bug 40126;
+      bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (correctness, buffers, backport from 0.4.4.4-rc):
+    - Fix a correctness bug that could cause an assertion failure if we
+      ever tried using the buf_move_all() function with an empty input
+      buffer. As far as we know, no released versions of Tor do this.
+      Fixes bug 40076; bugfix on 0.3.3.1-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.5.1-alpha):
+    - Remove a debug logging statement that uselessly spammed the logs.
+      Fixes bug 40135; bugfix on 0.3.5.0-alpha.
+
+  o Minor bugfixes (rate limiting, bridges, pluggable transports, backport from 0.4.4.4-rc):
+    - On a bridge, treat all connections from an ExtORPort as remote by
+      default for the purposes of rate-limiting. Previously, bridges
+      would treat the connection as local unless they explicitly
+      received a "USERADDR" command. ExtORPort connections still count
+      as local if there is a USERADDR command with an explicit local
+      address. Fixes bug 33747; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (relay configuration, crash, backport from 0.4.5.1-alpha):
+    - Avoid a fatal assert() when failing to create a listener
+      connection for an address that was in use. Fixes bug 40073; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (relay, usability, backport from 0.4.4.3-alpha):
+    - Adjust the rules for when to warn about having too many
+      connections to other relays. Previously we'd tolerate up to 1.5
+      connections per relay on average. Now we tolerate more connections
+      for directory authorities, and raise the number of total
+      connections we need to see before we warn. Fixes bug 33880; bugfix
+      on 0.3.1.1-alpha.
+
+  o Minor bugfixes (relays, backport from 0.4.4.1-alpha):
+    - Stop advertising incorrect IPv6 ORPorts in relay and bridge
+      descriptors, when the IPv6 port was configured as "auto". Fixes
+      bug 32588; bugfix on 0.2.3.9-alpha.
+
+  o Minor bugfixes (tests, 0.4.4.5):
+    - Fix the behavior of the rend_cache/clean_v2_descs_as_dir when run
+      on its own. Previously, it would exit with an error. Fixes bug
+      40099; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (windows, backport from 0.4.4.4-rc):
+    - Fix a bug that prevented Tor from starting if its log file grew
+      above 2GB. Fixes bug 31036; bugfix on 0.2.1.8-alpha.
+
+  o Deprecated features (onion service v2, backport form 0.4.4.2-alpha):
+    - Add a deprecation warning for version 2 onion services. Closes
+      ticket 40003.
+
+
 Changes in version 0.3.5.11 - 2020-07-09
   Tor 0.3.5.11 backports fixes from later tor releases, including several
   usability, portability, and reliability fixes.

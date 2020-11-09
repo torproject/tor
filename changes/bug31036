@@ -1,3 +1,0 @@
-  o Minor bugfixes (windows):
-    - Fix a bug that prevented Tor from starting if its log file
-      grew above 2GB.  Fixes bug 31036; bugfix on 0.2.1.8-alpha.

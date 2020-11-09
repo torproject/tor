@@ -1,7 +1,0 @@
-  o Minor bugfixes (rate limiting, bridges, pluggable transports):
-    - On a bridge, treat all connections from an ExtORPort as remote
-      by default for the purposes of rate-limiting. Previously,
-      bridges would treat the connection as local unless they explicitly
-      received a "USERADDR" command.  ExtORPort connections still
-      count as local if there is a USERADDR command with an  explicit local
-      address. Fixes bug 33747; bugfix on 0.2.5.1-alpha.
