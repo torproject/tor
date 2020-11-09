@@ -1,0 +1,6 @@
+  o Minor bugfixes (security):
+    - When completing a channel, relays now check more thoroughly to make
+      sure that it matches any pending circuits before attaching those
+      circuits. Previously, address correctness and Ed25519 identities were not
+      checked in this case, but only when extending circuits on an existing
+      channel. Fixes bug 40080; bugfix on 0.2.7.2-alpha.

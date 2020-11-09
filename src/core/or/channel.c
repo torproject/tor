@@ -670,7 +670,7 @@ channel_find_by_global_id(uint64_t global_identifier)
 
 /** Return true iff <b>chan</b> matches <b>rsa_id_digest</b> and <b>ed_id</b>.
  * as its identity keys.  If either is NULL, do not check for a match. */
-static int
+int
 channel_remote_identity_matches(const channel_t *chan,
                                 const char *rsa_id_digest,
                                 const ed25519_public_key_t *ed_id)
