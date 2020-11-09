@@ -1,8 +1,9 @@
-Changes in version 0.4.4.6 - 2020-11-12 Tor 0.4.4.6 is the second stable
-  release in the 0.4.4.x series. It backports fixes from later releases,
-  including a fix for TROVE-2020-005, a security issue that could be
-  used, under certain cases, by an adversary to observe traffic patterns
-  on a limited number of circuits intended for a different relay.
+Changes in version 0.4.4.6 - 2020-11-12
+  Tor 0.4.4.6 is the second stable release in the 0.4.4.x series. It
+  backports fixes from later releases, including a fix for TROVE-2020-
+  005, a security issue that could be used, under certain cases, by an
+  adversary to observe traffic patterns on a limited number of circuits
+  intended for a different relay.
 
   o Major bugfixes (security, backport from 0.4.5.1-alpha):
     - When completing a channel, relays now check more thoroughly to
