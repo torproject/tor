@@ -643,21 +643,37 @@ circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits)
           circ->state != CIRCUIT_STATE_CHAN_WAIT)
         continue;
 
-      if (tor_digest_is_zero(circ->n_hop->identity_digest)) {
+      const char *rsa_ident = NULL;
+      const ed25519_public_key_t *ed_ident = NULL;
+      if (! tor_digest_is_zero(circ->n_hop->identity_digest)) {
+        rsa_ident = circ->n_hop->identity_digest;
+      }
+      if (! ed25519_public_key_is_zero(&circ->n_hop->ed_identity)) {
+        ed_ident = &circ->n_hop->ed_identity;
+      }
+
+      if (rsa_ident == NULL && ed_ident == NULL) {
         /* Look at addr/port. This is an unkeyed connection. */
         if (!channel_matches_extend_info(chan, circ->n_hop))
           continue;
       } else {
-        /* We expected a key. See if it's the right one. */
-        if (tor_memneq(chan->identity_digest,
-                   circ->n_hop->identity_digest, DIGEST_LEN))
+        /* We expected a key or keys. See if they matched. */
+        if (!channel_remote_identity_matches(chan, rsa_ident, ed_ident))
           continue;
+
+        /* If the channel is canonical, great.  If not, it needs to match
+         * the requested address exactly. */
+        if (! chan->is_canonical &&
+            ! channel_matches_extend_info(chan, circ->n_hop)) {
+          continue;
+        }
       }
       if (!status) { /* chan failed; close circ */
         log_info(LD_CIRC,"Channel failed; closing circ.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CHANNEL_CLOSED);
         continue;
       }
+
       if (close_origin_circuits && CIRCUIT_IS_ORIGIN(circ)) {
         log_info(LD_CIRC,"Channel deprecated for origin circs; closing circ.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CHANNEL_CLOSED);
