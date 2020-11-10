@@ -143,6 +143,7 @@ TOR_INTERNAL_LIBS = \
 libtor.a: $(TOR_INTERNAL_LIBS)
 	$(AM_V_AR) export AR="$(AR)"; \
 	export ARFLAGS="$(ARFLAGS)"; \
+	export RANLIB="$(RANLIB)"; \
 	$(top_srcdir)/scripts/build/combine_libs libtor.a $(TOR_INTERNAL_LIBS)
 
 MOSTLYCLEANFILES += libtor.a
