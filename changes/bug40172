@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Fix a compilation issue in which the correct 'ranlib' program was not
+      used when building libtor.a.  Fixes bug 40172; bugfix on 0.4.5.1-alpha.
