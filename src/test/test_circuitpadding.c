@@ -1374,7 +1374,7 @@ test_circuitpadding_wronghop(void *arg)
   ret = circpad_handle_padding_negotiated(relay_side, &cell, NULL);
   tt_int_op(ret, OP_EQ, -1);
 
-  /* 7. Test garbled negotated cell (bad command 255) */
+  /* 7. Test garbled negotiated cell (bad command 255) */
   memset(&cell, 0, sizeof(cell));
   ret = circpad_handle_padding_negotiate(relay_side, &cell);
   tt_int_op(ret, OP_EQ, -1);
@@ -2338,7 +2338,7 @@ helper_circpad_circ_distribution_machine_setup(int min, int max)
 }
 
 /** Simple test that the padding delays sampled from a uniform distribution
- *  actually faill within the uniform distribution range. */
+ *  actually fail within the uniform distribution range. */
 static void
 test_circuitpadding_sample_distribution(void *arg)
 {
@@ -3032,7 +3032,7 @@ test_circuitpadding_hs_machines(void *arg)
 
   /* Test logic:
    *
-   * 1) Register the HS machines, which aim to hide the presense of
+   * 1) Register the HS machines, which aim to hide the presence of
    *    onion service traffic on the client-side
    *
    * 2) Call helper_test_hs_machines() to perform tests for the intro circuit

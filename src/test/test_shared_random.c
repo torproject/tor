@@ -1400,7 +1400,7 @@ test_state_transition(void *arg)
     sr_state_delete_commits();
     tt_int_op(digestmap_size(state->commits), OP_EQ, 0);
     /* Add it back so we can continue the rest of the test because after
-     * deletiong our commit will be freed so generate a new one. */
+     * deleting our commit will be freed so generate a new one. */
     commit = sr_generate_our_commit(now, mock_cert);
     tt_assert(commit);
     sr_state_add_commit(commit);
@@ -1541,7 +1541,7 @@ test_keep_commit(void *arg)
    * in the state and commitment and reveal values match. */
   tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                SR_PHASE_REVEAL), OP_EQ, 1);
-  /* The commit shouldn't be kept if it's not verified that is no matchin
+  /* The commit shouldn't be kept if it's not verified that is no matching
    * hashed reveal. */
   {
     /* Let's save the hash reveal so we can restore it. */

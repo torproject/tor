@@ -531,7 +531,7 @@ routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2)
  * Nodes that don't have a routerinfo must be general-purpose nodes, because
  * routerstatuses and microdescriptors only come via consensuses.
  *
- * The <b>flags</b> chech that <b>node</b>:
+ * The <b>flags</b> check that <b>node</b>:
  *  - <b>CRN_NEED_UPTIME</b>: has more than a minimum uptime;
  *  - <b>CRN_NEED_CAPACITY</b>: has more than a minimum capacity;
  *  - <b>CRN_NEED_GUARD</b>: is a Guard;

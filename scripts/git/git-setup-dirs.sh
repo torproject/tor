@@ -494,7 +494,7 @@ set_tor_github_pr_fetch_config
 fetch_remote "tor-github"
 
 # GitLab remote
-printf "%s Seting up remote %s\\n" "$MARKER" "${BYEL}tor-gitlab${CNRM}"
+printf "%s Setting up remote %s\\n" "$MARKER" "${BYEL}tor-gitlab${CNRM}"
 add_remote "tor-gitlab" "$GITLAB_PULL"
 set_remote_push "tor-gitlab" "$GITLAB_PUSH"
 # Add custom fetch for MRs

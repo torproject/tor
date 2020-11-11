@@ -6,7 +6,7 @@
 
 /**
  * @file server_port_cfg_st.h
- * @brief Cnfiguration structure for server ports.
+ * @brief Configuration structure for server ports.
  **/
 
 #ifndef SERVER_PORT_CFG_ST_H

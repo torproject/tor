@@ -47,7 +47,7 @@ CONF_VAR(AuthDirTestEd25519LinkKeys, BOOL, 0, "1")
 /**
  * Bool (default 1): As an authority, should we launch tests for
  * reachability, and use those results to vote on "Running"?  If 0,
- * we assume that every relay is Runnning.
+ * we assume that every relay is Running.
  **/
 CONF_VAR(AuthDirTestReachability, BOOL, 0, "1")
 

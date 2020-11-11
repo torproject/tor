@@ -50,7 +50,7 @@ Our current convention is to use the subsystem mechanism to initialize and
 clean up pieces of Tor.  The more recently updated pieces of Tor will use
 this mechanism.  For examples, see e.g. time_sys.c or log_sys.c.
 
-In simplest terms, a **subsytem** is a logically separate part of Tor that
+In simplest terms, a **subsystem** is a logically separate part of Tor that
 can be initialized, shut down, managed, and configured somewhat independently
 of the rest of the program.
 
@@ -59,7 +59,7 @@ initialize it, desconstruct it, and so on. To define a subsystem, we declare
 a `const` instance of subsys_fns_t.  See the documentation for subsys_fns_t
 for a full list of these functions.
 
-After defining a subsytem, it must be inserted in subsystem_list.c.  At that
+After defining a subsystem, it must be inserted in subsystem_list.c.  At that
 point, table-driven mechanisms in subsysmgr.c will invoke its functions when
 appropriate.
 

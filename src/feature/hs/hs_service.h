@@ -3,7 +3,7 @@
 
 /**
  * \file hs_service.h
- * \brief Header file containing service data for the HS subsytem.
+ * \brief Header file containing service data for the HS subsystem.
  **/
 
 #ifndef TOR_HS_SERVICE_H
@@ -121,9 +121,9 @@ typedef struct hs_service_intropoints_t {
  *
  * Mutable elements are initialized when we build the descriptor but they are
  * also altered during the lifetime of the descriptor. They could be
- * _refreshed_ everytime we upload the descriptor (which happens multiple times
- * over the lifetime of the descriptor), or through periodic events. We do this
- * for elements like the descriptor revision counter and various
+ * _refreshed_ every time we upload the descriptor (which happens multiple
+ * times over the lifetime of the descriptor), or through periodic events. We
+ * do this for elements like the descriptor revision counter and various
  * certificates. See refresh_service_descriptor() and
  * update_service_descriptor_intro_points().
  */
@@ -299,7 +299,7 @@ typedef struct hs_service_state_t {
 /** Representation of a service running on this tor instance. */
 typedef struct hs_service_t {
   /** Onion address base32 encoded and NUL terminated. We keep it for logging
-   * purposes so we don't have to build it everytime. */
+   * purposes so we don't have to build it every time. */
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
 
   /** Hashtable node: use to look up the service by its master public identity

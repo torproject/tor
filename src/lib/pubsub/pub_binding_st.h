@@ -30,7 +30,7 @@ typedef struct pub_binding_t {
   /**
    * A template for the msg_t fields that are filled in for this message.
    * This is copied into outgoing messages, ensuring that their fields are set
-   * corretly.
+   * correctly.
    **/
   msg_t msg_template;
 } pub_binding_t;

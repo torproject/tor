@@ -331,10 +331,10 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_not_well_formed(void *data)
   TO_CONN(conn)->linked = 1;
   tt_assert(connection_dir_is_encrypted(conn));
 
-  //TODO: this cant be reached because rend_valid_descriptor_id() prevents this
-  //case to happen. This test is the same as
-  //test_dir_handle_get_rendezvous2_on_encrypted_conn_with_invalid_desc_id
-  //We should refactor to remove the case from the switch.
+  //TODO: this can't be reached because rend_valid_descriptor_id() prevents
+  //this case to happen. This test is the same as
+  //test_dir_handle_get_rendezvous2_on_encrypted_conn_with_invalid_desc_id We
+  //should refactor to remove the case from the switch.
 
   const char *req = RENDEZVOUS2_GET("1bababababababababababababababab");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);

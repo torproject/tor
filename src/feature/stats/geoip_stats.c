@@ -774,7 +774,7 @@ geoip_get_dirreq_history(dirreq_type_t type)
  *
  * Store a newly allocated comma-separated string in <a>ipver_str</a>
  * containing entries for clients connecting over IPv4 and IPv6. The
- * format is family=num where num is the nubmer of IPs we've seen
+ * format is family=num where num is the number of IPs we've seen
  * connecting over that protocol family, and family is 'v4' or 'v6'.
  *
  * Return 0 on success and -1 if we're missing geoip data. */

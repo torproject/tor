@@ -45,7 +45,7 @@ typedef struct {
   /* True iff this voting schedule was set on demand meaning not through the
    * normal vote operation of a dirauth or when a consensus is set. This only
    * applies to a directory authority that needs to recalculate the voting
-   * timings only for the first vote even though this object was initilized
+   * timings only for the first vote even though this object was initialized
    * prior to voting. */
   int created_on_demand;
 

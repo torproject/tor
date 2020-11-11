@@ -546,7 +546,7 @@ service_intro_point_remove(const hs_service_t *service,
   /* Trying all descriptors. */
   FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
     /* We'll try to remove the descriptor on both descriptors which is not
-     * very expensive to do instead of doing loopup + remove. */
+     * very expensive to do instead of doing lookup + remove. */
     digest256map_remove(desc->intro_points.map,
                         ip->auth_key_kp.pubkey.pubkey);
   } FOR_EACH_DESCRIPTOR_END;
@@ -567,7 +567,7 @@ service_intro_point_find(const hs_service_t *service,
    *
    * Even if we use the same node as intro point in both descriptors, the node
    * will have a different intro auth key for each descriptor since we generate
-   * a new one everytime we pick an intro point.
+   * a new one every time we pick an intro point.
    *
    * After #22893 gets implemented, intro points will be moved to be
    * per-service instead of per-descriptor so this function will need to
@@ -784,7 +784,7 @@ close_service_rp_circuits(hs_service_t *service)
         ed25519_pubkey_eq(&ocirc->hs_ident->identity_pk,
                           &service->keys.identity_pk)) {
       /* Reason is FINISHED because service has been removed and thus the
-       * circuit is considered old/uneeded. When freed, it is removed from the
+       * circuit is considered old/unneeded. When freed, it is removed from the
        * hs circuitmap. */
       circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
     }
@@ -802,7 +802,7 @@ close_intro_circuits(hs_service_intropoints_t *intro_points)
     origin_circuit_t *ocirc = hs_circ_service_get_intro_circ(ip);
     if (ocirc) {
       /* Reason is FINISHED because service has been removed and thus the
-       * circuit is considered old/uneeded. When freed, the circuit is removed
+       * circuit is considered old/unneeded. When freed, the circuit is removed
        * from the HS circuitmap. */
       circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
     }
@@ -1086,7 +1086,7 @@ load_service_keys(hs_service_t *service)
     goto end;
   }
 
-  /* Succes. */
+  /* Success. */
   ret = 0;
  end:
   tor_free(fname);
@@ -2194,7 +2194,7 @@ pick_needed_intro_points(hs_service_t *service,
   }
 
   /* Build an exclude list of nodes of our intro point(s). The expiring intro
-   * points are OK to pick again because this is afterall a concept of round
+   * points are OK to pick again because this is after all a concept of round
    * robin so they are considered valid nodes to pick again. */
   DIGEST256MAP_FOREACH(desc->intro_points.map, key,
                        hs_service_intro_point_t *, ip) {
@@ -2378,7 +2378,7 @@ should_remove_intro_point(hs_service_intro_point_t *ip, time_t now)
 
   tor_assert(ip);
 
-  /* Any one of the following needs to be True to furfill the criteria to
+  /* Any one of the following needs to be True to fulfill the criteria to
    * remove an intro point. */
   bool has_no_retries = (ip->circuit_retries >
                          MAX_INTRO_POINT_CIRCUIT_RETRIES);
@@ -2997,7 +2997,7 @@ upload_descriptor_to_all(const hs_service_t *service,
   /* Get our list of responsible HSDir. */
   responsible_dirs = smartlist_new();
   /* The parameter 0 means that we aren't a client so tell the function to use
-   * the spread store consensus paremeter. */
+   * the spread store consensus parameter. */
   hs_get_responsible_hsdirs(&desc->blinded_kp.pubkey, desc->time_period_num,
                             service->desc_next == desc, 0, responsible_dirs);
 
@@ -3231,7 +3231,7 @@ refresh_service_descriptor(const hs_service_t *service,
                            hs_service_descriptor_t *desc, time_t now)
 {
   /* There are few fields that we consider "mutable" in the descriptor meaning
-   * we need to update them regurlarly over the lifetime fo the descriptor.
+   * we need to update them regularly over the lifetime for the descriptor.
    * The rest are set once and should not be modified.
    *
    *  - Signing key certificate.
@@ -3529,7 +3529,7 @@ service_add_fnames_to_list(const hs_service_t *service, smartlist_t *list)
   s_dir = service->config.directory_path;
   /* The hostname file. */
   smartlist_add(list, hs_path_from_filename(s_dir, fname_hostname));
-  /* The key files splitted in two. */
+  /* The key files split in two. */
   tor_snprintf(fname, sizeof(fname), "%s_secret_key", fname_keyfile_prefix);
   smartlist_add(list, hs_path_from_filename(s_dir, fname));
   tor_snprintf(fname, sizeof(fname), "%s_public_key", fname_keyfile_prefix);
@@ -3617,7 +3617,7 @@ hs_service_circuit_cleanup_on_close(const circuit_t *circ)
   }
 }
 
-/** This is called everytime the service map (v2 or v3) changes that is if an
+/** This is called every time the service map (v2 or v3) changes that is if an
  * element is added or removed. */
 void
 hs_service_map_has_changed(void)
@@ -3907,7 +3907,7 @@ hs_service_set_conn_addr_port(const origin_circuit_t *circ,
     goto err_no_close;
   }
 
-  /* Find a virtual port of that service mathcing the one in the connection if
+  /* Find a virtual port of that service matching the one in the connection if
    * successful, set the address in the connection. */
   if (hs_set_conn_addr_port(service->config.ports, conn) < 0) {
     log_info(LD_REND, "No virtual port mapping exists for port %d for "
@@ -4240,7 +4240,7 @@ hs_service_find(const ed25519_public_key_t *identity_pk)
   return find_service(hs_service_map, identity_pk);
 }
 
-/** Allocate and initilize a service object. The service configuration will
+/** Allocate and initialize a service object. The service configuration will
  * contain the default values. Return the newly allocated object pointer. This
  * function can't fail. */
 hs_service_t *

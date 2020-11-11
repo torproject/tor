@@ -124,7 +124,7 @@ the module calls.  Modules which call fewer other modules are better targets.
 
 Strive to change the C API as little as possible.
 
-We are currently targetting Rust stable. (See `CodingStandardsRust.md` for more
+We are currently targeting Rust stable. (See `CodingStandardsRust.md` for more
 details.)
 
 It is on our TODO list to try to cultivate good

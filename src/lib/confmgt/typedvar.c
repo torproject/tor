@@ -156,7 +156,7 @@ typed_var_copy(void *dest, const void *src, const var_type_def_t *def)
   if (BUG(!def))
     return -1; // LCOV_EXCL_LINE
   if (def->fns->copy) {
-    // If we have been provided a copy fuction, use it.
+    // If we have been provided a copy function, use it.
     return def->fns->copy(dest, src, def);
   }
 

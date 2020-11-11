@@ -854,7 +854,7 @@ hs_cache_lookup_as_client(const ed25519_public_key_t *key)
  *                                  was not usable but the descriptor was
  *                                  still stored.
  *
- *  Any other codes means indicate where the error occured and the descriptor
+ *  Any other codes means indicate where the error occurred and the descriptor
  *  was not stored. */
 hs_desc_decode_status_t
 hs_cache_store_as_client(const char *desc_str,
@@ -1019,7 +1019,7 @@ hs_cache_client_intro_state_purge(void)
 }
 
 /* This is called when new client authorization was added to the global state.
- * It attemps to decode the descriptor of the given service identity key.
+ * It attempts to decode the descriptor of the given service identity key.
  *
  * Return true if decoding was successful else false. */
 bool

@@ -47,7 +47,7 @@ A trace event in tor has the following standard format:
 tor_trace(subsystem, event_name, args...);
 ```
 
-The `subsystem` parameter is the name of the subsytem the trace event is in.
+The `subsystem` parameter is the name of the subsystem the trace event is in.
 For example that could be "scheduler" or "vote" or "hs". The idea is to add
 some context to the event so when we collect them we know where it's coming
 from.
@@ -135,7 +135,7 @@ This is pretty easy. Let's say you want to add a trace event in
 #include "lib/trace/events.h"
 ```
 
-Then, the `tor_trace()` macro can be used with the specific format detailled
+Then, the `tor_trace()` macro can be used with the specific format detailed
 before in a previous section. As an example:
 
 ```c

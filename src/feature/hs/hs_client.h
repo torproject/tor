@@ -3,7 +3,7 @@
 
 /**
  * \file hs_client.h
- * \brief Header file containing client data for the HS subsytem.
+ * \brief Header file containing client data for the HS subsystem.
  **/
 
 #ifndef TOR_HS_CLIENT_H
@@ -35,12 +35,12 @@ typedef enum {
 
 /* Status code of client auth credential registration */
 typedef enum {
-  /* We successfuly registered these credentials */
+  /* We successfully registered these credentials */
   REGISTER_SUCCESS,
   /* We successfully registered these credentials, but had to replace some
    * existing ones. */
   REGISTER_SUCCESS_ALREADY_EXISTS,
-  /* We successfuly registered these credentials, and also decrypted a cached
+  /* We successfully registered these credentials, and also decrypted a cached
    * descriptor. */
   REGISTER_SUCCESS_AND_DECRYPTED,
   /* We failed to register these credentials, because of a bad HS address. */
@@ -51,7 +51,7 @@ typedef enum {
 
 /* Status code of client auth credential removal */
 typedef enum {
-  /* We successfuly removed these credentials */
+  /* We successfully removed these credentials */
   REMOVAL_SUCCESS,
   /* No need to remove those credentials, because they were not there. */
   REMOVAL_SUCCESS_NOT_FOUND,

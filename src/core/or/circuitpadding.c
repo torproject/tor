@@ -1536,7 +1536,7 @@ circpad_machine_schedule_padding,(circpad_machine_runtime_t *mi))
 /**
  * If the machine transitioned to the END state, we need
  * to check to see if it wants us to shut it down immediately.
- * If it does, then we need to send the appropiate negotiation commands
+ * If it does, then we need to send the appropriate negotiation commands
  * depending on which side it is.
  *
  * After this function is called, mi may point to freed memory. Do
@@ -2076,7 +2076,7 @@ circpad_machine_conditions_keep(origin_circuit_t *circ,
  *
  * The padding code only cares if the circuit is building,
  * opened, used for streams, and/or still has relay early cells.
- * This returns a bitmask of all state properities that apply to
+ * This returns a bitmask of all state properties that apply to
  * this circuit.
  */
 static inline
@@ -2390,7 +2390,7 @@ circpad_deliver_unrecognized_cell_events(circuit_t *circ,
  * Deliver circpad events for "recognized" relay cells.
  *
  * Recognized cells are destined for this hop, either client or middle.
- * Check if this is a padding cell or not, and send the appropiate
+ * Check if this is a padding cell or not, and send the appropriate
  * received event.
  */
 void
@@ -2682,7 +2682,7 @@ circpad_circ_responder_machine_init(void)
      serialize this into the consensus or the torrc */
 
   /* We transition to the burst state on padding receive and on non-padding
-   * recieve */
+   * receive */
   circ_responder_machine->states[CIRCPAD_STATE_START].
       next_state[CIRCPAD_EVENT_PADDING_RECV] = CIRCPAD_STATE_BURST;
   circ_responder_machine->states[CIRCPAD_STATE_START].
@@ -2711,7 +2711,7 @@ circpad_circ_responder_machine_init(void)
   /* During burst state we wait forever for padding to arrive.
 
      We are waiting for a padding cell from the client to come in, so that we
-     respond, and we immitate how extend looks like */
+     respond, and we imitate how extend looks like */
   circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram[0] = 0;
   // Only infinity bin:
   circ_responder_machine->states[CIRCPAD_STATE_BURST].histogram[1] = 1;

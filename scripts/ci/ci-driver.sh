@@ -461,7 +461,7 @@ fi
 if [[ "${STEM}" = "yes" ]]; then
    start_section "Stem"
    if [[ "${TOR_VER_AT_LEAST_044}" = 'yes' ]]; then
-     # XXXX This shold probably be part some test-stem make target.
+     # XXXX This should probably be part of some test-stem make target.
      if runcmd timelimit -p -t 520 -s USR1 -T 30 -S ABRT \
            python3 "${STEM_PATH}/run_tests.py" \
            --tor src/app/tor \

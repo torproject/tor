@@ -479,7 +479,7 @@ parse_socks5_userpass_auth(const uint8_t *raw_data, socks_request_t *req,
 /**
  * Validate and respond to SOCKS5 username/password request we
  * parsed in parse_socks5_userpass_auth (corresponding to <b>req</b>.
- * Set <b>req->reply</b> to appropriate responsed. Return
+ * Set <b>req->reply</b> to appropriate response. Return
  * SOCKS_RESULT_DONE on success or SOCKS_RESULT_INVALID on failure.
  */
 static socks_result_t

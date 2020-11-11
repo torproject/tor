@@ -13,7 +13,7 @@ opened on your host at the same time.
 FreeBSD
 -------
 
-Tune the followind sysctl(8) variables:
+Tune the following sysctl(8) variables:
  * kern.maxfiles - maximum allowed file descriptors (for entire system)
  * kern.maxfilesperproc - maximum file descriptors one process is allowed
    to use

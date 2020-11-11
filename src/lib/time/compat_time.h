@@ -60,7 +60,7 @@
  *
  * Q: So, what backends is monotime_coarse using?
  *
- * A: Generally speaking, it uses "whatever monotonic-ish time implemenation
+ * A: Generally speaking, it uses "whatever monotonic-ish time implementation
  * does not require a context switch."  The various implementations provide
  * this by having a view of the current time in a read-only memory page that
  * is updated with a frequency corresponding to the kernel's tick count.

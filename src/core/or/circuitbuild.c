@@ -7,7 +7,7 @@
 /**
  * \file circuitbuild.c
  *
- * \brief Implements the details of building circuits (by chosing paths,
+ * \brief Implements the details of building circuits (by choosing paths,
  * constructing/sending create/extend cells, and so on).
  *
  * On the client side, this module handles launching circuits. Circuit

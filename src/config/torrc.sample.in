@@ -88,7 +88,7 @@
 ## yourself to make this work.
 #ORPort 443 NoListen
 #ORPort 127.0.0.1:9090 NoAdvertise
-## If you want to listen on IPv6 your numeric address must be explictly
+## If you want to listen on IPv6 your numeric address must be explicitly
 ## between square brackets as follows. You must also listen on IPv4.
 #ORPort [2001:DB8::1]:9050
 

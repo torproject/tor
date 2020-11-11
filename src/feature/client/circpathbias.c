@@ -683,7 +683,7 @@ pathbias_mark_use_success(origin_circuit_t *circ)
 }
 
 /**
- * If a stream ever detatches from a circuit in a retriable way,
+ * If a stream ever detaches from a circuit in a retriable way,
  * we need to mark this circuit as still needing either another
  * successful stream, or in need of a probe.
  *

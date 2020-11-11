@@ -3,7 +3,7 @@
 
 /**
  * \file hs_cell.h
- * \brief Header file containing cell data for the whole HS subsytem.
+ * \brief Header file containing cell data for the whole HS subsystem.
  **/
 
 #ifndef TOR_HS_CELL_H

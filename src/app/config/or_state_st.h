@@ -21,7 +21,7 @@ struct config_suite_t;
 struct or_state_t {
   uint32_t magic_;
   /** The time at which we next plan to write the state to the disk.  Equal to
-   * TIME_MAX if there are no savable changes, 0 if there are changes that
+   * TIME_MAX if there are no saveable changes, 0 if there are changes that
    * should be saved right away. */
   time_t next_write;
 

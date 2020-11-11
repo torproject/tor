@@ -70,7 +70,7 @@
  *
  * We persist these entries to disk using a simple format, where each line
  * has a base64-encoded RSA SHA1 hash, then a base64-endoded Ed25519 key.
- * Empty lines, misformed lines, and lines beginning with # are
+ * Empty lines, malformed lines, and lines beginning with # are
  * ignored. Lines beginning with @ are reserved for future extensions.
  *
  * The dirserv.c module is the main user of these functions.
@@ -507,7 +507,7 @@ keypin_clear(void)
   HT_CLEAR(rsamap,&the_rsa_map);
 
   if (bad_entries) {
-    log_warn(LD_BUG, "Found %d discrepencies in the keypin database.",
+    log_warn(LD_BUG, "Found %d discrepancies in the keypin database.",
              bad_entries);
   }
 }

@@ -28,7 +28,7 @@
 /*
  * Circuit Purposes
  *
- * The following defines an enumeration of all possible circuit purpose so
+ * The following defines an enumeration of all possible circuit purposes so
  * they appear in the trace with the define name (first parameter of
  * ctf_enum_value) instead of the numerical value.
  */
@@ -70,7 +70,7 @@ TRACEPOINT_ENUM(tor_circuit, purpose,
 
     /* Misc. */
     ctf_enum_value("TESTING", CIRCUIT_PURPOSE_TESTING)
-    ctf_enum_value("CONTROLER", CIRCUIT_PURPOSE_CONTROLLER)
+    ctf_enum_value("CONTROLLER", CIRCUIT_PURPOSE_CONTROLLER)
     ctf_enum_value("PATH_BIAS_TESTING", CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
 
     /* VanGuard */

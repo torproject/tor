@@ -127,7 +127,7 @@ typedef struct nodelist_t {
    *
    * Whenever a node's routerinfo or microdescriptor is about to change,
    * you should remove it from this map with node_remove_from_ed25519_map().
-   * Whenever a node's routerinfo or microdescriptor has just chaned,
+   * Whenever a node's routerinfo or microdescriptor has just changed,
    * you should add it to this map with node_add_to_ed25519_map().
    */
   HT_HEAD(nodelist_ed_map, node_t) nodes_by_ed_id;
@@ -1200,7 +1200,7 @@ node_supports_v3_rendezvous_point(const node_t *node)
 }
 
 /** Return true iff <b>node</b> supports the DoS ESTABLISH_INTRO cell
- * extenstion. */
+ * extension. */
 bool
 node_supports_establish_intro_dos_extension(const node_t *node)
 {

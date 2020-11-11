@@ -4,7 +4,7 @@
 /**
  * \file hs_ident.c
  * \brief Contains circuit and connection identifier code for the whole HS
- *        subsytem.
+ *        subsystem.
  **/
 
 #include "lib/crypt_ops/crypto_util.h"

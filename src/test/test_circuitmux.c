@@ -191,7 +191,7 @@ test_cmux_attach_circuit(void *arg)
   tt_int_op(circuitmux_is_circuit_attached(pchan->cmux, circ), OP_EQ, 1);
   tt_int_op(circuitmux_is_circuit_attached(nchan->cmux, circ), OP_EQ, 1);
 
-  /* Query the chanid<->circid map in the cmux subsytem with what we just
+  /* Query the chanid<->circid map in the cmux subsystem with what we just
    * created and validate the cell direction. */
   cdir = circuitmux_attached_circuit_direction(pchan->cmux, circ);
   tt_int_op(cdir, OP_EQ, CELL_DIRECTION_IN);

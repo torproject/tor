@@ -678,7 +678,7 @@ sendme_record_received_cell_digest(circuit_t *circ, crypt_path_t *cpath)
     /* Record incoming digest. */
     cpath_sendme_record_cell_digest(cpath, false);
   } else {
-    /* Record foward digest. */
+    /* Record forward digest. */
     relay_crypto_record_sendme_digest(&TO_OR_CIRCUIT(circ)->crypto, true);
   }
 }

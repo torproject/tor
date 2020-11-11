@@ -6,7 +6,7 @@
 
 	function usage($reason) {
 		echoln("Usage: php build-nix.php [flags]");
-		echoln("Flags in parantheses are optional");
+		echoln("Flags in parentheses are optional");
 		echoln("");
 		echoln("  --bits=[32,64]");
 		echoln("  --function=[curve25519,ed25519]");

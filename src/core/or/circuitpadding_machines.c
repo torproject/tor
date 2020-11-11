@@ -25,7 +25,7 @@
  * Client-side introduction circuit hiding machine:
  *
  *    This machine hides client-side introduction circuits by making their
- *    circuit consruction sequence look like normal general circuits that
+ *    circuit construction sequence look like normal general circuits that
  *    download directory information. Furthermore, the circuits are kept open
  *    until all the padding has been sent, since intro circuits are usually
  *    very short lived and this act as a distinguisher. For more info see

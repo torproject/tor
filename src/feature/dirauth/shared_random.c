@@ -52,7 +52,7 @@
  *   saves the current state of the protocol on disk so that it can resume
  *   normally in case of reboot. The disk state (sr_disk_state_t) is managed by
  *   shared_random_state.c:state_query() and we go to extra lengths to ensure
- *   that the state is flushed on disk everytime we receive any useful
+ *   that the state is flushed on disk every time we receive any useful
  *   information like commits or SRVs.
  *
  * - When we receive a commit from a vote, we examine it to see if it's useful
@@ -62,7 +62,7 @@
  *   receive the reveal information corresponding to a commitment, we verify
  *   that they indeed match using verify_commit_and_reveal().
  *
- * - We treat consensuses as the ground truth, so everytime we generate a new
+ * - We treat consensuses as the ground truth, so every time we generate a new
  *   consensus we update our SR state accordingly even if our local view was
  *   different (see sr_act_post_consensus()).
  *
@@ -170,7 +170,7 @@ commit_log(const sr_commit_t *commit)
 
 /** Make sure that the commitment and reveal information in <b>commit</b>
  * match. If they match return 0, return -1 otherwise. This function MUST be
- * used everytime we receive a new reveal value. Furthermore, the commit
+ * used every time we receive a new reveal value. Furthermore, the commit
  * object MUST have a reveal value and the hash of the reveal value. */
 STATIC int
 verify_commit_and_reveal(const sr_commit_t *commit)

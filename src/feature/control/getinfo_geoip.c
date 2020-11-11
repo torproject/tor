@@ -5,7 +5,7 @@
 
 /**
  * @file getinfo_geoip.c
- * @brief GEOIP-related contoller GETINFO commands.
+ * @brief GEOIP-related controller GETINFO commands.
  **/
 
 #include "core/or/or.h"

@@ -48,7 +48,7 @@ typedef enum {
   /** We are hibernating, and we won't wake up till there's more bandwidth to
    * use. */
   HIBERNATE_STATE_DORMANT=4,
-  /** We start out in state default, which means we havent decided which state
+  /** We start out in state default, which means we haven't decided which state
    * we're in. */
   HIBERNATE_STATE_INITIAL=5
 } hibernate_state_t;

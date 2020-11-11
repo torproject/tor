@@ -422,7 +422,7 @@ addressmap_rewrite(char *address, size_t maxlen,
       goto done;
     }
 
-    /* Check wither the flags we were passed tell us not to use this
+    /* Check whether the flags we were passed tell us not to use this
      * mapping. */
     switch (ent->source) {
       case ADDRMAPSRC_DNS:
@@ -515,7 +515,7 @@ addressmap_rewrite_reverse(char *address, size_t maxlen, unsigned flags,
     else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
       return 0;
     /* FFFF we should reverse-map virtual addresses even if we haven't
-     * enabled DNS cacheing. */
+     * enabled DNS caching. */
   }
 
   tor_asprintf(&s, "REVERSE[%s]", address);

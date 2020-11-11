@@ -90,7 +90,7 @@ periodic_event_dispatch(mainloop_event_t *ev, void *data)
     next_interval = r;
   } else {
     /* no action was taken, it is likely a precondition failed,
-     * we should reschedule for next second incase the precondition
+     * we should reschedule for next second in case the precondition
      * passes then */
     next_interval = 1;
   }

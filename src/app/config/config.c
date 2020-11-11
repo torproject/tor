@@ -1518,7 +1518,7 @@ compute_group_readable_flag(const char *datadir,
      * the datadirectory */
     return datadir_gr;
   } else {
-    /* The directores are different, so we default to "not group-readable" */
+    /* The directories are different, so we default to "not group-readable" */
     return 0;
   }
 }
@@ -5872,9 +5872,9 @@ warn_client_dns_cache(const char *option, int disabling)
     return;
 
   warn_deprecated_option(option,
-      "Client-side DNS cacheing enables a wide variety of route-"
+      "Client-side DNS caching enables a wide variety of route-"
       "capture attacks. If a single bad exit node lies to you about "
-      "an IP address, cacheing that address would make you visit "
+      "an IP address, caching that address would make you visit "
       "an address of the attacker's choice every time you connected "
       "to your destination.");
 }
@@ -7009,7 +7009,7 @@ options_get_dir_fname2_suffix,(const or_options_t *options,
   return fname;
 }
 
-/** Check wether the data directory has a private subdirectory
+/** Check whether the data directory has a private subdirectory
  * <b>subdir</b>. If not, try to create it. Return 0 on success,
  * -1 otherwise. */
 int

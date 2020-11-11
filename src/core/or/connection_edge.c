@@ -19,7 +19,7 @@
  * TCP application socket that has arrived via (e.g.) a SOCKS request, or an
  * exit connection.
  *
- * Not every instance of edge_connection_t truly represents an edge connction,
+ * Not every instance of edge_connection_t truly represents an edge connection,
  * however. (Sorry!) We also create edge_connection_t objects for streams that
  * we will not be handling with TCP.  The types of these streams are:
  *   <ul>
@@ -578,8 +578,8 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
 /**
  * Helper function for bsearch.
  *
- * As per smartlist_bsearch, return < 0 if key preceeds member,
- * > 0 if member preceeds key, and 0 if they are equal.
+ * As per smartlist_bsearch, return < 0 if key precedes member,
+ * > 0 if member precedes key, and 0 if they are equal.
  *
  * This is equivalent to subtraction of the values of key - member
  * (why does no one ever say that explicitly?).
@@ -2066,7 +2066,7 @@ connection_ap_handle_onion(entry_connection_t *conn,
       log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
                (descriptor_is_usable) ? "usable" : "unusable",
                safe_str_client(onion_address),
-               (descriptor_is_usable) ? "Not fetching." : "Refecting.");
+               (descriptor_is_usable) ? "Not fetching." : "Refetching.");
     } else {
       rend_cache_lookup_result = -ENOENT;
     }
@@ -2655,8 +2655,8 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
       break;
 #endif /* defined(TRANS_NETFILTER_IPV6) */
     default:
-      log_warn(LD_BUG,
-               "Received transparent data from an unsuported socket family %d",
+      log_warn(LD_BUG, "Received transparent data from an unsupported "
+                       "socket family %d",
                ENTRY_TO_CONN(conn)->socket_family);
       return -1;
   }

@@ -16,7 +16,7 @@
  * options and then put in a staging list. It will stay there until
  * hs_service_load_all_keys() is called. That function is responsible to
  * load/generate the keys for the service in the staging list and if
- * successful, transfert the service to the main global service list where
+ * successful, transferred the service to the main global service list where
  * at that point it is ready to be used.
  *
  * Configuration functions are per-version and there is a main generic one for
@@ -362,7 +362,7 @@ config_validate_service(const hs_service_config_t *config)
   return -1;
 }
 
-/** Configuration funcion for a version 3 service. The given service
+/** Configuration function for a version 3 service. The given service
  * object must be already allocated and passed through
  * config_generic_service() prior to calling this function.
  *

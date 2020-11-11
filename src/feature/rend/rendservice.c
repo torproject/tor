@@ -671,7 +671,7 @@ rend_service_prune_list_impl_(void)
                                         ocirc->build_state->chosen_exit)),
              safe_str_client(rend_data_get_address(ocirc->rend_data)));
     /* Reason is FINISHED because service has been removed and thus the
-     * circuit is considered old/uneeded. */
+     * circuit is considered old/unneeded. */
     circuit_mark_for_close(TO_CIRCUIT(ocirc), END_CIRC_REASON_FINISHED);
   }
   smartlist_free(surviving_services);
@@ -4138,7 +4138,7 @@ rend_consider_services_intro_points(time_t now)
      * list of the service. */
     unsigned int n_intro_points_to_open;
     /* Have an unsigned len so we can use it to compare values else gcc is
-     * not happy with unmatching signed comparaison. */
+     * not happy with unmatching signed comparison. */
     unsigned int intro_nodes_len;
     /* Different service are allowed to have the same introduction point as
      * long as they are on different circuit thus why we clear this list. */
@@ -4184,7 +4184,7 @@ rend_consider_services_intro_points(time_t now)
       intro->circuit_retries++;
     } SMARTLIST_FOREACH_END(intro);
 
-    /* Avoid mismatched signed comparaison below. */
+    /* Avoid mismatched signed comparison below. */
     intro_nodes_len = (unsigned int) smartlist_len(service->intro_nodes);
 
     /* Quiescent state, we have more or the equal amount of wanted node for
@@ -4274,7 +4274,7 @@ rend_consider_services_intro_points(time_t now)
         log_warn(LD_REND, "Error launching circuit to node %s for service %s.",
                  safe_str_client(extend_info_describe(intro->extend_info)),
                  safe_str_client(service->service_id));
-        /* This funcion will be called again by the main loop so this intro
+        /* This function will be called again by the main loop so this intro
          * point without a intro circuit will be retried on or removed after
          * a maximum number of attempts. */
       }

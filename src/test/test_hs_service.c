@@ -159,7 +159,7 @@ mock_router_have_minimum_dir_info_false(void)
 }
 
 /* Helper: from a set of options in conf, configure a service which will add
- * it to the staging list of the HS subsytem. */
+ * it to the staging list of the HS subsystem. */
 static int
 helper_config_service(const char *conf)
 {
@@ -778,7 +778,7 @@ mock_node_get_by_id(const char *digest)
 {
   (void) digest;
   memset(mock_node.identity, 'A', DIGEST_LEN);
-  /* Only return the matchin identity of As */
+  /* Only return the matching identity of As */
   if (!tor_memcmp(mock_node.identity, digest, DIGEST_LEN)) {
     return &mock_node;
   }

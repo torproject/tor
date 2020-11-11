@@ -408,7 +408,7 @@ good_bridge_line_test(const char *string, const char *test_addrport,
     tor_free(tmp);
   }
 
-  /* If we were asked to validate a transport name, make sure tha it
+  /* If we were asked to validate a transport name, make sure that it
      matches with the transport name that was parsed. */
   if (test_transport && !bridge_line->transport_name)
     tt_abort();
@@ -995,7 +995,7 @@ static const char *ret_addr_lookup_01010101[2] = {
 };
 
 /** This mock function is meant to replace tor_addr_lookup().
- * It answers with 1.1.1.1 as IP adddress that resulted from lookup.
+ * It answers with 1.1.1.1 as IP address that resulted from lookup.
  * This function increments <b>n_hostname_01010101</b> counter by one
  * every time it is called.
  */
@@ -1022,7 +1022,7 @@ tor_addr_lookup_01010101(const char *name, uint16_t family, tor_addr_t *addr)
 static int n_hostname_localhost = 0;
 
 /** This mock function is meant to replace tor_addr_lookup().
- * It answers with 127.0.0.1 as IP adddress that resulted from lookup.
+ * It answers with 127.0.0.1 as IP address that resulted from lookup.
  * This function increments <b>n_hostname_localhost</b> counter by one
  * every time it is called.
  */
@@ -1408,7 +1408,7 @@ test_config_find_my_address_mixed(void *arg)
  * AF_INET6 but we have one interface to do so thus we run the same exact unit
  * tests for both without copying them. */
 typedef struct find_my_address_params_t {
-  /* Index where the mock function results are located. For intance,
+  /* Index where the mock function results are located. For instance,
    * tor_addr_lookup_01010101() will have its returned value depending on the
    * family in ret_addr_lookup_01010101[].
    *
@@ -4912,7 +4912,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->entry_cfg.session_group, OP_EQ, 1111122);
 
-  // Test success with a zero unix domain socket, and doesnt add it to out
+  // Test success with a zero unix domain socket, and doesn't add it to out
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
@@ -4922,7 +4922,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 0);
 
-  // Test success with a one unix domain socket, and doesnt add it to out
+  // Test success with a one unix domain socket, and doesn't add it to out
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);

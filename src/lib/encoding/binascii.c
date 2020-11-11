@@ -275,7 +275,7 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
   }
   switch (n_idx) {
   case 0:
-    /* 0 leftover bits, no pading to add. */
+    /* 0 leftover bits, no padding to add. */
     break;
   case 1:
     /* 8 leftover bits, pad to 12 bits, write the 2 6-bit values followed

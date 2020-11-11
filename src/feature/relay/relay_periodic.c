@@ -6,7 +6,7 @@
 
 /**
  * @file relay_periodic.c
- * @brief Periodic functions for the relay subsytem
+ * @brief Periodic functions for the relay subsystem
  **/
 
 #include "orconfig.h"

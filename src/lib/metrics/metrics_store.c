@@ -26,7 +26,7 @@ struct metrics_store_t {
   /** Indexed by metrics entry name. An entry is a smartlist_t of one or more
    * metrics_store_entry_t allowing for multiple metrics of the same name.
    *
-   * The reason we allow multiple entires is because there are cases where one
+   * The reason we allow multiple entries is because there are cases where one
    * metrics can be used twice by the same entity but with different labels.
    * One example is an onion service with multiple ports, the port specific
    * metrics will have a port value as a label. */

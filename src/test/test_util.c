@@ -4514,7 +4514,7 @@ test_util_glob(void *ptr)
     smartlist_free(results); \
   } while (0);
 
-  // wilcards at beginning
+  // wildcards at beginning
   const char *results_test1[] = {"dir2", "file2"};
   TEST("*2");
   EXPECT(results_test1);
@@ -4761,7 +4761,7 @@ test_util_get_glob_opened_files(void *ptr)
   TEST("*"PATH_SEPARATOR);
   EXPECT(results_test2);
 
-  // wilcards in multiple path components
+  // wildcards in multiple path components
 #ifndef _WIN32
   const char *results_test3[] = {"", "dir1", "dir2", "empty", "file1", "file2",
                                  "forbidden"};
@@ -6193,7 +6193,7 @@ test_util_hostname_validation(void *arg)
 
   // XXX: do we allow single-label DNS names?
   // We shouldn't for SOCKS (spec says "contains a fully-qualified domain name"
-  // but only test pathologically malformed traling '.' cases for now.
+  // but only test pathologically malformed trailing '.' cases for now.
   tt_assert(!string_is_valid_nonrfc_hostname("."));
   tt_assert(!string_is_valid_nonrfc_hostname(".."));
 

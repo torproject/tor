@@ -344,7 +344,7 @@ test_confparse_assign_deprecated(void *arg)
   config_mgr_free(mgr);
 }
 
-/* Try to re-assign an option name that has been depreacted in favor of
+/* Try to re-assign an option name that has been deprecated in favor of
  * another. */
 static void
 test_confparse_assign_replaced(void *arg)

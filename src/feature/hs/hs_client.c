@@ -329,7 +329,7 @@ retry_all_socks_conn_waiting_for_desc(void)
        * a descriptor but we do have it in the cache.
        *
        * This can happen is tor comes back from suspend where it previously
-       * had the descriptor but the intro points were not usuable. Once it
+       * had the descriptor but the intro points were not usable. Once it
        * came back to life, the intro point failure cache was cleaned up and
        * thus the descriptor became usable again leaving us in this code path.
        *
@@ -1756,7 +1756,7 @@ remove_client_auth_creds_file(const char *filename)
     goto end;
   }
 
-  log_warn(LD_REND, "Successfuly removed client auth file (%s).",
+  log_warn(LD_REND, "Successfully removed client auth file (%s).",
            creds_file_path);
 
  end:

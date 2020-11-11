@@ -1849,7 +1849,7 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
     int found_ipv4_wildcard = 0, found_ipv6_wildcard = 0;
     const int i = p_sl_idx;
 
-    /* Look for accept/reject *[4|6|]:* entires */
+    /* Look for accept/reject *[4|6|]:* entries */
     if (p->prt_min <= 1 && p->prt_max == 65535 && p->maskbits == 0) {
       family = tor_addr_family(&p->addr);
       /* accept/reject *:* may have already been expanded into

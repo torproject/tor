@@ -1388,7 +1388,7 @@ test_dir_load_routers(void *arg)
   smartlist_add_strdup(chunks, EX_RI_BAD_PORTS);
   smartlist_add_strdup(chunks, EX_RI_BAD_TOKENS);
 
-  /* not ADDing MINIMIAL */
+  /* not ADDing MINIMAL */
   ADD(EX_RI_MAXIMAL);
   ADD(EX_RI_BAD_FINGERPRINT);
   ADD(EX_RI_BAD_SIG1);
@@ -1537,7 +1537,7 @@ test_dir_load_extrainfo(void *arg)
   smartlist_add_strdup(chunks, EX_EI_BAD_PUBLISHED);
   smartlist_add_strdup(chunks, EX_EI_BAD_TOKENS);
 
-  /* not ADDing MINIMIAL */
+  /* not ADDing MINIMAL */
   ADD(EX_EI_MAXIMAL);
   ADD(EX_EI_BAD_NICKNAME);
   /* Not ADDing BAD_PUBLISHED */
@@ -7044,7 +7044,7 @@ test_dir_dirserv_load_fingerprint_file(void *arg)
   expect_log_msg_containing("Invalid fingerprint");
   teardown_capture_of_logs();
 
-  // Test: Formt string exploit
+  // Test: Format string exploit
   setup_capture_of_logs(LOG_NOTICE);
   write_str_to_file(fname, router_lines_bad_fmt_str, 0);
   tt_int_op(dirserv_load_fingerprint_file(), OP_EQ, 0);

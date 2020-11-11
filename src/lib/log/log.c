@@ -784,7 +784,7 @@ logs_free_all(void)
 
 /** Flush the signal-safe log files.
  *
- * This function is safe to call from a signal handler. It is currenly called
+ * This function is safe to call from a signal handler. It is currently called
  * by the BUG() macros, when terminating the process on an abnormal condition.
  */
 void

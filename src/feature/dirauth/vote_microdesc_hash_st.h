@@ -6,7 +6,7 @@
 
 /**
  * @file vote_microdesc_hash_st.h
- * @brief Microdescriptor-hash voting strcture.
+ * @brief Microdescriptor-hash voting structure.
  **/
 
 #ifndef VOTE_MICRODESC_HASH_ST_H

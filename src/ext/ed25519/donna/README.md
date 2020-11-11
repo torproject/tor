@@ -1,5 +1,5 @@
 [ed25519](http://ed25519.cr.yp.to/) is an 
-[Elliptic Curve Digital Signature Algortithm](http://en.wikipedia.org/wiki/Elliptic_Curve_DSA), 
+[Elliptic Curve Digital Signature Algorithm](http://en.wikipedia.org/wiki/Elliptic_Curve_DSA), 
 developed by [Dan Bernstein](http://cr.yp.to/djb.html), 
 [Niels Duif](http://www.nielsduif.nl/), 
 [Tanja Lange](http://hyperelliptic.org/tanja), 
@@ -56,7 +56,7 @@ No configuration is needed **if you are compiling against OpenSSL**.
 
 ##### Hash Options
 
-If you are not compiling aginst OpenSSL, you will need a hash function.
+If you are not compiling against OpenSSL, you will need a hash function.
 
 To use a simple/**slow** implementation of SHA-512, use `-DED25519_REFHASH` when compiling `ed25519.c`. 
 This should never be used except to verify the code works when OpenSSL is not available.
@@ -73,7 +73,7 @@ custom hash implementation in ed25519-hash-custom.h. The hash must have a 512bit
 
 ##### Random Options
 
-If you are not compiling aginst OpenSSL, you will need a random function for batch verification.
+If you are not compiling against OpenSSL, you will need a random function for batch verification.
 
 To use a custom random function, use `-DED25519_CUSTOMRANDOM` when compiling `ed25519.c` and put your 
 custom hash implementation in ed25519-randombytes-custom.h. The random function must implement:
@@ -170,7 +170,7 @@ signing due to both using the same code for the scalar multiply.
 
 #### Testing
 
-Fuzzing against reference implemenations is now available. See [fuzz/README](fuzz/README.md).
+Fuzzing against reference implementations is now available. See [fuzz/README](fuzz/README.md).
 
 Building `ed25519.c` with `-DED25519_TEST` and linking with `test.c` will run basic sanity tests
 and benchmark each function. `test-batch.c` has been incorporated in to `test.c`.

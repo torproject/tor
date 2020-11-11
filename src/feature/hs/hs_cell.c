@@ -56,7 +56,7 @@ compute_introduce_mac(const uint8_t *encoded_cell, size_t encoded_cell_len,
   /* First, put the encoded cell in the msg. */
   memcpy(mac_msg, encoded_cell, encoded_cell_len);
   offset += encoded_cell_len;
-  /* Second, put the CLIENT_PK + ENCRYPTED_DATA but ommit the MAC field (which
+  /* Second, put the CLIENT_PK + ENCRYPTED_DATA but omit the MAC field (which
    * is junk at this point). */
   memcpy(mac_msg + offset, encrypted, (encrypted_len - DIGEST256_LEN));
   offset += (encrypted_len - DIGEST256_LEN);
@@ -293,7 +293,7 @@ introduce1_set_encrypted_link_spec(trn_cell_introduce_encrypted_t *cell,
 }
 
 /** Set padding in the enc_cell only if needed that is the total length of both
- * sections are below the mininum required for an INTRODUCE1 cell. */
+ * sections are below the minimum required for an INTRODUCE1 cell. */
 static void
 introduce1_set_encrypted_padding(const trn_cell_introduce1_t *cell,
                                  trn_cell_introduce_encrypted_t *enc_cell)

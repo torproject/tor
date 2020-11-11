@@ -11,7 +11,7 @@
 #
 
 """
-   This program uses a set of plugable filters to inspect and transform
+   This program uses a set of pluggable filters to inspect and transform
    our C code.
 """
 

@@ -82,7 +82,7 @@ namemap_fmt_name(const namemap_t *map, unsigned id)
 
 /**
  * Helper: As namemap_get_id(), but requires that <b>name</b> is
- * <b>namelen</b> charaters long, and that <b>namelen</b> is no more than
+ * <b>namelen</b> characters long, and that <b>namelen</b> is no more than
  * MAX_NAMEMAP_NAME_LEN.
  */
 static unsigned

@@ -653,17 +653,18 @@ router_parse_entry_from_string(const char *s, const char *end,
         goto err;
       }
       if (strcmp(ed_cert_tok->object_type, "ED25519 CERT")) {
-        log_warn(LD_DIR, "Wrong object type on identity-ed25519 in decriptor");
+        log_warn(LD_DIR, "Wrong object type on identity-ed25519 "
+                         "in descriptor");
         goto err;
       }
       if (strcmp(cc_ntor_tok->object_type, "ED25519 CERT")) {
         log_warn(LD_DIR, "Wrong object type on ntor-onion-key-crosscert "
-                 "in decriptor");
+                 "in descriptor");
         goto err;
       }
       if (strcmp(cc_tap_tok->object_type, "CROSSCERT")) {
         log_warn(LD_DIR, "Wrong object type on onion-key-crosscert "
-                 "in decriptor");
+                 "in descriptor");
         goto err;
       }
       if (strcmp(cc_ntor_tok->args[0], "0") &&
@@ -1065,7 +1066,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
         goto err;
       }
       if (strcmp(ed_cert_tok->object_type, "ED25519 CERT")) {
-        log_warn(LD_DIR, "Wrong object type on identity-ed25519 in decriptor");
+        log_warn(LD_DIR, "Wrong object type on identity-ed25519 "
+                         "in descriptor");
         goto err;
       }
 

@@ -374,7 +374,7 @@ process_get_protocol(const process_t *process)
   return process->protocol;
 }
 
-/** Set opague pointer to data.  This function allows you to store a pointer to
+/** Set opaque pointer to data.  This function allows you to store a pointer to
  * your own data in the given process. Use <b>process_get_data()</b> in the
  * various callback functions to retrieve the data again.
  *

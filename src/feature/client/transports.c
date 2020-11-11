@@ -16,7 +16,7 @@
  * managed proxies that are still unconfigured.
  *
  * In every run_scheduled_event() tick, we attempt to launch and then
- * configure the unconfiged managed proxies, using the configuration
+ * configure the unconfigured managed proxies, using the configuration
  * protocol defined in the 180_pluggable_transport.txt proposal. A
  * managed proxy might need several ticks to get fully configured.
  *
@@ -71,7 +71,7 @@
  *
  * We then start parsing torrc again.
  *
- * Everytime we encounter a transport line using a managed proxy that
+ * Every time we encounter a transport line using a managed proxy that
  * was around before the config read, we cleanse that proxy from the
  * removal mark.  We also toggle the <b>check_if_restarts_needed</b>
  * flag, so that on the next <b>pt_configure_remaining_proxies</b>

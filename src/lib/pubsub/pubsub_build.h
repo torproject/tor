@@ -55,7 +55,7 @@ void pubsub_builder_free_(pubsub_builder_t *);
 
 /**
  * Create a pubsub connector that a single subsystem will use to
- * register its messages.  The main-init code does this during susbsystem
+ * register its messages.  The main-init code does this during subsystem
  * initialization.
  */
 struct pubsub_connector_t *pubsub_connector_for_subsystem(pubsub_builder_t *,

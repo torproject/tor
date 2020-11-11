@@ -342,7 +342,7 @@ entry_guard_get_pathbias_state(entry_guard_t *guard)
 
 HANDLE_IMPL(entry_guard, entry_guard_t, ATTR_UNUSED STATIC)
 
-/** Return an interval betweeen 'now' and 'max_backdate' seconds in the past,
+/** Return an interval between 'now' and 'max_backdate' seconds in the past,
  * chosen uniformly at random.  We use this before recording persistent
  * dates, so that we aren't leaking exactly when we recorded it.
  */
@@ -3359,7 +3359,7 @@ get_guard_state_for_bridge_desc_fetch(const char *digest)
   }
 
   /* Update the guard last_tried_to_connect time since it's checked by the
-   * guard susbsystem. */
+   * guard subsystem. */
   guard->last_tried_to_connect = approx_time();
 
   /* Create the guard state */

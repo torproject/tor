@@ -4,7 +4,7 @@
 /**
  * \file hs_ident.h
  * \brief Header file containing circuit and connection identifier data for
- *        the whole HS subsytem.
+ *        the whole HS subsystem.
  *
  * \details
  * This interface is used to uniquely identify a hidden service on a circuit

@@ -113,7 +113,7 @@ clear_waitpid_callback(waitpid_callback_t *ent)
   tor_free(ent);
 }
 
-/** Helper: find the callack for <b>pid</b>; if there is one, run it,
+/** Helper: find the callback for <b>pid</b>; if there is one, run it,
  * reporting the exit status as <b>status</b>. */
 static void
 notify_waitpid_callback_by_pid(pid_t pid, int status)

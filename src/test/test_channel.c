@@ -729,7 +729,7 @@ test_channel_inbound_cell(void *arg)
   tt_int_op(chan->reason_for_closing, OP_EQ, CHANNEL_CLOSE_REQUESTED);
   tt_int_op(test_close_called, OP_EQ, old_count + 1);
 
-  /* This closes the channe so it calls in the scheduler, make sure of it. */
+  /* This closes the channel so it calls in the scheduler, make sure of it. */
   old_count = test_releases_count;
   chan_test_finish_close(chan);
   tt_int_op(test_releases_count, OP_EQ, old_count + 1);

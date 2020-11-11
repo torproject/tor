@@ -247,7 +247,7 @@ routerstatus_parse_guardfraction(const char *guardfraction_str,
 
   tor_assert(bool_eq(vote, vote_rs));
 
-  /* If this info comes from a consensus, but we should't apply
+  /* If this info comes from a consensus, but we shouldn't apply
      guardfraction, just exit. */
   if (is_consensus && !should_apply_guardfraction(NULL)) {
     return 0;

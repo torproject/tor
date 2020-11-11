@@ -6,7 +6,7 @@ If you run `make`, two .a archives will be built, similar to djb's curve25519
 code. Alternatively, read on:
 
 The C implementation is contained within curve25519-donna.c. It has no external
-dependancies and is BSD licenced. You can copy/include/link it directly in with
+dependencies and is BSD licenced. You can copy/include/link it directly in with
 your program. Recommended C flags: -O2
 
 The x86-64 bit implementation is contained within curve25519-donna-x86-64.c and

@@ -224,7 +224,7 @@ tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
 #define TOR_ADDR_BUF_LEN 48
 
 /** Length of a buffer containing an IP address along with a port number and
- * a seperating colon.
+ * a separating colon.
  *
  * This allows enough space for
  *   "[ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]:12345",

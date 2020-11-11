@@ -3,7 +3,7 @@
 
 /**
  * \file hs_config.h
- * \brief Header file containing configuration ABI/API for the HS subsytem.
+ * \brief Header file containing configuration ABI/API for the HS subsystem.
  **/
 
 #ifndef TOR_HS_CONFIG_H

@@ -1691,7 +1691,7 @@ launch_one_resolve(const char *address, uint8_t query_type,
       log_warn(LD_BUG, "Called with PTR query and unexpected address family");
     break;
   default:
-    log_warn(LD_BUG, "Called with unexpectd query type %d", (int)query_type);
+    log_warn(LD_BUG, "Called with unexpected query type %d", (int)query_type);
     break;
   }
 

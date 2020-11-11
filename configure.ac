@@ -1501,7 +1501,7 @@ dnl These cflags add bunches of branches, and we haven't been able to
 dnl persuade ourselves that they're suitable for code that needs to be
 dnl constant time.
 AC_SUBST(CFLAGS_BUGTRAP)
-dnl These cflags are variant ones sutable for code that needs to be
+dnl These cflags are variant ones suitable for code that needs to be
 dnl constant-time.
 AC_SUBST(CFLAGS_CONSTTIME)
 

@@ -817,7 +817,7 @@ hs_circ_service_intro_has_opened(hs_service_t *service,
   tor_assert(desc);
   tor_assert(circ);
 
-  /* Cound opened circuits that have sent ESTABLISH_INTRO cells or are already
+  /* Count opened circuits that have sent ESTABLISH_INTRO cells or are already
    * established introduction circuits */
   num_intro_circ = count_opened_desc_intro_point_circuits(service, desc);
   num_needed_circ = service->config.num_intro_points;

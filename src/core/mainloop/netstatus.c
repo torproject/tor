@@ -72,7 +72,7 @@ note_user_activity(time_t now)
 }
 
 /**
- * Change the time at which "user activitiy" was last seen to <b>now</b>.
+ * Change the time at which "user activity" was last seen to <b>now</b>.
  *
  * Unlike note_user_actity, this function sets the time without checking
  * whether it is in the past, and without causing any rescan of periodic events

@@ -54,7 +54,7 @@ enum path_state_t {
     /** Did any SOCKS streams or hidserv introductions actually succeed on
       * this circuit?
       *
-      * If any streams detatch/fail from this circuit, the code transitions
+      * If any streams detach/fail from this circuit, the code transitions
       * the circuit back to PATH_STATE_USE_ATTEMPTED to ensure we probe. See
       * pathbias_mark_use_rollback() for that.
       */

@@ -1475,7 +1475,7 @@ get_my_roles(const or_options_t *options)
 
   /* We also consider tor to have the role of a client if the ControlPort is
    * set because a lot of things can be done over the control port which
-   * requires tor to have basic functionnalities. */
+   * requires tor to have basic functionalities. */
   int is_client = options_any_client_port_set(options) ||
                   options->ControlPort_set ||
                   options->OwningControllerFD != UINT64_MAX;

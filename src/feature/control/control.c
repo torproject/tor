@@ -280,7 +280,7 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
 #define MAX_COMMAND_LINE_LENGTH (1024*1024)
 
 /** Wrapper around peek_buf_has_control0 command: presents the same
- * interface as that underlying functions, but takes a connection_t intead of
+ * interface as that underlying functions, but takes a connection_t instead of
  * a buf_t.
  */
 static int

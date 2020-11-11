@@ -163,7 +163,7 @@ crypto_dh_init_openssl(void)
 
 /** Number of bits to use when choosing the x or y value in a Diffie-Hellman
  * handshake.  Since we exponentiate by this value, choosing a smaller one
- * lets our handhake go faster.
+ * lets our handshake go faster.
  */
 #define DH_PRIVATE_KEY_BITS 320
 

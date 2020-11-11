@@ -2126,7 +2126,7 @@ tor_addr_port_copy(tor_addr_port_t *dest,
   memcpy(dest, source, sizeof(tor_addr_port_t));
 }
 
-/** Return true if <b>string</b> represents a valid IPv4 adddress in
+/** Return true if <b>string</b> represents a valid IPv4 address in
  * 'a.b.c.d' form.
  */
 int

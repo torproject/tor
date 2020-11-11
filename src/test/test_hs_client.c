@@ -1486,7 +1486,7 @@ test_purge_ephemeral_client_auth(void *arg)
   MOCK(get_options, mock_get_options);
   MOCK(write_str_to_file, mock_write_str_to_file);
 
-  /* Boggus directory so when we try to write the permanent client
+  /* Bogus directory so when we try to write the permanent client
    * authorization data to disk, we don't fail. See
    * store_permanent_client_auth_credentials() for more details. */
   mocked_options.ClientOnionAuthDir = tor_strdup("auth_dir");

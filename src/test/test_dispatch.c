@@ -135,7 +135,7 @@ test_dispatch_simple(void *arg)
   tor_free(recv2_received);
 }
 
-/* Construct a dispatch_t with a message and no reciever; make sure that it
+/* Construct a dispatch_t with a message and no receiver; make sure that it
  * gets dropped properly. */
 static void
 test_dispatch_no_recipient(void *arg)

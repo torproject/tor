@@ -194,7 +194,7 @@ typedef struct subsys_fns_t {
 
   /**
    * Return a list of metrics store of this subsystem. This is called
-   * everytime a request arrives on the MetricsPort.
+   * every time a request arrives on the MetricsPort.
    *
    * The list MUST contain metrics_store_t object and contains entries so it
    * can be formatted for the metrics port.

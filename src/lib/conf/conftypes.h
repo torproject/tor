@@ -273,7 +273,7 @@ typedef struct config_deprecation_t {
 #endif /* !defined(COCCI) */
 
 /**
- * Validation function: verify whether a configuation object is well-formed
+ * Validation function: verify whether a configuration object is well-formed
  * and consistent.
  *
  * On success, return 0.  On failure, set <b>msg_out</b> to a newly allocated

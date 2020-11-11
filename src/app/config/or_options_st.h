@@ -1041,7 +1041,7 @@ struct or_options_t {
   /** Maximum allowed burst of circuits. Reaching that value, the address is
    * detected as malicious and a defense might be used. */
   int DoSCircuitCreationBurst;
-  /** When an address is marked as malicous, what defense should be used
+  /** When an address is marked as malicious, what defense should be used
    * against it. See the dos_cc_defense_type_t enum. */
   int DoSCircuitCreationDefenseType;
   /** For how much time (in seconds) the defense is applicable for a malicious

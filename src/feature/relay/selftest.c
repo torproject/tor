@@ -174,7 +174,7 @@ router_should_check_reachability(int test_or, int test_dir)
 #define SELF_EXCLUDED_WARN_INTERVAL 3600
       static ratelim_t warning_limit=RATELIM_INIT(SELF_EXCLUDED_WARN_INTERVAL);
       log_fn_ratelim(&warning_limit, LOG_WARN, LD_CIRC,
-                 "Can't peform self-tests for this relay: we have "
+                 "Can't perform self-tests for this relay: we have "
                  "listed ourself in ExcludeNodes, and StrictNodes is set. "
                  "We cannot learn whether we are usable, and will not "
                  "be able to advertise ourself.");

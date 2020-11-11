@@ -1991,7 +1991,7 @@ circuit_purpose_is_hidden_service(uint8_t purpose)
   return 0;
 }
 
-/** Retrun true iff the given circuit is an HS client circuit. */
+/** Return true iff the given circuit is an HS client circuit. */
 bool
 circuit_purpose_is_hs_client(const uint8_t purpose)
 {
@@ -1999,7 +1999,7 @@ circuit_purpose_is_hs_client(const uint8_t purpose)
           purpose <= CIRCUIT_PURPOSE_C_HS_MAX_);
 }
 
-/** Retrun true iff the given circuit is an HS service circuit. */
+/** Return true iff the given circuit is an HS service circuit. */
 bool
 circuit_purpose_is_hs_service(const uint8_t purpose)
 {
@@ -2007,14 +2007,14 @@ circuit_purpose_is_hs_service(const uint8_t purpose)
           purpose <= CIRCUIT_PURPOSE_S_HS_MAX_);
 }
 
-/** Retrun true iff the given circuit is an HS Vanguards circuit. */
+/** Return true iff the given circuit is an HS Vanguards circuit. */
 bool
 circuit_purpose_is_hs_vanguards(const uint8_t purpose)
 {
   return (purpose == CIRCUIT_PURPOSE_HS_VANGUARDS);
 }
 
-/** Retrun true iff the given circuit is an HS v2 circuit. */
+/** Return true iff the given circuit is an HS v2 circuit. */
 bool
 circuit_is_hs_v2(const circuit_t *circ)
 {
@@ -2022,7 +2022,7 @@ circuit_is_hs_v2(const circuit_t *circ)
           (CONST_TO_ORIGIN_CIRCUIT(circ)->rend_data != NULL));
 }
 
-/** Retrun true iff the given circuit is an HS v3 circuit. */
+/** Return true iff the given circuit is an HS v3 circuit. */
 bool
 circuit_is_hs_v3(const circuit_t *circ)
 {

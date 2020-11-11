@@ -44,7 +44,7 @@ tor_disable_debugger_attach(void)
 {
   int r = -1;
   log_debug(LD_CONFIG,
-            "Attemping to disable debugger attachment to Tor for "
+            "Attempting to disable debugger attachment to Tor for "
             "unprivileged users.");
 #if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) \
   && defined(HAVE_PRCTL) && defined(PR_SET_DUMPABLE)

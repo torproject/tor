@@ -18,7 +18,7 @@
 #include "test/test.h"
 
 /**
- * This struct holds the various informations that are needed for router
+ * This struct holds the various information that are needed for router
  * comparison. Each router in the test function has one, and they are all
  * put in a global digestmap, router_properties
  */

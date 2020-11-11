@@ -56,7 +56,7 @@ test_v1_record_digest(void *arg)
   circ = TO_CIRCUIT(or_circ);
 
   /* The package window has to be a multiple of CIRCWINDOW_INCREMENT minus 1
-   * in order to catched the CIRCWINDOW_INCREMENT-nth cell. Try something that
+   * in order to catch the CIRCWINDOW_INCREMENT-nth cell. Try something that
    * shouldn't be noted. */
   circ->package_window = CIRCWINDOW_INCREMENT;
   sendme_record_cell_digest_on_circ(circ, NULL);

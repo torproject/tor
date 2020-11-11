@@ -689,7 +689,7 @@ static void
 test_consdiffmgr_cleanup_bad_valid_after(void *arg)
 {
   /* This will seem cleanable, but isn't, because its valid-after time is
-   * misformed. */
+   * malformed. */
 
   (void)arg;
   config_line_t *labels = NULL;

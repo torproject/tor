@@ -17,7 +17,7 @@
 /** Method used to resolved an address. In other words, how was the address
  * discovered by tor. */
 typedef enum {
-  /* Default value. Indiate that no method found the address. */
+  /* Default value. Indicate that no method found the address. */
   RESOLVED_ADDR_NONE              = 0,
   /* Found from the "Address" configuration option. */
   RESOLVED_ADDR_CONFIGURED        = 1,

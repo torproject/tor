@@ -713,7 +713,7 @@ test_address_udp_socket_trick_blackbox(void *arg)
 
 #else /* !(0) */
   /* Both of the blackbox test cases fail horribly if:
-   *  * The host has no external addreses.
+   *  * The host has no external addresses.
    *  * There are multiple interfaces with either AF_INET or AF_INET6.
    *  * The last address isn't the one associated with the default route.
    *

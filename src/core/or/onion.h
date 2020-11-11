@@ -50,7 +50,7 @@ typedef struct extend_cell_t {
   tor_addr_port_t orport_ipv4;
   /** An IPv6 address and port for the node we're connecting to. */
   tor_addr_port_t orport_ipv6;
-  /** Identity fingerprint of the node we're conecting to.*/
+  /** Identity fingerprint of the node we're connecting to.*/
   uint8_t node_id[DIGEST_LEN];
   /** Ed25519 public identity key. Zero if not set. */
   struct ed25519_public_key_t ed_pubkey;

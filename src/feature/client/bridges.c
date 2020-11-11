@@ -934,7 +934,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       if (!from_cache) {
         /* This schedules the re-fetch at a constant interval, which produces
          * a pattern of bridge traffic. But it's better than trying all
-         * configured briges several times in the first few minutes. */
+         * configured bridges several times in the first few minutes. */
         download_status_reset(&bridge->fetch_status);
       }
 

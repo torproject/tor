@@ -31,7 +31,7 @@ static void pubsub_adjmap_add(pubsub_adjmap_t *map,
                                 const pubsub_cfg_t *item);
 
 /**
- * Helper: contruct and return a new pubsub_adjacency_map from <b>cfg</b>.
+ * Helper: construct and return a new pubsub_adjacency_map from <b>cfg</b>.
  * Return NULL on error.
  **/
 static pubsub_adjmap_t *

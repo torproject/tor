@@ -3,7 +3,7 @@
 # To install this script, copy it to .git/hooks/pre-commit in local copy of
 # tor git repo and make sure it has permission to execute.
 #
-# This is pre-commit git hook script that prevents commiting your changeset if
+# This is pre-commit git hook script that prevents committing your changeset if
 # it fails our code formatting, changelog entry formatting, module include
 # rules, etc...
 

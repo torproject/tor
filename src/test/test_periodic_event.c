@@ -101,7 +101,7 @@ test_pe_launch(void *arg)
   periodic_events_on_new_options(options);
 
 #if 0
-  /* Lets make sure that before intialization, we can't scan the periodic
+  /* Lets make sure that before initialization, we can't scan the periodic
    * events list and launch them. Lets try by being a Client. */
   /* XXXX We make sure these events are initialized now way earlier than we
    * did before. */

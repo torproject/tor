@@ -482,7 +482,7 @@ test_desc_reupload_logic(void *arg)
    *  1) Upload descriptor to HSDirs
    *     CHECK that previous_hsdirs list was populated.
    *  2) Then call router_dir_info_changed() without an HSDir set change.
-   *     CHECK that no reuplod occurs.
+   *     CHECK that no reupload occurs.
    *  3) Now change the HSDir set, and call dir_info_changed() again.
    *     CHECK that reupload occurs.
    *  4) Finally call service_desc_schedule_upload().

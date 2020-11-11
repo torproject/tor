@@ -32,7 +32,7 @@
  *
  * NOTE: For now, the separation between channels and specialized channels
  * (like channeltls) is not that well defined. So the channeltls layer calls
- * channel_process_cell() which originally comes from the connection subsytem.
+ * channel_process_cell() which originally comes from the connection subsystem.
  * This should be hopefully be fixed with #23993.
  *
  * For *outbound* cells, the entry point is: channel_write_packed_cell().
@@ -2387,7 +2387,7 @@ channel_is_better(channel_t *a, channel_t *b)
  * Get a channel to extend a circuit.
  *
  * Given the desired relay identity, pick a suitable channel to extend a
- * circuit to the target IPv4 or IPv6 address requsted by the client. Search
+ * circuit to the target IPv4 or IPv6 address requested by the client. Search
  * for an existing channel for the requested endpoint. Make sure the channel
  * is usable for new circuits, and matches one of the target addresses.
  *

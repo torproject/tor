@@ -391,7 +391,7 @@ connection_ext_or_auth_handle_client_hash(connection_t *conn)
 }
 
 /** Handle data from <b>or_conn</b> received on Extended ORPort.
- *  Return -1 on error. 0 on unsufficient data. 1 on correct. */
+ *  Return -1 on error. 0 on insufficient data. 1 on correct. */
 static int
 connection_ext_or_auth_process_inbuf(or_connection_t *or_conn)
 {

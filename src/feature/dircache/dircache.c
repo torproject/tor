@@ -735,7 +735,7 @@ digest_list_contains_best_consensus(consensus_flavor_t flavor,
 typedef struct {
   /** name of the flavor to retrieve. */
   char *flavor;
-  /** flavor to retrive, as enum. */
+  /** flavor to retrieve, as enum. */
   consensus_flavor_t flav;
   /** plus-separated list of authority fingerprints; see
    * client_likes_consensus(). Aliases the URL in the request passed to

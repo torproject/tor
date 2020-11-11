@@ -3,7 +3,7 @@
 
 /**
  * \file test_metrics.c
- * \brief Test lib/metrics and feature/metrics functionnalities
+ * \brief Test lib/metrics and feature/metrics functionalities
  */
 
 #define CONFIG_PRIVATE
@@ -233,7 +233,7 @@ test_store(void *arg)
   tt_assert(entry);
   metrics_store_entry_add_label(entry, TEST_METRICS_ENTRY_LABEL_2);
 
-  /* Make sure _both_ entires are there. */
+  /* Make sure _both_ entries are there. */
   const smartlist_t *entries =
     metrics_store_get_all(store, TEST_METRICS_ENTRY_NAME);
   tt_assert(entries);

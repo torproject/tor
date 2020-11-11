@@ -491,7 +491,7 @@ subtest_halfstream_insertremove(int num)
   entryconn = fake_entry_conn(circ, 23);
   edgeconn = ENTRY_TO_EDGE_CONN(entryconn);
 
-  /* Explicity test all operations on an absent stream list */
+  /* Explicitly test all operations on an absent stream list */
   tt_int_op(connection_half_edge_is_valid_data(circ->half_streams,
             23), OP_EQ, 0);
   tt_int_op(connection_half_edge_is_valid_connected(circ->half_streams,
@@ -570,7 +570,7 @@ subtest_halfstream_insertremove(int num)
   }
   tt_int_op(smartlist_len(circ->half_streams), OP_EQ, 0);
 
-  /* Explicity test all operations on an empty stream list */
+  /* Explicitly test all operations on an empty stream list */
   tt_int_op(connection_half_edge_is_valid_data(circ->half_streams,
             23), OP_EQ, 0);
   tt_int_op(connection_half_edge_is_valid_connected(circ->half_streams,

@@ -891,7 +891,7 @@ icdf_genpareto(double p, double mu, double sigma, double xi)
 
 /**
  * Compute the inverse of the SF of the GeneralizedPareto(mu, sigma,
- * xi) distribution.  Ill-conditioned for p near 1; conditon number is
+ * xi) distribution.  Ill-conditioned for p near 1; condition number is
  *
  *      -xi/(1 - p^{-xi})
  */
@@ -1000,7 +1000,7 @@ sample_uniform_interval(double p0, double a, double b)
      * since if we treat subnormals as having an implicit
      * zero bit before the `binary' point, their exponents
      * are all the same.  There is at most one carry/borrow
-     * bit, which can always be acommodated either in a
+     * bit, which can always be accommodated either in a
      * subnormal, or, at largest, in the implicit one bit
      * of a normal.
      *

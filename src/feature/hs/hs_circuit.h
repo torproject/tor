@@ -3,7 +3,7 @@
 
 /**
  * \file hs_circuit.h
- * \brief Header file containing circuit data for the whole HS subsytem.
+ * \brief Header file containing circuit data for the whole HS subsystem.
  **/
 
 #ifndef TOR_HS_CIRCUIT_H

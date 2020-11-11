@@ -127,7 +127,7 @@ MOCK_DECL(unsigned int, circuitmux_num_cells, (circuitmux_t *cmux));
 unsigned int circuitmux_num_circuits(circuitmux_t *cmux);
 unsigned int circuitmux_num_active_circuits(circuitmux_t *cmux);
 
-/* Debuging interface - slow. */
+/* Debugging interface - slow. */
 int64_t circuitmux_count_queued_destroy_cells(const channel_t *chan,
                                               const circuitmux_t *cmux);
 

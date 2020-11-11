@@ -70,7 +70,7 @@ LINE_OBVIOUSNESS_LIMIT = 4
 # Maximum line width.  This includes a terminating newline character.
 #
 # (This is the maximum before encoding, so that if the the operating system
-# uses multiple characers to encode newline, that's still okay.)
+# uses multiple characters to encode newline, that's still okay.)
 LINE_WIDTH=80
 
 class Problem(Exception):

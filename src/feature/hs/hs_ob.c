@@ -120,7 +120,7 @@ get_onion_public_key(const char *value, ed25519_public_key_t *pkey_out)
   }
 
   /* We don't want the .onion so we add 2 because size - 1 is copied with
-   * strlcpy() in order to accomodate the NUL byte and sizeof() counts the NUL
+   * strlcpy() in order to accommodate the NUL byte and sizeof() counts the NUL
    * byte so we need to remove them from the equation. */
   strlcpy(address, value, strlen(value) - sizeof(".onion") + 2);
 
@@ -264,10 +264,10 @@ hs_ob_parse_config_file(hs_service_config_t *config)
 
 /** Compute all possible subcredentials for every onion master key in the given
  * service config object. subcredentials_out is allocated and set as an
- * continous array containing all possible values.
+ * continuous array containing all possible values.
  *
  * On success, return the number of subcredential put in the array which will
- * correspond to an arry of size: n * DIGEST256_LEN where DIGEST256_LEN is the
+ * correspond to an array of size: n * DIGEST256_LEN where DIGEST256_LEN is the
  * length of a single subcredential.
  *
  * If the given configuration object has no OB master keys configured, 0 is
@@ -300,7 +300,7 @@ compute_subcredentials(const hs_service_t *service,
   /* Time to build all the subcredentials for each time period: two for each
    * instance descriptor plus three for the onionbalance frontend service: the
    * previous one (-1), the current one (0) and the next one (1) for each
-   * configured key in order to accomodate client and service consensus skew.
+   * configured key in order to accommodate client and service consensus skew.
    *
    * If the client consensus after_time is at 23:00 but the service one is at
    * 01:00, the client will be using the previous time period where the
@@ -356,9 +356,10 @@ compute_subcredentials(const hs_service_t *service,
  *  If we are not an Onionbalance instance or we are not ready to do so, this
  *  is a NOP.
  *
- *  This function is called everytime we build a new descriptor. That's because
- *  we want our Onionbalance keys to always use up-to-date subcredentials both
- *  for the instance (ourselves) and for the onionbalance frontend.
+ *  This function is called every time we build a new descriptor. That's
+ *  because we want our Onionbalance keys to always use up-to-date
+ *  subcredentials both for the instance (ourselves) and for the onionbalance
+ *  frontend.
  */
 void
 hs_ob_refresh_keys(hs_service_t *service)

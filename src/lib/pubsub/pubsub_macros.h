@@ -135,7 +135,7 @@
 #include "lib/pubsub/pubsub_flags.h"
 #include "lib/pubsub/pubsub_publish.h"
 
-/* Implemenation notes:
+/* Implementation notes:
  *
  * For a messagename "foo", the DECLARE_MESSAGE*() macros must declare:
  *

@@ -96,7 +96,7 @@ variables:
     - if [ "$CHUTNEY" = yes ]; then git clone --depth 1 https://git.torproject.org/chutney.git ;  export CHUTNEY_PATH="$(pwd)/chutney"; fi
     - if [ "$TRACING" = yes ]; then apt install liblttng-ust-dev; fi
 
-# Minmal check on debian: just make, make check.
+# Minimal check on debian: just make, make check.
 #
 debian-minimal:
   image: debian:stable

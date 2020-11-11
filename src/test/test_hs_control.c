@@ -619,7 +619,7 @@ test_hs_control_store_permanent_creds(void *arg)
   tt_assert(creds_file_str);
   tt_str_op(creds_file_str, OP_EQ,
          "2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd:descriptor:"
-         /* This is the base32 represenation of the base64 iJ1t... key above */
+         /* base32 representation of the base64 iJ1t... key above */
          "x25519:rcow3dfavmyanyqvhwnvnmfdqw34ydtrgv7jnelmqs4wi4uuxrca");
 
   tor_free(args);
@@ -643,7 +643,7 @@ test_hs_control_store_permanent_creds(void *arg)
   tt_assert(creds_file_str);
   tt_str_op(creds_file_str, OP_EQ,
          "2fvhjskjet3n5syd6yfg5lhvwcs62bojmthr35ko5bllr3iqdb4ctdyd:descriptor:"
-         /* This is the base32 represenation of the base64 UDRv... key above */
+         /* base32 representation of the base64 UDRv... key above */
          "x25519:ka2g6zf33qti2ecexpbx4stan3nsu3sijbiqm4t2rwctigxajnpq");
 
   /* Now for our next act!!! Actually get the HS client subsystem to parse the

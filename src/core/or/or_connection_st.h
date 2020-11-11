@@ -31,7 +31,7 @@ struct or_connection_t {
   /** This is the ClientHash value we expect to receive from the
    *  client during the Extended ORPort authentication protocol. We
    *  compute it upon receiving the ClientNoce from the client, and we
-   *  compare it with the acual ClientHash value sent by the
+   *  compare it with the actual ClientHash value sent by the
    *  client. */
   char *ext_or_auth_correct_client_hash;
   /** String carrying the name of the pluggable transport
@@ -74,7 +74,7 @@ struct or_connection_t {
   unsigned int is_outgoing:1;
   unsigned int proxy_type:3; /**< One of PROXY_NONE...PROXY_HAPROXY */
   unsigned int wide_circ_ids:1;
-  /** True iff a failure on this connection indicates a posssible
+  /** True iff a failure on this connection indicates a possible
    * bootstrapping problem.  We set this as true if we notice that this
    * connection could handle a pending origin circuit, or if we launch it to
    * handle an origin circuit. */
