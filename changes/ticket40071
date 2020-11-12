@@ -1,0 +1,7 @@
+  o Minor bugfixes (relay, address):
+    - Don't trigger an IP change if no new valid IP can be found. Fixes bug
+      40071; bugfix on 0.4.5.1-alpha.
+    - When attempting to discover our IP, don't launch a descriptor fetch
+      anymore but rather a simple test circuit since the address discovery is
+      through the NETINFO cell now from the authorities. Fixes bug 40071; bugfix
+      on 0.4.5.1-alpha.
