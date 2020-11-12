@@ -948,7 +948,6 @@ connection_free_minimal(connection_t *conn)
     connection_or_clear_identity(TO_OR_CONN(conn));
   }
   if (conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR) {
-    connection_or_remove_from_ext_or_id_map(TO_OR_CONN(conn));
     tor_free(TO_OR_CONN(conn)->ext_or_conn_id);
     tor_free(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash);
     tor_free(TO_OR_CONN(conn)->ext_or_transport);
@@ -5824,7 +5823,6 @@ connection_free_all(void)
 
   /* Unlink everything from the identity map. */
   connection_or_clear_identity_map();
-  connection_or_clear_ext_or_id_map();
 
   /* Clear out our list of broken connections */
   clear_broken_connection_map(0);
