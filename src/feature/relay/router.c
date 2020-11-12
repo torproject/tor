@@ -386,7 +386,8 @@ MOCK_IMPL(crypto_pk_t *,
 get_server_identity_key,(void))
 {
   tor_assert(server_identitykey);
-  tor_assert(server_mode(get_options()));
+  tor_assert(server_mode(get_options()) ||
+             get_options()->command == CMD_KEY_EXPIRATION);
   assert_identity_keys_ok();
   return server_identitykey;
 }
@@ -398,7 +399,9 @@ get_server_identity_key,(void))
 int
 server_identity_key_is_set(void)
 {
-  return server_mode(get_options()) && server_identitykey != NULL;
+  return (server_mode(get_options()) ||
+          get_options()->command == CMD_KEY_EXPIRATION) &&
+         server_identitykey != NULL;
 }
 
 /** Set the current client identity key to <b>k</b>.
@@ -941,7 +944,7 @@ init_keys(void)
 
   /* OP's don't need persistent keys; just make up an identity and
    * initialize the TLS context. */
-  if (!server_mode(options)) {
+  if (!server_mode(options) && !(options->command == CMD_KEY_EXPIRATION)) {
     return init_keys_client();
   }
   if (init_keys_common() < 0)
