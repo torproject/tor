@@ -113,11 +113,16 @@ helper_setup_fake_routerlist(void)
   MOCK(router_descriptor_is_older_than,
        router_descriptor_is_older_than_replacement);
 
+  // Pick a time when these descriptors' certificates were valid.
+  update_approx_time(1603981036);
+
   /* Load all the test descriptors to the routerlist. */
   retval = router_load_routers_from_string(TEST_DESCRIPTORS,
                                            NULL, SAVED_IN_JOURNAL,
                                            NULL, 0, NULL);
   tt_int_op(retval, OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
+
+  update_approx_time(0); // this restores the regular approx_time behavior
 
   /* Sanity checking of routerlist and nodelist. */
   our_routerlist = router_get_routerlist();

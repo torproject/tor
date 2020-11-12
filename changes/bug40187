@@ -1,0 +1,5 @@
+  o Minor bugfixes (testing):
+    - Fix unit tests that used newly generated list of routers so that they
+      check them with respect to the date when they were generated, not
+      with respect to the current time.  Fixes bug 40187; bugfix on
+      0.4.5.1-alpha.
