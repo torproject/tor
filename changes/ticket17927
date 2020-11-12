@@ -1,0 +1,4 @@
+  o Minor features (performance, windows):
+    - Use SRWLocks to implement locking on Windows. Replaces the critical
+      section locking implementation with the faster SRWLocks available
+      since Windows Vista. Closes ticket 17927. Patch by Daniel Pinto.
