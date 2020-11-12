@@ -6855,9 +6855,15 @@ test_config_duplicate_orports(void *arg)
   port_parse_config(ports, config_port, "OR", CONN_TYPE_OR_LISTENER, "[::]",
                     0, CL_PORT_SERVER_OPTIONS);
 
-  // There should be three ports at this point.
-  tt_int_op(smartlist_len(ports), OP_EQ, 3);
+  /* There should be 4 ports at this point that is:
+   *    - 0.0.0.0:9050
+   *    - [::]:9050
+   *    - [::1]:9050
+   *    - [::1]:9050
+   */
+  tt_int_op(smartlist_len(ports), OP_EQ, 4);
 
+  /* This will remove the [::] and the extra [::1]. */
   remove_duplicate_orports(ports);
 
   // The explicit IPv6 port should have replaced the implicit IPv6 port.
@@ -6865,6 +6871,33 @@ test_config_duplicate_orports(void *arg)
 
  done:
   SMARTLIST_FOREACH(ports,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_free(ports);
+  config_free_lines(config_port);
+}
+
+static void
+test_config_multifamily_port(void *arg)
+{
+  (void) arg;
+
+  config_line_t *config_port = NULL;
+  smartlist_t *ports = smartlist_new();
+
+  config_line_append(&config_port, "SocksPort", "9050");
+  config_line_append(&config_port, "SocksPort", "[::1]:9050");
+
+  // Parse IPv4, then IPv6.
+  port_parse_config(ports, config_port, "SOCKS", CONN_TYPE_AP_LISTENER,
+                    "0.0.0.0", 9050, 0);
+
+  /* There should be 2 ports at this point that is:
+   *    - 0.0.0.0:9050
+   *    - [::1]:9050
+   */
+  tt_int_op(smartlist_len(ports), OP_EQ, 2);
+
+ done:
+  SMARTLIST_FOREACH(ports, port_cfg_t *, cfg, port_cfg_free(cfg));
   smartlist_free(ports);
   config_free_lines(config_port);
 }
@@ -6937,5 +6970,6 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(kvline_parse, 0),
   CONFIG_TEST(getinfo_config_names, 0),
   CONFIG_TEST(duplicate_orports, 0),
+  CONFIG_TEST(multifamily_port, 0),
   END_OF_TESTCASES
 };

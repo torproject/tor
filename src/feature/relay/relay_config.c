@@ -228,15 +228,16 @@ remove_duplicate_orports(smartlist_t *ports)
         continue;
       }
       /* Same address family and same port number, we have a match. */
-      if (!current->explicit_addr && next->explicit_addr &&
-          tor_addr_family(&current->addr) == tor_addr_family(&next->addr) &&
+      if (tor_addr_family(&current->addr) == tor_addr_family(&next->addr) &&
           current->port == next->port) {
         /* Remove current because next is explicitly set. */
         removing[i] = true;
-        char *next_str = tor_strdup(describe_relay_port(next));
-        log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
-                 describe_relay_port(current), next_str);
-        tor_free(next_str);
+        if (!current->explicit_addr && next->explicit_addr) {
+          char *next_str = tor_strdup(describe_relay_port(next));
+          log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
+                   describe_relay_port(current), next_str);
+          tor_free(next_str);
+        }
       }
     }
   }
