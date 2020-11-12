@@ -1,0 +1,4 @@
+  o Minor bugfixes (port configuration):
+    - Second non ORPort of a different family (ex: SocksPort [::1]:9050) was
+      ignored due to a logical configuration parsing error. Fixes bug 40183;
+      bugfix on 0.4.5.1-alpha.

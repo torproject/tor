@@ -5934,13 +5934,12 @@ port_parse_config(smartlist_t *out,
   char *unix_socket_path = NULL;
   port_cfg_t *cfg = NULL;
   bool addr_is_explicit = false;
-  int family = -1;
-
-  /* Parse default address. This can fail for Unix socket for instance so
-   * family can be -1 and the default_addr will be made UNSPEC. */
   tor_addr_t default_addr = TOR_ADDR_NULL;
+
+  /* Parse default address. This can fail for Unix socket so the default_addr
+   * will simply be made UNSPEC. */
   if (defaultaddr) {
-    family = tor_addr_parse(&default_addr, defaultaddr);
+    tor_addr_parse(&default_addr, defaultaddr);
   }
 
   /* If there's no FooPort, then maybe make a default one. */
@@ -6018,7 +6017,6 @@ port_parse_config(smartlist_t *out,
         port = 1;
     } else if (!strcasecmp(addrport, "auto")) {
       port = CFG_AUTO_PORT;
-      tor_assert(family >= 0);
       tor_addr_copy(&addr, &default_addr);
     } else if (!strcasecmpend(addrport, ":auto")) {
       char *addrtmp = tor_strndup(addrport, strlen(addrport)-5);
@@ -6035,17 +6033,11 @@ port_parse_config(smartlist_t *out,
          "9050" might be a valid address. */
       port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
       if (ok) {
-        tor_assert(family >= 0);
         tor_addr_copy(&addr, &default_addr);
       } else if (tor_addr_port_lookup(addrport, &addr, &ptmp) == 0) {
         if (ptmp == 0) {
           log_warn(LD_CONFIG, "%sPort line has address but no port", portname);
           goto err;
-        }
-        if (family != -1 && tor_addr_family(&addr) != family) {
-          /* This means we are parsing another ORPort family but we are
-           * attempting to find the default address' family ORPort. */
-          goto ignore;
         }
         port = ptmp;
         addr_is_explicit = true;
