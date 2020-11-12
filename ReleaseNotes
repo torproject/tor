@@ -2,6 +2,69 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.4.6 - 2020-11-12
+  Tor 0.4.4.6 is the second stable release in the 0.4.4.x series. It
+  backports fixes from later releases, including a fix for TROVE-2020-
+  005, a security issue that could be used, under certain cases, by an
+  adversary to observe traffic patterns on a limited number of circuits
+  intended for a different relay.
+
+  o Major bugfixes (security, backport from 0.4.5.1-alpha):
+    - When completing a channel, relays now check more thoroughly to
+      make sure that it matches any pending circuits before attaching
+      those circuits. Previously, address correctness and Ed25519
+      identities were not checked in this case, but only when extending
+      circuits on an existing channel. Fixes bug 40080; bugfix on
+      0.2.7.2-alpha. Resolves TROVE-2020-005.
+
+  o Minor features (directory authorities, backport from 0.4.5.1-alpha):
+    - Authorities now list a different set of protocols as required and
+      recommended. These lists have been chosen so that only truly
+      recommended and/or required protocols are included, and so that
+      clients using 0.2.9 or later will continue to work (even though
+      they are not supported), whereas only relays running 0.3.5 or
+      later will meet the requirements. Closes ticket 40162.
+    - Make it possible to specify multiple ConsensusParams torrc lines.
+      Now directory authority operators can for example put the main
+      ConsensusParams config in one torrc file and then add to it from a
+      different torrc file. Closes ticket 40164.
+
+  o Minor features (subprotocol versions, backport from 0.4.5.1-alpha):
+    - Tor no longer allows subprotocol versions larger than 63.
+      Previously version numbers up to UINT32_MAX were allowed, which
+      significantly complicated our code. Implements proposal 318;
+      closes ticket 40133.
+
+  o Minor features (tests, v2 onion services, backport from 0.4.5.1-alpha):
+    - Fix a rendezvous cache unit test that was triggering an underflow
+      on the global rend cache allocation. Fixes bug 40125; bugfix
+      on 0.2.8.1-alpha.
+    - Fix another rendezvous cache unit test that was triggering an
+      underflow on the global rend cache allocation. Fixes bug 40126;
+      bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.4.5.1-alpha):
+    - Fix compiler warnings that would occur when building with
+      "--enable-all-bugs-are-fatal" and "--disable-module-relay" at the
+      same time. Fixes bug 40129; bugfix on 0.4.4.1-alpha.
+    - Resolve a compilation warning that could occur in
+      test_connection.c. Fixes bug 40113; bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (logging, backport from 0.4.5.1-alpha):
+    - Remove a debug logging statement that uselessly spammed the logs.
+      Fixes bug 40135; bugfix on 0.3.5.0-alpha.
+
+  o Minor bugfixes (relay configuration, crash, backport from 0.4.5.1-alpha):
+    - Avoid a fatal assert() when failing to create a listener
+      connection for an address that was in use. Fixes bug 40073; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (v2 onion services, backport from 0.4.5.1-alpha):
+    - For HSFETCH commands on v2 onion services addresses, check the
+      length of bytes decoded, not the base32 length. Fixes bug 34400;
+      bugfix on 0.4.1.1-alpha. Patch by Neel Chauhan.
+
+
 Changes in version 0.4.4.5 - 2020-09-15
   Tor 0.4.4.5 is the first stable release in the 0.4.4.x series. This
   series improves our guard selection algorithms, adds v3 onion balance
