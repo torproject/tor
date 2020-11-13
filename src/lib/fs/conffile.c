@@ -23,6 +23,7 @@
 #include "lib/string/printf.h"
 
 #include <stdbool.h>
+#include <errno.h>
 
 static smartlist_t *config_get_file_list(const char *path,
                                          smartlist_t *opened_files);
@@ -68,6 +69,11 @@ expand_glob(const char *pattern, smartlist_t *opened_files)
 
   smartlist_t *matches = tor_glob(pattern);
   if (!matches) {
+    if (errno == EPERM) {
+      log_err(LD_CONFIG, "Sandbox is active, but the configuration pattern "
+              "\"%s\" listed with %%include would access files or folders not "
+              "allowed by it. Cannot proceed.", pattern);
+    }
     return NULL;
   }
 
