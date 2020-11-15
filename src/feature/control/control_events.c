@@ -1927,6 +1927,9 @@ rend_auth_type_to_string(rend_auth_type_t auth_type)
     case REND_STEALTH_AUTH:
       str = "STEALTH_AUTH";
       break;
+    case REND_V3_AUTH:
+      str = "REND_V3_AUTH";
+      break;
     default:
       str = "UNKNOWN";
   }

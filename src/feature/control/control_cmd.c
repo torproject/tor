@@ -33,6 +33,7 @@
 #include "feature/control/control_getinfo.h"
 #include "feature/control/control_proto.h"
 #include "feature/hs/hs_control.h"
+#include "feature/hs/hs_service.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
@@ -1653,7 +1654,8 @@ add_onion_helper_add_service(int hs_version,
                              add_onion_secret_key_t *pk,
                              smartlist_t *port_cfgs, int max_streams,
                              int max_streams_close_circuit, int auth_type,
-                             smartlist_t *auth_clients, char **address_out)
+                             smartlist_t *auth_clients,
+                             smartlist_t *auth_clients_v3, char **address_out)
 {
   hs_service_add_ephemeral_status_t ret;
 
@@ -1669,7 +1671,8 @@ add_onion_helper_add_service(int hs_version,
     break;
   case HS_VERSION_THREE:
     ret = hs_service_add_ephemeral(pk->v3, port_cfgs, max_streams,
-                                   max_streams_close_circuit, address_out);
+                                   max_streams_close_circuit,
+                                   auth_clients_v3, address_out);
     break;
   default:
     tor_assert_unreached();
@@ -1693,7 +1696,7 @@ get_detached_onion_services(void)
 }
 
 static const char *add_onion_keywords[] = {
-   "Port", "Flags", "MaxStreams", "ClientAuth", NULL
+   "Port", "Flags", "MaxStreams", "ClientAuth", "ClientAuthV3", NULL
 };
 static const control_cmd_syntax_t add_onion_syntax = {
   .min_args = 1, .max_args = 1,
@@ -1714,6 +1717,8 @@ handle_control_add_onion(control_connection_t *conn,
   smartlist_t *port_cfgs = smartlist_new();
   smartlist_t *auth_clients = NULL;
   smartlist_t *auth_created_clients = NULL;
+  smartlist_t *auth_clients_v3 = NULL;
+  smartlist_t *auth_clients_v3_str = NULL;
   int discard_pk = 0;
   int detach = 0;
   int max_streams = 0;
@@ -1758,6 +1763,7 @@ handle_control_add_onion(control_connection_t *conn,
       static const char *detach_flag = "Detach";
       static const char *max_s_close_flag = "MaxStreamsCloseCircuit";
       static const char *basicauth_flag = "BasicAuth";
+      static const char *v3auth_flag = "V3Auth";
       static const char *non_anonymous_flag = "NonAnonymous";
 
       smartlist_t *flags = smartlist_new();
@@ -1778,6 +1784,8 @@ handle_control_add_onion(control_connection_t *conn,
           max_streams_close_circuit = 1;
         } else if (!strcasecmp(flag, basicauth_flag)) {
           auth_type = REND_BASIC_AUTH;
+        } else if (!strcasecmp(flag, v3auth_flag)) {
+          auth_type = REND_V3_AUTH;
         } else if (!strcasecmp(flag, non_anonymous_flag)) {
           non_anonymous = 1;
         } else {
@@ -1821,6 +1829,20 @@ handle_control_add_onion(control_connection_t *conn,
       if (created) {
         smartlist_add(auth_created_clients, client);
       }
+    } else if (!strcasecmp(arg->key, "ClientAuthV3")) {
+      hs_service_authorized_client_t *client_v3 =
+                                       parse_authorized_client_key(arg->value);
+      if (!client_v3) {
+        goto out;
+      }
+
+      if (auth_clients_v3 == NULL) {
+        auth_clients_v3 = smartlist_new();
+        auth_clients_v3_str = smartlist_new();
+      }
+
+      smartlist_add(auth_clients_v3, client_v3);
+      smartlist_add(auth_clients_v3_str, tor_strdup(arg->value));
     } else {
       tor_assert_nonfatal_unreached();
       goto out;
@@ -1829,10 +1851,12 @@ handle_control_add_onion(control_connection_t *conn,
   if (smartlist_len(port_cfgs) == 0) {
     control_write_endreply(conn, 512, "Missing 'Port' argument");
     goto out;
-  } else if (auth_type == REND_NO_AUTH && auth_clients != NULL) {
+  } else if (auth_type == REND_NO_AUTH &&
+             (auth_clients != NULL && auth_clients_v3 != NULL)) {
     control_write_endreply(conn, 512, "No auth type specified");
     goto out;
-  } else if (auth_type != REND_NO_AUTH && auth_clients == NULL) {
+  } else if (auth_type != REND_NO_AUTH &&
+             (auth_clients == NULL && auth_clients_v3 == NULL)) {
     control_write_endreply(conn, 512, "No auth clients specified");
     goto out;
   } else if ((auth_type == REND_BASIC_AUTH &&
@@ -1841,6 +1865,15 @@ handle_control_add_onion(control_connection_t *conn,
               smartlist_len(auth_clients) > 16)) {
     control_write_endreply(conn, 512, "Too many auth clients");
     goto out;
+  } else if ((auth_type == REND_BASIC_AUTH ||
+              auth_type == REND_STEALTH_AUTH) && auth_clients_v3) {
+    control_write_endreply(conn, 512,
+                        "ClientAuthV3 does not support basic or stealth auth");
+    goto out;
+  } else if (auth_type == REND_V3_AUTH && auth_clients) {
+    control_write_endreply(conn, 512, "ClientAuth does not support v3 auth");
+    goto out;
+
   } else if (non_anonymous != rend_service_non_anonymous_mode_enabled(
                                                               get_options())) {
     /* If we failed, and the non-anonymous flag is set, Tor must be in
@@ -1869,10 +1902,14 @@ handle_control_add_onion(control_connection_t *conn,
     goto out;
   }
 
-  /* Hidden service version 3 don't have client authentication support so if
-   * ClientAuth was given, send back an error. */
+  /* We can't mix ClientAuth and Version 3 Onion Services, or ClientAuthV3 and
+   * Version 2. If that's the case, send back an error. */
   if (hs_version == HS_VERSION_THREE && auth_clients) {
     control_write_endreply(conn, 513, "ClientAuth not supported");
+    goto out;
+  }
+  if (hs_version == HS_VERSION_TWO && auth_clients_v3) {
+    control_write_endreply(conn, 513, "ClientAuthV3 not supported");
     goto out;
   }
 
@@ -1882,12 +1919,13 @@ handle_control_add_onion(control_connection_t *conn,
    * regardless of success/failure.
    */
   char *service_id = NULL;
-  int ret = add_onion_helper_add_service(hs_version, &pk, port_cfgs,
-                                         max_streams,
-                                         max_streams_close_circuit, auth_type,
-                                         auth_clients, &service_id);
+  int ret =
+      add_onion_helper_add_service(hs_version, &pk, port_cfgs, max_streams,
+                                   max_streams_close_circuit, auth_type,
+                                   auth_clients, auth_clients_v3, &service_id);
   port_cfgs = NULL; /* port_cfgs is now owned by the rendservice code. */
   auth_clients = NULL; /* so is auth_clients */
+  auth_clients_v3 = NULL; /* so is auth_clients_v3 */
   switch (ret) {
   case RSAE_OKAY:
   {
@@ -1917,6 +1955,11 @@ handle_control_add_onion(control_connection_t *conn,
                                 ac->client_name, encoded);
         memwipe(encoded, 0, strlen(encoded));
         tor_free(encoded);
+      });
+    }
+    if (auth_clients_v3_str) {
+      SMARTLIST_FOREACH(auth_clients_v3_str, char *, client_str, {
+        control_printf_midreply(conn, 250, "ClientAuthV3=%s", client_str);
       });
     }
 
@@ -1956,6 +1999,18 @@ handle_control_add_onion(control_connection_t *conn,
                       rend_authorized_client_free(ac));
     smartlist_free(auth_clients);
   }
+  if (auth_clients_v3) {
+    SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, ac,
+                      service_authorized_client_free(ac));
+    smartlist_free(auth_clients_v3);
+  }
+  if (auth_clients_v3_str) {
+    SMARTLIST_FOREACH(auth_clients_v3_str, char *, client_str,
+                      tor_free(client_str));
+    smartlist_free(auth_clients_v3_str);
+  }
+
+
   if (auth_created_clients) {
     // Do not free entries; they are the same as auth_clients
     smartlist_free(auth_created_clients);

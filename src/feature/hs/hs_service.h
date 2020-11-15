@@ -372,7 +372,8 @@ char *hs_service_lookup_current_desc(const ed25519_public_key_t *pk);
 hs_service_add_ephemeral_status_t
 hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
                          int max_streams_per_rdv_circuit,
-                         int max_streams_close_circuit, char **address_out);
+                         int max_streams_close_circuit,
+                         smartlist_t *auth_clients_v3, char **address_out);
 int hs_service_del_ephemeral(const char *address);
 
 /* Used outside of the HS subsystem by the control port command HSPOST. */
@@ -387,6 +388,15 @@ hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 void hs_service_dump_stats(int severity);
 void hs_service_circuit_cleanup_on_close(const circuit_t *circ);
+
+hs_service_authorized_client_t *
+parse_authorized_client_key(const char *key_str);
+
+void
+service_authorized_client_free_(hs_service_authorized_client_t *client);
+#define service_authorized_client_free(c) \
+  FREE_AND_NULL(hs_service_authorized_client_t, \
+                           service_authorized_client_free_, (c))
 
 #ifdef HS_SERVICE_PRIVATE
 
@@ -451,12 +461,6 @@ STATIC void service_descriptor_free_(hs_service_descriptor_t *desc);
 #define service_descriptor_free(d) \
   FREE_AND_NULL(hs_service_descriptor_t, \
                            service_descriptor_free_, (d))
-
-STATIC void
-service_authorized_client_free_(hs_service_authorized_client_t *client);
-#define service_authorized_client_free(c) \
-  FREE_AND_NULL(hs_service_authorized_client_t, \
-                           service_authorized_client_free_, (c))
 
 STATIC int
 write_address_to_file(const hs_service_t *service, const char *fname_);
