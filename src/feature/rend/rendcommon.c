@@ -548,6 +548,8 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
         ipos = ipos_encrypted;
         ipos_len = ipos_encrypted_len;
         break;
+      case REND_V3_AUTH:
+        break; /* v3 service, break. */
       default:
         log_warn(LD_REND|LD_BUG, "Unrecognized authorization type %d",
                  (int)auth_type);
