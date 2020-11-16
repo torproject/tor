@@ -1,0 +1,4 @@
+  o Major bugfixes (signing key):
+    - In the tor-gencert utility, give an informative error message if the
+      passphrase given in `--create-identity-key` is too short. Fixes bug
+      40189; bugfix on 0.2.0.1-alpha. Patch by Neel Chauhan.
