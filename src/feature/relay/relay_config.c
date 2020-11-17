@@ -227,6 +227,10 @@ remove_duplicate_orports(smartlist_t *ports)
       if (removing[j]) {
         continue;
       }
+      /* Skip non ORPorts. */
+      if (next->type != CONN_TYPE_OR_LISTENER) {
+        continue;
+      }
       /* Same address family and same port number, we have a match. */
       if (tor_addr_family(&current->addr) == tor_addr_family(&next->addr) &&
           current->port == next->port) {
