@@ -145,6 +145,9 @@ branch release-0.4.3
 branch maint-0.4.4
 branch release-0.4.4
 
+branch maint-0.4.5
+branch release-0.4.5
+
 branch master
 
 finish
