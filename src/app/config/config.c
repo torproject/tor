@@ -4485,6 +4485,25 @@ options_init_from_torrc(int argc, char **argv)
 
   if (config_line_find(cmdline_only_options, "--version")) {
     printf("Tor version %s.\n",get_version());
+    printf("Tor is running on %s with Libevent %s, "
+            "%s %s, Zlib %s, Liblzma %s, Libzstd %s and %s %s as libc.\n",
+            get_uname(),
+            tor_libevent_get_version_str(),
+            crypto_get_library_name(),
+            crypto_get_library_version_string(),
+            tor_compress_supports_method(ZLIB_METHOD) ?
+            tor_compress_version_str(ZLIB_METHOD) : "N/A",
+            tor_compress_supports_method(LZMA_METHOD) ?
+            tor_compress_version_str(LZMA_METHOD) : "N/A",
+            tor_compress_supports_method(ZSTD_METHOD) ?
+            tor_compress_version_str(ZSTD_METHOD) : "N/A",
+            tor_libc_get_name() ?
+            tor_libc_get_name() : "Unknown",
+            tor_libc_get_version_str());
+    printf("Tor compiled with %s version %s\n",
+            strcmp(COMPILER_VENDOR, "gnu") == 0?
+            COMPILER:COMPILER_VENDOR, COMPILER_VERSION);
+
     return 1;
   }
 
