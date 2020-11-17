@@ -114,7 +114,9 @@
 #define CIRCUIT_PURPOSE_S_HSDIR_POST 20
 #define CIRCUIT_PURPOSE_S_HS_MAX_ 20
 
-/** A testing circuit; not meant to be used for actual traffic. */
+/** A testing circuit; not meant to be used for actual traffic. It is used for
+ * bandwidth measurement, reachability test and address discovery from an
+ * authority using the NETINFO cell. */
 #define CIRCUIT_PURPOSE_TESTING 21
 /** A controller made this circuit and Tor should not use it. */
 #define CIRCUIT_PURPOSE_CONTROLLER 22

@@ -65,6 +65,9 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
+#include "core/or/circuitlist.h"
+#include "core/or/circuituse.h"
+#include "core/or/extendinfo.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
 #include "feature/control/control_events.h"
@@ -137,8 +140,6 @@ static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
                                               int with_annotations);
-static void launch_dummy_descriptor_download_as_needed(time_t now,
-                                   const or_options_t *options);
 
 /****************************************************************************/
 
@@ -2306,7 +2307,6 @@ update_all_descriptor_downloads(time_t now)
     return;
   update_router_descriptor_downloads(now);
   update_microdesc_downloads(now);
-  launch_dummy_descriptor_download_as_needed(now, get_options());
 }
 
 /** Clear all our timeouts for fetching v3 directory stuff, and then
@@ -2758,54 +2758,6 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
  done:
   smartlist_free(downloadable);
   smartlist_free(no_longer_old);
-}
-
-/** How often should we launch a server/authority request to be sure of getting
- * a guess for our IP? */
-/*XXXX+ this info should come from netinfo cells or something, or we should
- * do this only when we aren't seeing incoming data. see bug 652. */
-#define DUMMY_DOWNLOAD_INTERVAL (20*60)
-
-/** As needed, launch a dummy router descriptor fetch to see if our
- * address has changed. */
-static void
-launch_dummy_descriptor_download_as_needed(time_t now,
-                                           const or_options_t *options)
-{
-  static time_t last_dummy_download = 0;
-  bool have_addr;
-  tor_addr_t addr_out;
-
-  /* This dummy fetch only matter for relays. */
-  if (!server_mode(options)) {
-    return;
-  }
-
-  /* Lookup the address cache to learn if we have a good usable address. We
-   * still force relays to have an IPv4 so that alone is enough to learn if we
-   * need a lookup. In case we don't have one, we might want to attempt a
-   * dummy fetch to learn our address as a suggestion from an authority. */
-  have_addr = relay_find_addr_to_publish(options, AF_INET,
-                                         RELAY_FIND_ADDR_CACHE_ONLY,
-                                         &addr_out);
-
-  /* XXXX+ we could be smarter here; see notes on bug 652. */
-  /* If we're a server that doesn't have an address, we rely on directory
-   * fetches to learn when our address changes.  So if we haven't tried to get
-   * any routerdescs in a long time, try a dummy fetch now. */
-  if (!have_addr &&
-      last_descriptor_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
-      last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
-    last_dummy_download = now;
-    /* XX/teor - do we want an authority here, because they are less likely
-     * to give us the wrong address? (See #17782)
-     * I'm leaving the previous behaviour intact, because I don't like
-     * the idea of some relays contacting an authority every 20 minutes. */
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                                 ROUTER_PURPOSE_GENERAL, "authority.z",
-                                 PDS_RETRY_IF_NO_SERVERS,
-                                 DL_WANT_ANY_DIRSERVER);
-  }
 }
 
 /** Launch downloads for router status as needed. */

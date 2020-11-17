@@ -2071,7 +2071,9 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
 
   /* Tor requires a relay to have an IPv4 so bail if we can't find it. */
   if (!have_v4) {
-    log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
+    log_info(LD_CONFIG, "Don't know my address while generating descriptor. "
+                        "Launching circuit to authority to learn it.");
+    relay_addr_learn_from_dirauth();
     result = TOR_ROUTERINFO_ERROR_NO_EXT_ADDR;
     goto err;
   }
@@ -2679,8 +2681,21 @@ check_descriptor_ipaddress_changed(time_t now)
 
     /* Ignore returned value because we want to notice not only an address
      * change but also if an address is lost (current == UNSPEC). */
-    find_my_address(get_options(), family, LOG_INFO, &current, &method,
-                    &hostname);
+    bool found = find_my_address(get_options(), family, LOG_INFO, &current,
+                                 &method, &hostname);
+    if (!found) {
+      /* Address was possibly not found because it is simply not configured or
+       * discoverable. Fallback to our cache, which includes any suggestion
+       * sent by a trusted directory server. */
+      found = relay_find_addr_to_publish(get_options(), family,
+                                         RELAY_FIND_ADDR_CACHE_ONLY,
+                                         &current);
+    }
+
+    /* The "current" address might be UNSPEC meaning it was not discovered nor
+     * found in our current cache. If we had an address before and we have
+     * none now, we consider this an IP change since it appears the relay lost
+     * its address. */
 
     if (!tor_addr_eq(previous, &current)) {
       char *source;
