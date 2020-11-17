@@ -1,0 +1,5 @@
+  o Minor bugfixes (configuration, ports):
+    - Fix an issue where an ORPort was validated against other type of ports
+      when it should have been only checked against other ORPorts. This lead to
+      "DirPort auto" to be ignored and failing to be used. Fixes bug 40195;
+      bugfix on 0.4.5.1-alpha.
