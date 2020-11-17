@@ -134,7 +134,8 @@ hs_helper_build_intro_point(const ed25519_keypair_t *signing_kp, time_t now,
  * points are added. */
 static hs_descriptor_t *
 hs_helper_build_hs_desc_impl(unsigned int no_ip,
-                             const ed25519_keypair_t *signing_kp)
+                             const ed25519_keypair_t *signing_kp,
+                             uint64_t rev_counter)
 {
   int ret;
   int i;
@@ -161,7 +162,7 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
                     &signing_kp->pubkey, now, 3600,
                     CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(desc->plaintext_data.signing_key_cert);
-  desc->plaintext_data.revision_counter = 42;
+  desc->plaintext_data.revision_counter = rev_counter;
   desc->plaintext_data.lifetime_sec = 3 * 60 * 60;
 
   hs_get_subcredential(&signing_kp->pubkey, &blinded_kp.pubkey,
@@ -226,18 +227,26 @@ hs_helper_get_subcred_from_identity_keypair(ed25519_keypair_t *signing_kp,
                        subcred_out);
 }
 
+/* Build a descriptor with a specific rev counter. */
+hs_descriptor_t *
+hs_helper_build_hs_desc_with_rev_counter(const ed25519_keypair_t *signing_kp,
+                                         uint64_t revision_counter)
+{
+  return hs_helper_build_hs_desc_impl(0, signing_kp, revision_counter);
+}
+
 /* Build a descriptor with introduction points. */
 hs_descriptor_t *
 hs_helper_build_hs_desc_with_ip(const ed25519_keypair_t *signing_kp)
 {
-  return hs_helper_build_hs_desc_impl(0, signing_kp);
+  return hs_helper_build_hs_desc_impl(0, signing_kp, 42);
 }
 
 /* Build a descriptor without any introduction points. */
 hs_descriptor_t *
 hs_helper_build_hs_desc_no_ip(const ed25519_keypair_t *signing_kp)
 {
-  return hs_helper_build_hs_desc_impl(1, signing_kp);
+  return hs_helper_build_hs_desc_impl(1, signing_kp, 42);
 }
 
 hs_descriptor_t *
@@ -247,7 +256,7 @@ hs_helper_build_hs_desc_with_client_auth(
                         const ed25519_keypair_t *signing_kp)
 {
   curve25519_keypair_t auth_ephemeral_kp;
-  hs_descriptor_t *desc = hs_helper_build_hs_desc_impl(0, signing_kp);
+  hs_descriptor_t *desc = hs_helper_build_hs_desc_impl(0, signing_kp, 42);
   hs_desc_authorized_client_t *desc_client;
 
   /* The number of client authorized auth has tobe a multiple of

@@ -65,10 +65,14 @@ MOCK_DECL(int, rep_hist_get_circuit_handshake_assigned, (uint16_t type));
 
 void rep_hist_hs_stats_init(time_t now);
 void rep_hist_hs_stats_term(void);
-time_t rep_hist_hs_stats_write(time_t now);
-char *rep_hist_get_hs_stats_string(void);
-void rep_hist_seen_new_rp_cell(void);
-void rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey);
+time_t rep_hist_hs_stats_write(time_t now, bool is_v3);
+
+char *rep_hist_get_hs_v2_stats_string(void);
+void rep_hist_seen_new_rp_cell(bool is_v2);
+void rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey);
+
+char *rep_hist_get_hs_v3_stats_string(void);
+void rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key);
 
 void rep_hist_free_all(void);
 
@@ -82,6 +86,40 @@ extern uint32_t rephist_total_num;
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
 #endif
+
+#ifdef REPHIST_PRIVATE
+/** Carries the various hidden service statistics, and any other
+ *  information needed. */
+typedef struct hs_v2_stats_t {
+  /** How many v2 relay cells have we seen as rendezvous points? */
+  uint64_t rp_v2_relay_cells_seen;
+
+  /** Set of unique public key digests we've seen this stat period
+   * (could also be implemented as sorted smartlist). */
+  digestmap_t *v2_onions_seen_this_period;
+} hs_v2_stats_t;
+
+/** Structure that contains the various statistics we keep about v3
+ *  services.
+ *
+ *  Because of the time period logic of v3 services, v3 statistics are more
+ *  sensitive to time than v2 stats. For this reason, we collect v3
+ *  statistics strictly from 12:00UTC to 12:00UTC as dictated by
+ *  'start_of_hs_v3_stats_interval'.
+ **/
+typedef struct hs_v3_stats_t {
+  /** How many v3 relay cells have we seen as a rendezvous point? */
+  uint64_t rp_v3_relay_cells_seen;
+
+  /* The number of unique v3 onion descriptors (actually, unique v3 blind keys)
+   * we've seen during the measurement period */
+  digest256map_t *v3_onions_seen_this_period;
+} hs_v3_stats_t;
+
+MOCK_DECL(STATIC bool, should_collect_v3_stats,(void));
+
+STATIC char *rep_hist_format_hs_stats(time_t now, bool is_v3);
+#endif /* defined(REPHIST_PRIVATE) */
 
 /**
  * Represents the type of a cell for padding accounting
@@ -107,5 +145,12 @@ char *rep_hist_get_padding_count_lines(void);
 void rep_hist_reset_padding_counts(void);
 void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
+
+#ifdef TOR_UNIT_TESTS
+struct hs_v2_stats_t;
+const struct hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);
+struct hs_v3_stats_t;
+const struct hs_v3_stats_t *rep_hist_get_hs_v3_stats(void);
+#endif
 
 #endif /* !defined(TOR_REPHIST_H) */

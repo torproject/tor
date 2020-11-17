@@ -63,6 +63,12 @@ struct or_circuit_t {
    *  statistics. */
   unsigned int circuit_carries_hs_traffic_stats : 1;
 
+  /** True iff this circuit was made with a CREATE_FAST cell, or a CREATE[2]
+   * cell with a TAP handshake. If this is the case and this is a rend circuit,
+   * this is a v2 circuit, otherwise if this is a rend circuit it's a v3
+   * circuit. */
+  bool used_legacy_circuit_handshake;
+
   /** Number of cells that were removed from circuit queue; reset every
    * time when writing buffer stats to disk. */
   uint32_t processed_cells;

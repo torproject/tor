@@ -1710,103 +1710,63 @@ rep_hist_log_circuit_handshake_stats(time_t now)
 
 /** Start of the current hidden service stats interval or 0 if we're
  * not collecting hidden service statistics. */
-static time_t start_of_hs_stats_interval;
+static time_t start_of_hs_v2_stats_interval;
 
-/** Carries the various hidden service statistics, and any other
- *  information needed. */
-typedef struct hs_stats_t {
-  /** How many relay cells have we seen as rendezvous points? */
-  uint64_t rp_relay_cells_seen;
+/** Our v2 statistics structure singleton. */
+static hs_v2_stats_t *hs_v2_stats = NULL;
 
-  /** Set of unique public key digests we've seen this stat period
-   * (could also be implemented as sorted smartlist). */
-  digestmap_t *onions_seen_this_period;
-} hs_stats_t;
+/** HSv2 stats */
 
-/** Our statistics structure singleton. */
-static hs_stats_t *hs_stats = NULL;
-
-/** Allocate, initialize and return an hs_stats_t structure. */
-static hs_stats_t *
-hs_stats_new(void)
+/** Allocate, initialize and return an hs_v2_stats_t structure. */
+static hs_v2_stats_t *
+hs_v2_stats_new(void)
 {
-  hs_stats_t *new_hs_stats = tor_malloc_zero(sizeof(hs_stats_t));
-  new_hs_stats->onions_seen_this_period = digestmap_new();
+  hs_v2_stats_t *new_hs_v2_stats = tor_malloc_zero(sizeof(hs_v2_stats_t));
+  new_hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
 
-  return new_hs_stats;
+  return new_hs_v2_stats;
 }
 
-#define hs_stats_free(val) \
-  FREE_AND_NULL(hs_stats_t, hs_stats_free_, (val))
+#define hs_v2_stats_free(val) \
+  FREE_AND_NULL(hs_v2_stats_t, hs_v2_stats_free_, (val))
 
-/** Free an hs_stats_t structure. */
+/** Free an hs_v2_stats_t structure. */
 static void
-hs_stats_free_(hs_stats_t *victim_hs_stats)
+hs_v2_stats_free_(hs_v2_stats_t *victim_hs_v2_stats)
 {
-  if (!victim_hs_stats) {
+  if (!victim_hs_v2_stats) {
     return;
   }
 
-  digestmap_free(victim_hs_stats->onions_seen_this_period, NULL);
-  tor_free(victim_hs_stats);
-}
-
-/** Initialize hidden service statistics. */
-void
-rep_hist_hs_stats_init(time_t now)
-{
-  if (!hs_stats) {
-    hs_stats = hs_stats_new();
-  }
-
-  start_of_hs_stats_interval = now;
+  digestmap_free(victim_hs_v2_stats->v2_onions_seen_this_period, NULL);
+  tor_free(victim_hs_v2_stats);
 }
 
 /** Clear history of hidden service statistics and set the measurement
  * interval start to <b>now</b>. */
 static void
-rep_hist_reset_hs_stats(time_t now)
+rep_hist_reset_hs_v2_stats(time_t now)
 {
-  if (!hs_stats) {
-    hs_stats = hs_stats_new();
+  if (!hs_v2_stats) {
+    hs_v2_stats = hs_v2_stats_new();
   }
 
-  hs_stats->rp_relay_cells_seen = 0;
+  hs_v2_stats->rp_v2_relay_cells_seen = 0;
 
-  digestmap_free(hs_stats->onions_seen_this_period, NULL);
-  hs_stats->onions_seen_this_period = digestmap_new();
+  digestmap_free(hs_v2_stats->v2_onions_seen_this_period, NULL);
+  hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
 
-  start_of_hs_stats_interval = now;
+  start_of_hs_v2_stats_interval = now;
 }
 
-/** Stop collecting hidden service stats in a way that we can re-start
- * doing so in rep_hist_buffer_stats_init(). */
+/** As HSDirs, we saw another v2 onion with public key <b>pubkey</b>. Check
+ *  whether we have counted it before, if not count it now! */
 void
-rep_hist_hs_stats_term(void)
-{
-  rep_hist_reset_hs_stats(0);
-}
-
-/** We saw a new HS relay cell, Count it! */
-void
-rep_hist_seen_new_rp_cell(void)
-{
-  if (!hs_stats) {
-    return; // We're not collecting stats
-  }
-
-  hs_stats->rp_relay_cells_seen++;
-}
-
-/** As HSDirs, we saw another hidden service with public key
- *  <b>pubkey</b>. Check whether we have counted it before, if not
- *  count it now! */
-void
-rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
+rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
 {
   char pubkey_hash[DIGEST_LEN];
 
-  if (!hs_stats) {
+  if (!hs_v2_stats) {
     return; // We're not collecting stats
   }
 
@@ -1820,12 +1780,177 @@ rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
 
   /* Check if this is the first time we've seen this hidden
      service. If it is, count it as new. */
-  if (!digestmap_get(hs_stats->onions_seen_this_period,
+  if (!digestmap_get(hs_v2_stats->v2_onions_seen_this_period,
                      pubkey_hash)) {
-    digestmap_set(hs_stats->onions_seen_this_period,
+    digestmap_set(hs_v2_stats->v2_onions_seen_this_period,
                   pubkey_hash, (void*)(uintptr_t)1);
   }
 }
+
+/*** HSv3 stats ******/
+
+/** Start of the current hidden service stats interval or 0 if we're not
+ *  collecting hidden service statistics.
+ *
+ *  This is particularly important for v3 statistics since this variable
+ *  controls the start time of initial v3 stats collection. It's initialized by
+ *  rep_hist_hs_stats_init() to the next time period start (i.e. 12:00UTC), and
+ *  should_collect_v3_stats() ensures that functions that collect v3 stats do
+ *  not do so sooner than that.
+ *
+ *  Collecting stats from 12:00UTC to 12:00UTC is extremely important for v3
+ *  stats because rep_hist_hsdir_stored_maybe_new_v3_onion() uses the blinded
+ *  key of each onion service as its double-counting index. Onion services
+ *  rotate their descriptor at around 00:00UTC which means that their blinded
+ *  key also changes around that time. However the precise time that onion
+ *  services rotate their descriptors is actually when they fetch a new
+ *  00:00UTC consensus and that happens at a random time (e.g. it can even
+ *  happen at 02:00UTC). This means that if we started keeping v3 stats at
+ *  around 00:00UTC we wouldn't be able to tell when onion services change
+ *  their blinded key and hence we would double count an unpredictable amount
+ *  of them (for example, if an onion service fetches the 00:00UTC consensus at
+ *  01:00UTC it would upload to its old HSDir at 00:45UTC, and then to a
+ *  different HSDir at 01:50UTC).
+ *
+ *  For this reason, we start collecting statistics at 12:00UTC. This way we
+ *  know that by the time we stop collecting statistics for that time period 24
+ *  hours later, all the onion services have switched to their new blinded
+ *  key. This way we can predict much better how much double counting has been
+ *  performed.
+ */
+static time_t start_of_hs_v3_stats_interval;
+
+/** Our v3 statistics structure singleton. */
+static hs_v3_stats_t *hs_v3_stats = NULL;
+
+/** Allocate, initialize and return an hs_v3_stats_t structure. */
+static hs_v3_stats_t *
+hs_v3_stats_new(void)
+{
+  hs_v3_stats_t *new_hs_v3_stats = tor_malloc_zero(sizeof(hs_v3_stats_t));
+  new_hs_v3_stats->v3_onions_seen_this_period = digest256map_new();
+
+  return new_hs_v3_stats;
+}
+
+#define hs_v3_stats_free(val) \
+  FREE_AND_NULL(hs_v3_stats_t, hs_v3_stats_free_, (val))
+
+/** Free an hs_v3_stats_t structure. */
+static void
+hs_v3_stats_free_(hs_v3_stats_t *victim_hs_v3_stats)
+{
+  if (!victim_hs_v3_stats) {
+    return;
+  }
+
+  digest256map_free(victim_hs_v3_stats->v3_onions_seen_this_period, NULL);
+  tor_free(victim_hs_v3_stats);
+}
+
+/** Clear history of hidden service statistics and set the measurement
+ * interval start to <b>now</b>. */
+static void
+rep_hist_reset_hs_v3_stats(time_t now)
+{
+  if (!hs_v3_stats) {
+    hs_v3_stats = hs_v3_stats_new();
+  }
+
+  digest256map_free(hs_v3_stats->v3_onions_seen_this_period, NULL);
+  hs_v3_stats->v3_onions_seen_this_period = digest256map_new();
+
+  hs_v3_stats->rp_v3_relay_cells_seen = 0;
+
+  start_of_hs_v3_stats_interval = now;
+}
+
+/** Return true if it's a good time to collect v3 stats.
+ *
+ *  v3 stats have a strict stats collection period (from 12:00UTC to 12:00UTC
+ *  on the real network). We don't want to collect statistics if (for example)
+ *  we just booted and it's 03:00UTC; we will wait until 12:00UTC before we
+ *  start collecting statistics to make sure that the final result represents
+ *  the whole collection period. This behavior is controlled by
+ *  rep_hist_hs_stats_init().
+ */
+MOCK_IMPL(STATIC bool,
+should_collect_v3_stats,(void))
+{
+  return start_of_hs_v3_stats_interval <= approx_time();
+}
+
+/** We just received a new descriptor with <b>blinded_key</b>. See if we've
+ * seen this blinded key before, and if not add it to the stats.  */
+void
+rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key)
+{
+  /* Return early if we don't collect HSv3 stats, or if it's not yet the time
+   * to collect them. */
+  if (!hs_v3_stats || !should_collect_v3_stats()) {
+    return;
+  }
+
+  bool seen_before =
+    !!digest256map_get(hs_v3_stats->v3_onions_seen_this_period,
+                       blinded_key);
+
+  log_info(LD_GENERAL, "Considering v3 descriptor with %s (%sseen before)",
+           safe_str(hex_str((char*)blinded_key, 32)),
+           seen_before ? "" : "not ");
+
+  /* Count it if we haven't seen it before. */
+  if (!seen_before) {
+    digest256map_set(hs_v3_stats->v3_onions_seen_this_period,
+                  blinded_key, (void*)(uintptr_t)1);
+  }
+}
+
+/** We saw a new HS relay cell: count it!
+ *  If <b>is_v2</b> is set then it's a v2 RP cell, otherwise it's a v3. */
+void
+rep_hist_seen_new_rp_cell(bool is_v2)
+{
+  log_debug(LD_GENERAL, "New RP cell (%d)", is_v2);
+
+  if (is_v2 && hs_v2_stats) {
+    hs_v2_stats->rp_v2_relay_cells_seen++;
+  } else if (!is_v2 && hs_v3_stats && should_collect_v3_stats()) {
+    hs_v3_stats->rp_v3_relay_cells_seen++;
+  }
+}
+
+/** Generic HS stats code */
+
+/** Initialize v2 and v3 hidden service statistics. */
+void
+rep_hist_hs_stats_init(time_t now)
+{
+  if (!hs_v2_stats) {
+    hs_v2_stats = hs_v2_stats_new();
+  }
+
+  /* Start collecting v2 stats straight away */
+  start_of_hs_v2_stats_interval = now;
+
+  if (!hs_v3_stats) {
+    hs_v3_stats = hs_v3_stats_new();
+  }
+
+  /* Start collecting v3 stats at the next 12:00 UTC */
+  start_of_hs_v3_stats_interval = hs_get_start_time_of_next_time_period(now);
+}
+
+/** Stop collecting hidden service stats in a way that we can re-start
+ * doing so in rep_hist_buffer_stats_init(). */
+void
+rep_hist_hs_stats_term(void)
+{
+  rep_hist_reset_hs_v2_stats(0);
+  rep_hist_reset_hs_v3_stats(0);
+}
+
+/** Stats reporting code */
 
 /* The number of cells that are supposed to be hidden from the adversary
  * by adding noise from the Laplace distribution.  This value, divided by
@@ -1851,57 +1976,68 @@ rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
 #define ONIONS_SEEN_BIN_SIZE 8
 
 /** Allocate and return a string containing hidden service stats that
- *  are meant to be placed in the extra-info descriptor. */
-static char *
-rep_hist_format_hs_stats(time_t now)
+ *  are meant to be placed in the extra-info descriptor.
+ *
+ *  Function works for both v2 and v3 stats depending on <b>is_v3</b>. */
+STATIC char *
+rep_hist_format_hs_stats(time_t now, bool is_v3)
 {
   char t[ISO_TIME_LEN+1];
   char *hs_stats_string;
-  int64_t obfuscated_cells_seen;
-  int64_t obfuscated_onions_seen;
+  int64_t obfuscated_onions_seen, obfuscated_cells_seen;
+
+  uint64_t rp_cells_seen = is_v3 ?
+    hs_v3_stats->rp_v3_relay_cells_seen : hs_v2_stats->rp_v2_relay_cells_seen;
+  size_t onions_seen = is_v3 ?
+    digest256map_size(hs_v3_stats->v3_onions_seen_this_period) :
+    digestmap_size(hs_v2_stats->v2_onions_seen_this_period);
+  time_t start_of_hs_stats_interval = is_v3 ?
+    start_of_hs_v3_stats_interval : start_of_hs_v2_stats_interval;
 
   uint64_t rounded_cells_seen
-    = round_uint64_to_next_multiple_of(hs_stats->rp_relay_cells_seen,
-                                       REND_CELLS_BIN_SIZE);
+    = round_uint64_to_next_multiple_of(rp_cells_seen, REND_CELLS_BIN_SIZE);
   rounded_cells_seen = MIN(rounded_cells_seen, INT64_MAX);
   obfuscated_cells_seen = add_laplace_noise((int64_t)rounded_cells_seen,
                           crypto_rand_double(),
                           REND_CELLS_DELTA_F, REND_CELLS_EPSILON);
 
   uint64_t rounded_onions_seen =
-    round_uint64_to_next_multiple_of((size_t)digestmap_size(
-                                        hs_stats->onions_seen_this_period),
-                                     ONIONS_SEEN_BIN_SIZE);
+    round_uint64_to_next_multiple_of(onions_seen, ONIONS_SEEN_BIN_SIZE);
   rounded_onions_seen = MIN(rounded_onions_seen, INT64_MAX);
   obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
 
   format_iso_time(t, now);
-  tor_asprintf(&hs_stats_string, "hidserv-stats-end %s (%d s)\n"
-               "hidserv-rend-relayed-cells %"PRId64" delta_f=%d "
-                                           "epsilon=%.2f bin_size=%d\n"
-               "hidserv-dir-onions-seen %"PRId64" delta_f=%d "
-                                        "epsilon=%.2f bin_size=%d\n",
-               t, (unsigned) (now - start_of_hs_stats_interval),
-               (obfuscated_cells_seen), REND_CELLS_DELTA_F,
+  tor_asprintf(&hs_stats_string, "%s %s (%ld s)\n"
+               "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n"
+               "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n",
+               is_v3 ? "hidserv-v3-stats-end" : "hidserv-stats-end",
+               t, now - start_of_hs_stats_interval,
+               is_v3 ?
+                "hidserv-rend-v3-relayed-cells" : "hidserv-rend-relayed-cells",
+               obfuscated_cells_seen, REND_CELLS_DELTA_F,
                REND_CELLS_EPSILON, REND_CELLS_BIN_SIZE,
-               (obfuscated_onions_seen),
-               ONIONS_SEEN_DELTA_F,
+               is_v3 ? "hidserv-dir-v3-onions-seen" :"hidserv-dir-onions-seen",
+               obfuscated_onions_seen, ONIONS_SEEN_DELTA_F,
                ONIONS_SEEN_EPSILON, ONIONS_SEEN_BIN_SIZE);
 
   return hs_stats_string;
 }
 
 /** If 24 hours have passed since the beginning of the current HS
- * stats period, write buffer stats to $DATADIR/stats/hidserv-stats
+ * stats period, write buffer stats to $DATADIR/stats/hidserv-v3-stats
  * (possibly overwriting an existing file) and reset counters.  Return
  * when we would next want to write buffer stats or 0 if we never want to
- * write. */
+ * write. Function works for both v2 and v3 stats depending on <b>is_v3</b>.
+ */
 time_t
-rep_hist_hs_stats_write(time_t now)
+rep_hist_hs_stats_write(time_t now, bool is_v3)
 {
   char *str = NULL;
+
+  time_t start_of_hs_stats_interval = is_v3 ?
+    start_of_hs_v3_stats_interval : start_of_hs_v2_stats_interval;
 
   if (!start_of_hs_stats_interval) {
     return 0; /* Not initialized. */
@@ -1912,15 +2048,20 @@ rep_hist_hs_stats_write(time_t now)
   }
 
   /* Generate history string. */
-  str = rep_hist_format_hs_stats(now);
+  str = rep_hist_format_hs_stats(now, is_v3);
 
   /* Reset HS history. */
-  rep_hist_reset_hs_stats(now);
+  if (is_v3) {
+    rep_hist_reset_hs_v3_stats(now);
+  } else {
+    rep_hist_reset_hs_v2_stats(now);
+  }
 
   /* Try to write to disk. */
   if (!check_or_create_data_subdir("stats")) {
-    write_to_data_subdir("stats", "hidserv-stats", str,
-                         "hidden service stats");
+    write_to_data_subdir("stats",
+                         is_v3 ? "hidserv-v3-stats" : "hidserv-stats",
+                         str, "hidden service stats");
   }
 
  done:
@@ -2134,7 +2275,8 @@ rep_hist_log_link_protocol_counts(void)
 void
 rep_hist_free_all(void)
 {
-  hs_stats_free(hs_stats);
+  hs_v2_stats_free(hs_v2_stats);
+  hs_v3_stats_free(hs_v3_stats);
   digestmap_free(history_map, free_or_history);
 
   tor_free(exit_bytes_read);
@@ -2155,3 +2297,19 @@ rep_hist_free_all(void)
   tor_assert_nonfatal(rephist_total_alloc == 0);
   tor_assert_nonfatal_once(rephist_total_num == 0);
 }
+
+#ifdef TOR_UNIT_TESTS
+/* only exists for unit tests: get HSv2 stats object */
+const hs_v2_stats_t *
+rep_hist_get_hs_v2_stats(void)
+{
+  return hs_v2_stats;
+}
+
+/* only exists for unit tests: get HSv2 stats object */
+const hs_v3_stats_t *
+rep_hist_get_hs_v3_stats(void)
+{
+  return hs_v3_stats;
+}
+#endif /* defined(TOR_UNIT_TESTS) */
