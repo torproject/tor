@@ -1,0 +1,5 @@
+  o Minor bugfixes (ipv6):
+    - Allow non-SOCKSPorts to disable IPv4, IPv6, and Prefer IPv4. Some rare
+      configs might break, but in this case you can disable NoIPv4Traffic and
+      NoIPv6Traffic as needed. Fixes bug 33607; bugfix on 0.4.1.1-alpha. Patch
+      by Neel Chauhan.
