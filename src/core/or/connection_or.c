@@ -566,11 +566,6 @@ connection_or_reached_eof(or_connection_t *conn)
 int
 connection_or_process_inbuf(or_connection_t *conn)
 {
-  /** Don't let the inbuf of a nonopen OR connection grow beyond this many
-   * bytes: it's either a broken client, a non-Tor client, or a DOS
-   * attempt. */
-#define MAX_OR_INBUF_WHEN_NONOPEN 0
-
   int ret = 0;
   tor_assert(conn);
 
@@ -581,6 +576,15 @@ connection_or_process_inbuf(or_connection_t *conn)
       /* start TLS after handshake completion, or deal with error */
       if (ret == 1) {
         tor_assert(TO_CONN(conn)->proxy_state == PROXY_CONNECTED);
+        if (buf_datalen(conn->base_.inbuf) != 0) {
+          log_fn(LOG_PROTOCOL_WARN, LD_NET, "Found leftover (%d bytes) "
+                 "when transitioning from PROXY_HANDSHAKING state on %s: "
+                 "closing.",
+                 (int)buf_datalen(conn->base_.inbuf),
+                 connection_describe(TO_CONN(conn)));
+          connection_or_close_for_error(conn, 0);
+          return -1;
+        }
         if (connection_tls_start_handshake(conn, 0) < 0)
           ret = -1;
         /* Touch the channel's active timestamp if there is one */
@@ -601,14 +605,12 @@ connection_or_process_inbuf(or_connection_t *conn)
       break; /* don't do anything */
   }
 
-  /* This check was necessary with 0.2.2, when the TLS_SERVER_RENEGOTIATING
-   * check would otherwise just let data accumulate.  It serves no purpose
-   * in 0.2.3.
-   *
-   * XXXX Remove this check once we verify that the above paragraph is
-   * 100% true. */
-  if (buf_datalen(conn->base_.inbuf) > MAX_OR_INBUF_WHEN_NONOPEN) {
-    log_fn(LOG_PROTOCOL_WARN, LD_NET, "Accumulated too much data (%d bytes) "
+  /* This check makes sure that we don't have any data on the inbuf if we're
+   * doing our TLS handshake: if we did, they were probably put there by a
+   * SOCKS proxy trying to trick us into accepting unauthenticated data.
+   */
+  if (buf_datalen(conn->base_.inbuf) != 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_NET, "Accumulated data (%d bytes) "
            "on non-open %s; closing.",
            (int)buf_datalen(conn->base_.inbuf),
            connection_describe(TO_CONN(conn)));
