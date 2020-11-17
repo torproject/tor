@@ -1,0 +1,5 @@
+  o Minor features (protocol, proxy support, defense in depth):
+    - Respond more deliberately to misbehaving proxies that leave leftover
+      data on their connections, so as to be even less likely as to allow
+      them to pass their data off as having come from a relay.
+      Closes ticket 40017.
