@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing, portability):
+    - Fix our Python reference-implementation for the v3 onion service
+      handshake so that it works correctly with the version of hashlib provided
+      by Python 3.9. Fixes part of bug 40179; bugfix on 0.3.1.6-rc.
