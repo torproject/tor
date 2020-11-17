@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging, flow control):
+    - Turn a SENDME failure log warning into a debug. It can actually happen
+      naturally. Fixes bug 40142; bugfix on 0.4.1.1-alpha.
