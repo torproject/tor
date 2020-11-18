@@ -1,0 +1,4 @@
+  o Minor bugfixes (configure, build):
+    - Fix the --enable-static-tor switch to properly set the -static compile
+      option onto the tor binary only. Fixes bug 40111; bugfix on
+      0.2.3.1-alpha.
