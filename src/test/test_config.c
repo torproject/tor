@@ -705,11 +705,13 @@ test_config_parse_tcp_proxy_line(void *arg)
   tor_free(msg);
 
   /* Bad TCPProxy line - unparsable address/port. */
-  ret = parse_tcp_proxy_line("haproxy 95.216.163.36/443", options, &msg);
+  MOCK(tor_addr_lookup, mock_tor_addr_lookup__fail_on_bad_addrs);
+  ret = parse_tcp_proxy_line("haproxy bogus_address!/300", options, &msg);
   tt_int_op(ret, OP_EQ, -1);
   tt_str_op(msg, OP_EQ, "TCPProxy address/port failed to parse or resolve. "
                         "Please fix.");
   tor_free(msg);
+  UNMOCK(tor_addr_lookup);
 
   /* Good TCPProxy line - ipv4. */
   ret = parse_tcp_proxy_line("haproxy 95.216.163.36:443", options, &msg);
@@ -722,7 +724,7 @@ test_config_parse_tcp_proxy_line(void *arg)
   tor_free(msg);
 
  done:
-  ;
+  UNMOCK(tor_addr_lookup);
 }
 
 /**
