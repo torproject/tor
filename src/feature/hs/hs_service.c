@@ -3756,9 +3756,11 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
   if (service->config.clients == NULL) {
     service->config.clients = smartlist_new();
   }
-  SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, c,
-    smartlist_add(service->config.clients, c));
-
+  SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, c, {
+    if (c != NULL) {
+      smartlist_add(service->config.clients, c);
+    }
+  });
 
   /* Build the onion address for logging purposes but also the control port
    * uses it for the HS_DESC event. */

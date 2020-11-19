@@ -1649,7 +1649,7 @@ handle_control_hspost(control_connection_t *conn,
  * On success (RSAE_OKAY), the address_out points to a newly allocated string
  * containing the onion address without the .onion part. On error, address_out
  * is untouched. */
-static hs_service_add_ephemeral_status_t
+STATIC hs_service_add_ephemeral_status_t
 add_onion_helper_add_service(int hs_version,
                              add_onion_secret_key_t *pk,
                              smartlist_t *port_cfgs, int max_streams,
@@ -2009,7 +2009,6 @@ handle_control_add_onion(control_connection_t *conn,
                       tor_free(client_str));
     smartlist_free(auth_clients_v3_str);
   }
-
 
   if (auth_created_clients) {
     // Do not free entries; they are the same as auth_clients

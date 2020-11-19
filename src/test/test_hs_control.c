@@ -7,15 +7,17 @@
  **/
 
 #define CONTROL_EVENTS_PRIVATE
+#define CONTROL_CMD_PRIVATE
 #define HS_CLIENT_PRIVATE
+#define HS_SERVICE_PRIVATE
 
 #include "core/or/or.h"
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "core/mainloop/connection.h"
 #include "feature/control/control.h"
-#include "feature/control/control_events.h"
 #include "feature/control/control_cmd.h"
+#include "feature/control/control_events.h"
 #include "feature/control/control_fmt.h"
 #include "feature/control/control_connection_st.h"
 #include "app/config/config.h"
@@ -23,9 +25,11 @@
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_control.h"
 #include "feature/nodelist/nodelist.h"
+#include "feature/rend/rendservice.h"
 
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "lib/container/smartlist.h"
 #include "lib/crypt_ops/crypto_format.h"
 
 #ifdef HAVE_SYS_STAT_H
@@ -735,6 +739,76 @@ test_hs_control_add_onion_with_bad_pubkey(void *arg)
   tor_free(conn.current_cmd);
 }
 
+/** Test that add_onion_helper_add_service can add the service. */
+static void
+test_hs_add_onion_helper_add_service(void *arg)
+{
+  int hs_version_good, hs_version_bad;
+  add_onion_secret_key_t sk_good, sk_bad;
+  ed25519_public_key_t pk_good, pk_bad;
+  char *key_new_blob_good = NULL, *key_new_blob_bad = NULL;
+  const char *key_new_alg_good = NULL, *key_new_alg_bad = NULL;
+  hs_service_authorized_client_t *client_good, *client_bad;
+  smartlist_t *list_v2, *list_good, *list_bad;
+  hs_service_ht *global_map;
+  rend_service_port_config_t *portcfg;
+  smartlist_t *portcfgs;
+  char *address_out_good, *address_out_bad;
+
+  (void) arg;
+
+  hs_init();
+  global_map = get_hs_service_map();
+
+  portcfg = rend_service_parse_port_config("8080", ",", NULL);
+  portcfgs = smartlist_new();
+  smartlist_add(portcfgs, portcfg);
+
+  memset(&sk_good, 0, sizeof(sk_good));
+  memset(&sk_bad, 0, sizeof(sk_bad));
+
+  add_onion_helper_keyarg("NEW:ED25519-V3", 0, &key_new_alg_good,
+                         &key_new_blob_good, &sk_good, &hs_version_good, NULL);
+  add_onion_helper_keyarg("NEW:ED25519-V3", 0, &key_new_alg_bad,
+                         &key_new_blob_bad, &sk_bad, &hs_version_bad, NULL);
+
+  ed25519_public_key_generate(&pk_good, sk_good.v3);
+  ed25519_public_key_generate(&pk_bad, sk_bad.v3);
+
+  client_good = parse_authorized_client_key(
+                       "N2NU7BSRL6YODZCYPN4CREB54TYLKGIE2KYOQWLFYC23ZJVCE5DQ");
+  client_bad = parse_authorized_client_key("dummy");
+
+  list_v2 = smartlist_new();
+  list_good = smartlist_new();
+  smartlist_add(list_good, client_good);
+  list_bad = smartlist_new();
+  smartlist_add(list_bad, client_bad);
+
+  add_onion_helper_add_service(HS_VERSION_THREE, &sk_good, portcfgs, 1, 1,
+                          REND_V3_AUTH, list_v2, list_good, &address_out_good);
+  add_onion_helper_add_service(HS_VERSION_THREE, &sk_bad, portcfgs, 1, 1,
+                          REND_V3_AUTH, list_v2, list_bad, &address_out_bad);
+
+  hs_service_t *srv_good = find_service(global_map, &pk_good);
+  hs_service_t *srv_bad = find_service(global_map, &pk_bad);
+
+  tt_int_op(smartlist_len(srv_good->config.clients), OP_EQ, 1);
+  tt_int_op(smartlist_len(srv_bad->config.clients), OP_EQ, 0);
+
+ done:
+  tor_free(key_new_blob_good);
+  tor_free(key_new_blob_bad);
+  tor_free(address_out_good);
+  tor_free(address_out_bad);
+
+  service_authorized_client_free(client_good);
+
+  smartlist_free(list_v2);
+  smartlist_free(list_good);
+  smartlist_free(list_bad);
+}
+
 struct testcase_t hs_control_tests[] = {
   { "hs_desc_event", test_hs_desc_event, TT_FORK,
     NULL, NULL },
@@ -748,6 +822,8 @@ struct testcase_t hs_control_tests[] = {
     test_hs_control_store_permanent_creds, TT_FORK, NULL, NULL },
   { "hs_control_add_onion_with_bad_pubkey",
     test_hs_control_add_onion_with_bad_pubkey, TT_FORK, NULL, NULL },
+  { "hs_add_onion_helper_add_service",
+    test_hs_add_onion_helper_add_service, TT_FORK, NULL, NULL},
 
   END_OF_TESTCASES
 };
