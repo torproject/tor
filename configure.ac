@@ -9,6 +9,8 @@ AC_CONFIG_SRCDIR([src/app/main/tor_main.c])
 AC_CONFIG_MACRO_DIR([m4])
 
 configure_flags="$*"
+AC_DEFINE_UNQUOTED([CONFIG_FLAGS], ["$configure_flags"], [Flags passed to configure])
+
 
 # DO NOT EDIT THIS DEFINITION BY HAND UNLESS YOU KNOW WHAT YOU'RE DOING.
 #
@@ -420,6 +422,17 @@ AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_SED
+
+AX_COMPILER_VERSION
+AX_COMPILER_VENDOR
+
+AC_DEFINE_UNQUOTED([COMPILER_VERSION],["$ax_cv_c_compiler_version"], [Compiler version])
+AC_DEFINE_UNQUOTED([COMPILER_VENDOR],["$ax_cv_c_compiler_vendor"], [Compiler vendor])
+
+AS_CASE($ax_cv_c_compiler_vendor,
+        [gnu], AC_DEFINE([COMPILER],["GCC"],[Compiler name]),
+        AC_DEFINE([COMPILER],[],[Compiler name])
+)
 
 AC_ARG_VAR([PERL], [path to Perl binary])
 AC_CHECK_PROGS([PERL], [perl])
