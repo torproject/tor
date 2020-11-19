@@ -164,6 +164,17 @@ bridge_get_addr_port(const bridge_info_t *bridge)
   return &bridge->addrport_configured;
 }
 
+/**
+ * Given a <b>bridge</b>, return the transport name. If none were configured,
+ * NULL is returned.
+ */
+const char *
+bridget_get_transport_name(const bridge_info_t *bridge)
+{
+  tor_assert(bridge);
+  return bridge->transport_name;
+}
+
 /** If we have a bridge configured whose digest matches <b>digest</b>, or a
  * bridge with no known digest whose address matches any of the
  * tor_addr_port_t's in <b>orports</b>, return that bridge.  Else return

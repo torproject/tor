@@ -1,0 +1,6 @@
+  o Minor bugfixes (client, bridge, configuration):
+    - Exit tor on a misconfiguration when the Bridge line has a transport but
+      no corresponding ClientTransportPlugin can be found. Prior to this fix,
+      tor would attempt to connect to the bridge directly without using the
+      transport leading to a possible leak on the wire. Fixes bug 25528;
+      bugfix on 0.2.6.1-alpha.
