@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Fix the config/parse_tcp_proxy_line test so that it works correctly on
+      systems where the DNS provider hijacks invalid queries.
+      Fixes part of bug 40179; bugfix on 0.4.3.1-alpha.
