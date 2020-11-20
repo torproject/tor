@@ -2009,11 +2009,13 @@ rep_hist_format_hs_stats(time_t now, bool is_v3)
                            ONIONS_SEEN_EPSILON);
 
   format_iso_time(t, now);
-  tor_asprintf(&hs_stats_string, "%s %s (%ld s)\n"
+  const uint64_t delta_time = now - start_of_hs_stats_interval;
+
+  tor_asprintf(&hs_stats_string, "%s %s (%"PRIu64" s)\n"
                "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n"
                "%s %"PRId64" delta_f=%d epsilon=%.2f bin_size=%d\n",
                is_v3 ? "hidserv-v3-stats-end" : "hidserv-stats-end",
-               t, now - start_of_hs_stats_interval,
+               t, delta_time,
                is_v3 ?
                 "hidserv-rend-v3-relayed-cells" : "hidserv-rend-relayed-cells",
                obfuscated_cells_seen, REND_CELLS_DELTA_F,
