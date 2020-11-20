@@ -524,7 +524,9 @@ test_rephist_v3_onions(void *arg)
   /* Initialize the subsystems */
   hs_cache_init();
   rep_hist_hs_stats_init(0);
-  update_approx_time(10101010101);
+
+  /* Change time to 03-01-2002 23:36 UTC */
+  update_approx_time(1010101010);
 
   /* HS stats should be zero here */
   hs_v3_stats = rep_hist_get_hs_v3_stats();
