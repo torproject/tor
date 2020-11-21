@@ -69,7 +69,7 @@ Changes in version 0.4.5.2-alpha - 2020-11-23
       40015; bugfix on 0.3.2.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (logging):
-    - Remove trailing whitespaces from control event log messages. Fixes
+    - Remove trailing whitespace from control event log messages. Fixes
       bug 32178; bugfix on 0.1.1.1-alpha. Based on a patch by
       Amadeusz Pawlik.
     - Turn warning-level log message about SENDME failure into a debug-
