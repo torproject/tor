@@ -1,3 +1,109 @@
+Changes in version 0.4.5.2-alpha - 2020-11-23
+  Tor 0.4.5.2-alpha is the second alpha release in the 0.4.5.x series.
+  It fixes several bugs present in earlier releases, including one that
+  made it impractical to run relays on Windows. It also adds a few small
+  safety features to improve Tor's behavior in the presence of strange
+  compile-time options, misbehaving proxies, and future versions
+  of OpenSSL.
+
+  o Major bugfixes (relay, windows):
+    - Fix a bug in our implementation of condition variables on Windows.
+      Previously, a relay on Windows would use 100% CPU after running
+      for some time. Because of this change, Tor now require Windows
+      Vista or later to build and run. Fixes bug 30187; bugfix on
+      0.2.6.3-alpha. (This bug became more serious in 0.3.1.1-alpha with
+      the introduction of consensus diffs.) Patch by Daniel Pinto.
+
+  o Minor features (compilation):
+    - Disable deprecation warnings when building with OpenSSL 3.0.0 or
+      later. There are a number of APIs newly deprecated in OpenSSL
+      3.0.0 that Tor still requires. (A later version of Tor will try to
+      stop depending on these APIs.) Closes ticket 40165.
+
+  o Minor features (protocol, proxy support, defense in depth):
+    - Respond more deliberately to misbehaving proxies that leave
+      leftover data on their connections, so as to make Tor even less
+      likely to allow the proxies to pass their data off as having come
+      from a relay. Closes ticket 40017.
+
+  o Minor features (safety):
+    - Log a warning at startup if Tor is built with compile-time options
+      that are likely to make it less stable or reliable. Closes
+      ticket 18888.
+
+  o Minor bugfixes (circuit, handshake):
+    - In the v3 handshaking code, use connection_or_change_state() to
+      change the state. Previously, we changed the state directly, but
+      this did not pass the state change to the pubsub or channel
+      objects, potentially leading to bugs. Fixes bug 32880; bugfix on
+      0.2.3.6-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (compilation):
+    - Use the correct 'ranlib' program when building libtor.a.
+      Previously we used the default ranlib, which broke some kinds of
+      cross-compilation. Fixes bug 40172; bugfix on 0.4.5.1-alpha.
+    - Remove a duplicate typedef in metrics_store.c. Fixes bug 40177;
+      bugfix on 0.4.5.1-alpha.
+    - When USDT tracing is enabled, and STAP_PROBEV() is missing, don't
+      attempt to build. Linux supports that macro but not the BSDs.
+      Fixes bug 40174; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (configuration):
+    - Exit Tor on a misconfiguration when the Bridge line is configured
+      to use a transport but no corresponding ClientTransportPlugin can
+      be found. Prior to this fix, Tor would attempt to connect to the
+      bridge directly without using the transport, making it easier for
+      adversaries to notice the bridge. Fixes bug 25528; bugfix
+      on 0.2.6.1-alpha.
+    - Fix an issue where an ORPort was compared with other kinds of
+      ports, when it should have been only checked against other
+      ORPorts. This bug would lead to "DirPort auto" getting ignored.
+      Fixes bug 40195; bugfix on 0.4.5.1-alpha.
+    - Fix a bug where a second non-ORPort with a variant family (ex:
+      SocksPort [::1]:9050) would be ignored due to a configuration
+      parsing error. Fixes bug 40183; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (crash, relay, signing key):
+    - Avoid assertion failures when we run Tor from the command line
+      with `--key-expiration sign`, but an ORPort is not set. Fixes bug
+      40015; bugfix on 0.3.2.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (logging):
+    - Remove trailing whitespace from control event log messages. Fixes
+      bug 32178; bugfix on 0.1.1.1-alpha. Based on a patch by
+      Amadeusz Pawlik.
+    - Turn warning-level log message about SENDME failure into a debug-
+      level message. (This event can happen naturally, and is no reason
+      for concern). Fixes bug 40142; bugfix on 0.4.1.1-alpha.
+
+  o Minor bugfixes (relay, address discovery):
+    - Don't trigger an IP change when no new valid IP can be found.
+      Fixes bug 40071; bugfix on 0.4.5.1-alpha.
+    - When attempting to discover our IP, use a simple test circuit,
+      rather than a descriptor fetch: the same address information is
+      present in NETINFO cells, and is better authenticated there. Fixes
+      bug 40071; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Fix the `config/parse_tcp_proxy_line` test so that it works
+      correctly on systems where the DNS provider hijacks invalid
+      queries. Fixes part of bug 40179; bugfix on 0.4.3.1-alpha.
+    - Fix unit tests that used newly generated list of routers so that
+      they check them with respect to the date when they were generated,
+      not with respect to the current time. Fixes bug 40187; bugfix
+      on 0.4.5.1-alpha.
+    - Fix our Python reference-implementation for the v3 onion service
+      handshake so that it works correctly with the version of hashlib
+      provided by Python 3.9. Fixes part of bug 40179; bugfix
+      on 0.3.1.6-rc.
+    - Fix the `tortls/openssl/log_one_error` test to work with OpenSSL
+      3.0.0. Fixes bug 40170; bugfix on 0.2.8.1-alpha.
+
+  o Removed features (controller):
+    - Remove the "GETINFO network-status" controller command. It has
+      been deprecated since 0.3.1.1-alpha. Closes ticket 22473.
+
+
 Changes in version 0.4.4.6 - 2020-11-12
   Tor 0.4.4.6 is the second stable release in the 0.4.4.x series. It
   backports fixes from later releases, including a fix for TROVE-2020-
