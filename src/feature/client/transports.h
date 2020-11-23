@@ -41,15 +41,15 @@ void transport_free_(transport_t *transport);
 #define transport_free(tr) FREE_AND_NULL(transport_t, transport_free_, (tr))
 
 MOCK_DECL(transport_t*, transport_get_by_name, (const char *name));
+bool managed_proxy_has_transport(const char *transport_name);
 
 MOCK_DECL(void, pt_kickstart_proxy,
-          (const smartlist_t *transport_list, char **proxy_argv,
-           int is_server));
+          (const char *transport_name, char **proxy_argv, int is_server));
 
-#define pt_kickstart_client_proxy(tl, pa)  \
-  pt_kickstart_proxy(tl, pa, 0)
-#define pt_kickstart_server_proxy(tl, pa) \
-  pt_kickstart_proxy(tl, pa, 1)
+#define pt_kickstart_client_proxy(name, pa)  \
+  pt_kickstart_proxy(name, pa, 0)
+#define pt_kickstart_server_proxy(name, pa) \
+  pt_kickstart_proxy(name, pa, 1)
 
 void pt_configure_remaining_proxies(void);
 
@@ -87,6 +87,7 @@ struct process_t;
 
 /** Structure containing information of a managed proxy. */
 typedef struct {
+  char *transport_name; /* Transport name */
   enum pt_proto_state conf_state; /* the current configuration state */
   char **argv; /* the cli arguments of this proxy */
   int conf_protocol; /* the configuration protocol version used */
@@ -135,8 +136,9 @@ STATIC char *get_transport_options_for_server_proxy(const managed_proxy_t *mp);
 STATIC void managed_proxy_destroy(managed_proxy_t *mp,
                                   int also_terminate_process);
 
-STATIC managed_proxy_t *managed_proxy_create(const smartlist_t *transport_list,
-                                             char **proxy_argv, int is_server);
+STATIC managed_proxy_t *managed_proxy_create(const char *name,
+                                             char **proxy_argv,
+                                             int is_server);
 
 STATIC int configure_proxy(managed_proxy_t *mp);
 

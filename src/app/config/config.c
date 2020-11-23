@@ -2198,7 +2198,8 @@ options_act,(const or_options_t *old_options))
    * validation time. */
   SMARTLIST_FOREACH_BEGIN(bridge_list_get(), const bridge_info_t *, bi) {
     const char *bi_transport_name = bridget_get_transport_name(bi);
-    if (bi_transport_name && !transport_get_by_name(bi_transport_name)) {
+    if (bi_transport_name && (!transport_get_by_name(bi_transport_name) &&
+                          !managed_proxy_has_transport(bi_transport_name))) {
       log_warn(LD_CONFIG, "Bridge line with transport %s is missing a "
                           "ClientTransportPlugin line", bi_transport_name);
       return -1;
@@ -5266,8 +5267,7 @@ pt_parse_transport_line(const or_options_t *options,
 
   smartlist_t *items = NULL;
   int r;
-  const char *transports = NULL;
-  smartlist_t *transport_list = NULL;
+  const char *transport_name = NULL;
   char *type = NULL;
   char *addrport = NULL;
   tor_addr_t addr;
@@ -5279,7 +5279,6 @@ pt_parse_transport_line(const or_options_t *options,
   char **proxy_argv = NULL;
   char **tmp = NULL;
   int proxy_argc, i;
-  int is_useless_proxy = 1;
 
   int line_length;
 
@@ -5296,25 +5295,20 @@ pt_parse_transport_line(const or_options_t *options,
     goto err;
   }
 
-  /* Get the first line element, split it to commas into
-     transport_list (in case it's multiple transports) and validate
-     the transport names. */
-  transports = smartlist_get(items, 0);
-  transport_list = smartlist_new();
-  smartlist_split_string(transport_list, transports, ",",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
-    /* validate transport names */
-    if (!string_is_C_identifier(transport_name)) {
-      log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
-               transport_name);
-      goto err;
-    }
-
-    /* see if we actually need the transports provided by this proxy */
-    if (!validate_only && transport_is_needed(transport_name))
-      is_useless_proxy = 0;
-  } SMARTLIST_FOREACH_END(transport_name);
+  /* Get transport name. */
+  transport_name = smartlist_get(items, 0);
+  if (!string_is_C_identifier(transport_name)) {
+    log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
+             transport_name);
+    goto err;
+  }
+  /* If we can't find a Bridge line for that same transport, it is an error
+   * and thus stop immediately. */
+  if (!validate_only && !server && !transport_is_needed(transport_name)) {
+    log_warn(LD_CONFIG, "ClientTransportPlugin line for %s is missing a "
+                        "corresponding Bridge line.", transport_name);
+    goto err;
+  }
 
   type = smartlist_get(items, 1);
   if (!strcmp(type, "exec")) {
@@ -5357,20 +5351,13 @@ pt_parse_transport_line(const or_options_t *options,
   if (is_managed) {
     /* managed */
 
-    if (!server && !validate_only && is_useless_proxy) {
-      log_info(LD_GENERAL,
-               "Pluggable transport proxy (%s) does not provide "
-               "any needed transports and will not be launched.",
-               line);
-    }
-
     /*
      * If we are not just validating, use the rest of the line as the
      * argv of the proxy to be launched. Also, make sure that we are
      * only launching proxies that contribute useful transports.
      */
 
-    if (!validate_only && (server || !is_useless_proxy)) {
+    if (!validate_only) {
       proxy_argc = line_length - 2;
       tor_assert(proxy_argc > 0);
       proxy_argv = tor_calloc((proxy_argc + 1), sizeof(char *));
@@ -5385,9 +5372,9 @@ pt_parse_transport_line(const or_options_t *options,
 
       /* kickstart the thing */
       if (server) {
-        pt_kickstart_server_proxy(transport_list, proxy_argv);
+        pt_kickstart_server_proxy(transport_name, proxy_argv);
       } else {
-        pt_kickstart_client_proxy(transport_list, proxy_argv);
+        pt_kickstart_client_proxy(transport_name, proxy_argv);
       }
     }
   } else {
@@ -5399,13 +5386,6 @@ pt_parse_transport_line(const or_options_t *options,
       log_warn(LD_CONFIG, "You have configured an external proxy with another "
                           "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy|"
                           "TCPProxy)");
-      goto err;
-    }
-
-    if (smartlist_len(transport_list) != 1) {
-      log_warn(LD_CONFIG,
-               "You can't have an external proxy with more than "
-               "one transport.");
       goto err;
     }
 
@@ -5426,12 +5406,10 @@ pt_parse_transport_line(const or_options_t *options,
     if (!validate_only) {
       log_info(LD_DIR, "%s '%s' at %s.",
                server ? "Server transport" : "Transport",
-               transports, fmt_addrport(&addr, port));
+               transport_name, fmt_addrport(&addr, port));
 
       if (!server) {
-        transport_add_from_config(&addr, port,
-                                  smartlist_get(transport_list, 0),
-                                  socks_ver);
+        transport_add_from_config(&addr, port, transport_name, socks_ver);
       }
     }
   }
@@ -5445,10 +5423,6 @@ pt_parse_transport_line(const or_options_t *options,
  done:
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
-  if (transport_list) {
-    SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
-    smartlist_free(transport_list);
-  }
 
   return r;
 }

@@ -627,8 +627,8 @@ get_total_system_memory_mock(size_t *mem_out)
 
 /* Mocks needed for the transport plugin line test */
 
-static void pt_kickstart_proxy_mock(const smartlist_t *transport_list,
-                                    char **proxy_argv, int is_server);
+static void pt_kickstart_proxy_mock(const char *name, char **proxy_argv,
+                                    int is_server);
 static int transport_add_from_config_mock(const tor_addr_t *addr,
                                           uint16_t port, const char *name,
                                           int socks_ver);
@@ -640,12 +640,11 @@ static int transport_is_needed_mock_call_count = 0;
 static int transport_is_needed_mock_return = 0;
 
 static void
-pt_kickstart_proxy_mock(const smartlist_t *transport_list,
-                        char **proxy_argv, int is_server)
+pt_kickstart_proxy_mock(const char *name, char **proxy_argv, int is_server)
 {
-  (void) transport_list;
   (void) proxy_argv;
   (void) is_server;
+  (void) name;
   /* XXXX check that args are as expected. */
 
   ++pt_kickstart_proxy_mock_call_count;
@@ -759,13 +758,7 @@ test_config_parse_transport_plugin_line(void *arg)
       "transport_1 exec /usr/bin/fake-transport", 1, 0);
   tt_int_op(r, OP_EQ, 0);
   r = pt_parse_transport_line(options,
-   "transport_1 exec /usr/bin/fake-transport", 1, 1);
-  tt_int_op(r, OP_EQ, 0);
-  r = pt_parse_transport_line(options,
-      "transport_1,transport_2 exec /usr/bin/fake-transport", 1, 0);
-  tt_int_op(r, OP_EQ, 0);
-  r = pt_parse_transport_line(options,
-      "transport_1,transport_2 exec /usr/bin/fake-transport", 1, 1);
+      "transport_1 exec /usr/bin/fake-transport", 1, 1);
   tt_int_op(r, OP_EQ, 0);
   /* Bad transport identifiers */
   r = pt_parse_transport_line(options,
@@ -786,13 +779,6 @@ test_config_parse_transport_plugin_line(void *arg)
   r = pt_parse_transport_line(options,
       "transport_1 proxy 1.2.3.4:567", 1, 1);
   tt_int_op(r, OP_EQ, 0);
-  /* Multiple-transport error exit */
-  r = pt_parse_transport_line(options,
-      "transport_1,transport_2 socks5 1.2.3.4:567", 1, 0);
-  tt_int_op(r, OP_LT, 0);
-  r = pt_parse_transport_line(options,
-      "transport_1,transport_2 proxy 1.2.3.4:567", 1, 1);
-  tt_int_op(r, OP_LT, 0);
   /* No port error exit */
   r = pt_parse_transport_line(options,
       "transport_1 socks5 1.2.3.4", 1, 0);
@@ -862,7 +848,7 @@ test_config_parse_transport_plugin_line(void *arg)
   r = pt_parse_transport_line(options,
       "transport_1 exec /usr/bin/fake-transport", 0, 0);
   /* Should have succeeded */
-  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(r, OP_EQ, -1);
   /* transport_is_needed() should have been called */
   tt_assert(transport_is_needed_mock_call_count ==
       old_transport_is_needed_mock_call_count + 1);
