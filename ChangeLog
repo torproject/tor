@@ -57,11 +57,11 @@ Changes in version 0.4.5.2-alpha - 2020-11-23
       on 0.2.6.1-alpha.
     - Fix an issue where an ORPort was compared with other kinds of
       ports, when it should have been only checked against other
-      ORPorts. This bug lead to "DirPort auto" getting ignored. Fixes
-      bug 40195; bugfix on 0.4.5.1-alpha.
+      ORPorts. This bug would lead to "DirPort auto" getting ignored.
+      Fixes bug 40195; bugfix on 0.4.5.1-alpha.
     - Fix a bug where a second non-ORPort with a variant family (ex:
-      SocksPort [::1]:9050) would ignored due to a configuration parsing
-      error. Fixes bug 40183; bugfix on 0.4.5.1-alpha.
+      SocksPort [::1]:9050) would be ignored due to a configuration
+      parsing error. Fixes bug 40183; bugfix on 0.4.5.1-alpha.
 
   o Minor bugfixes (crash, relay, signing key):
     - Avoid assertion failures when we run Tor from the command line
