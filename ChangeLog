@@ -1,9 +1,9 @@
 Changes in version 0.4.5.2-alpha - 2020-11-23
-  Tor 0.4.5.2-alpha is the second alpha release in the 0.4.5.2-alpha
-  series. It fixes several bugs present in earlier releases, including
-  one that made it impractical to run relays on Windows. It also adds a
-  few small safety features to improve tor's behavior in the presence of
-  strange compile-time options, misbehaving proxies, and future versions
+  Tor 0.4.5.2-alpha is the second alpha release in the 0.4.5.x series.
+  It fixes several bugs present in earlier releases, including one that
+  made it impractical to run relays on Windows. It also adds a few small
+  safety features to improve Tor's behavior in the presence of strange
+  compile-time options, misbehaving proxies, and future versions
   of OpenSSL.
 
   o Major bugfixes (relay, windows):
@@ -34,8 +34,8 @@ Changes in version 0.4.5.2-alpha - 2020-11-23
   o Minor bugfixes (circuit, handshake):
     - In the v3 handshaking code, use connection_or_change_state() to
       change the state. Previously, we changed the state directly, but
-      this did not pass a state change to the pubsub or channel objects,
-      potentially leading to bugs. Fixes bug 32880; bugfix on
+      this did not pass the state change to the pubsub or channel
+      objects, potentially leading to bugs. Fixes bug 32880; bugfix on
       0.2.3.6-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (compilation):
@@ -55,13 +55,13 @@ Changes in version 0.4.5.2-alpha - 2020-11-23
       bridge directly without using the transport, making it easier for
       adversaries to notice the bridge. Fixes bug 25528; bugfix
       on 0.2.6.1-alpha.
-    - Fix an issue where an ORPort was validated against other type of
+    - Fix an issue where an ORPort was compared with other kinds of
       ports, when it should have been only checked against other
       ORPorts. This bug lead to "DirPort auto" getting ignored. Fixes
       bug 40195; bugfix on 0.4.5.1-alpha.
-    - Fix a bug where the second non-ORPort with a variant family (ex:
-      SocksPort [::1]:9050) was ignored due to a logical configuration
-      parsing error. Fixes bug 40183; bugfix on 0.4.5.1-alpha.
+    - Fix a bug where a second non-ORPort with a variant family (ex:
+      SocksPort [::1]:9050) would ignored due to a configuration parsing
+      error. Fixes bug 40183; bugfix on 0.4.5.1-alpha.
 
   o Minor bugfixes (crash, relay, signing key):
     - Avoid assertion failures when we run Tor from the command line
