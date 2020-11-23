@@ -240,7 +240,7 @@ networkstatus_get_cache_fname,(int flav,
 }
 
 /**
- * Read and and return the cached consensus of type <b>flavorname</b>.  If
+ * Read and return the cached consensus of type <b>flavorname</b>.  If
  * <b>unverified</b> is false, get the one we haven't verified. Return NULL if
  * the file isn't there. */
 static tor_mmap_t *

@@ -2209,7 +2209,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   }
 
   /* If this is a .exit hostname, strip off the .name.exit part, and
-   * see whether we're willing to connect there, and and otherwise handle the
+   * see whether we're willing to connect there, and otherwise handle the
    * .exit address.
    *
    * We'll set chosen_exit_name and/or close the connection as appropriate.
