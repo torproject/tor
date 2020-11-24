@@ -1143,7 +1143,6 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   build_time_t *x=cbt->circuit_build_times;
   double a = 0;
   int n=0,i=0,abandoned_count=0;
-  build_time_t max_time=0;
 
   /* http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation */
   /* We sort of cheat here and make our samples slightly more pareto-like
@@ -1168,8 +1167,6 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
       abandoned_count++;
     } else {
       a += tor_mathlog(x[i]);
-      if (x[i] > max_time)
-        max_time = x[i];
       n++;
     }
   }
@@ -1185,17 +1182,6 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
             cbt->total_build_times);
   }
   tor_assert_nonfatal(n==cbt->total_build_times-abandoned_count);
-
-  if (max_time <= 0) {
-    /* This can happen if Xm is actually the *maximum* value in the set.
-     * It can also happen if we've abandoned every single circuit somehow.
-     * In either case, tell the caller not to compute a new build timeout. */
-    log_warn(LD_BUG,
-             "Could not determine largest build time (%d). "
-             "Xm is %dms and we've abandoned %d out of %d circuits.", max_time,
-             cbt->Xm, abandoned_count, n);
-    return 0;
-  }
 
   /* This is the "Maximum Likelihood Estimator" for parameter alpha of a Pareto
    * Distribution. See:
