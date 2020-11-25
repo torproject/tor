@@ -1119,17 +1119,19 @@ client_filename_is_valid(const char *filename)
  *
  * Return the key on success, return NULL, otherwise. */
 hs_service_authorized_client_t *
-parse_authorized_client_key(const char *key_str)
+parse_authorized_client_key(const char *key_str, bool log)
 {
   hs_service_authorized_client_t *client = NULL;
 
-  /* We expect a specific length of the base32 encoded key so make sure we
+  /* We expect a specific length of the base64 encoded key so make sure we
    * have that so we don't successfully decode a value with a different length
    * and end up in trouble when copying the decoded key into a fixed length
    * buffer. */
   if (strlen(key_str) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
-    log_warn(LD_REND, "Client authorization encoded base32 public key "
-                      "length is invalid: %s", key_str);
+    if (log) {
+      log_warn(LD_REND, "Client authorization encoded base32 public key "
+                        "length is invalid: %s", key_str);
+    }
     goto err;
   }
 
@@ -1138,8 +1140,10 @@ parse_authorized_client_key(const char *key_str)
                     sizeof(client->client_pk.public_key),
                     key_str, strlen(key_str)) !=
       sizeof(client->client_pk.public_key)) {
-    log_warn(LD_REND, "Client authorization public key cannot be decoded: %s",
-             key_str);
+    if (log) {
+      log_warn(LD_REND, "Client authorization public key cannot be decoded: "
+               "%s", key_str);
+    }
     goto err;
   }
 
@@ -1198,7 +1202,7 @@ parse_authorized_client(const char *client_key_str)
     goto err;
   }
 
-  if ((client = parse_authorized_client_key(pubkey_b32)) == NULL) {
+  if ((client = parse_authorized_client_key(pubkey_b32, true)) == NULL) {
     goto err;
   }
 
@@ -3753,14 +3757,14 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
     goto err;
   }
 
-  if (service->config.clients == NULL) {
-    service->config.clients = smartlist_new();
-  }
-  SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, c, {
-    if (c != NULL) {
-      smartlist_add(service->config.clients, c);
+  if (auth_clients_v3) {
+    if (service->config.clients == NULL) {
+      service->config.clients = smartlist_new();
     }
-  });
+    SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, c, {
+      smartlist_add(service->config.clients, c);
+    });
+  }
 
   /* Build the onion address for logging purposes but also the control port
    * uses it for the HS_DESC event. */
