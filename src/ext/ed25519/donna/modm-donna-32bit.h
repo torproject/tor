@@ -376,7 +376,7 @@ contract256_slidingwindow_modm(signed char r[256], const bignum256modm s, int wi
 
 
 /*
-	helpers for batch verifcation, are allowed to be vartime
+	helpers for batch verification, are allowed to be vartime
 */
 
 /* out = a - b, a must be larger than b */
