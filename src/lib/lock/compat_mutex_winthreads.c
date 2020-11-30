@@ -58,13 +58,15 @@ tor_mutex_uninit(tor_mutex_t *m)
 static void
 tor_mutex_acquire_recursive(tor_mutex_t *m)
 {
-  DWORD thread_id = GetCurrentThreadId();
-  if (thread_id == m->lock_owner) {
+  LONG thread_id = GetCurrentThreadId();
+  // use InterlockedCompareExchange to perform an atomic read
+  LONG lock_owner = InterlockedCompareExchange(&m->lock_owner, 0, 0);
+  if (thread_id == lock_owner) {
     ++m->lock_count;
     return;
   }
   AcquireSRWLockExclusive(&m->mutex);
-  m->lock_owner = thread_id;
+  InterlockedExchange(&m->lock_owner, thread_id);
   m->lock_count = 1;
 }
 
@@ -91,7 +93,7 @@ tor_mutex_release_recursive(tor_mutex_t *m)
   if (--m->lock_count) {
     return;
   }
-  m->lock_owner = 0;
+  InterlockedExchange(&m->lock_owner, 0);
   ReleaseSRWLockExclusive(&m->mutex);
 }
 

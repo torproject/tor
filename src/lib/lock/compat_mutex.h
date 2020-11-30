@@ -46,7 +46,7 @@ typedef struct tor_mutex_t {
     NON_RECURSIVE = 0,
     RECURSIVE
   } type;
-  DWORD lock_owner; // id of the thread that owns the lock
+  LONG lock_owner; // id of the thread that owns the lock
   int lock_count; // number of times the lock is held recursively
 #elif defined(USE_PTHREADS)
   /** Pthreads-only: with pthreads, we implement locks with
