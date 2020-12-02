@@ -1,0 +1,3 @@
+  o Minor features (tests, portability):
+    - Port the hs_build_address.py test script to work with recent versions
+      of python.  Closes ticket 40213. Patch from Samanta Navarro.
