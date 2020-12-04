@@ -1649,7 +1649,7 @@ handle_control_hspost(control_connection_t *conn,
  * On success (RSAE_OKAY), the address_out points to a newly allocated string
  * containing the onion address without the .onion part. On error, address_out
  * is untouched. */
-STATIC hs_service_add_ephemeral_status_t
+static hs_service_add_ephemeral_status_t
 add_onion_helper_add_service(int hs_version,
                              add_onion_secret_key_t *pk,
                              smartlist_t *port_cfgs, int max_streams,
@@ -1831,7 +1831,7 @@ handle_control_add_onion(control_connection_t *conn,
       }
     } else if (!strcasecmp(arg->key, "ClientAuthV3")) {
       hs_service_authorized_client_t *client_v3 =
-                                parse_authorized_client_key(arg->value, false);
+                             parse_authorized_client_key(arg->value, LOG_INFO);
       if (!client_v3) {
         control_write_endreply(conn, 512, "Cannot decode v3 client auth key");
         goto out;
@@ -1926,6 +1926,7 @@ handle_control_add_onion(control_connection_t *conn,
                                    auth_clients, auth_clients_v3, &service_id);
   port_cfgs = NULL; /* port_cfgs is now owned by the rendservice code. */
   auth_clients = NULL; /* so is auth_clients */
+  auth_clients_v3 = NULL; /* so is auth_clients_v3 */
   switch (ret) {
   case RSAE_OKAY:
   {

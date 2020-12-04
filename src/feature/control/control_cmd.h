@@ -103,17 +103,6 @@ STATIC control_cmd_args_t *control_cmd_parse_args(
                                    size_t body_len,
                                    const char *body,
                                    char **error_out);
-#ifdef TOR_UNIT_TESTS
-#include "feature/hs/hs_common.h"
-
-STATIC hs_service_add_ephemeral_status_t
-add_onion_helper_add_service(int hs_version,
-                             add_onion_secret_key_t *pk,
-                             smartlist_t *port_cfgs, int max_streams,
-                             int max_streams_close_circuit, int auth_type,
-                             smartlist_t *auth_clients,
-                             smartlist_t *auth_clients_v3, char **address_out);
-#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(CONTROL_CMD_PRIVATE) */
 

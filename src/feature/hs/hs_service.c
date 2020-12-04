@@ -1119,7 +1119,7 @@ client_filename_is_valid(const char *filename)
  *
  * Return the key on success, return NULL, otherwise. */
 hs_service_authorized_client_t *
-parse_authorized_client_key(const char *key_str, bool log)
+parse_authorized_client_key(const char *key_str, int severity)
 {
   hs_service_authorized_client_t *client = NULL;
 
@@ -1128,10 +1128,8 @@ parse_authorized_client_key(const char *key_str, bool log)
    * and end up in trouble when copying the decoded key into a fixed length
    * buffer. */
   if (strlen(key_str) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
-    if (log) {
-      log_warn(LD_REND, "Client authorization encoded base32 public key "
-                        "length is invalid: %s", key_str);
-    }
+    log_fn(severity, LD_REND, "Client authorization encoded base32 public key "
+                              "length is invalid: %s", key_str);
     goto err;
   }
 
@@ -1140,10 +1138,8 @@ parse_authorized_client_key(const char *key_str, bool log)
                     sizeof(client->client_pk.public_key),
                     key_str, strlen(key_str)) !=
       sizeof(client->client_pk.public_key)) {
-    if (log) {
-      log_warn(LD_REND, "Client authorization public key cannot be decoded: "
-               "%s", key_str);
-    }
+    log_fn(severity, LD_REND, "Client authorization public key cannot be "
+             "decoded: %s", key_str);
     goto err;
   }
 
@@ -1151,7 +1147,7 @@ parse_authorized_client_key(const char *key_str, bool log)
 
  err:
   if (client != NULL) {
-    tor_free(client);
+    service_authorized_client_free(client);
   }
   return NULL;
 }
@@ -1202,7 +1198,7 @@ parse_authorized_client(const char *client_key_str)
     goto err;
   }
 
-  if ((client = parse_authorized_client_key(pubkey_b32, true)) == NULL) {
+  if ((client = parse_authorized_client_key(pubkey_b32, LOG_WARN)) == NULL) {
     goto err;
   }
 
@@ -3759,11 +3755,8 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
 
   if (auth_clients_v3) {
     if (service->config.clients == NULL) {
-      service->config.clients = smartlist_new();
+      service->config.clients = auth_clients_v3;
     }
-    SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, c, {
-      smartlist_add(service->config.clients, c);
-    });
   }
 
   /* Build the onion address for logging purposes but also the control port

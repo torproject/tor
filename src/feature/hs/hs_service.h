@@ -390,7 +390,7 @@ void hs_service_dump_stats(int severity);
 void hs_service_circuit_cleanup_on_close(const circuit_t *circ);
 
 hs_service_authorized_client_t *
-parse_authorized_client_key(const char *key_str, bool log);
+parse_authorized_client_key(const char *key_str, int severity);
 
 void
 service_authorized_client_free_(hs_service_authorized_client_t *client);
