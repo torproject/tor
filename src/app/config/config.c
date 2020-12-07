@@ -2601,8 +2601,11 @@ config_parse_commandline(int argc, char **argv, int ignore_errors)
         parsed_cmdline_free(result);
         return NULL;
       }
-    } else if (want_arg == ARGUMENT_OPTIONAL && is_last) {
+    } else if (want_arg == ARGUMENT_OPTIONAL &&
+               /* optional arguments may never start with '-'. */
+               (is_last || argv[i+1][0] == '-')) {
       arg = tor_strdup("");
+      want_arg = ARGUMENT_NONE; // prevent skipping the next flag.
     } else {
       arg = (want_arg != ARGUMENT_NONE) ? tor_strdup(argv[i+1]) :
                                               tor_strdup("");
