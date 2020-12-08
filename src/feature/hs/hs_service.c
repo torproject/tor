@@ -3700,9 +3700,10 @@ hs_service_upload_desc_to_dir(const char *encoded_desc,
 /** Add the ephemeral service using the secret key sk and ports. Both max
  * streams parameter will be set in the newly created service.
  *
- * Ownership of sk and ports is passed to this routine.  Regardless of
- * success/failure, callers should not touch these values after calling this
- * routine, and may assume that correct cleanup has been done on failure.
+ * Ownership of sk, ports, and auth_clients_v3 is passed to this routine.
+ * Regardless of success/failure, callers should not touch these values
+ * after calling this routine, and may assume that correct cleanup has
+ * been done on failure.
  *
  * Return an appropriate hs_service_add_ephemeral_status_t. */
 hs_service_add_ephemeral_status_t
@@ -3754,9 +3755,7 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
   }
 
   if (auth_clients_v3) {
-    if (service->config.clients == NULL) {
-      service->config.clients = auth_clients_v3;
-    }
+    service->config.clients = auth_clients_v3;
   }
 
   /* Build the onion address for logging purposes but also the control port
