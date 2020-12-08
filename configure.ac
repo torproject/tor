@@ -129,8 +129,9 @@ if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
   enable_static_openssl="yes";
   enable_static_zlib="yes";
-  CFLAGS="$CFLAGS -static"
+  TOR_STATIC_LDFLAGS="-static"
 fi
+AC_SUBST(TOR_STATIC_LDFLAGS)
 
 if test "$enable_system_torrc" = "no"; then
   AC_DEFINE(DISABLE_SYSTEM_TORRC, 1,
@@ -953,7 +954,7 @@ if test "$enable_static_libevent" = "yes"; then
    if test "$tor_cv_library_libevent_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-libevent-dir=x option when using --enable-static-libevent")
    else
-     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $STATIC_LIBEVENT_FLAGS"
+     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/.libs/libevent.a $STATIC_LIBEVENT_FLAGS"
    fi
 else
      if test "x$ac_cv_header_event2_event_h" = "xyes"; then

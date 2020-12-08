@@ -1,0 +1,7 @@
+  o Minor bugfixes (configure, build):
+    - Fix the --enable-static-tor switch to properly set the -static compile
+      option onto the tor binary only. Fixes bug 40111; bugfix on
+      0.2.3.1-alpha.
+    - Path to static libevent has been fixed as well which affects the
+      --enable-static-libevent to behave correctly now. The .a file is in
+      .libs/ of libevent repository, not at the root.
