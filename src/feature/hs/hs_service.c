@@ -3755,7 +3755,13 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
   }
 
   if (auth_clients_v3) {
-    service->config.clients = auth_clients_v3;
+    service->config.clients = smartlist_new();
+    SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, c, {
+      if (c != NULL) {
+        smartlist_add(service->config.clients, c);
+      }
+    });
+    smartlist_free(auth_clients_v3);
   }
 
   /* Build the onion address for logging purposes but also the control port

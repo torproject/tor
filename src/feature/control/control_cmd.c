@@ -1649,7 +1649,7 @@ handle_control_hspost(control_connection_t *conn,
  * On success (RSAE_OKAY), the address_out points to a newly allocated string
  * containing the onion address without the .onion part. On error, address_out
  * is untouched. */
-static hs_service_add_ephemeral_status_t
+STATIC hs_service_add_ephemeral_status_t
 add_onion_helper_add_service(int hs_version,
                              add_onion_secret_key_t *pk,
                              smartlist_t *port_cfgs, int max_streams,

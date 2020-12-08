@@ -75,6 +75,7 @@ typedef struct control_cmd_syntax_t {
 } control_cmd_syntax_t;
 
 #ifdef CONTROL_CMD_PRIVATE
+#include "feature/hs/hs_service.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 /* ADD_ONION secret key to create an ephemeral service. The command supports
@@ -93,6 +94,14 @@ STATIC int add_onion_helper_keyarg(const char *arg, int discard_pk,
                                    add_onion_secret_key_t *decoded_key,
                                    int *hs_version,
                                    control_connection_t *conn);
+
+STATIC hs_service_add_ephemeral_status_t add_onion_helper_add_service(
+                             int hs_version,
+                             add_onion_secret_key_t *pk,
+                             smartlist_t *port_cfgs, int max_streams,
+                             int max_streams_close_circuit, int auth_type,
+                             smartlist_t *auth_clients,
+                             smartlist_t *auth_clients_v3, char **address_out);
 
 STATIC rend_authorized_client_t *add_onion_helper_clientauth(const char *arg,
                                    int *created, control_connection_t *conn);
