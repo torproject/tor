@@ -1,0 +1,5 @@
+  o Minor bugfixes (relay, logging, reachability):
+    - When launching bandwidth testing circuit, don't log notice that we are
+      doing a reachability test. Furthermore, avoid to trigger a
+      "CHECKING_REACHABILITY" control event. Fixes bug 40205; bugfix on
+      0.4.5.1-alpha.

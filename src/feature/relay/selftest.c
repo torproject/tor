@@ -274,7 +274,12 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
              !orport_reachable ? "reachability" : "bandwidth",
              family_name, fmt_addrport_ap(ap));
 
-    inform_testing_reachability(&ap->addr, ap->port, false);
+    if (!orport_reachable) {
+      /* Only log if we are actually doing a reachability test to learn if our
+       * ORPort is reachable. Else, this prints a log notice if we are simply
+       * opening a bandwidth testing circuit even do we are reachable. */
+      inform_testing_reachability(&ap->addr, ap->port, false);
+    }
 
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                                   CIRCLAUNCH_NEED_CAPACITY|
