@@ -1,0 +1,5 @@
+  o Minor features (command-line interface):
+    - When parsing command-line flags that take an optional argument,
+      treat the argument as absent if it would start with a '-' character.
+      Arguments in that form are not intelligible for any of our
+      optional-argument flags.  Closes ticket 40223.
