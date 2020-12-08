@@ -146,7 +146,6 @@ static void
 test_pt_get_transport_options(void *arg)
 {
   char **execve_args;
-  smartlist_t *transport_list = smartlist_new();
   managed_proxy_t *mp;
   or_options_t *options = get_options_mutable();
   char *opt_str = NULL;
@@ -157,7 +156,7 @@ test_pt_get_transport_options(void *arg)
   execve_args[0] = tor_strdup("cheeseshop");
   execve_args[1] = NULL;
 
-  mp = managed_proxy_create(transport_list, execve_args, 1);
+  mp = managed_proxy_create("aname", execve_args, 1);
   tt_ptr_op(mp, OP_NE, NULL);
   opt_str = get_transport_options_for_server_proxy(mp);
   tt_ptr_op(opt_str, OP_EQ, NULL);
@@ -191,7 +190,6 @@ test_pt_get_transport_options(void *arg)
   tor_free(opt_str);
   config_free_lines(cl);
   managed_proxy_destroy(mp, 0);
-  smartlist_free(transport_list);
 }
 
 static void
@@ -250,7 +248,6 @@ test_pt_get_extrainfo_string(void *arg)
 {
   managed_proxy_t *mp1 = NULL, *mp2 = NULL;
   char **argv1, **argv2;
-  smartlist_t *t1 = smartlist_new(), *t2 = smartlist_new();
   int r;
   char *s = NULL;
   (void) arg;
@@ -265,8 +262,8 @@ test_pt_get_extrainfo_string(void *arg)
   argv2[2] = tor_strdup("Schlangenkraft");
   argv2[3] = NULL;
 
-  mp1 = managed_proxy_create(t1, argv1, 1);
-  mp2 = managed_proxy_create(t2, argv2, 1);
+  mp1 = managed_proxy_create("aname", argv1, 1);
+  mp2 = managed_proxy_create("aname", argv2, 1);
 
   r = parse_smethod_line("SMETHOD hagbard 127.0.0.1:5555", mp1);
   tt_int_op(r, OP_EQ, 0);
@@ -284,9 +281,6 @@ test_pt_get_extrainfo_string(void *arg)
             "transport celine 127.0.0.1:1723 card=no-enemy\n");
 
  done:
-  /* XXXX clean up better */
-  smartlist_free(t1);
-  smartlist_free(t2);
   tor_free(s);
 }
 

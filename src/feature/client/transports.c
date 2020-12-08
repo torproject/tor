@@ -368,6 +368,26 @@ static int unconfigured_proxies_n = 0;
 /** Boolean: True iff we might need to restart some proxies. */
 static int check_if_restarts_needed = 0;
 
+/** Return true iff we have a managed_proxy_t in the global list is for the
+ * given transport name. */
+bool
+managed_proxy_has_transport(const char *transport_name)
+{
+  tor_assert(transport_name);
+
+  if (!managed_proxy_list) {
+    return false;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, const managed_proxy_t *, mp) {
+    if (!strcmp(mp->transport_name, transport_name)) {
+      return true;
+    }
+  } SMARTLIST_FOREACH_END(mp);
+
+  return false;
+}
+
 /** Return true if there are still unconfigured managed proxies, or proxies
  * that need restarting. */
 int
@@ -724,6 +744,7 @@ managed_proxy_destroy(managed_proxy_t *mp,
     process_terminate(mp->process);
   }
 
+  tor_free(mp->transport_name);
   tor_free(mp);
 }
 
@@ -1495,10 +1516,11 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
  *
  * Requires that proxy_argv have at least one element. */
 STATIC managed_proxy_t *
-managed_proxy_create(const smartlist_t *with_transport_list,
-                     char **proxy_argv, int is_server)
+managed_proxy_create(const char *transport_name, char **proxy_argv,
+                     int is_server)
 {
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
+  mp->transport_name = tor_strdup(transport_name);
   mp->conf_state = PT_PROTO_INFANT;
   mp->is_server = is_server;
   mp->argv = proxy_argv;
@@ -1507,8 +1529,7 @@ managed_proxy_create(const smartlist_t *with_transport_list,
   mp->process = process_new(proxy_argv[0]);
 
   mp->transports_to_launch = smartlist_new();
-  SMARTLIST_FOREACH(with_transport_list, const char *, transport,
-                    add_transport_to_proxy(transport, mp));
+  add_transport_to_proxy(mp->transport_name, mp);
 
   /* register the managed proxy */
   if (!managed_proxy_list)
@@ -1521,9 +1542,9 @@ managed_proxy_create(const smartlist_t *with_transport_list,
   return mp;
 }
 
-/** Register proxy with <b>proxy_argv</b>, supporting transports in
- *  <b>transport_list</b>, to the managed proxy subsystem.
- *  If <b>is_server</b> is true, then the proxy is a server proxy.
+/** Register proxy with <b>proxy_argv</b>, supporting the transport name to
+ * the managed proxy subsystem.  If <b>is_server</b> is true, then the proxy
+ * is a server proxy.
  *
  * Takes ownership of proxy_argv.
  *
@@ -1531,11 +1552,13 @@ managed_proxy_create(const smartlist_t *with_transport_list,
  * elements, containing at least one element.
  **/
 MOCK_IMPL(void,
-pt_kickstart_proxy, (const smartlist_t *with_transport_list,
-                     char **proxy_argv, int is_server))
+pt_kickstart_proxy,(const char *transport_name, char **proxy_argv,
+                    int is_server))
 {
   managed_proxy_t *mp=NULL;
   transport_t *old_transport = NULL;
+
+  tor_assert(transport_name);
 
   if (!proxy_argv || !proxy_argv[0]) {
     return;
@@ -1544,7 +1567,7 @@ pt_kickstart_proxy, (const smartlist_t *with_transport_list,
   mp = get_managed_proxy_by_argv_and_type(proxy_argv, is_server);
 
   if (!mp) { /* we haven't seen this proxy before */
-    managed_proxy_create(with_transport_list, proxy_argv, is_server);
+    managed_proxy_create(transport_name, proxy_argv, is_server);
 
   } else { /* known proxy. add its transport to its transport list */
     if (mp->was_around_before_config_read) {
@@ -1558,18 +1581,15 @@ pt_kickstart_proxy, (const smartlist_t *with_transport_list,
         check_if_restarts_needed = 1;
       }
 
-      /* For each new transport, check if the managed proxy used to
+      /* For the transport, check if the managed proxy used to
          support it before the SIGHUP. If that was the case, make sure
          it doesn't get removed because we might reuse it. */
-      SMARTLIST_FOREACH_BEGIN(with_transport_list, const char *, transport) {
-        old_transport = transport_get_by_name(transport);
-        if (old_transport)
-          old_transport->marked_for_removal = 0;
-      } SMARTLIST_FOREACH_END(transport);
+      old_transport = transport_get_by_name(transport_name);
+      if (old_transport)
+        old_transport->marked_for_removal = 0;
     }
 
-    SMARTLIST_FOREACH(with_transport_list, const char *, transport,
-                      add_transport_to_proxy(transport, mp));
+    add_transport_to_proxy(transport_name, mp);
     free_execve_args(proxy_argv);
   }
 }

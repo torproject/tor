@@ -1,0 +1,8 @@
+  o Minor bugfixes (config, bridge):
+    - Really fix the case where torrc has a missing Bridge line while configured
+      with a ClientTransportPlugin. Previously, we failed to also look at the
+      managed proxy list and thus it would fail for the "exec" case. Fixes bug
+      40106; bugfix on 0.4.5.1-alpha.
+    - Our code was supporting a *TransportPlugin line to have multiple
+      transport name but our documentation never detailed it. Remove that
+      capability in favor of using multiple *TransportPlugin line instead.
