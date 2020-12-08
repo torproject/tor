@@ -53,10 +53,10 @@ config_get_lines_include(const char *string, config_line_t **result,
                               opened_lst, 1, NULL, config_process_include);
 }
 
-/** Returns a list of paths obtained when expading globs in <b>pattern</b>. If
- * <b>pattern</b> has no globs, returns a list with <b>pattern</b> if it is an
- * existing path or NULL otherwise. If <b>opened_files</b> is provided, adds
- * paths opened by glob to it. Returns NULL on failure. */
+/** Return a list of paths obtained when expading globs in <b>pattern</b>.
+ * If <b>pattern</b> has no globs, return a list with <b>pattern</b> in it.
+ * If <b>opened_files</b> is provided, add paths opened by glob to it.
+ * Return NULL on failure. */
 static smartlist_t *
 expand_glob(const char *pattern, smartlist_t *opened_files)
 {

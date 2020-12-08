@@ -1229,7 +1229,9 @@ static sandbox_filter_func_t filter_func[] = {
 /**
  * Return the interned (and hopefully sandbox-permitted) string equal
  * to @a str.
- */
+ *
+ * Return NULL if `str` is NULL, or `str` is not an interned string.
+ **/
 const char *
 sandbox_intern_string(const char *str)
 {
