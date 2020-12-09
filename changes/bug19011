@@ -1,0 +1,7 @@
+  o Minor bugfixes (directory authorities, voting):
+    - Add a new consensus method (31) to support any future changes that
+      authorities decide to make to the value of bwweightscale or
+      maxunmeasuredbw. Previously, there was a bug that prevented the
+      authorities from parsing these consensus parameters correctly under
+      most circumstances.
+      Fixes bug 19011; bugfix on 0.2.2.10-alpha.
