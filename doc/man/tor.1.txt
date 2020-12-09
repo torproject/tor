@@ -3824,9 +3824,11 @@ __DataDirectory__/**`approved-routers`**::
     **fingerprint** file in a tor relay's __DataDirectory__ for an example
     fingerprint line. If the status is **!reject**, then descriptors from the
     given identity are rejected by this server. If it is **!invalid** then
-    descriptors are accepted, but marked in the directory as not valid, that
-    is, not recommended. In either case, the corresponding relays are not
-    included in the consensus.
+    descriptors are accepted, but marked in the vote as not valid.
+    If it is **!badexit**, then the authority will vote for it to receive a
+    BadExit flag, indicating that it shouldn't be used for traffic leaving
+    the Tor network.
+    (Neither rejected nor invalid relays are included in the consensus.)
 
 __DataDirectory__/**`v3-status-votes`**::
     Only for v3 authoritative directory servers. This file contains status
