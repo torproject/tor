@@ -853,9 +853,10 @@ circuit_build_times_create_histogram(const circuit_build_times_t *cbt,
  * Return the Pareto start-of-curve parameter Xm.
  *
  * Because we are not a true Pareto curve, we compute this as the
- * weighted average of the N most frequent build time bins. N is either
- * 1 if we don't have enough circuit build time data collected, or
- * determined by the consensus parameter cbtnummodes (default 3).
+ * weighted average of the 10 most frequent build time bins. This
+ * heuristic allowed for the actual timeout rate to be closest
+ * to the chosen quantile cutoff, for quantiles 60-80%, out of
+ * many variant approaches (see #40157 for analysis).
  */
 static build_time_t
 circuit_build_times_get_xm(circuit_build_times_t *cbt)
