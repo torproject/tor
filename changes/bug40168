@@ -9,7 +9,7 @@
       circuits most likely just contain relays that are offline. We also now
       wait a bit longer to let circuits complete for measurement purposes,
       lower the minimum possible effective timeout from 1.5 seconds to 10ms,
-      and increase the resolution of the circuit build time histrogram from
+      and increase the resolution of the circuit build time histogram from
       50ms bin widths to 10ms bin widths. Additionally, we alter our estimate
       Xm by taking the maximum of the top 10 most common build time values
       of the 10ms histogram, and compute Xm as the average of these.
