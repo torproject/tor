@@ -205,10 +205,10 @@ circuit_build_times_max_timeouts(void)
  * Retrieve and bounds-check the cbtnummodes consensus parameter.
  *
  * Effect: This value governs how many modes to use in the weighted
- * average calculation of Pareto parameter Xm. A value of 3 introduces
- * some bias (2-5% of CDF) under ideal conditions, but allows for better
- * performance in the event that a client chooses guard nodes of radically
- * different performance characteristics.
+ * average calculation of Pareto parameter Xm. Analysis of pairs of
+ * geographically near, far, and mixed guaeds has shown that a value of
+ * 10 introduces some allows for the actual timeout rate to be within
+ * 2-7% of the cutoff quantile, for quantiles between 60-80%.
  */
 static int32_t
 circuit_build_times_default_num_xm_modes(void)
