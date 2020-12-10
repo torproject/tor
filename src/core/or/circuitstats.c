@@ -1180,7 +1180,7 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
     log_err(LD_CIRC, "Discrepancy in build times count: %d vs %d", n,
             cbt->total_build_times);
   }
-  tor_assert(n==cbt->total_build_times-abandoned_count);
+  tor_assert_nonfatal(n==cbt->total_build_times-abandoned_count);
 
   /* This is the "Maximum Likelihood Estimator" for parameter alpha of a Pareto
    * Distribution. See:
