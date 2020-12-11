@@ -6069,7 +6069,7 @@ port_parse_config(smartlist_t *out,
       tor_free(addrtmp);
     } else {
       /* Try parsing integer port before address, because, who knows?
-         "9050" might be a valid address. */
+       * "9050" might be a valid address. */
       port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
       if (ok) {
         tor_addr_copy(&addr, &default_addr);
