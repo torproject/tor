@@ -142,6 +142,7 @@ STATIC void circuit_build_times_reset(circuit_build_times_t *cbt);
 /* Network liveness functions */
 STATIC int circuit_build_times_network_check_changed(
                                              circuit_build_times_t *cbt);
+STATIC build_time_t circuit_build_times_get_xm(circuit_build_times_t *cbt);
 #endif /* defined(CIRCUITSTATS_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS

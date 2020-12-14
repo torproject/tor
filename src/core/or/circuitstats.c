@@ -858,7 +858,7 @@ circuit_build_times_create_histogram(const circuit_build_times_t *cbt,
  * to the chosen quantile cutoff, for quantiles 60-80%, out of
  * many variant approaches (see #40157 for analysis).
  */
-static build_time_t
+STATIC build_time_t
 circuit_build_times_get_xm(circuit_build_times_t *cbt)
 {
   build_time_t nbins = 0;

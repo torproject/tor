@@ -57,6 +57,7 @@
 #include "feature/stats/rephist.h"
 #include "app/config/statefile.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
+#include "feature/nodelist/networkstatus.h"
 
 #include "core/or/extend_info_st.h"
 #include "core/or/or_circuit_st.h"
@@ -364,6 +365,106 @@ crypto_rand_deterministic_aes(char *out, size_t n)
   tor_assert(crypto_rand_aes_cipher);
   memset(out, 0, n);
   crypto_cipher_crypt_inplace(crypto_rand_aes_cipher, out, n);
+}
+
+static int32_t cbtnummodes = 10;
+
+static int32_t
+mock_xm_networkstatus_get_param(
+    const networkstatus_t *ns, const char *param_name, int32_t default_val,
+    int32_t min_val, int32_t max_val)
+{
+  (void)ns;
+  (void)default_val;
+  (void)min_val;
+  (void)max_val;
+  // only support cbtnummodes right now
+  tor_assert(strcmp(param_name, "cbtnummodes")==0);
+  return cbtnummodes;
+}
+
+static void
+test_circuit_timeout_xm_alpha(void *arg)
+{
+  circuit_build_times_t cbt;
+  build_time_t Xm;
+  int alpha_ret;
+  circuit_build_times_init(&cbt);
+  (void)arg;
+
+  /* Plan:
+   * 1. Create array of build times with 10 modes.
+   * 2. Make sure Xm calc is sane for 1,3,5,10,15,20 modes.
+   * 3. Make sure alpha calc is sane for 1,3,5,10,15,20 modes.
+   */
+
+  /* 110 build times, 9 modes, 8 mode ties, 10 abandoned */
+  build_time_t circuit_build_times[] = {
+    100, 20, 1000, 500, 200, 5000, 30, 600, 200, 300, CBT_BUILD_ABANDONED,
+    101, 21, 1001, 501, 201, 5001, 31, 601, 201, 301, CBT_BUILD_ABANDONED,
+    102, 22, 1002, 502, 202, 5002, 32, 602, 202, 302, CBT_BUILD_ABANDONED,
+    103, 23, 1003, 503, 203, 5003, 33, 603, 203, 303, CBT_BUILD_ABANDONED,
+    104, 24, 1004, 504, 204, 5004, 34, 604, 204, 304, CBT_BUILD_ABANDONED,
+    105, 25, 1005, 505, 205, 5005, 35, 605, 205, 305, CBT_BUILD_ABANDONED,
+    106, 26, 1006, 506, 206, 5006, 36, 606, 206, 306, CBT_BUILD_ABANDONED,
+    107, 27, 1007, 507, 207, 5007, 37, 607, 207, 307, CBT_BUILD_ABANDONED,
+    108, 28, 1008, 508, 208, 5008, 38, 608, 208, 308, CBT_BUILD_ABANDONED,
+    109, 29, 1009, 509, 209, 5009, 39, 609, 209, 309, CBT_BUILD_ABANDONED
+  };
+
+  memcpy(cbt.circuit_build_times, circuit_build_times,
+         sizeof(circuit_build_times));
+  cbt.total_build_times = 110;
+
+  MOCK(networkstatus_get_param, mock_xm_networkstatus_get_param);
+
+#define CBT_ALPHA_PRECISION 0.00001
+  cbtnummodes = 1;
+  Xm = circuit_build_times_get_xm(&cbt);
+  alpha_ret = circuit_build_times_update_alpha(&cbt);
+  tt_int_op(alpha_ret, OP_EQ, 1);
+  tt_int_op(Xm, OP_EQ, 205);
+  tt_assert(fabs(cbt.alpha - 1.394401) < CBT_ALPHA_PRECISION);
+
+  cbtnummodes = 3;
+  Xm = circuit_build_times_get_xm(&cbt);
+  alpha_ret = circuit_build_times_update_alpha(&cbt);
+  tt_int_op(alpha_ret, OP_EQ, 1);
+  tt_int_op(Xm, OP_EQ, 117);
+  tt_assert(fabs(cbt.alpha - 0.902313) < CBT_ALPHA_PRECISION);
+
+  cbtnummodes = 5;
+  Xm = circuit_build_times_get_xm(&cbt);
+  alpha_ret = circuit_build_times_update_alpha(&cbt);
+  tt_int_op(alpha_ret, OP_EQ, 1);
+  tt_int_op(Xm, OP_EQ, 146);
+  tt_assert(fabs(cbt.alpha - 1.049032) < CBT_ALPHA_PRECISION);
+
+  cbtnummodes = 10;
+  Xm = circuit_build_times_get_xm(&cbt);
+  alpha_ret = circuit_build_times_update_alpha(&cbt);
+  tt_int_op(alpha_ret, OP_EQ, 1);
+  tt_int_op(Xm, OP_EQ, 800);
+  tt_assert(fabs(cbt.alpha - 4.851754) < CBT_ALPHA_PRECISION);
+
+  cbtnummodes = 15;
+  Xm = circuit_build_times_get_xm(&cbt);
+  alpha_ret = circuit_build_times_update_alpha(&cbt);
+  tt_int_op(alpha_ret, OP_EQ, 1);
+  tt_int_op(Xm, OP_EQ, 800);
+  tt_assert(fabs(cbt.alpha - 4.851754) < CBT_ALPHA_PRECISION);
+
+  cbtnummodes = 20;
+  Xm = circuit_build_times_get_xm(&cbt);
+  alpha_ret = circuit_build_times_update_alpha(&cbt);
+  tt_int_op(alpha_ret, OP_EQ, 1);
+  tt_int_op(Xm, OP_EQ, 800);
+  tt_assert(fabs(cbt.alpha - 4.851754) < CBT_ALPHA_PRECISION);
+
+ done:
+#undef CBT_ALPHA_PRECISION
+  UNMOCK(networkstatus_get_param);
+  circuit_build_times_free_timeouts(&cbt);
 }
 
 static void
@@ -815,6 +916,7 @@ static struct testcase_t test_array[] = {
   { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
   { "fast_handshake", test_fast_handshake, 0, NULL, NULL },
   FORK(circuit_timeout),
+  FORK(circuit_timeout_xm_alpha),
   FORK(rend_fns),
   FORK(stats),
 
