@@ -537,6 +537,10 @@ unglob_win32(const char *pattern, int prev_sep, int next_sep)
 static DIR *
 prot_opendir(const char *name)
 {
+  if (sandbox_interned_string_is_missing(name)) {
+    errno = EPERM;
+    return NULL;
+  }
   return opendir(sandbox_intern_string(name));
 }
 
@@ -544,6 +548,10 @@ prot_opendir(const char *name)
 static int
 prot_stat(const char *pathname, struct stat *buf)
 {
+  if (sandbox_interned_string_is_missing(pathname)) {
+    errno = EPERM;
+    return -1;
+  }
   return stat(sandbox_intern_string(pathname), buf);
 }
 
@@ -551,6 +559,10 @@ prot_stat(const char *pathname, struct stat *buf)
 static int
 prot_lstat(const char *pathname, struct stat *buf)
 {
+  if (sandbox_interned_string_is_missing(pathname)) {
+    errno = EPERM;
+    return -1;
+  }
   return lstat(sandbox_intern_string(pathname), buf);
 }
 /** As closedir, but has the right type for gl_closedir */
@@ -563,7 +575,8 @@ wrap_closedir(void *arg)
 
 /** Return a new list containing the paths that match the pattern
  * <b>pattern</b>. Return NULL on error. On POSIX systems, errno is set by the
- * glob function.
+ * glob function or is set to EPERM if glob tried to access a file not allowed
+ * by the seccomp sandbox.
  */
 struct smartlist_t *
 tor_glob(const char *pattern)

@@ -310,6 +310,8 @@ static int filter_nopar_gen[] = {
 #define seccomp_rule_add_4(ctx,act,call,f1,f2,f3,f4)      \
   seccomp_rule_add((ctx),(act),(call),4,(f1),(f2),(f3),(f4))
 
+static const char *sandbox_get_interned_string(const char *str);
+
 /**
  * Function responsible for setting up the rt_sigaction syscall for
  * the seccomp filter sandbox.
@@ -1224,8 +1226,41 @@ static sandbox_filter_func_t filter_func[] = {
     sb_kill
 };
 
+/**
+ * Return the interned (and hopefully sandbox-permitted) string equal
+ * to @a str.
+ *
+ * Return NULL if `str` is NULL, or `str` is not an interned string.
+ **/
 const char *
 sandbox_intern_string(const char *str)
+{
+  const char *interned = sandbox_get_interned_string(str);
+
+  if (sandbox_active && str != NULL && interned == NULL) {
+    log_warn(LD_BUG, "No interned sandbox parameter found for %s", str);
+  }
+
+  return interned ? interned : str;
+}
+
+/**
+ * Return true if the sandbox is running and we are missing an interned string
+ * equal to @a str.
+ */
+bool
+sandbox_interned_string_is_missing(const char *str)
+{
+  return sandbox_active && sandbox_get_interned_string(str) == NULL;
+}
+
+/**
+ * Try to find and return the interned string equal to @a str.
+ *
+ * If there is no such string, return NULL.
+ **/
+static const char *
+sandbox_get_interned_string(const char *str)
 {
   sandbox_cfg_t *elem;
 
@@ -1245,9 +1280,7 @@ sandbox_intern_string(const char *str)
     }
   }
 
-  if (sandbox_active)
-    log_warn(LD_BUG, "No interned sandbox parameter found for %s", str);
-  return str;
+  return NULL;
 }
 
 /* DOCDOC */
