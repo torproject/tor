@@ -1,0 +1,5 @@
+  o Minor bugfixes (relay, statistics):
+    - The connection statistics were wrongly exported in the extrainfo document
+      due to a problem in the file loading function which would wrongly truncate
+      the file reporting the wrong information. It is now fixed. Fixes bug
+      40226; bugfix on 0.4.5.1-alpha.

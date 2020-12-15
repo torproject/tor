@@ -3139,57 +3139,77 @@ router_dump_exit_policy_to_string(const routerinfo_t *router,
                                include_ipv6);
 }
 
-/** Load the contents of <b>filename</b>, find the last line starting with
- * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
- * the past or more than 1 hour in the future with respect to <b>now</b>,
- * and write the file contents starting with that line to *<b>out</b>.
- * Return 1 for success, 0 if the file does not exist or is empty, or -1
- * if the file does not contain a line matching these criteria or other
- * failure. */
-static int
-load_stats_file(const char *filename, const char *end_line, time_t now,
+/** Load the contents of <b>filename</b>, find a line starting with
+ * timestamp tag <b>ts_tag</b>, ensure that its timestamp is not more than 25
+ * hours in the past or more than 1 hour in the future with respect to
+ * <b>now</b>, and write the entire file contents into <b>out</b>.
+ *
+ * The timestamp expected should be an ISO-formatted UTC time value which is
+ * parsed using our parse_iso_time() function.
+ *
+ * In case more than one tag are found in the file, the very first one is
+ * used.
+ *
+ * Return 1 for success, 0 if the file does not exist or is empty, or -1 if
+ * the file does not contain a line with the timestamp tag. */
+STATIC int
+load_stats_file(const char *filename, const char *ts_tag, time_t now,
                 char **out)
 {
   int r = -1;
   char *fname = get_datadir_fname(filename);
-  char *contents, *start = NULL, *tmp, timestr[ISO_TIME_LEN+1];
+  char *contents = NULL, timestr[ISO_TIME_LEN+1];
   time_t written;
+
   switch (file_status(fname)) {
-    case FN_FILE:
-      /* X022 Find an alternative to reading the whole file to memory. */
-      if ((contents = read_file_to_str(fname, 0, NULL))) {
-        tmp = strstr(contents, end_line);
-        /* Find last block starting with end_line */
-        while (tmp) {
-          start = tmp;
-          tmp = strstr(tmp + 1, end_line);
-        }
-        if (!start)
-          goto notfound;
-        if (strlen(start) < strlen(end_line) + 1 + sizeof(timestr))
-          goto notfound;
-        strlcpy(timestr, start + 1 + strlen(end_line), sizeof(timestr));
-        if (parse_iso_time(timestr, &written) < 0)
-          goto notfound;
-        if (written < now - (25*60*60) || written > now + (1*60*60))
-          goto notfound;
-        *out = tor_strdup(start);
-        r = 1;
-      }
-     notfound:
-      tor_free(contents);
-      break;
-    /* treat empty stats files as if the file doesn't exist */
-    case FN_NOENT:
-    case FN_EMPTY:
-      r = 0;
-      break;
-    case FN_ERROR:
-    case FN_DIR:
-    default:
-      break;
+  case FN_FILE:
+    contents = read_file_to_str(fname, 0, NULL);
+    if (contents == NULL) {
+      log_debug(LD_BUG, "Unable to read content of %s", filename);
+      goto end;
+    }
+    /* Find the timestamp tag to validate that the file is not too old or if
+     * exists. */
+    const char *ts_tok = find_str_at_start_of_line(contents, ts_tag);
+    if (!ts_tok) {
+      log_warn(LD_BUG, "Token %s not found in file %s", ts_tag, filename);
+      goto end;
+    }
+    /* Do we have enough for parsing a timestamp? */
+    if (strlen(contents) < strlen(ts_tag) + 1 + sizeof(timestr)) {
+      log_warn(LD_BUG, "Token %s malformed in file %s", ts_tag, filename);
+      goto end;
+    }
+    /* Parse timestamp in order to validate it is not too old. */
+    strlcpy(timestr, contents + strlen(ts_tag) + 1, sizeof(timestr));
+    if (parse_iso_time(timestr, &written) < 0) {
+      log_warn(LD_BUG, "Token %s has a malformed timestamp in file %s",
+               ts_tag, filename);
+      goto end;
+    }
+    if (written < now - (25*60*60) || written > now + (1*60*60)) {
+      /* This can happen normally so don't log. */
+      goto end;
+    }
+    /* Success. Put in the entire content. */
+    *out = contents;
+    contents = NULL; /* Must not free it. */
+    r = 1;
+    break;
+  /* treat empty stats files as if the file doesn't exist */
+  case FN_NOENT:
+  case FN_EMPTY:
+    r = 0;
+    break;
+  case FN_ERROR:
+  case FN_DIR:
+  default:
+    break;
   }
+
+ end:
   tor_free(fname);
+  tor_free(contents);
   return r;
 }
 
