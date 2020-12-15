@@ -19,9 +19,11 @@
 #include "lib/fs/path.h"
 #include "lib/log/log.h"
 #include "lib/malloc/malloc.h"
+#include "lib/sandbox/sandbox.h"
 #include "lib/string/printf.h"
 
 #include <stdbool.h>
+#include <errno.h>
 
 static smartlist_t *config_get_file_list(const char *path,
                                          smartlist_t *opened_files);
@@ -52,21 +54,26 @@ config_get_lines_include(const char *string, config_line_t **result,
                               opened_lst, 1, NULL, config_process_include);
 }
 
-/** Returns a list of paths obtained when expading globs in <b>pattern</b>. If
- * <b>pattern</b> has no globs, returns a list with <b>pattern</b> if it is an
- * existing path or NULL otherwise. If <b>opened_files</b> is provided, adds
- * paths opened by glob to it. Returns NULL on failure. */
+/** Return a list of paths obtained when expading globs in <b>pattern</b>.
+ * If <b>pattern</b> has no globs, return a list with <b>pattern</b> in it.
+ * If <b>opened_files</b> is provided, add paths opened by glob to it.
+ * Return NULL on failure. */
 static smartlist_t *
 expand_glob(const char *pattern, smartlist_t *opened_files)
 {
-  smartlist_t *matches = tor_glob(pattern);
-  if (!matches) {
-    return NULL;
+  if (! has_glob(pattern)) {
+    smartlist_t *matches = smartlist_new();
+    smartlist_add_strdup(matches, pattern);
+    return matches;
   }
 
-  // if it is not a glob, return error when the path is missing
-  if (!has_glob(pattern) && smartlist_len(matches) == 0) {
-    smartlist_free(matches);
+  smartlist_t *matches = tor_glob(pattern);
+  if (!matches) {
+    if (errno == EPERM) {
+      log_err(LD_CONFIG, "Sandbox is active, but the configuration pattern "
+              "\"%s\" listed with %%include would access files or folders not "
+              "allowed by it. Cannot proceed.", pattern);
+    }
     return NULL;
   }
 
@@ -106,6 +113,13 @@ config_get_file_list(const char *pattern, smartlist_t *opened_files)
   SMARTLIST_FOREACH_BEGIN(glob_matches, char *, path) {
     if (opened_files) {
       smartlist_add_strdup(opened_files, path);
+    }
+    if (sandbox_interned_string_is_missing(path)) {
+      log_err(LD_CONFIG, "Sandbox is active, but a new configuration "
+              "file \"%s\" has been listed with %%include. Cannot proceed.",
+              path);
+      error_found = true;
+      break;
     }
 
     file_status_t file_type = file_status(path);
@@ -201,6 +215,13 @@ config_process_include(const char *pattern, int recursion_level, int extended,
 
   int rv = -1;
   SMARTLIST_FOREACH_BEGIN(config_files, const char *, config_file) {
+    if (sandbox_interned_string_is_missing(config_file)) {
+      log_err(LD_CONFIG, "Sandbox is active, but a new configuration "
+              "file \"%s\" has been listed with %%include. Cannot proceed.",
+              config_file);
+      goto done;
+    }
+
     log_notice(LD_CONFIG, "Including configuration file \"%s\".", config_file);
     config_line_t *included_config = NULL;
     config_line_t *included_config_last = NULL;

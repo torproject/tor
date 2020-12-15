@@ -104,12 +104,11 @@ typedef struct {
 #endif /* defined(USE_LIBSECCOMP) */
 
 #ifdef USE_LIBSECCOMP
-/** Returns a registered protected string used with the sandbox, given that
- * it matches the parameter.
- */
 const char* sandbox_intern_string(const char *param);
+bool sandbox_interned_string_is_missing(const char *s);
 #else /* !defined(USE_LIBSECCOMP) */
 #define sandbox_intern_string(s) (s)
+#define sandbox_interned_string_is_missing(s) (false)
 #endif /* defined(USE_LIBSECCOMP) */
 
 /** Creates an empty sandbox configuration file.*/
