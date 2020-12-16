@@ -3176,12 +3176,12 @@ load_stats_file(const char *filename, const char *ts_tag, time_t now,
       goto end;
     }
     /* Do we have enough for parsing a timestamp? */
-    if (strlen(contents) < strlen(ts_tag) + 1 + sizeof(timestr)) {
+    if (strlen(ts_tok) < strlen(ts_tag) + 1 + sizeof(timestr)) {
       log_warn(LD_BUG, "Token %s malformed in file %s", ts_tag, filename);
       goto end;
     }
     /* Parse timestamp in order to validate it is not too old. */
-    strlcpy(timestr, contents + strlen(ts_tag) + 1, sizeof(timestr));
+    strlcpy(timestr, ts_tok + strlen(ts_tag) + 1, sizeof(timestr));
     if (parse_iso_time(timestr, &written) < 0) {
       log_warn(LD_BUG, "Token %s has a malformed timestamp in file %s",
                ts_tag, filename);

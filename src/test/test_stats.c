@@ -499,13 +499,12 @@ static void
 test_load_stats_file(void *arg)
 {
   int ret;
-  char *content = NULL, *read_file_content = NULL;
-  const char *fname = NULL;
+  char *content = NULL, *read_file_content = NULL, *fname = NULL;
 
   (void) arg;
 
   /* Load conn-stats. */
-  fname = get_fname("conn-stats");
+  fname = get_datadir_fname("conn-stats");
   tt_assert(fname);
   read_file_content = tor_strdup(
     "conn-bi-direct 2020-12-13 15:48:53 (86400 s) 12,34,56,78\n"
@@ -516,7 +515,7 @@ test_load_stats_file(void *arg)
   tt_str_op(read_file_content, OP_EQ, content);
 
   /* Load hidserv-stats. */
-  fname = get_fname("hidserv-stats");
+  fname = get_datadir_fname("hidserv-stats");
   tt_assert(fname);
   tor_free(read_file_content);
   read_file_content = tor_strdup(
@@ -525,6 +524,7 @@ test_load_stats_file(void *arg)
       "bin_size=1024\n"
     "hidserv-dir-onions-seen 53 delta_f=8 epsilon=0.30 bin_size=8\n");
   write_str_to_file(fname, read_file_content, 0);
+  tor_free(fname);
   tor_free(content);
   ret = load_stats_file("hidserv-stats", "hidserv-stats-end", 1607874000,
                         &content);
@@ -532,7 +532,7 @@ test_load_stats_file(void *arg)
   tt_str_op(read_file_content, OP_EQ, content);
 
   /* Load dirreq-stats. */
-  fname = get_fname("dirreq-stats");
+  fname = get_datadir_fname("dirreq-stats");
   tt_assert(fname);
   tor_free(read_file_content);
   read_file_content = tor_strdup(
@@ -546,13 +546,29 @@ test_load_stats_file(void *arg)
       "d1=133653,d2=221050,q1=261242,d3=300622,d4=399758,md=539051,d6=721322,"
       "d7=959866,q3=1103363,d8=1302035,d9=2046125,max=113404000\n");
   write_str_to_file(fname, read_file_content, 0);
+  tor_free(fname);
   tor_free(content);
   ret = load_stats_file("dirreq-stats", "dirreq-stats-end", 1607874000,
                         &content);
   tt_int_op(ret, OP_EQ, 1);
   tt_str_op(read_file_content, OP_EQ, content);
 
+  /* Attempt to load future-stats file not starting with timestamp tag. */
+  fname = get_datadir_fname("future-stats");
+  tt_assert(fname);
+  tor_free(read_file_content);
+  read_file_content = tor_strdup(
+    "future-stuff-at-file-start\n"
+    "future-stats 2020-12-13 15:48:53 (86400 s)\n");
+  write_str_to_file(fname, read_file_content, 0);
+  tor_free(fname);
+  tor_free(content);
+  ret = load_stats_file("future-stats", "future-stats", 1607874000, &content);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(read_file_content, OP_EQ, content);
+
  done:
+  tor_free(fname);
   tor_free(read_file_content);
   tor_free(content);
 }
