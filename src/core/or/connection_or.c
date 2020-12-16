@@ -686,6 +686,11 @@ connection_or_finished_flushing(or_connection_t *conn)
       /* PROXY_HAPROXY gets connected by receiving an ack. */
       if (conn->proxy_type == PROXY_HAPROXY) {
         tor_assert(TO_CONN(conn)->proxy_state == PROXY_HAPROXY_WAIT_FOR_FLUSH);
+        IF_BUG_ONCE(buf_datalen(TO_CONN(conn)->inbuf) != 0) {
+          /* This should be impossible; we're not even reading. */
+          connection_or_close_for_error(conn, 0);
+          return -1;
+        }
         TO_CONN(conn)->proxy_state = PROXY_CONNECTED;
 
         if (connection_tls_start_handshake(conn, 0) < 0) {
