@@ -1,0 +1,5 @@
+  o Minor bugfixes (config, bridge):
+    - Really fix the case where torrc has a missing ClientTransportPlugin but
+      configured with a Bridge line and UseBridges. Previously, we failed to
+      also look at the managed proxy list and thus it would fail for the
+      "exec" case. Fixes bug 40106; bugfix on 0.4.5.1-alpha.

@@ -368,6 +368,28 @@ static int unconfigured_proxies_n = 0;
 /** Boolean: True iff we might need to restart some proxies. */
 static int check_if_restarts_needed = 0;
 
+/** Return true iff we have a managed_proxy_t in the global list is for the
+ * given transport name. */
+bool
+managed_proxy_has_transport(const char *transport_name)
+{
+  tor_assert(transport_name);
+
+  if (!managed_proxy_list) {
+    return false;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(managed_proxy_list, const managed_proxy_t *, mp) {
+    SMARTLIST_FOREACH_BEGIN(mp->transports_to_launch, const char *, name) {
+      if (!strcasecmp(name, transport_name)) {
+        return true;
+      }
+    } SMARTLIST_FOREACH_END(name);
+  } SMARTLIST_FOREACH_END(mp);
+
+  return false;
+}
+
 /** Return true if there are still unconfigured managed proxies, or proxies
  * that need restarting. */
 int

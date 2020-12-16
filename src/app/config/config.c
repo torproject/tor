@@ -2198,7 +2198,8 @@ options_act,(const or_options_t *old_options))
    * validation time. */
   SMARTLIST_FOREACH_BEGIN(bridge_list_get(), const bridge_info_t *, bi) {
     const char *bi_transport_name = bridget_get_transport_name(bi);
-    if (bi_transport_name && !transport_get_by_name(bi_transport_name)) {
+    if (bi_transport_name && (!transport_get_by_name(bi_transport_name) &&
+                          !managed_proxy_has_transport(bi_transport_name))) {
       log_warn(LD_CONFIG, "Bridge line with transport %s is missing a "
                           "ClientTransportPlugin line", bi_transport_name);
       return -1;
