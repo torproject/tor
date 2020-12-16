@@ -37,6 +37,8 @@ details-*.json
 uptime-*.json
 *.full_url
 *.last_modified
+# ccls file that can be per directory.
+*.ccls
 
 # /
 /Makefile
@@ -74,6 +76,7 @@ uptime-*.json
 /Tor*Bundle.dmg
 /tor-*-win32.exe
 /warning_flags
+/compile_commands.json
 
 /coverage_html/
 /callgraph/
