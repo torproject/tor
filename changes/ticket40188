@@ -1,0 +1,4 @@
+  o Minor features (documentation):
+    - Mention the !badexit directive that can appear in an authority's
+      approved-routers file, and update the description of the !invalid
+      directive. Closes ticket 40188.
