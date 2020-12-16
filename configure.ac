@@ -967,7 +967,7 @@ if test "$enable_static_libevent" = "yes"; then
    if test "$tor_cv_library_libevent_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-libevent-dir=x option when using --enable-static-libevent")
    else
-     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/.libs/libevent.a $STATIC_LIBEVENT_FLAGS"
+     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $STATIC_LIBEVENT_FLAGS"
    fi
 else
      if test "x$ac_cv_header_event2_event_h" = "xyes"; then
