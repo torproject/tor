@@ -1,0 +1,5 @@
+  o Minor features (crypto):
+    - Fix undefined behavior on our Keccak library. The bug only appears on
+      platforms with 32-byte CPU cache lines (e.g. armv5tel) and would result
+      in wrong digests. Fixes bug 40210; bugfix on 0.2.8.1-alpha. Thanks to
+      Bernhard Übelacker, Arnd Bergmann and weasel for diagnosing this.
