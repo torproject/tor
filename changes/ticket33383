@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Remove the orconn_ext_or_id_map structure and related functions. Nothing
+      outside of unit tests looks up anything in this structure. Closes ticket
+      33383. Patch by Neel Chauhan.
