@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging, relay):
+    - Logs the address discovered by the directory authorities if none were
+      configured or detected before. Fixes bug 40201; bugfix on 0.4.5.1-alpha.
