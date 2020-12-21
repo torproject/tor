@@ -129,6 +129,8 @@ void router_free_all(void);
 STATIC void get_platform_str(char *platform, size_t len);
 STATIC int router_write_fingerprint(int hashed, int ed25519_identity);
 STATIC smartlist_t *get_my_declared_family(const or_options_t *options);
+STATIC int load_stats_file(const char *filename, const char *ts_tag,
+                           time_t now, char **out);
 
 #ifdef TOR_UNIT_TESTS
 extern time_t desc_clean_since;
