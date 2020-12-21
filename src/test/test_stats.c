@@ -34,6 +34,7 @@
 #define STATEFILE_PRIVATE
 #define BWHIST_PRIVATE
 #define REPHIST_PRIVATE
+#define ROUTER_PRIVATE
 
 #include "core/or/or.h"
 #include "lib/err/backtrace.h"
@@ -48,6 +49,7 @@
 #include "app/config/statefile.h"
 #include "feature/stats/bwhist.h"
 #include "feature/stats/bw_array_st.h"
+#include "feature/relay/router.h"
 
 /** Run unit tests for some stats code. */
 static void
@@ -623,6 +625,84 @@ test_rephist_v3_onions(void *arg)
   tor_free(stats_string);
 }
 
+static void
+test_load_stats_file(void *arg)
+{
+  int ret;
+  char *content = NULL, *read_file_content = NULL, *fname = NULL;
+
+  (void) arg;
+
+  /* Load conn-stats. */
+  fname = get_datadir_fname("conn-stats");
+  tt_assert(fname);
+  read_file_content = tor_strdup(
+    "conn-bi-direct 2020-12-13 15:48:53 (86400 s) 12,34,56,78\n"
+    "ipv6-conn-bi-direct 2020-12-14 15:48:53 (86400 s) 21,43,65,87\n");
+  write_str_to_file(fname, read_file_content, 0);
+  ret = load_stats_file("conn-stats", "conn-bi-direct", 1607874000, &content);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(read_file_content, OP_EQ, content);
+
+  /* Load hidserv-stats. */
+  tor_free(fname);
+  fname = get_datadir_fname("hidserv-stats");
+  tt_assert(fname);
+  tor_free(read_file_content);
+  read_file_content = tor_strdup(
+    "hidserv-stats-end 2020-12-13 15:48:53 (86400 s)\n"
+    "hidserv-rend-relayed-cells 48754891 delta_f=2048 epsilon=0.30 "
+      "bin_size=1024\n"
+    "hidserv-dir-onions-seen 53 delta_f=8 epsilon=0.30 bin_size=8\n");
+  write_str_to_file(fname, read_file_content, 0);
+  tor_free(content);
+  ret = load_stats_file("hidserv-stats", "hidserv-stats-end", 1607874000,
+                        &content);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(read_file_content, OP_EQ, content);
+
+  /* Load dirreq-stats. */
+  tor_free(fname);
+  fname = get_datadir_fname("dirreq-stats");
+  tt_assert(fname);
+  tor_free(read_file_content);
+  read_file_content = tor_strdup(
+    "dirreq-stats-end 2020-12-13 15:48:53 (86400 s)\n"
+    "dirreq-v3-ips ru=1728,us=1144,de=696,ir=432,gb=328,fr=304,in=296,ua=232\n"
+    "dirreq-v3-reqs ru=3616,us=3576,de=1896,fr=800,gb=632,ir=616\n"
+    "dirreq-v3-resp ok=18472,not-enough-sigs=0,unavailable=0,not-found=0,"
+      "not-modified=3136,busy=0\n"
+    "dirreq-v3-direct-dl complete=0,timeout=0,running=0\n"
+    "dirreq-v3-tunneled-dl complete=18124,timeout=348,running=4,min=257,"
+      "d1=133653,d2=221050,q1=261242,d3=300622,d4=399758,md=539051,d6=721322,"
+      "d7=959866,q3=1103363,d8=1302035,d9=2046125,max=113404000\n");
+  write_str_to_file(fname, read_file_content, 0);
+  tor_free(content);
+  ret = load_stats_file("dirreq-stats", "dirreq-stats-end", 1607874000,
+                        &content);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(read_file_content, OP_EQ, content);
+
+  /* Attempt to load future-stats file not starting with timestamp tag. */
+  tor_free(fname);
+  fname = get_datadir_fname("future-stats");
+  tt_assert(fname);
+  tor_free(read_file_content);
+  read_file_content = tor_strdup(
+    "future-stuff-at-file-start\n"
+    "future-stats 2020-12-13 15:48:53 (86400 s)\n");
+  write_str_to_file(fname, read_file_content, 0);
+  tor_free(content);
+  ret = load_stats_file("future-stats", "future-stats", 1607874000, &content);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(read_file_content, OP_EQ, content);
+
+ done:
+  tor_free(fname);
+  tor_free(read_file_content);
+  tor_free(content);
+}
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -637,6 +717,7 @@ struct testcase_t stats_tests[] = {
   FORK(fill_bandwidth_history),
   FORK(get_bandwidth_lines),
   FORK(rephist_v3_onions),
+  FORK(load_stats_file),
 
   END_OF_TESTCASES
 };
