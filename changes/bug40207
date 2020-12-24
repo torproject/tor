@@ -1,0 +1,4 @@
+  o Minor bugfixes (onion services, logging):
+    - Downgrade the severity of a few rendezvous circuit-related
+      warnings from warning to info. Fixes bug 40207; bugfix on
+      0.3.2.1-alpha. Patch by Neel Chauhan.

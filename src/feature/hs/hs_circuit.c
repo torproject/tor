@@ -1181,7 +1181,7 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
   /* We should never select an invalid rendezvous point in theory but if we
    * do, this function will fail to populate the introduce data. */
   if (setup_introduce1_data(ip, exit_node, subcredential, &intro1_data) < 0) {
-    log_warn(LD_REND, "Unable to setup INTRODUCE1 data. The chosen rendezvous "
+    log_info(LD_REND, "Unable to setup INTRODUCE1 data. The chosen rendezvous "
                       "point is unusable. Closing circuit.");
     goto close;
   }
