@@ -1,0 +1,5 @@
+  o Minor bugfixes (key generation):
+    - Do not require a valid torrc when using the `--keygen` argument
+      to generate a signing key. This allows us to generate keys on
+      systems or users which may not run Tor. Fixes bug 40235; bugfix
+      on 0.2.7.2-alpha. Patch by Neel Chauhan.

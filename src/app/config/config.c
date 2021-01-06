@@ -4338,6 +4338,7 @@ find_torrc_filename(const config_line_t *cmd_arg,
   const config_line_t *p_index;
   const char *fname_opt = defaults_file ? "--defaults-torrc" : "-f";
   const char *ignore_opt = defaults_file ? NULL : "--ignore-missing-torrc";
+  const char *keygen_opt = "--keygen";
 
   if (defaults_file)
     *ignore_missing_torrc = 1;
@@ -4359,7 +4360,8 @@ find_torrc_filename(const config_line_t *cmd_arg,
       }
 
       *using_default_fname = 0;
-    } else if (ignore_opt && !strcmp(p_index->key,ignore_opt)) {
+    } else if ((ignore_opt && !strcmp(p_index->key, ignore_opt)) ||
+               (keygen_opt && !strcmp(p_index->key, keygen_opt))) {
       *ignore_missing_torrc = 1;
     }
   }
