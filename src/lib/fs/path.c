@@ -611,11 +611,13 @@ tor_glob(const char *pattern)
     return NULL;
   }
 
-  // #40141: workaround for bug in glibc < 2.19 where patterns ending in path
-  // separator match files and folders instead of folders only
+  // #40141, !249: workaround for glibc bug where patterns ending in path
+  // separator match files and folders instead of folders only.
+  // this could be in #ifdef __GLIBC__ but: 1. it might affect other libcs too,
+  // and 2. it doesn't cost much to stat each match again since libc is already
+  // supposed to do it (otherwise the file may be on slow NFS or something)
   size_t pattern_len = strlen(pattern);
-  bool dir_only = has_glob(pattern) &&
-                  pattern_len > 0 && pattern[pattern_len-1] == *PATH_SEPARATOR;
+  bool dir_only = pattern_len > 0 && pattern[pattern_len-1] == *PATH_SEPARATOR;
 
   result = smartlist_new();
   size_t i;
