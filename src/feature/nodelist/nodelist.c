@@ -959,6 +959,7 @@ nodelist_ensure_freshness(const networkstatus_t *ns)
     nodelist_set_consensus(ns);
   }
 }
+
 /** Return a list of a node_t * for every node we know about.  The caller
  * MUST NOT modify the list. (You can set and clear flags in the nodes if
  * you must, but you must not add or remove nodes.) */

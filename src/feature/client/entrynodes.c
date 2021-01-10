@@ -3850,7 +3850,7 @@ guards_retry_optimistic(const or_options_t *options)
  * Check if we are missing any crucial dirinfo for the guard subsystem to
  * work. Return NULL if everything went well, otherwise return a newly
  * allocated string with an informative error message. In the latter case, use
- * the genreal descriptor information <b>using_mds</b>, <b>num_present</b> and
+ * the general descriptor information <b>using_mds</b>, <b>num_present</b> and
  * <b>num_usable</b> to improve the error message. */
 char *
 guard_selection_get_err_str_if_dir_info_missing(guard_selection_t *gs,
