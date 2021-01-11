@@ -41,15 +41,6 @@ helper_tor_config(const char *conf)
   return ret;
 }
 
-static networkstatus_t mock_ns;
-
-static networkstatus_t *
-mock_networkstatus_get_live_consensus(time_t now)
-{
-  (void) now;
-  return &mock_ns;
-}
-
 static char *
 mock_read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 {
@@ -168,23 +159,11 @@ test_parse_config_file_bad(void *arg)
 static void
 test_get_subcredentials(void *arg)
 {
-  int ret;
   hs_service_t *service = NULL;
   hs_service_config_t config;
   hs_subcredential_t *subcreds = NULL;
 
   (void) arg;
-
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
-
-  /* Setup consensus with proper time so we can compute the time period. */
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
-                           &mock_ns.valid_after);
-  tt_int_op(ret, OP_EQ, 0);
-  ret = parse_rfc1123_time("Sat, 26 Oct 1985 14:00:00 UTC",
-                           &mock_ns.fresh_until);
-  tt_int_op(ret, OP_EQ, 0);
 
   config.ob_master_pubkeys = smartlist_new();
   tt_assert(config.ob_master_pubkeys);
@@ -251,8 +230,6 @@ test_get_subcredentials(void *arg)
     memset(&service->config, 0, sizeof(hs_service_config_t));
     hs_service_free(service);
   }
-
-  UNMOCK(networkstatus_get_live_consensus);
 }
 
 struct testcase_t hs_ob_tests[] = {

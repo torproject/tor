@@ -24,6 +24,7 @@
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/keymgt/loadkey.h"
 #include "feature/nodelist/describe.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
@@ -2509,7 +2510,8 @@ should_rotate_descriptors(hs_service_t *service, time_t now)
 
   tor_assert(service);
 
-  ns = networkstatus_get_live_consensus(now);
+  ns = networkstatus_get_reasonably_live_consensus(now,
+                                                   usable_consensus_flavor());
   if (ns == NULL) {
     goto no_rotation;
   }
@@ -3196,7 +3198,8 @@ should_service_upload_descriptor(const hs_service_t *service,
   }
 
   /* Don't upload desc if we don't have a live consensus */
-  if (!networkstatus_get_live_consensus(now)) {
+  if (!networkstatus_get_reasonably_live_consensus(now,
+                                            usable_consensus_flavor())) {
     msg = tor_strdup("No live consensus");
     log_cant_upload_desc(service, desc, msg,
                          LOG_DESC_UPLOAD_REASON_NO_LIVE_CONSENSUS);

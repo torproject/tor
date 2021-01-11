@@ -362,7 +362,7 @@ node_set_hsdir_index(node_t *node, const networkstatus_t *ns)
   tor_assert(node);
   tor_assert(ns);
 
-  if (!networkstatus_is_live(ns, now)) {
+  if (!networkstatus_consensus_reasonably_live(ns, now)) {
     static struct ratelim_t live_consensus_ratelim = RATELIM_INIT(30 * 60);
     log_fn_ratelim(&live_consensus_ratelim, LOG_INFO, LD_GENERAL,
                    "Not setting hsdir index with a non-live consensus.");
