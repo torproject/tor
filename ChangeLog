@@ -1,56 +1,58 @@
 Changes in version 0.4.5.3-rc - 2021-01-12
-  Tor 0.4.5.3-rc is the first release candidate in its series.  It fixes
-  several bugs, including one that broke onion services on certain older ARM
-  CPUs.
+  Tor 0.4.5.3-rc is the first release candidate in its series. It fixes
+  several bugs, including one that broke onion services on certain older
+  ARM CPUs.
 
-  Though we anticipate that we'll be doing a bit more clean-up between now
-  and the stable release, we expect that our remaining changes will be fairly
-  simple.  There will be at lease one more release candidate before 0.4.5.x
-  is stable.
+  Though we anticipate that we'll be doing a bit more clean-up between
+  now and the stable release, we expect that our remaining changes will
+  be fairly simple. There will be at lease one more release candidate
+  before 0.4.5.x is stable.
 
   o Minor features (crypto):
-    - Fix undefined behavior on our Keccak library. The bug only appears on
-      platforms with 32-byte CPU cache lines (e.g. armv5tel) and would result
-      in wrong digests. Fixes bug 40210; bugfix on 0.2.8.1-alpha. Thanks to
-      Bernhard Übelacker, Arnd Bergmann and weasel for diagnosing this.
+    - Fix undefined behavior on our Keccak library. The bug only appears
+      on platforms with 32-byte CPU cache lines (e.g. armv5tel) and
+      would result in wrong digests. Fixes bug 40210; bugfix on
+      0.2.8.1-alpha. Thanks to Bernhard Übelacker, Arnd Bergmann and
+      weasel for diagnosing this.
 
   o Minor features (documentation):
     - Mention the !badexit directive that can appear in an authority's
       approved-routers file, and update the description of the !invalid
       directive. Closes ticket 40188.
 
-  o Minor bugfixes (config, bridge):
-    - Really fix the case where torrc has a missing ClientTransportPlugin but
-      configured with a Bridge line and UseBridges. Previously, we failed to
-      also look at the managed proxy list and thus it would fail for the
-      "exec" case. Fixes bug 40106; bugfix on 0.4.5.1-alpha.
-
   o Minor bugfixes (build):
-    - Fix the --enable-static-tor switch to properly set the -static compile
-      option onto the tor binary only. Fixes bug 40111; bugfix on
-      0.2.3.1-alpha.
+    - Fix the --enable-static-tor switch to properly set the -static
+      compile option onto the tor binary only. Fixes bug 40111; bugfix
+      on 0.2.3.1-alpha.
     - Path to static libevent has been fixed as well which affects the
-      --enable-static-libevent to behave correctly now. The .a file is in
-      .libs/ of libevent repository, not at the root.
+      --enable-static-libevent to behave correctly now. The .a file is
+      in .libs/ of libevent repository, not at the root.
+
+  o Minor bugfixes (config, bridge):
+    - Really fix the case where torrc has a missing ClientTransportPlugin
+      but configured with a Bridge line and UseBridges. Previously, we
+      failed to also look at the managed proxy list and thus it would
+      fail for the "exec" case. Fixes bug 40106; bugfix on 0.4.5.1-alpha.
 
   o Minor bugfixes (logging, relay):
-    - Logs the address discovered by the directory authorities if none were
-      configured or detected before. Fixes bug 40201; bugfix on 0.4.5.1-alpha.
-    - When launching bandwidth testing circuit, don't log notice that we are
-      doing a reachability test. Furthermore, avoid to trigger a
-      "CHECKING_REACHABILITY" control event. Fixes bug 40205; bugfix on
-      0.4.5.1-alpha.
+    - Logs the address discovered by the directory authorities if none
+      were configured or detected before. Fixes bug 40201; bugfix
+      on 0.4.5.1-alpha.
+    - When launching bandwidth testing circuit, don't log notice that we
+      are doing a reachability test. Furthermore, avoid to trigger a
+      "CHECKING_REACHABILITY" control event. Fixes bug 40205; bugfix
+      on 0.4.5.1-alpha.
 
   o Minor bugfixes (relay, statistics):
-    - The connection statistics were wrongly exported in the extrainfo document
-      due to a problem in the file loading function which would wrongly truncate
-      the file reporting the wrong information. It is now fixed. Fixes bug
-      40226; bugfix on 0.4.5.1-alpha.
+    - The connection statistics were wrongly exported in the extrainfo
+      document due to a problem in the file loading function which would
+      wrongly truncate the file reporting the wrong information. It is
+      now fixed. Fixes bug 40226; bugfix on 0.4.5.1-alpha.
 
   o Minor bugfixes (SOCKS5):
-    - Handle partial socks5 messages correctly.  Previously, our code would
-      send an incorrect error message if it got a socks5 request that wasn't
-      complete. Fixes bug 40190; bugfix on 0.3.5.1-alpha.
+    - Handle partial socks5 messages correctly. Previously, our code
+      would send an incorrect error message if it got a socks5 request
+      that wasn't complete. Fixes bug 40190; bugfix on 0.3.5.1-alpha.
 
 
 Changes in version 0.4.5.2-alpha - 2020-11-23
