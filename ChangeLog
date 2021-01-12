@@ -5,7 +5,7 @@ Changes in version 0.4.5.3-rc - 2021-01-12
 
   Though we anticipate that we'll be doing a bit more clean-up between
   now and the stable release, we expect that our remaining changes will
-  be fairly simple. There will be at lease one more release candidate
+  be fairly simple. There will be at least one more release candidate
   before 0.4.5.x is stable.
 
   o Minor features (crypto):
@@ -16,7 +16,7 @@ Changes in version 0.4.5.3-rc - 2021-01-12
       weasel for diagnosing this.
 
   o Minor features (documentation):
-    - Mention that the "!badexit" directive that can appear in an
+    - Mention the "!badexit" directive that can appear in an
       authority's approved-routers file, and update the description of
       the "!invalid" directive. Closes ticket 40188.
 
@@ -30,7 +30,7 @@ Changes in version 0.4.5.3-rc - 2021-01-12
 
   o Minor bugfixes (config, bridge):
     - Really fix the case where torrc has a missing ClientTransportPlugin
-      but configured with a Bridge line and UseBridges. Previously, we
+      but is configured with a Bridge line and UseBridges. Previously, we
       didn't look at the managed proxy list and thus would fail for the
       "exec" case. Fixes bug 40106; bugfix on 0.4.5.1-alpha.
 
