@@ -17,6 +17,7 @@
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_descriptor.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/rend/rendcache.h"
 
@@ -739,7 +740,9 @@ cached_client_descriptor_has_expired(time_t now,
   /* We use the current consensus time to see if we should expire this
    * descriptor since we use consensus time for all other parts of the protocol
    * as well (e.g. to build the blinded key and compute time periods). */
-  const networkstatus_t *ns = networkstatus_get_live_consensus(now);
+  const networkstatus_t *ns =
+    networkstatus_get_reasonably_live_consensus(now,
+      usable_consensus_flavor());
   /* If we don't have a recent consensus, consider this entry expired since we
    * will want to fetch a new HS desc when we get a live consensus. */
   if (!ns) {
