@@ -8,6 +8,13 @@ Changes in version 0.4.5.3-rc - 2021-01-12
   be fairly simple. There will be at least one more release candidate
   before 0.4.5.x is stable.
 
+  o Major bugfixes (onion service v3):
+    - Stop requiring a live consensus for v3 clients and services, and
+      allow a "reasonably live" consensus instead. This allows v3 onion
+      services to work even if the authorities fail to generate a
+      consensus for more than 2 hours in a row. Fixes bug 40237; bugfix
+      on 0.3.5.1-alpha.
+
   o Minor features (crypto):
     - Fix undefined behavior on our Keccak library. The bug only
       appeared on platforms with 32-byte CPU cache lines (e.g. armv5tel)
@@ -16,9 +23,9 @@ Changes in version 0.4.5.3-rc - 2021-01-12
       weasel for diagnosing this.
 
   o Minor features (documentation):
-    - Mention the "!badexit" directive that can appear in an
-      authority's approved-routers file, and update the description of
-      the "!invalid" directive. Closes ticket 40188.
+    - Mention the "!badexit" directive that can appear in an authority's
+      approved-routers file, and update the description of the
+      "!invalid" directive. Closes ticket 40188.
 
   o Minor bugfixes (compilation):
     - Fix a compilation warning about unreachable fallthrough
@@ -30,9 +37,9 @@ Changes in version 0.4.5.3-rc - 2021-01-12
 
   o Minor bugfixes (config, bridge):
     - Really fix the case where torrc has a missing ClientTransportPlugin
-      but is configured with a Bridge line and UseBridges. Previously, we
-      didn't look at the managed proxy list and thus would fail for the
-      "exec" case. Fixes bug 40106; bugfix on 0.4.5.1-alpha.
+      but is configured with a Bridge line and UseBridges. Previously,
+      we didn't look at the managed proxy list and thus would fail for
+      the "exec" case. Fixes bug 40106; bugfix on 0.4.5.1-alpha.
 
   o Minor bugfixes (logging, relay):
     - Log our address as reported by the directory authorities, if none
