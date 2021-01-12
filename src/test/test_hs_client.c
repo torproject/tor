@@ -1121,8 +1121,8 @@ test_close_intro_circuits_cache_clean(void *arg)
 
   /* This is needed because of the client cache expiration timestamp is based
    * on having a consensus. See cached_client_descriptor_has_expired(). */
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* Set consensus time */
   parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
@@ -1187,7 +1187,7 @@ test_close_intro_circuits_cache_clean(void *arg)
   hs_descriptor_free(desc1);
   hs_free_all();
   rend_cache_free_all();
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 static void
@@ -1204,8 +1204,8 @@ test_socks_hs_errors(void *arg)
 
   (void) arg;
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
   MOCK(connection_mark_unattached_ap_,
        mock_connection_mark_unattached_ap_no_close);
   MOCK(read_file_to_str, mock_read_file_to_str);
@@ -1285,7 +1285,7 @@ test_socks_hs_errors(void *arg)
 
   hs_free_all();
 
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
   UNMOCK(connection_mark_unattached_ap_);
   UNMOCK(read_file_to_str);
   UNMOCK(tor_listdir);

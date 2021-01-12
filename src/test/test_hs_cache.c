@@ -587,8 +587,8 @@ test_client_cache_decrypt(void *arg)
   /* Initialize HSDir cache subsystem */
   hs_init();
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* Set consensus time */
   parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
@@ -643,7 +643,7 @@ test_client_cache_decrypt(void *arg)
 
   hs_free_all();
 
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 static void
@@ -657,8 +657,8 @@ test_client_cache_remove(void *arg)
 
   hs_init();
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* Set consensus time. Lookup will not return the entry if it has expired
    * and it is checked against the consensus valid_after time. */
@@ -696,7 +696,7 @@ test_client_cache_remove(void *arg)
   hs_descriptor_free(desc1);
   hs_free_all();
 
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 struct testcase_t hs_cache[] = {
