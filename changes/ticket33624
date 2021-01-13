@@ -1,0 +1,5 @@
+  o Minor bugfixes (configure, static build):
+    - Change our search library configure macro linker flag order so it works
+      for certain compilers that need the right order. Fixes bug 33624; bugfix
+      on 0.1.1.0-alpha.
+
