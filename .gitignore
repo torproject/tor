@@ -37,6 +37,9 @@ details-*.json
 uptime-*.json
 *.full_url
 *.last_modified
+# Core files
+core
+core.*
 
 # /
 /Makefile
