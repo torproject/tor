@@ -2263,9 +2263,7 @@ entry_guards_note_guard_success(guard_selection_t *gs,
       break;
     default:
       tor_assert_nonfatal_unreached();
-#ifndef ALL_BUGS_ARE_FATAL
-      FALLTHROUGH;
-#endif
+      FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL;
     case GUARD_CIRC_STATE_USABLE_IF_NO_BETTER_GUARD:
       if (guard->is_primary) {
         /* XXXX #20832 -- I don't actually like this logic. It seems to make

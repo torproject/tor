@@ -215,6 +215,17 @@
   IF_BUG_ONCE__(ASSERT_PREDICT_UNLIKELY_(cond),                 \
                 IF_BUG_ONCE_VARNAME__(__LINE__))
 
+/**
+ * Use this macro after a nonfatal assertion, and before a case statement
+ * where you would want to fall through.
+ */
+#ifdef ALL_BUGS_ARE_FATAL
+#define FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL \
+  abort()
+#else
+#define FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL FALLTHROUGH
+#endif
+
 /** Define this if you want Tor to crash when any problem comes up,
  * so you can get a coredump and track things down. */
 // #define tor_fragile_assert() tor_assert_unreached(0)

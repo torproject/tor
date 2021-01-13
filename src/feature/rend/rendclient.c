@@ -819,9 +819,7 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
         log_warn(LD_BUG, "Unknown failure type %u. Removing intro point.",
                  failure_type);
         tor_fragile_assert();
-#ifndef ALL_BUGS_ARE_FATAL
-        FALLTHROUGH;
-#endif
+        FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL;
       case INTRO_POINT_FAILURE_GENERIC:
         rend_cache_intro_failure_note(failure_type,
                                       (uint8_t *)failed_intro->identity_digest,
