@@ -129,8 +129,9 @@ microdesc_note_outdated_dirserver(const char *relay_digest)
   tor_assert(outdated_dirserver_list);
 
   /* If the list grows too big, clean it up */
-  if (BUG(smartlist_len(outdated_dirserver_list) >
-          TOO_MANY_OUTDATED_DIRSERVERS)) {
+  if (smartlist_len(outdated_dirserver_list) > TOO_MANY_OUTDATED_DIRSERVERS) {
+    log_info(LD_GENERAL,"Too many outdated directory servers (%d). Resetting.",
+             smartlist_len(outdated_dirserver_list));
     microdesc_reset_outdated_dirservers_list();
   }
 
