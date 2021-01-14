@@ -198,9 +198,13 @@ relay_addr_learn_from_dirauth(void)
       return;
     }
     const node_t *node = node_get_by_id(rs->identity_digest);
-    if (BUG(!node)) {
-      /* If there is a routerstatus_t, there is a node_t thus this should
-       * never fail. */
+    if (!node) {
+      /* This can happen if we are still in the early starting stage where no
+       * descriptors we actually fetched and thus we have the routerstatus_t
+       * for the authority but not its descriptor which is needed to build a
+       * circuit and thus learn our address. */
+      log_info(LD_GENERAL, "Can't build a circuit to an authority. Unable to "
+                           "learn for now our address from them.");
       return;
     }
     extend_info_t *ei = extend_info_from_node(node, 1);
