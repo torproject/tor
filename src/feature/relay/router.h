@@ -102,7 +102,7 @@ int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(const routerinfo_t *router);
 bool router_addr_is_my_published_addr(const tor_addr_t *addr);
 int router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e);
-int router_rebuild_descriptor(int force);
+bool router_rebuild_descriptor(int force);
 char *router_dump_router_to_string(routerinfo_t *router,
                              const crypto_pk_t *ident_key,
                              const crypto_pk_t *tap_key,
