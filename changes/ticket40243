@@ -1,0 +1,4 @@
+  o Major bugfixes (authority, IPv6):
+    - Do not consider multiple relays in the same IPv6 network to be sybils.
+      Sybils are selected based on the /128 now, not the /64. Fixes bug 40243;
+      bugfix on 0.4.5.1-alpha.
