@@ -23,6 +23,7 @@ new Tor release:
        - {simon} at sdeziel.info
        - {yuri} at freebsd.org
        - {mh+tor} at scrit.ch
+       - {security} at brave.com
 
 3. Given the release date for Tor, ask the TB team about the likely release
    date of a TB that contains it.  See note below in "commit, upload,
