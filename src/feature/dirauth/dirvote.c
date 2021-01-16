@@ -3462,6 +3462,15 @@ dirvote_compute_consensuses(void)
       pending[flav].body = consensus_body;
       pending[flav].consensus = consensus;
       n_generated++;
+
+      /* Write it out to disk too, for dir auth debugging purposes */
+      {
+        char *filename;
+        tor_asprintf(&filename, "my-consensus-%s", flavor_name);
+        write_str_to_file(get_datadir_fname(filename), consensus_body, 0);
+        tor_free(filename);
+      }
+
       consensus_body = NULL;
       consensus = NULL;
     }
