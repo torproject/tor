@@ -1,0 +1,4 @@
+  o Minor features (logging):
+    - Give more visibility to directory authority operators during the
+      consensus voting process and while processing relay descriptors.
+      Closes ticket 40245.

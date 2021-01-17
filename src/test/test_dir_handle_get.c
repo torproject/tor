@@ -2105,7 +2105,7 @@ test_dir_handle_get_status_vote_d(void* data)
 
   const char *msg_out = NULL;
   int status_out = 0;
-  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, 0,
+  struct pending_vote_t *pv = dirvote_add_vote(VOTE_BODY_V3, 0, "foo",
                                                &msg_out, &status_out);
   tt_assert(pv);
 
@@ -2487,7 +2487,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   time_t now = 1441223455 -1;
   dirauth_sched_recalculate_timing(mock_options, now);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0, "foo",
                                                  &msg_out, &status_out);
   tt_assert(vote);
 
@@ -2649,7 +2649,7 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   time_t now = 1441223455;
   dirauth_sched_recalculate_timing(mock_options, now-1);
 
-  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0,
+  struct pending_vote_t *vote = dirvote_add_vote(VOTE_BODY_V3, 0, "foo",
                                                  &msg_out, &status_out);
   tt_assert(vote);
 
@@ -2777,7 +2777,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
 
   /* Next voting interval */
   vote = dirvote_add_vote(VOTE_BODY_V3,
-                          fetch_missing + vote_interval,
+                          fetch_missing + vote_interval, "foo",
                           &msg_out, &status_out);
   tt_assert(!vote);
   tt_int_op(status_out, OP_EQ, 400);
@@ -2786,7 +2786,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
 
   /* Just after fetch missing */
   vote = dirvote_add_vote(VOTE_BODY_V3,
-                          fetch_missing + 1,
+                          fetch_missing + 1, "foo",
                           &msg_out, &status_out);
   tt_assert(!vote);
   tt_int_op(status_out, OP_EQ, 400);
@@ -2795,7 +2795,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
 
   /* On fetch missing */
   vote = dirvote_add_vote(VOTE_BODY_V3,
-                          fetch_missing,
+                          fetch_missing, "foo",
                           &msg_out, &status_out);
   tt_assert(vote);
 
@@ -2806,7 +2806,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
 
   /* Between voting starts and fetch missing */
   vote = dirvote_add_vote(VOTE_BODY_V3,
-                          voting_starts + 1,
+                          voting_starts + 1, "foo",
                           &msg_out, &status_out);
   tt_assert(vote);
 
@@ -2817,7 +2817,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
 
   /* On voting starts */
   vote = dirvote_add_vote(VOTE_BODY_V3,
-                          voting_starts,
+                          voting_starts, "foo",
                           &msg_out, &status_out);
   tt_assert(vote);
 
@@ -2828,7 +2828,7 @@ test_dir_handle_get_status_vote_too_late(void* data)
 
   /* Just before voting starts */
   vote = dirvote_add_vote(VOTE_BODY_V3,
-                          voting_starts - 1,
+                          voting_starts - 1, "foo",
                           &msg_out, &status_out);
   tt_assert(vote);
 
