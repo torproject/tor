@@ -88,6 +88,12 @@ STATIC void remove_duplicate_orports(struct smartlist_t *ports);
 STATIC int check_bridge_distribution_setting(const char *bd);
 STATIC int have_enough_mem_for_dircache(const struct or_options_t *options,
                                         size_t total_mem, char **msg);
+#ifdef TOR_UNIT_TESTS
+
+struct port_cfg_t;
+STATIC const char *describe_relay_port(const struct port_cfg_t *port);
+
+#endif /* TOR_UNIT_TESTS */
 
 #endif /* defined(RELAY_CONFIG_PRIVATE) */
 

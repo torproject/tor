@@ -6674,20 +6674,28 @@ get_first_listener_addrport_string(int listener_type)
 static const port_cfg_t *
 portconf_get_first_advertised(int listener_type, int address_family)
 {
+  const port_cfg_t *first_port = NULL;
+  const port_cfg_t *first_port_explicit_addr = NULL;
+
   if (address_family == AF_UNSPEC)
     return NULL;
 
   const smartlist_t *conf_ports = get_configured_ports();
   SMARTLIST_FOREACH_BEGIN(conf_ports, const port_cfg_t *, cfg) {
-    if (cfg->type == listener_type &&
-        !cfg->server_cfg.no_advertise) {
+    if (cfg->type == listener_type && !cfg->server_cfg.no_advertise) {
       if ((address_family == AF_INET && port_binds_ipv4(cfg)) ||
           (address_family == AF_INET6 && port_binds_ipv6(cfg))) {
-        return cfg;
+        if (cfg->explicit_addr && !first_port_explicit_addr) {
+          first_port_explicit_addr = cfg;
+        } else if (!first_port) {
+          first_port = cfg;
+        }
       }
     }
   } SMARTLIST_FOREACH_END(cfg);
-  return NULL;
+
+  /* Prefer the port with the explicit address if any. */
+  return (first_port_explicit_addr) ? first_port_explicit_addr : first_port;
 }
 
 /** Return the first advertised port of type <b>listener_type</b> in
