@@ -1225,9 +1225,7 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
        * the v2 and v3 handshakes. */
       /* But that should be happening any longer've disabled bufferevents. */
       tor_assert_nonfatal_unreached_once();
-#ifndef ALL_BUGS_ARE_FATAL
-      FALLTHROUGH;
-#endif
+      FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL;
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
       if (!(command_allowed_before_handshake(var_cell->command))) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,

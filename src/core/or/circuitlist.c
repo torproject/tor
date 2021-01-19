@@ -787,9 +787,7 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
              "Unrecognized circuit purpose: %d",
              (int)purpose);
       tor_fragile_assert();
-#ifndef ALL_BUGS_ARE_FATAL
-      FALLTHROUGH;
-#endif
+      FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL;
 
     case CIRCUIT_PURPOSE_OR:
     case CIRCUIT_PURPOSE_C_GENERAL:
