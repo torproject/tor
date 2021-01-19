@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Fix another warning about unreachable fallthrough annotations
+      when building with "--enable-all-bugs-are-fatal" on some compilers.
+      Fixes bug 40241; bugfix on 0.4.5.3-rc.
