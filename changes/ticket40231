@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay):
+    - If we were unable to build our descriptor, don't mark that we've
+      advertised our descriptor. Also remove an harmless BUG(). Fixes bug 40231;
+      bugfix on 0.4.5.1-alpha.

@@ -1450,10 +1450,9 @@ consider_publishable_server(int force)
     return;
 
   rebuilt = router_rebuild_descriptor(0);
-  if (decide_if_publishable_server()) {
+  if (rebuilt && decide_if_publishable_server()) {
     set_server_advertised(1);
-    if (rebuilt == 0)
-      router_upload_dir_desc_to_dirservers(force);
+    router_upload_dir_desc_to_dirservers(force);
   } else {
     set_server_advertised(0);
   }
@@ -1840,7 +1839,7 @@ router_get_my_extrainfo(void)
 {
   if (!server_mode(get_options()))
     return NULL;
-  if (router_rebuild_descriptor(0))
+  if (!router_rebuild_descriptor(0))
     return NULL;
   return desc_extrainfo;
 }
@@ -2437,9 +2436,10 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
 
 /** If <b>force</b> is true, or our descriptor is out-of-date, rebuild a fresh
  * routerinfo, signed server descriptor, and extra-info document for this OR.
- * Return 0 on success, -1 on temporary error.
+ *
+ * Return true on success, else false on temporary error.
  */
-int
+bool
 router_rebuild_descriptor(int force)
 {
   int err = 0;
@@ -2447,13 +2447,13 @@ router_rebuild_descriptor(int force)
   extrainfo_t *ei;
 
   if (desc_clean_since && !force)
-    return 0;
+    return true;
 
   log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
 
   err = router_build_fresh_descriptor(&ri, &ei);
   if (err < 0) {
-    return err;
+    return false;
   }
 
   routerinfo_free(desc_routerinfo);
@@ -2469,7 +2469,7 @@ router_rebuild_descriptor(int force)
   }
   desc_dirty_reason = NULL;
   control_event_my_descriptor_changed();
-  return 0;
+  return true;
 }
 
 /** Called when we have a new set of consensus parameters. */
