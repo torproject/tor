@@ -249,6 +249,17 @@
 
 #endif /* defined(ALL_BUGS_ARE_FATAL) || ... */
 
+/**
+ * Use this macro after a nonfatal assertion, and before a case statement
+ * where you would want to fall through.
+ */
+#ifdef ALL_BUGS_ARE_FATAL
+#define FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL \
+  abort()
+#else
+#define FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL FALLTHROUGH
+#endif
+
 /** In older code, we used tor_fragile_assert() to mark optional failure
  * points. At these points, we could make some debug builds fail.
  * (But release builds would continue.)
