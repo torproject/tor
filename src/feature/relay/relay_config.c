@@ -151,7 +151,7 @@ describe_portnum(int port)
 
 /** Return a static buffer containing the human readable logging string that
  * describes the given port object. */
-static const char *
+STATIC const char *
 describe_relay_port(const port_cfg_t *port)
 {
   IF_BUG_ONCE(!port) {
@@ -198,6 +198,16 @@ describe_relay_port(const port_cfg_t *port)
  * First one binds to both v4 and v6 address but second one is specific to an
  * address superseding the global bind one.
  *
+ * Another example is this one:
+ *
+ *    ORPort 9001
+ *    ORPort [4242::1]:9002
+ *    ORPort [4242::2]:9003
+ *
+ * In this case, all IPv4 and IPv6 are kept since we do allow multiple ORPorts
+ * but the published port will be the first explicit one if any to be
+ * published or else the implicit.
+ *
  * The following is O(n^2) but it is done at bootstrap or config reload and
  * the list is not very long usually. */
 STATIC void
@@ -231,11 +241,14 @@ remove_duplicate_orports(smartlist_t *ports)
       if (next->type != CONN_TYPE_OR_LISTENER) {
         continue;
       }
-      /* Same address family and same port number, we have a match. */
-      if (tor_addr_family(&current->addr) == tor_addr_family(&next->addr) &&
-          current->port == next->port) {
-        /* Remove current because next is explicitly set. */
-        removing[i] = true;
+      /* Don't compare addresses of different family. */
+      if (tor_addr_family(&current->addr) != tor_addr_family(&next->addr)) {
+        continue;
+      }
+
+      /* Same port, we keep the explicit one. */
+      if (current->port == next->port) {
+        removing[j] = true;
         if (!current->explicit_addr && next->explicit_addr) {
           char *next_str = tor_strdup(describe_relay_port(next));
           log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
