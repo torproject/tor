@@ -137,7 +137,7 @@ void control_event_logmsg_pending(void);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,
                                  time_t expires, const char *error,
-                                 const int cached);
+                                 const int cached, uint64_t stream_id);
 int control_event_my_descriptor_changed(void);
 int control_event_network_liveness_update(int liveness);
 int control_event_networkstatus_changed(smartlist_t *statuses);

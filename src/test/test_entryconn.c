@@ -307,7 +307,7 @@ test_entryconn_rewrite_cached_dns_ipv4(void *arg)
                       tor_strdup("240.240.241.241"),
                       expires,
                       ADDRMAPSRC_DNS,
-                      0, 0);
+                      0, 0, 0);
 
   strlcpy(ec->socks_request->address, "www.friendly.example.com",
           sizeof(ec->socks_request->address));
@@ -359,7 +359,7 @@ test_entryconn_rewrite_cached_dns_ipv6(void *arg)
                       tor_strdup("[::f00f]"),
                       expires,
                       ADDRMAPSRC_DNS,
-                      0, 0);
+                      0, 0, 0);
 
   strlcpy(ec->socks_request->address, "www.friendly.example.com",
           sizeof(ec->socks_request->address));

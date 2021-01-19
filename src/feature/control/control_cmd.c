@@ -1232,7 +1232,7 @@ handle_control_resolve(control_connection_t *conn,
   send_control_done(conn);
   SMARTLIST_FOREACH(failed, const char *, arg, {
       control_event_address_mapped(arg, arg, time(NULL),
-                                   "internal", 0);
+                                   "internal", 0, 0);
   });
 
   smartlist_free(failed);
