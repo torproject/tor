@@ -1,2 +1,4 @@
   o Minor bugfixes (build):
-	- Mini-report in the configure script now shows whether or not lzma and zstd have been used, not just if enable flag passed in. Fixes bug 40236; bugfix on 0.4.3.1-alpha.
+    - Mini-report in the configure script now shows whether or not lzma and zstd
+      have been used, not just if enable flag passed in. Fixes bug 40236; bugfix
+      on 0.4.3.1-alpha.
