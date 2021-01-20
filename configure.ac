@@ -2816,10 +2816,10 @@ PPRINT_PROP_BOOL([libscrypt (--disable-libscrypt)], $value)
 test "x$enable_systemd" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([Systemd support (--enable-systemd)], $value)
 
-test "x$enable_lzma" = "xyes" && value=1 || value=0
+test "x$have_lzma" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([liblzma (--enable-lzma)], $value)
 
-test "x$enable_zstd" = "xyes" && value=1 || value=0
+test "x$have_zstd" = "xyes" && value=1 || value=0
 PPRINT_PROP_BOOL([libzstd (--enable-zstd)], $value)
 
 AS_ECHO
