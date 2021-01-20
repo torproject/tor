@@ -2189,23 +2189,6 @@ options_act,(const or_options_t *old_options))
     }
   }
 
-  /* Validate that we actually have a configured transport for a Bridge line
-   * that has one.  This is done here because we require the bridge and
-   * transport to be added to the global list before doing the validation.
-   *
-   * In an ideal world, pt_parse_transport_line() would actually return a
-   * transport_t object so we could inspect it and thus do this step at
-   * validation time. */
-  SMARTLIST_FOREACH_BEGIN(bridge_list_get(), const bridge_info_t *, bi) {
-    const char *bi_transport_name = bridget_get_transport_name(bi);
-    if (bi_transport_name && (!transport_get_by_name(bi_transport_name) &&
-                          !managed_proxy_has_transport(bi_transport_name))) {
-      log_warn(LD_CONFIG, "Bridge line with transport %s is missing a "
-                          "ClientTransportPlugin line", bi_transport_name);
-      return -1;
-    }
-  } SMARTLIST_FOREACH_END(bi);
-
   if (options_act_server_transport(old_options) < 0)
     return -1;
 
