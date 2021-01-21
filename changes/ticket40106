@@ -1,0 +1,6 @@
+  o Minor bugfixes (config, bridge):
+    - Don't initiate a connection to a bridge without a corresponding
+      transport. Fixes bug 40106; bugfix on 0.4.5.1-alpha.
+    - This also reverts an earlier fix we did for this that would validate
+      configuration to avoid such situation but turns out it wouldn't work for
+      a DisableNetwork thus the new approach.

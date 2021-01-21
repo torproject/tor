@@ -175,6 +175,17 @@ bridget_get_transport_name(const bridge_info_t *bridge)
   return bridge->transport_name;
 }
 
+/**
+ * Return true if @a bridge has a transport name for which we don't actually
+ * know a transport.
+ */
+bool
+bridge_has_invalid_transport(const bridge_info_t *bridge)
+{
+  const char *tname = bridget_get_transport_name(bridge);
+  return tname && transport_get_by_name(tname) == NULL;
+}
+
 /** If we have a bridge configured whose digest matches <b>digest</b>, or a
  * bridge with no known digest whose address matches any of the
  * tor_addr_port_t's in <b>orports</b>, return that bridge.  Else return
@@ -655,6 +666,15 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
       CONN_TYPE_DIR, &bridge->addr, bridge->port,
       DIR_PURPOSE_FETCH_SERVERDESC))
     return; /* it's already on the way */
+
+  if (bridge_has_invalid_transport(bridge)) {
+    download_status_mark_impossible(&bridge->fetch_status);
+    log_warn(LD_CONFIG, "Can't use bridge at %s: there is no configured "
+             "transport called \"%s\".",
+             safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
+             bridget_get_transport_name(bridge));
+    return; /* Can't use this bridge; it has not */
+  }
 
   if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
     download_status_mark_impossible(&bridge->fetch_status);
