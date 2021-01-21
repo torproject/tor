@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging):
+    - Reject obsolete router/extrainfo descs earlier and more quietly.
+      Fixes bug 40238; bugfix on 0.4.5.1-alpha.
