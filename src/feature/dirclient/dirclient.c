@@ -2419,8 +2419,8 @@ handle_response_fetch_status_vote(dir_connection_t *conn,
 
   const char *msg;
   int st;
-  log_info(LD_DIR,"Got votes (body size %d) from server %s",
-           (int)body_len, connection_describe_peer(TO_CONN(conn)));
+  log_notice(LD_DIR,"Got votes (body size %d) from server %s",
+             (int)body_len, connection_describe_peer(TO_CONN(conn)));
   if (status_code != 200) {
     log_warn(LD_DIR,
              "Received http status code %d (%s) from server "
@@ -2430,7 +2430,7 @@ handle_response_fetch_status_vote(dir_connection_t *conn,
              conn->requested_resource);
     return -1;
   }
-  dirvote_add_vote(body, 0, &msg, &st);
+  dirvote_add_vote(body, 0, TO_CONN(conn)->address, &msg, &st);
   if (st > 299) {
     log_warn(LD_DIR, "Error adding retrieved vote: %s", msg);
   } else {
@@ -2720,7 +2720,7 @@ handle_response_upload_vote(dir_connection_t *conn,
 
   switch (status_code) {
   case 200: {
-    log_notice(LD_DIR,"Uploaded a vote to dirserver %s",
+    log_notice(LD_DIR,"Uploaded my vote to dirserver %s",
                connection_describe_peer(TO_CONN(conn)));
   }
     break;
