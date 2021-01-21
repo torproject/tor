@@ -1,0 +1,6 @@
+  o Minor bugfixes (directory cache, performance, windows):
+    - Limit the number of items in the consensus diff cache to 64 on Windows.
+      We hope this will resolve an issue where Windows relay operators reported
+      Tor using 100% CPU while we investigate better solutions. Fixes bug 24857;
+      bugfix on 0.3.1.1-alpha.
+
