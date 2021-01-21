@@ -2456,7 +2456,6 @@ onion_extend_cpath(origin_circuit_t *circ)
       choose_good_middle_server(purpose, state, circ->cpath, cur_len);
     if (r) {
       info = extend_info_from_node(r, 0);
-      tor_assert_nonfatal(info);
     }
   }
 
