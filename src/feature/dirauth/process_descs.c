@@ -322,8 +322,9 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
    * and is non-zero (clients check that it's non-zero before using it). */
   if (!routerinfo_has_curve25519_onion_key(router)) {
     log_fn(severity, LD_DIR,
-           "Descriptor from router %s is missing an ntor curve25519 onion "
-           "key.", router_describe(router));
+           "Descriptor from router %s (platform %s) "
+           "is missing an ntor curve25519 onion key.",
+           router_describe(router), router->platform);
     if (msg)
       *msg = "Missing ntor curve25519 onion key. Please upgrade!";
     return RTR_REJECT;
@@ -760,6 +761,9 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     r = ROUTER_AUTHDIR_REJECTS;
     goto fail;
   }
+
+  log_info(LD_DIR, "Assessing new descriptor: %s: %s",
+           ri->nickname, ri->platform);
 
   /* Check whether this descriptor is semantically identical to the last one
    * from this server.  (We do this here and not in router_add_to_routerlist
