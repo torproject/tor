@@ -39,6 +39,7 @@ uptime-*.json
 # Core files
 core
 core.*
+!core/
 # ccls file that can be per directory.
 *.ccls
 
