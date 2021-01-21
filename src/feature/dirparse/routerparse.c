@@ -456,6 +456,12 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
+  if (!tor_memstr(s, end-s, "\nproto ")) {
+    log_debug(LD_DIR, "Found an obsolete router descriptor. "
+              "Rejecting quietly.");
+    goto err;
+  }
+
   if (router_get_router_hash(s, end - s, digest) < 0) {
     log_warn(LD_DIR, "Couldn't compute router hash.");
     goto err;
@@ -990,6 +996,11 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   /* point 'end' to a point immediately after the final newline. */
   while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
     --end;
+
+  if (!tor_memstr(s, end-s, "\nidentity-ed25519")) {
+    log_debug(LD_DIR, "Found an obsolete extrainfo. Rejecting quietly.");
+    goto err;
+  }
 
   if (router_get_extrainfo_hash(s, end-s, digest) < 0) {
     log_warn(LD_DIR, "Couldn't compute router hash.");
