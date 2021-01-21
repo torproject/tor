@@ -1,0 +1,4 @@
+  o Minor feature (build system):
+    - New "make lsp" command to auto generate the compile_commands.json file
+      used by the ccls server. The "bear" program is needed for this. Closes
+      ticket 40227.
