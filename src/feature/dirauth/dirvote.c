@@ -2975,7 +2975,7 @@ dirvote_perform_vote(void)
   if (!contents)
     return -1;
 
-  pending_vote = dirvote_add_vote(contents, 0, &msg, &status);
+  pending_vote = dirvote_add_vote(contents, 0, "self", &msg, &status);
   tor_free(contents);
   if (!pending_vote) {
     log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
@@ -3169,6 +3169,7 @@ add_new_cert_if_needed(const struct authority_cert_t *cert)
  * only) */
 pending_vote_t *
 dirvote_add_vote(const char *vote_body, time_t time_posted,
+                 const char *where_from,
                  const char **msg_out, int *status_out)
 {
   networkstatus_t *vote;
@@ -3226,6 +3227,14 @@ dirvote_add_vote(const char *vote_body, time_t time_posted,
     goto err;
   }
 
+  if (time_posted) { /* they sent it to me via a POST */
+    log_notice(LD_DIR, "%s posted a vote to me from %s.",
+               vi->nickname, where_from);
+  } else { /* I imported this one myself */
+    log_notice(LD_DIR, "Retrieved %s's vote from %s.",
+               vi->nickname, where_from);
+  }
+
   /* Check if we received it, as a post, after the cutoff when we
    * start asking other dir auths for it. If we do, the best plan
    * is to discard it, because using it greatly increases the chances
@@ -3235,10 +3244,10 @@ dirvote_add_vote(const char *vote_body, time_t time_posted,
     char tbuf1[ISO_TIME_LEN+1], tbuf2[ISO_TIME_LEN+1];
     format_iso_time(tbuf1, time_posted);
     format_iso_time(tbuf2, voting_schedule.fetch_missing_votes);
-    log_warn(LD_DIR, "Rejecting posted vote from %s received at %s; "
+    log_warn(LD_DIR, "Rejecting %s's posted vote from %s received at %s; "
              "our cutoff for received votes is %s. Check your clock, "
              "CPU load, and network load. Also check the authority that "
-             "posted the vote.", vi->address, tbuf1, tbuf2);
+             "posted the vote.", vi->nickname, vi->address, tbuf1, tbuf2);
     *msg_out = "Posted vote received too late, would be dangerous to count it";
     goto err;
   }
@@ -3254,8 +3263,8 @@ dirvote_add_vote(const char *vote_body, time_t time_posted,
         networkstatus_voter_info_t *vi_old = get_voter(v->vote);
         if (fast_memeq(vi_old->vote_digest, vi->vote_digest, DIGEST_LEN)) {
           /* Ah, it's the same vote. Not a problem. */
-          log_info(LD_DIR, "Discarding a vote we already have (from %s).",
-                   vi->address);
+          log_notice(LD_DIR, "Discarding a vote we already have (from %s).",
+                     vi->address);
           if (*status_out < 200)
             *status_out = 200;
           goto discard;
@@ -3278,6 +3287,8 @@ dirvote_add_vote(const char *vote_body, time_t time_posted,
             *msg_out = "OK";
           return v;
         } else {
+          log_notice(LD_DIR, "Discarding vote from %s because we have "
+                     "a newer one already.", vi->address);
           *msg_out = "Already have a newer pending vote";
           goto err;
         }
@@ -3462,6 +3473,15 @@ dirvote_compute_consensuses(void)
       pending[flav].body = consensus_body;
       pending[flav].consensus = consensus;
       n_generated++;
+
+      /* Write it out to disk too, for dir auth debugging purposes */
+      {
+        char *filename;
+        tor_asprintf(&filename, "my-consensus-%s", flavor_name);
+        write_str_to_file(get_datadir_fname(filename), consensus_body, 0);
+        tor_free(filename);
+      }
+
       consensus_body = NULL;
       consensus = NULL;
     }

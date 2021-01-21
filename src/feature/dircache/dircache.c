@@ -1675,6 +1675,15 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     const char *msg = "[None]";
     uint8_t purpose = authdir_mode_bridge(options) ?
                       ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
+
+    {
+      char *genreason = http_get_header(headers, "X-Desc-Gen-Reason: ");
+      log_info(LD_DIRSERV,
+               "New descriptor post, because: %s",
+               genreason ? genreason : "not specified");
+      tor_free(genreason);
+    }
+
     was_router_added_t r = dirserv_add_multiple_descriptors(body, body_len,
                                            purpose, conn->base_.address, &msg);
     tor_assert(msg);
@@ -1699,7 +1708,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
       !strcmp(url,"/tor/post/vote")) { /* v3 networkstatus vote */
     const char *msg = "OK";
     int status;
-    if (dirvote_add_vote(body, approx_time(), &msg, &status)) {
+    if (dirvote_add_vote(body, approx_time(), TO_CONN(conn)->address,
+                         &msg, &status)) {
       write_short_http_response(conn, status, "Vote stored");
     } else {
       tor_assert(msg);
