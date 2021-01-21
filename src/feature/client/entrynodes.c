@@ -804,7 +804,7 @@ get_sampled_guard_for_bridge(guard_selection_t *gs,
   entry_guard_t *guard;
   if (BUG(!addrport))
     return NULL; // LCOV_EXCL_LINE
-  if (!transport_get_by_name(bridget_get_transport_name(bridge))) {
+  if (bridge_has_invalid_transport(bridge)) {
     return NULL;
   }
   guard = get_sampled_guard_by_bridge_addr(gs, addrport);
