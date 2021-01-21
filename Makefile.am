@@ -706,3 +706,17 @@ show-libs:
 
 show-testing-libs:
 	@echo $(TOR_INTERNAL_TESTING_LIBS)
+
+# Note here that we hardcode this -j2 because if the user would pass too many
+# cores, bear actually chockes and dies :S. For this to work, a make clean
+# needs to be done else bear will miss some compile flags.
+lsp:
+	@if test -x "`which bear 2>&1;true`"; then \
+		echo "Generating LSP compile_commands.json. Might take few minutes..."; \
+		$(MAKE) clean 2>&1 >/dev/null; \
+		bear >/dev/null 2>&1 -- $(MAKE) -j2 2>&1 >/dev/null; \
+		echo "Generating .ccls file..."; \
+		./scripts/maint/gen_ccls_file.sh \
+	else \
+		echo "No bear command found. On debian, apt install bear"; \
+	fi
