@@ -656,6 +656,15 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
       DIR_PURPOSE_FETCH_SERVERDESC))
     return; /* it's already on the way */
 
+  if (transport_get_by_name(bridget_get_transport_name(bridge)) == NULL) {
+    download_status_mark_impossible(&bridge->fetch_status);
+    log_warn(LD_CONFIG, "Can't use bridge at %s: there is no configured "
+             "transport called \"%s\".",
+             safe_str_client(fmt_and_decorate_addr(&bridge->addr)),
+             bridget_get_transport_name(bridge));
+    return; /* Can't use this bridge; it has not */
+  }
+
   if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
     download_status_mark_impossible(&bridge->fetch_status);
     log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
