@@ -177,6 +177,16 @@ typedef struct cdm_diff_t {
 /** Hashtable mapping flavor and source consensus digest to status. */
 static HT_HEAD(cdm_diff_ht, cdm_diff_t) cdm_diff_ht = HT_INITIALIZER();
 
+#ifdef _WIN32
+   // XXX(ahf): For tor#24857, a contributor suggested that on Windows, the CPU
+   // begins to spike at 100% once the number of files handled by the consensus
+   // diff manager becomes larger than 64. To see if the issue goes away, we
+   // hardcode this value to 64 now while we investigate a better solution.
+#  define CACHE_MAX_NUM 64
+#else
+#  define CACHE_MAX_NUM 128
+#endif
+
 /**
  * Configuration for this module
  */
@@ -184,7 +194,7 @@ static consdiff_cfg_t consdiff_cfg = {
   // XXXX I'd like to make this number bigger, but it interferes with the
   // XXXX seccomp2 syscall filter, which tops out at BPF_MAXINS (4096)
   // XXXX rules.
-  /* .cache_max_num = */ 128
+  /* .cache_max_num = */ CACHE_MAX_NUM
 };
 
 static int consdiffmgr_ensure_space_for_files(int n);
