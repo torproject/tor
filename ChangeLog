@@ -3,7 +3,7 @@ Changes in version 0.4.5.4-rc - 2021-01-22
   several bugs present in previous releases.
 
   We expect that the stable release will be the same, or almost the
-  same, as this releasee candidate, unless serious bugs are found.
+  same, as this release candidate, unless serious bugs are found.
 
   o Major bugfixes (authority, IPv6):
     - Do not consider multiple relays in the same IPv6 /64 network to be
