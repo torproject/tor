@@ -1,3 +1,0 @@
-  o Minor bugfixes (config):
-    - Fix globbing directories on all platforms. Fixes compilation on musl.
-      Fixes bug 40141; bugfix on 0.4.5.1-alpha.
