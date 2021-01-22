@@ -2047,12 +2047,11 @@ MOCK_IMPL(STATIC int,
 router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
 {
   routerinfo_t *ri = NULL;
-  tor_addr_t ipv4_addr, ipv6_addr;
+  tor_addr_t ipv4_addr;
   char platform[256];
   int hibernating = we_are_hibernating();
   const or_options_t *options = get_options();
   int result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
-  uint16_t ipv6_orport = 0;
 
   if (BUG(!ri_out)) {
     result = TOR_ROUTERINFO_ERROR_INTERNAL_BUG;
@@ -2064,10 +2063,6 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   bool have_v4 = relay_find_addr_to_publish(options, AF_INET,
                                             RELAY_FIND_ADDR_NO_FLAG,
                                             &ipv4_addr);
-  bool have_v6 = relay_find_addr_to_publish(options, AF_INET6,
-                                            RELAY_FIND_ADDR_NO_FLAG,
-                                            &ipv6_addr);
-
   /* Tor requires a relay to have an IPv4 so bail if we can't find it. */
   if (!have_v4) {
     log_info(LD_CONFIG, "Don't know my address while generating descriptor. "
@@ -2079,24 +2074,21 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   /* Log a message if the address in the descriptor doesn't match the ORPort
    * and DirPort addresses configured by the operator. */
   router_check_descriptor_address_consistency(&ipv4_addr);
-  router_check_descriptor_address_consistency(&ipv6_addr);
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
+  tor_addr_copy(&ri->ipv4_addr, &ipv4_addr);
   ri->cache_info.routerlist_index = -1;
   ri->nickname = tor_strdup(options->Nickname);
 
   /* IPv4. */
-  tor_addr_copy(&ri->ipv4_addr, &ipv4_addr);
   ri->ipv4_orport = routerconf_find_or_port(options, AF_INET);
   ri->ipv4_dirport = routerconf_find_dir_port(options, 0);
 
-  /* IPv6. Do not publish an IPv6 if we don't have an ORPort that can be used
-   * with the address. This is possible for instance if the ORPort is
-   * IPv4Only. */
-  ipv6_orport = routerconf_find_or_port(options, AF_INET6);
-  if (have_v6 && ipv6_orport != 0) {
-    tor_addr_copy(&ri->ipv6_addr, &ipv6_addr);
-    ri->ipv6_orport = ipv6_orport;
+  /* Optionally check for an IPv6. We still publish without one. */
+  if (relay_find_addr_to_publish(options, AF_INET6, RELAY_FIND_ADDR_NO_FLAG,
+                                 &ri->ipv6_addr)) {
+    ri->ipv6_orport = routerconf_find_or_port(options, AF_INET6);
+    router_check_descriptor_address_consistency(&ri->ipv6_addr);
   }
 
   ri->supports_tunnelled_dir_requests =
