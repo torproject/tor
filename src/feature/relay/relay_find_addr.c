@@ -99,6 +99,13 @@ relay_address_new_suggestion(const tor_addr_t *suggested_addr,
  *       populated by the NETINFO cell content or HTTP header from a
  *       directory.
  *
+ * The AddressDisableIPv6 is checked here for IPv6 address discovery and if
+ * set, false is returned and addr_out is UNSPEC.
+ *
+ * Before doing any discovery, the configuration is checked for an ORPort of
+ * the given family. If none can be found, false is returned and addr_out is
+ * UNSPEC.
+ *
  * Return true on success and addr_out contains the address to use for the
  * given family. On failure to find the address, false is returned and
  * addr_out is set to an AF_UNSPEC address. */
@@ -115,6 +122,12 @@ relay_find_addr_to_publish, (const or_options_t *options, int family,
    * this instance. If so, we return a failure. It is done here so we don't
    * query the suggested cache that might be populated with an IPv6. */
   if (family == AF_INET6 && options->AddressDisableIPv6) {
+    return false;
+  }
+
+  /* There is no point on attempting an address discovery to publish if we
+   * don't have an ORPort for this family. */
+  if (!routerconf_find_or_port(options, family)) {
     return false;
   }
 
