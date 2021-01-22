@@ -144,6 +144,17 @@ relay_find_addr_to_publish, (const or_options_t *options, int family,
     if (find_my_address(options, family, LOG_INFO, addr_out, NULL, NULL)) {
       goto found;
     }
+    /* No publishable address was found even though we have an ORPort thus
+     * print a notice log so operator can notice. We'll do that every hour so
+     * it is not too spammy but enough so operators address the issue. */
+    static ratelim_t rlim = RATELIM_INIT(3600);
+    log_fn_ratelim(&rlim, LOG_NOTICE, LD_CONFIG,
+                   "Unable to find %s address for ORPort %u. "
+                   "You might want to specify %sOnly to it or set an "
+                   "explicit address or set Address.",
+                   fmt_af_family(family),
+                   routerconf_find_or_port(options, family),
+                   fmt_af_family(family));
   }
 
   /* Third, consider address from our suggestion cache. */
