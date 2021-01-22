@@ -354,6 +354,7 @@ URL: https:onionoo.torproject.orguptime?typerelay&first_seen_days90-&last_seen_d
 /* ===== */
 ,
 "193.11.114.45:9031 orport=9002 id=80AAF8D5956A43C197104CEF2550CD42D165C6FB"
+" ipv6=[2001:6b0:30:1000::100]:9050"
 /* nickname=mdfnet2 */
 /* extrainfo=0 */
 /* ===== */
@@ -552,6 +553,7 @@ URL: https:onionoo.torproject.orguptime?typerelay&first_seen_days90-&last_seen_d
 /* ===== */
 ,
 "193.11.114.46:9032 orport=9003 id=B83DC1558F0D34353BB992EF93AFEAFDB226A73E"
+" ipv6=[2001:6b0:30:1000::101]:9050"
 /* nickname=mdfnet3 */
 /* extrainfo=0 */
 /* ===== */
