@@ -2012,6 +2012,30 @@ routerlist_remove_old_routers(void)
   router_rebuild_store(RRS_DONT_REMOVE_OLD,&routerlist->extrainfo_store);
 }
 
+/* Drop every bridge descriptor in our routerlist. Used by the external
+ * 'bridgestrap' tool to discard bridge descriptors so that it can then
+ * do a clean reachability test. */
+void
+routerlist_drop_bridge_descriptors(void)
+{
+  routerinfo_t *router;
+  int i;
+
+  if (!routerlist)
+    return;
+
+  for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
+    router = smartlist_get(routerlist->routers, i);
+    if (router->purpose == ROUTER_PURPOSE_BRIDGE) {
+      log_notice(LD_DIR,
+               "Dropping existing bridge descriptor for %s",
+               router_describe(router));
+      routerlist_remove(routerlist, router, 0, time(NULL));
+      i--;
+    }
+  }
+}
+
 /** We just added a new set of descriptors. Take whatever extra steps
  * we need. */
 void

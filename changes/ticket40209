@@ -1,0 +1,4 @@
+  o Minor features (bridge testing support):
+    - Let external bridge reachability testing tools discard cached
+      bridge descriptors when setting new bridges, so they can be sure
+      to get a clean reachability test. Implements ticket 40209.

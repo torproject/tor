@@ -628,6 +628,7 @@ static const config_var_t option_vars_[] = {
   V(ConnectionPadding,           AUTOBOOL, "auto"),
   V(RefuseUnknownExits,          AUTOBOOL, "auto"),
   V(CircuitPadding,              BOOL,     "1"),
+  V(ReconfigDropsBridgeDescs,    BOOL,     "0"),
   V(ReducedCircuitPadding,       BOOL,     "0"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
@@ -2321,6 +2322,8 @@ options_act,(const or_options_t *old_options))
     }
 
     if (transition_affects_guards) {
+      if (options->ReconfigDropsBridgeDescs)
+        routerlist_drop_bridge_descriptors();
       if (guards_update_all()) {
         abandon_circuits = 1;
       }

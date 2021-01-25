@@ -293,6 +293,13 @@ struct or_options_t {
    * disabled. */
   int CircuitPadding;
 
+  /** Boolean: if true, then this client will discard cached bridge
+   * descriptors on a setconf or other config change that impacts guards
+   * or bridges (see options_transition_affects_guards() for exactly which
+   * config changes trigger it). Useful for tools that test bridge
+   * reachability by fetching fresh descriptors. */
+  int ReconfigDropsBridgeDescs;
+
   /** Boolean: if true, then this client will only use circuit padding
    * algorithms that are known to use a low amount of overhead. If false,
    * we will use all available circuit padding algorithms.
