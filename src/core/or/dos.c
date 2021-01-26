@@ -210,7 +210,7 @@ get_param_conn_connect_rate(const networkstatus_t *ns)
 
 /* Return the connection connect burst parameters either from the
  * configuration file or, if not found, consensus parameter. */
-static uint32_t
+STATIC uint32_t
 get_param_conn_connect_burst(const networkstatus_t *ns)
 {
   if (dos_get_options()->DoSConnectionConnectBurst) {
