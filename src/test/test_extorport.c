@@ -473,7 +473,7 @@ test_ext_or_handshake(void *arg)
   tt_int_op(handshake_start_called,OP_EQ,1);
   tt_int_op(TO_CONN(conn)->type, OP_EQ, CONN_TYPE_OR);
   tt_int_op(TO_CONN(conn)->state, OP_EQ, 0);
-  close_closeable_connections();
+  connection_free_(TO_CONN(conn));
   conn = NULL;
 
   /* Okay, this time let's succeed the handshake but fail the USERADDR
