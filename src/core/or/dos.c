@@ -399,7 +399,7 @@ cc_has_exhausted_circuits(const dos_client_stats_t *stats)
 {
   tor_assert(stats);
   return stats->cc_stats.circuit_bucket == 0 &&
-         stats->concurrent_count >= dos_cc_min_concurrent_conn;
+         stats->conn_stats.concurrent_count >= dos_cc_min_concurrent_conn;
 }
 
 /* Mark client address by setting a timestamp in the stats object which tells
@@ -491,11 +491,17 @@ conn_consensus_has_changed(const networkstatus_t *ns)
 /** Called when a new client connection has arrived. The following will update
  * the client connection statistics.
  *
+ * The addr is used for logging purposes only.
+ *
  * If the connect counter reaches its limit, it is marked. */
 static void
-conn_update_on_connect(conn_client_stats_t *stats)
+conn_update_on_connect(conn_client_stats_t *stats, const tor_addr_t *addr)
 {
   tor_assert(stats);
+  tor_assert(addr);
+
+  /* Update concurrent count for this new connect. */
+  stats->concurrent_count++;
 
   /* Refill connect connection count. */
   token_bucket_ctr_refill(&stats->connect_count, (uint32_t) approx_time());
@@ -512,6 +518,31 @@ conn_update_on_connect(conn_client_stats_t *stats)
       stats->marked_until_ts == 0) {
     conn_mark_client(stats);
   }
+
+  log_debug(LD_DOS, "Client address %s has now %u concurrent connections. "
+                    "Remaining %lu/sec connections are allowed.",
+            fmt_addr(addr), stats->concurrent_count,
+            token_bucket_ctr_get(&stats->connect_count));
+}
+
+/** Called when a client connection is closed. The following will update
+ * the client connection statistics.
+ *
+ * The addr is used for logging purposes only. */
+static void
+conn_update_on_close(conn_client_stats_t *stats, const tor_addr_t *addr)
+{
+  /* Extra super duper safety. Going below 0 means an underflow which could
+   * lead to most likely a false positive. In theory, this should never happen
+   * but lets be extra safe. */
+  if (BUG(stats->concurrent_count == 0)) {
+    return;
+  }
+
+  stats->concurrent_count--;
+  log_debug(LD_DOS, "Client address %s has lost a connection. Concurrent "
+                    "connections are now at %u",
+            fmt_addr(addr), stats->concurrent_count);
 }
 
 /* General private API */
@@ -651,7 +682,8 @@ dos_conn_addr_get_defense_type(const tor_addr_t *addr)
 
   /* Need to be above the maximum concurrent connection count to trigger a
    * defense. */
-  if (entry->dos_stats.concurrent_count > dos_conn_max_concurrent_count) {
+  if (entry->dos_stats.conn_stats.concurrent_count >
+      dos_conn_max_concurrent_count) {
     conn_num_addr_rejected++;
     return dos_conn_defense_type;
   }
@@ -676,7 +708,7 @@ dos_geoip_entry_about_to_free(const clientmap_entry_t *geoip_ent)
 
   /* The count is down to 0 meaning no connections right now, we can safely
    * clear the geoip entry from the cache. */
-  if (geoip_ent->dos_stats.concurrent_count == 0) {
+  if (geoip_ent->dos_stats.conn_stats.concurrent_count == 0) {
     goto end;
   }
 
@@ -831,13 +863,10 @@ dos_new_client_conn(or_connection_t *or_conn, const char *transport_name)
   }
 
   /* Update stats from this new connect. */
-  conn_update_on_connect(&entry->dos_stats.conn_stats);
+  conn_update_on_connect(&entry->dos_stats.conn_stats,
+                         &TO_CONN(or_conn)->addr);
 
-  entry->dos_stats.concurrent_count++;
   or_conn->tracked_for_dos_mitigation = 1;
-  log_debug(LD_DOS, "Client address %s has now %u concurrent connections.",
-            fmt_addr(&TO_CONN(or_conn)->addr),
-            entry->dos_stats.concurrent_count);
 
  end:
   return;
@@ -867,18 +896,8 @@ dos_close_client_conn(const or_connection_t *or_conn)
     goto end;
   }
 
-  /* Extra super duper safety. Going below 0 means an underflow which could
-   * lead to most likely a false positive. In theory, this should never happen
-   * but lets be extra safe. */
-  if (BUG(entry->dos_stats.concurrent_count == 0)) {
-    goto end;
-  }
-
-  entry->dos_stats.concurrent_count--;
-  log_debug(LD_DOS, "Client address %s has lost a connection. Concurrent "
-                    "connections are now at %u",
-            fmt_addr(&TO_CONN(or_conn)->addr),
-            entry->dos_stats.concurrent_count);
+  /* Update stats from this new close. */
+  conn_update_on_close(&entry->dos_stats.conn_stats, &TO_CONN(or_conn)->addr);
 
  end:
   return;

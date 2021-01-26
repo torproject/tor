@@ -470,7 +470,7 @@ test_known_relay(void *arg)
                               GEOIP_CLIENT_CONNECT);
   tt_assert(entry);
   /* We should have a count of 0. */
-  tt_uint_op(entry->dos_stats.concurrent_count, OP_EQ, 0);
+  tt_uint_op(entry->dos_stats.conn_stats.concurrent_count, OP_EQ, 0);
 
   /* To make sure that his is working properly, make a unknown client
    * connection and see if we do get it. */
@@ -483,7 +483,7 @@ test_known_relay(void *arg)
                               GEOIP_CLIENT_CONNECT);
   tt_assert(entry);
   /* We should have a count of 2. */
-  tt_uint_op(entry->dos_stats.concurrent_count, OP_EQ, 2);
+  tt_uint_op(entry->dos_stats.conn_stats.concurrent_count, OP_EQ, 2);
 
  done:
   routerstatus_free(rs); routerinfo_free(ri); microdesc_free(md);

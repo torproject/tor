@@ -34,6 +34,10 @@ typedef struct cc_client_stats_t {
 
 /* Structure that keeps stats of client connection per-IP. */
 typedef struct conn_client_stats_t {
+  /* Concurrent connection count from the specific address. 2^32 - 1 is most
+   * likely way too big for the amount of allowed file descriptors. */
+  uint32_t concurrent_count;
+
   /* Connect count from the specific address. We use a token bucket here to
    * track the rate and burst of connections from the same IP address.*/
   token_bucket_ctr_t connect_count;
@@ -48,10 +52,6 @@ typedef struct conn_client_stats_t {
  * per-IP client DoS mitigation. Because it is per-IP, it is used in the geoip
  * clientmap_entry_t object. */
 typedef struct dos_client_stats_t {
-  /* Concurrent connection count from the specific address. 2^32 is most
-   * likely way too big for the amount of allowed file descriptors. */
-  uint32_t concurrent_count;
-
   /* Client connection statistics. */
   conn_client_stats_t conn_stats;
 
