@@ -1,0 +1,3 @@
+  o Major feature (relay, denial of service):
+    - Add a new DoS subsystem feature to control the rate of client connections
+      for relays. Closes ticket 40253.

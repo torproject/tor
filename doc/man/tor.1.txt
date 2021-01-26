@@ -2936,6 +2936,30 @@ Denial of Service mitigation subsystem described above.
     consensus, the value is 100.
     (Default: 0)
 
+[[DoSConnectionConnectRate]] **DoSConnectionConnectRate** __NUM__::
+
+    The allowed rate of client connection from a single address per second.
+    Coupled with the burst (see below), if the limit is reached, the address
+    is marked and a defense is applied (DoSConnectionDefenseType) for a period
+    of time defined by DoSConnectionConnectDefenseTimePeriod. If not defined
+    or set to 0, it is controlled by a consensus parameter.
+    (Default: 0)
+
+[[DoSConnectionConnectBurst]] **DoSConnectionConnectBurst** __NUM__::
+
+    The allowed burst of client connection from a single address per second.
+    See the DoSConnectionConnectRate for more details on this detection. If
+    not defined or set to 0, it is controlled by a consensus parameter.
+    (Default: 0)
+
+[[DoSConnectionConnectDefenseTimePeriod]] **DoSConnectionConnectDefenseTimePeriod** __N__ **seconds**|**minutes**|**hours**::
+
+    The base time period in seconds that the client connection defense is
+    activated for. The actual value is selected randomly for each activation
+    from N+1 to 3/2 * N. If not defined or set to 0, it is controlled by a
+    consensus parameter.
+    (Default: 24 hours)
+
 [[DoSRefuseSingleHopClientRendezvous]] **DoSRefuseSingleHopClientRendezvous** **0**|**1**|**auto**::
 
     Refuse establishment of rendezvous points for single hop clients. In other
