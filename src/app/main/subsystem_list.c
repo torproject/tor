@@ -14,6 +14,7 @@
 #include "lib/cc/torint.h"
 
 #include "core/mainloop/mainloop_sys.h"
+#include "core/or/dos_sys.h"
 #include "core/or/or_sys.h"
 #include "feature/control/btrack_sys.h"
 #include "lib/compress/compress_sys.h"
@@ -64,6 +65,7 @@ const subsys_fns_t *tor_subsystems[] = {
 
   &sys_mainloop,
   &sys_or,
+  &sys_dos,
 
   &sys_relay,
   &sys_hs,

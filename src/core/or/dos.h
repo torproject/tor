@@ -9,6 +9,8 @@
 #ifndef TOR_DOS_H
 #define TOR_DOS_H
 
+#include "core/or/or.h"
+
 /* Structure that keeps stats of client connection per-IP. */
 typedef struct cc_client_stats_t {
   /* Number of allocated circuits remaining for this address.  It is
