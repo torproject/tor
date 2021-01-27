@@ -9,6 +9,9 @@
 #ifndef TOR_CORE_OR_DOS_SYS_H
 #define TOR_CORE_OR_DOS_SYS_H
 
+struct dos_options_t;
+const struct dos_options_t *dos_get_options(void);
+
 extern const struct subsys_fns_t sys_dos;
 
 /**

@@ -6,10 +6,16 @@
  * @brief Subsystem definitions for DOS module.
  **/
 
+#include "core/or/or.h"
+
 #include "lib/subsys/subsys.h"
 
-#include "core/or/dos.h"
+#include "core/or/dos_config.h"
 #include "core/or/dos_sys.h"
+
+#include "core/or/dos_options_st.h"
+
+static const dos_options_t *global_dos_options;
 
 static int
 subsys_dos_initialize(void)
@@ -20,6 +26,22 @@ subsys_dos_initialize(void)
 static void
 subsys_dos_shutdown(void)
 {
+  global_dos_options = NULL;
+}
+
+const dos_options_t *
+dos_get_options(void)
+{
+  tor_assert(global_dos_options);
+  return global_dos_options;
+}
+
+static int
+dos_set_options(void *arg)
+{
+  dos_options_t *opts = arg;
+  global_dos_options = opts;
+  return 0;
 }
 
 const struct subsys_fns_t sys_dos = {
@@ -31,4 +53,8 @@ const struct subsys_fns_t sys_dos = {
 
   .initialize = subsys_dos_initialize,
   .shutdown = subsys_dos_shutdown,
+
+  /* Configuration Options. */
+  .options_format = &dos_options_fmt,
+  .set_options = dos_set_options,
 };

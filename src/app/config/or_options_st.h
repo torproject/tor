@@ -1031,35 +1031,6 @@ struct or_options_t {
    */
   int DisableSignalHandlers;
 
-  /** Autobool: Is the circuit creation DoS mitigation subsystem enabled? */
-  int DoSCircuitCreationEnabled;
-  /** Minimum concurrent connection needed from one single address before any
-   * defense is used. */
-  int DoSCircuitCreationMinConnections;
-  /** Circuit rate used to refill the token bucket. */
-  int DoSCircuitCreationRate;
-  /** Maximum allowed burst of circuits. Reaching that value, the address is
-   * detected as malicious and a defense might be used. */
-  int DoSCircuitCreationBurst;
-  /** When an address is marked as malicious, what defense should be used
-   * against it. See the dos_cc_defense_type_t enum. */
-  int DoSCircuitCreationDefenseType;
-  /** For how much time (in seconds) the defense is applicable for a malicious
-   * address. A random time delta is added to the defense time of an address
-   * which will be between 1 second and half of this value. */
-  int DoSCircuitCreationDefenseTimePeriod;
-
-  /** Autobool: Is the DoS connection mitigation subsystem enabled? */
-  int DoSConnectionEnabled;
-  /** Maximum concurrent connection allowed per address. */
-  int DoSConnectionMaxConcurrentCount;
-  /** When an address is reaches the maximum count, what defense should be
-   * used against it. See the dos_conn_defense_type_t enum. */
-  int DoSConnectionDefenseType;
-
-  /** Autobool: Do we refuse single hop client rendezvous? */
-  int DoSRefuseSingleHopClientRendezvous;
-
   /** Interval: how long without activity does it take for a client
    * to become dormant?
    **/

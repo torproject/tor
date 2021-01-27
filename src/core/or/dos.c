@@ -23,7 +23,9 @@
 #include "lib/crypt_ops/crypto_rand.h"
 
 #include "core/or/dos.h"
+#include "core/or/dos_sys.h"
 
+#include "core/or/dos_options_st.h"
 #include "core/or/or_connection_st.h"
 
 /*
@@ -77,8 +79,8 @@ static uint64_t num_single_hop_client_refused;
 MOCK_IMPL(STATIC unsigned int,
 get_param_cc_enabled, (const networkstatus_t *ns))
 {
-  if (get_options()->DoSCircuitCreationEnabled != -1) {
-    return get_options()->DoSCircuitCreationEnabled;
+  if (dos_get_options()->DoSCircuitCreationEnabled != -1) {
+    return dos_get_options()->DoSCircuitCreationEnabled;
   }
 
   return !!networkstatus_get_param(ns, "DoSCircuitCreationEnabled",
@@ -90,8 +92,8 @@ get_param_cc_enabled, (const networkstatus_t *ns))
 STATIC uint32_t
 get_param_cc_min_concurrent_connection(const networkstatus_t *ns)
 {
-  if (get_options()->DoSCircuitCreationMinConnections) {
-    return get_options()->DoSCircuitCreationMinConnections;
+  if (dos_get_options()->DoSCircuitCreationMinConnections) {
+    return dos_get_options()->DoSCircuitCreationMinConnections;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationMinConnections",
                                  DOS_CC_MIN_CONCURRENT_CONN_DEFAULT,
@@ -104,8 +106,8 @@ static uint32_t
 get_param_cc_circuit_rate(const networkstatus_t *ns)
 {
   /* This is in seconds. */
-  if (get_options()->DoSCircuitCreationRate) {
-    return get_options()->DoSCircuitCreationRate;
+  if (dos_get_options()->DoSCircuitCreationRate) {
+    return dos_get_options()->DoSCircuitCreationRate;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationRate",
                                  DOS_CC_CIRCUIT_RATE_DEFAULT,
@@ -117,8 +119,8 @@ get_param_cc_circuit_rate(const networkstatus_t *ns)
 STATIC uint32_t
 get_param_cc_circuit_burst(const networkstatus_t *ns)
 {
-  if (get_options()->DoSCircuitCreationBurst) {
-    return get_options()->DoSCircuitCreationBurst;
+  if (dos_get_options()->DoSCircuitCreationBurst) {
+    return dos_get_options()->DoSCircuitCreationBurst;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationBurst",
                                  DOS_CC_CIRCUIT_BURST_DEFAULT,
@@ -129,8 +131,8 @@ get_param_cc_circuit_burst(const networkstatus_t *ns)
 static uint32_t
 get_param_cc_defense_type(const networkstatus_t *ns)
 {
-  if (get_options()->DoSCircuitCreationDefenseType) {
-    return get_options()->DoSCircuitCreationDefenseType;
+  if (dos_get_options()->DoSCircuitCreationDefenseType) {
+    return dos_get_options()->DoSCircuitCreationDefenseType;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationDefenseType",
                                  DOS_CC_DEFENSE_TYPE_DEFAULT,
@@ -143,8 +145,8 @@ static int32_t
 get_param_cc_defense_time_period(const networkstatus_t *ns)
 {
   /* Time in seconds. */
-  if (get_options()->DoSCircuitCreationDefenseTimePeriod) {
-    return get_options()->DoSCircuitCreationDefenseTimePeriod;
+  if (dos_get_options()->DoSCircuitCreationDefenseTimePeriod) {
+    return dos_get_options()->DoSCircuitCreationDefenseTimePeriod;
   }
   return networkstatus_get_param(ns, "DoSCircuitCreationDefenseTimePeriod",
                                  DOS_CC_DEFENSE_TIME_PERIOD_DEFAULT,
@@ -156,8 +158,8 @@ get_param_cc_defense_time_period(const networkstatus_t *ns)
 MOCK_IMPL(STATIC unsigned int,
 get_param_conn_enabled, (const networkstatus_t *ns))
 {
-  if (get_options()->DoSConnectionEnabled != -1) {
-    return get_options()->DoSConnectionEnabled;
+  if (dos_get_options()->DoSConnectionEnabled != -1) {
+    return dos_get_options()->DoSConnectionEnabled;
   }
   return !!networkstatus_get_param(ns, "DoSConnectionEnabled",
                                    DOS_CONN_ENABLED_DEFAULT, 0, 1);
@@ -168,8 +170,8 @@ get_param_conn_enabled, (const networkstatus_t *ns))
 STATIC uint32_t
 get_param_conn_max_concurrent_count(const networkstatus_t *ns)
 {
-  if (get_options()->DoSConnectionMaxConcurrentCount) {
-    return get_options()->DoSConnectionMaxConcurrentCount;
+  if (dos_get_options()->DoSConnectionMaxConcurrentCount) {
+    return dos_get_options()->DoSConnectionMaxConcurrentCount;
   }
   return networkstatus_get_param(ns, "DoSConnectionMaxConcurrentCount",
                                  DOS_CONN_MAX_CONCURRENT_COUNT_DEFAULT,
@@ -180,8 +182,8 @@ get_param_conn_max_concurrent_count(const networkstatus_t *ns)
 static uint32_t
 get_param_conn_defense_type(const networkstatus_t *ns)
 {
-  if (get_options()->DoSConnectionDefenseType) {
-    return get_options()->DoSConnectionDefenseType;
+  if (dos_get_options()->DoSConnectionDefenseType) {
+    return dos_get_options()->DoSConnectionDefenseType;
   }
   return networkstatus_get_param(ns, "DoSConnectionDefenseType",
                                  DOS_CONN_DEFENSE_TYPE_DEFAULT,
@@ -613,8 +615,8 @@ dos_should_refuse_single_hop_client(void)
     return 0;
   }
 
-  if (get_options()->DoSRefuseSingleHopClientRendezvous != -1) {
-    return get_options()->DoSRefuseSingleHopClientRendezvous;
+  if (dos_get_options()->DoSRefuseSingleHopClientRendezvous != -1) {
+    return dos_get_options()->DoSRefuseSingleHopClientRendezvous;
   }
 
   return (int) networkstatus_get_param(NULL,
