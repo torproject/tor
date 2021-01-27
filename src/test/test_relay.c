@@ -11,6 +11,7 @@
 #include "feature/stats/bwhist.h"
 #include "core/or/relay.h"
 #include "lib/container/order.h"
+#include "lib/encoding/confline.h"
 /* For init/free stuff */
 #include "core/or/scheduler.h"
 
@@ -23,6 +24,8 @@
 #include "feature/relay/routermode.h"
 #include "feature/dirclient/dir_server_st.h"
 
+#define CONFIG_PRIVATE
+#include "app/config/config.h"
 #include "app/config/resolve_addr.h"
 
 /* Test suite stuff */
@@ -298,11 +301,12 @@ test_find_addr_to_publish(void *arg)
   int family;
   bool ret;
   tor_addr_t ipv4_addr, ipv6_addr, cache_addr;
-  or_options_t options;
+  or_options_t *options;
 
   (void) arg;
 
-  memset(&options, 0, sizeof(options));
+  options = options_new();
+  options_init(options);
 
   /* Populate our resolved cache with a valid IPv4 and IPv6. */
   family = tor_addr_parse(&ipv4_addr, "1.2.3.4");
@@ -317,13 +321,24 @@ test_find_addr_to_publish(void *arg)
   resolved_addr_get_last(AF_INET6, &cache_addr);
   tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
 
+  /* Setup ORPort config. */
+  {
+    int n, w, r;
+    char *msg = NULL;
+
+    config_line_append(&options->ORPort_lines, "ORPort", "9001");
+
+    r = parse_ports(options, 0, &msg, &n, &w);
+    tt_int_op(r, OP_EQ, 0);
+  }
+
   /* 1. Address located in the resolved cache. */
-  ret = relay_find_addr_to_publish(&options, AF_INET,
+  ret = relay_find_addr_to_publish(options, AF_INET,
                                    RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
 
-  ret = relay_find_addr_to_publish(&options, AF_INET6,
+  ret = relay_find_addr_to_publish(options, AF_INET6,
                                    RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
@@ -334,13 +349,13 @@ test_find_addr_to_publish(void *arg)
    *    the find_my_address() code path because that is extensively tested in
    *    another unit tests. */
   resolved_addr_set_suggested(&ipv4_addr);
-  ret = relay_find_addr_to_publish(&options, AF_INET,
+  ret = relay_find_addr_to_publish(options, AF_INET,
                                    RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv4_addr, &cache_addr));
 
   resolved_addr_set_suggested(&ipv6_addr);
-  ret = relay_find_addr_to_publish(&options, AF_INET6,
+  ret = relay_find_addr_to_publish(options, AF_INET6,
                                    RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(ret);
   tt_assert(tor_addr_eq(&ipv6_addr, &cache_addr));
@@ -348,15 +363,15 @@ test_find_addr_to_publish(void *arg)
   resolve_addr_reset_suggested(AF_INET6);
 
   /* 3. No IP anywhere. */
-  ret = relay_find_addr_to_publish(&options, AF_INET,
+  ret = relay_find_addr_to_publish(options, AF_INET,
                                    RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(!ret);
-  ret = relay_find_addr_to_publish(&options, AF_INET6,
+  ret = relay_find_addr_to_publish(options, AF_INET6,
                                    RELAY_FIND_ADDR_CACHE_ONLY, &cache_addr);
   tt_assert(!ret);
 
  done:
-  ;
+  or_options_free(options);
 }
 
 struct testcase_t relay_tests[] = {

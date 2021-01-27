@@ -99,6 +99,13 @@ relay_address_new_suggestion(const tor_addr_t *suggested_addr,
  *       populated by the NETINFO cell content or HTTP header from a
  *       directory.
  *
+ * The AddressDisableIPv6 is checked here for IPv6 address discovery and if
+ * set, false is returned and addr_out is UNSPEC.
+ *
+ * Before doing any discovery, the configuration is checked for an ORPort of
+ * the given family. If none can be found, false is returned and addr_out is
+ * UNSPEC.
+ *
  * Return true on success and addr_out contains the address to use for the
  * given family. On failure to find the address, false is returned and
  * addr_out is set to an AF_UNSPEC address. */
@@ -118,6 +125,12 @@ relay_find_addr_to_publish, (const or_options_t *options, int family,
     return false;
   }
 
+  /* There is no point on attempting an address discovery to publish if we
+   * don't have an ORPort for this family. */
+  if (!routerconf_find_or_port(options, family)) {
+    return false;
+  }
+
   /* First, check our resolved address cache. It should contain the address
    * we've discovered from the periodic relay event. */
   resolved_addr_get_last(family, addr_out);
@@ -131,6 +144,17 @@ relay_find_addr_to_publish, (const or_options_t *options, int family,
     if (find_my_address(options, family, LOG_INFO, addr_out, NULL, NULL)) {
       goto found;
     }
+    /* No publishable address was found even though we have an ORPort thus
+     * print a notice log so operator can notice. We'll do that every hour so
+     * it is not too spammy but enough so operators address the issue. */
+    static ratelim_t rlim = RATELIM_INIT(3600);
+    log_fn_ratelim(&rlim, LOG_NOTICE, LD_CONFIG,
+                   "Unable to find %s address for ORPort %u. "
+                   "You might want to specify %sOnly to it or set an "
+                   "explicit address or set Address.",
+                   fmt_af_family(family),
+                   routerconf_find_or_port(options, family),
+                   fmt_af_family(family));
   }
 
   /* Third, consider address from our suggestion cache. */
