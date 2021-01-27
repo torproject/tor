@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay, configuration):
+    - Don't attempt to discover address (IPv4 or IPv6) if no ORPort for it can
+      be found in the configuration. Fixes bug 40254; bugfix on 0.4.5.1-alpha.
+
