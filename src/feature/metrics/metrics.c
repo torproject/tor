@@ -20,6 +20,7 @@
 #include "lib/net/address.h"
 
 #include "core/mainloop/connection.h"
+#include "core/or/connection_or.h"
 #include "core/or/connection_st.h"
 #include "core/or/policies.h"
 #include "core/or/port_cfg_st.h"
@@ -93,7 +94,8 @@ metrics_get_output(const metrics_format_t fmt)
 
 /** Process what is in the inbuf of this connection of type metrics.
  *
- * Return 0 on success else -1 on error which will close the connection. */
+ * Return 0 on success else -1 on error for which the connection is marked for
+ * close. */
 int
 metrics_connection_process_inbuf(connection_t *conn)
 {
@@ -111,13 +113,14 @@ metrics_connection_process_inbuf(connection_t *conn)
     goto err;
   }
 
-  const int http_status = fetch_from_buf_http(conn->inbuf, &headers, 1024,
-                                              NULL, NULL, 1024, 0);
+  const int http_status =
+    connection_fetch_from_buf_http(conn, &headers, 1024, NULL, NULL, 1024, 0);
   if (http_status < 0) {
     errmsg = "HTTP/1.0 400 Bad Request\r\n\r\n";
     goto err;
   } else if (http_status == 0) {
     /* no HTTP request yet. */
+    ret = 0;
     goto done;
   }
 
@@ -155,6 +158,7 @@ metrics_connection_process_inbuf(connection_t *conn)
     log_info(LD_EDGE, "HTTP metrics error: saying %s", escaped(errmsg));
     connection_buf_add(errmsg, strlen(errmsg), conn);
   }
+  connection_mark_and_flush(conn);
 
  done:
   tor_free(headers);
@@ -241,6 +245,17 @@ metrics_parse_ports(or_options_t *options, smartlist_t *ports,
   SMARTLIST_FOREACH(elems, char *, e, tor_free(e));
   smartlist_free(elems);
   return ret;
+}
+
+/** Called when conn has gotten its socket closed. */
+int
+metrics_connection_reached_eof(connection_t *conn)
+{
+  tor_assert(conn);
+
+  log_info(LD_EDGE, "Metrics connection reached EOF. Closing.");
+  connection_mark_for_close(conn);
+  return 0;
 }
 
 /** Initialize the subsystem. */
