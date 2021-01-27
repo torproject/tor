@@ -1224,7 +1224,7 @@ run_connection_housekeeping(int i, time_t now)
      * mark it now. */
     log_info(LD_OR,
              "Expiring non-used OR connection to fd %d (%s:%d) [Too old].",
-             (int)conn->s, conn->address, conn->port);
+             (int)conn->s, fmt_and_decorate_addr(&conn->addr), conn->port);
     if (conn->state == OR_CONN_STATE_CONNECTING)
       connection_or_connect_failed(TO_OR_CONN(conn),
                                    END_OR_CONN_REASON_TIMEOUT,
@@ -1234,7 +1234,7 @@ run_connection_housekeeping(int i, time_t now)
     if (past_keepalive) {
       /* We never managed to actually get this connection open and happy. */
       log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
-               (int)conn->s,conn->address, conn->port);
+               (int)conn->s, fmt_and_decorate_addr(&conn->addr), conn->port);
       connection_or_close_normally(TO_OR_CONN(conn), 0);
     }
   } else if (we_are_hibernating() &&
@@ -1244,7 +1244,7 @@ run_connection_housekeeping(int i, time_t now)
      * flush.*/
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
-             (int)conn->s,conn->address, conn->port);
+             (int)conn->s, fmt_and_decorate_addr(&conn->addr), conn->port);
     connection_or_close_normally(TO_OR_CONN(conn), 1);
   } else if (!have_any_circuits &&
              now - or_conn->idle_timeout >=
@@ -1252,7 +1252,7 @@ run_connection_housekeeping(int i, time_t now)
     log_info(LD_OR,"Expiring non-used OR connection %"PRIu64" to fd %d "
              "(%s:%d) [no circuits for %d; timeout %d; %scanonical].",
              (chan->global_identifier),
-             (int)conn->s, conn->address, conn->port,
+             (int)conn->s, fmt_and_decorate_addr(&conn->addr), conn->port,
              (int)(now - chan->timestamp_last_had_circuits),
              or_conn->idle_timeout,
              or_conn->is_canonical ? "" : "non");
@@ -1264,14 +1264,14 @@ run_connection_housekeeping(int i, time_t now)
     log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
            "Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to "
            "flush; %d seconds since last write)",
-           (int)conn->s, conn->address, conn->port,
+           (int)conn->s, fmt_and_decorate_addr(&conn->addr), conn->port,
            (int)connection_get_outbuf_len(conn),
            (int)(now-conn->timestamp_last_write_allowed));
     connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (past_keepalive && !connection_get_outbuf_len(conn)) {
     /* send a padding cell */
     log_fn(LOG_DEBUG,LD_OR,"Sending keepalive to (%s:%d)",
-           conn->address, conn->port);
+           fmt_and_decorate_addr(&conn->addr), conn->port);
     memset(&cell,0,sizeof(cell_t));
     cell.command = CELL_PADDING;
     connection_or_write_cell_to_buf(&cell, or_conn);
