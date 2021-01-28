@@ -1,0 +1,5 @@
+  o Major bugfixes (onion service v3):
+    - Stop requiring a live consensus for v3 clients and services to work. The
+      use of a reasonably live consensus will allow v3 to work properly in most
+      cases if the network failed to generate a consensus for more than 2 hours
+      in a row. Fixes bug 40237; bugfix on 0.3.5.1-alpha.
