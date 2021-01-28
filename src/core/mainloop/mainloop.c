@@ -2154,7 +2154,8 @@ hs_service_callback(time_t now, const or_options_t *options)
   /* We need to at least be able to build circuits and that we actually have
    * a working network. */
   if (!have_completed_a_circuit() || net_is_disabled() ||
-      networkstatus_get_live_consensus(now) == NULL) {
+      !networkstatus_get_reasonably_live_consensus(now,
+                                         usable_consensus_flavor())) {
     goto end;
   }
 

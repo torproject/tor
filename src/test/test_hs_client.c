@@ -66,16 +66,18 @@ static networkstatus_t mock_ns;
 
 /* Always return NULL. */
 static networkstatus_t *
-mock_networkstatus_get_live_consensus_false(time_t now)
+mock_networkstatus_get_reasonably_live_consensus_false(time_t now, int flavor)
 {
   (void) now;
+  (void) flavor;
   return NULL;
 }
 
 static networkstatus_t *
-mock_networkstatus_get_live_consensus(time_t now)
+mock_networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 {
   (void) now;
+  (void) flavor;
   return &mock_ns;
 }
 
@@ -379,8 +381,8 @@ test_client_pick_intro(void *arg)
   ed25519_keypair_t service_kp;
   hs_descriptor_t *desc = NULL;
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   (void) arg;
 
@@ -632,15 +634,15 @@ test_descriptor_fetch(void *arg)
   get_options_mutable()->FetchHidServDescriptors = 1;
 
   /* 2. We don't have a live consensus. */
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus_false);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus_false);
   ret = hs_client_refetch_hsdesc(&service_pk);
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
   tt_int_op(ret, OP_EQ, HS_CLIENT_FETCH_MISSING_INFO);
 
   /* From now on, return a live consensus. */
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* 3. Not enough dir information. */
   MOCK(router_have_minimum_dir_info,
@@ -682,7 +684,7 @@ test_descriptor_fetch(void *arg)
 
  done:
   connection_free_minimal(ENTRY_TO_CONN(ec));
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
   UNMOCK(router_have_minimum_dir_info);
   hs_free_all();
 }
@@ -880,8 +882,8 @@ test_desc_has_arrived_cleanup(void *arg)
 
   hs_init();
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
   MOCK(connection_mark_unattached_ap_,
        mock_connection_mark_unattached_ap_);
   MOCK(router_have_minimum_dir_info,
@@ -953,7 +955,7 @@ test_desc_has_arrived_cleanup(void *arg)
   tor_free(desc_str);
   hs_free_all();
 
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
   UNMOCK(connection_mark_unattached_ap_);
   UNMOCK(router_have_minimum_dir_info);
 }
@@ -974,8 +976,8 @@ test_close_intro_circuits_new_desc(void *arg)
 
   /* This is needed because of the client cache expiration timestamp is based
    * on having a consensus. See cached_client_descriptor_has_expired(). */
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* Set consensus time */
   parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
@@ -1101,7 +1103,7 @@ test_close_intro_circuits_new_desc(void *arg)
   hs_descriptor_free(desc1);
   hs_descriptor_free(desc2);
   hs_free_all();
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 static void
@@ -1120,8 +1122,8 @@ test_close_intro_circuits_cache_clean(void *arg)
 
   /* This is needed because of the client cache expiration timestamp is based
    * on having a consensus. See cached_client_descriptor_has_expired(). */
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* Set consensus time */
   parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
@@ -1186,7 +1188,7 @@ test_close_intro_circuits_cache_clean(void *arg)
   hs_descriptor_free(desc1);
   hs_free_all();
   rend_cache_free_all();
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 static void
@@ -1207,8 +1209,8 @@ test_socks_hs_errors(void *arg)
 
   (void) arg;
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
   MOCK(connection_mark_unattached_ap_,
        mock_connection_mark_unattached_ap_no_close);
   MOCK(read_file_to_str, mock_read_file_to_str);
@@ -1356,7 +1358,7 @@ test_socks_hs_errors(void *arg)
 
   hs_free_all();
 
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
   UNMOCK(connection_mark_unattached_ap_);
   UNMOCK(read_file_to_str);
   UNMOCK(tor_listdir);
