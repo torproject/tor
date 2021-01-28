@@ -1,0 +1,7 @@
+  o Minor bugfixes (compatibility):
+    - Strip '\r' characters when reading text files on Unix platforms.
+      This should resolve an issue where a relay operator migrates a relay from
+      Windows to Unix, but does not change the line ending of Tor's various state
+      files to match the platform, the CRLF line endings from Windows ends up leaking
+      into other files such as the extra-info document. Fixes bug 33781; bugfix on
+      0.0.9pre5.
