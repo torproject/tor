@@ -79,9 +79,10 @@
 static networkstatus_t mock_ns;
 
 static networkstatus_t *
-mock_networkstatus_get_live_consensus(time_t now)
+mock_networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 {
   (void) now;
+  (void) flavor;
   return &mock_ns;
 }
 
@@ -1302,8 +1303,8 @@ test_rotate_descriptors(void *arg)
   hs_init();
   MOCK(get_or_state, get_or_state_replacement);
   MOCK(circuit_mark_for_close_, mock_circuit_mark_for_close);
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* Descriptor rotation happens with a consensus with a new SRV. */
 
@@ -1387,7 +1388,7 @@ test_rotate_descriptors(void *arg)
   hs_free_all();
   UNMOCK(get_or_state);
   UNMOCK(circuit_mark_for_close_);
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 /** Test building descriptors: picking intro points, setting up their link
@@ -1408,8 +1409,8 @@ test_build_update_descriptors(void *arg)
 
   MOCK(get_or_state,
        get_or_state_replacement);
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
@@ -1633,8 +1634,8 @@ test_build_descriptors(void *arg)
 
   MOCK(get_or_state,
        get_or_state_replacement);
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 
@@ -1714,8 +1715,8 @@ test_upload_descriptors(void *arg)
   hs_init();
   MOCK(get_or_state,
        get_or_state_replacement);
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   dummy_state = tor_malloc_zero(sizeof(or_state_t));
 

@@ -443,9 +443,10 @@ test_hsdir_revision_counter_check(void *arg)
 static networkstatus_t mock_ns;
 
 static networkstatus_t *
-mock_networkstatus_get_live_consensus(time_t now)
+mock_networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 {
   (void) now;
+  (void) flavor;
   return &mock_ns;
 }
 
@@ -466,8 +467,8 @@ test_client_cache(void *arg)
   /* Initialize HSDir cache subsystem */
   init_test();
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   /* Set consensus time */
   parse_rfc1123_time("Sat, 26 Oct 1985 13:00:00 UTC",
