@@ -1002,13 +1002,30 @@ LIBS="$TOR_OPENSSL_LIBS $LIBS"
 LDFLAGS="$TOR_LDFLAGS_openssl $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_openssl $CPPFLAGS"
 
+dnl Tor currently uses a number of APIs that are deprecated in OpenSSL 3.0.0
+dnl and later.  We want to migrate away from them, but that will be a lot of
+dnl work. (See ticket tor#40166.)  For now, we disable the deprecation
+dnl warnings.
+
+AC_MSG_CHECKING([for OpenSSL >= 3.0.0])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <openssl/opensslv.h>
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER <= 0x30000000L
+#error "you_have_version_3"
+#endif
+   ]], [[]])],
+   [ AC_MSG_RESULT([no]) ],
+   [ AC_MSG_RESULT([yes]);
+     AC_DEFINE(OPENSSL_SUPPRESS_DEPRECATED, 1, [disable openssl deprecated-function warnings]) ])
+
+AC_MSG_CHECKING([for OpenSSL < 1.0.1])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
 #if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x1000100fL
 #error "too old"
 #endif
    ]], [[]])],
-   [ : ],
+   [ AC_MSG_RESULT([no]) ],
    [ AC_MSG_ERROR([OpenSSL is too old. We require 1.0.1 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
