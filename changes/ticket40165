@@ -1,0 +1,5 @@
+  o Minor features (compilation):
+    - Disable deprecation warnings when building with OpenSSL 3.0.0 or later.
+      There are a number of newly deprecated APIs in OpenSSL 3.0.0 that Tor
+      still requires.  (A later version of Tor will try to stop depending on
+      these.)  Closes ticket 40165.
