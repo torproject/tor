@@ -279,8 +279,7 @@ test_tortls_log_one_error(void *ignored)
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, 3), LOG_WARN, 0, NULL);
-  expect_log_msg("TLS error with 127.hello: "
-            "BN lib (in unknown library:(null):---)\n");
+  expect_log_msg_containing("TLS error with 127.hello");
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_HTTP_REQUEST),

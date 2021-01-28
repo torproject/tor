@@ -32,10 +32,6 @@
 #define OPENSSL_1_1_API
 #endif /* OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) && ... */
 
-#ifndef OPENSSL_VERSION
-#define OPENSSL_VERSION SSLEAY_VERSION
-#endif
-
 #ifndef OPENSSL_1_1_API
 #define OpenSSL_version(v) SSLeay_version(v)
 #define OpenSSL_version_num() SSLeay()
@@ -54,4 +50,3 @@
 #endif /* defined(ENABLE_OPENSSL) */
 
 #endif /* !defined(TOR_COMPAT_OPENSSL_H) */
-
