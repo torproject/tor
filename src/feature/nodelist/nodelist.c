@@ -134,6 +134,10 @@ typedef struct nodelist_t {
   /* Set of addresses that belong to nodes we believe in. */
   address_set_t *node_addrs;
 
+  /* Set of addresses + port that belong to nodes we know and that we don't
+   * allow network re-entry towards them. */
+  addr_port_set_t *reentry_set;
+
   /* The valid-after time of the last live consensus that initialized the
    * nodelist.  We use this to detect outdated nodelists that need to be
    * rebuilt using a newer consensus. */
@@ -446,27 +450,61 @@ node_addrs_changed(node_t *node)
 static void
 node_add_to_address_set(const node_t *node)
 {
-  if (!the_nodelist || !the_nodelist->node_addrs)
+  tor_addr_t tmp_addr;
+
+  if (!the_nodelist ||
+      !the_nodelist->node_addrs || !the_nodelist->reentry_set)
     return;
 
-  /* These various address sources can be redundant, but it's likely faster
-   * to add them all than to compare them all for equality. */
+  /* These various address sources can be redundant, but it's likely faster to
+   * add them all than to compare them all for equality.
+   *
+   * For relays, we only add the ORPort in the addr+port set since we want to
+   * allow re-entry into the network to the DirPort so the self reachability
+   * test succeeds and thus the 0 value for the DirPort. */
 
   if (node->rs) {
-    if (node->rs->addr)
-      address_set_add_ipv4h(the_nodelist->node_addrs, node->rs->addr);
+    if (node->rs->addr) {
+      tor_addr_from_ipv4h(&tmp_addr, node->rs->addr);
+      nodelist_add_addr_to_address_set(&tmp_addr, node->rs->or_port, 0);
+    }
     if (!tor_addr_is_null(&node->rs->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->rs->ipv6_addr);
+      nodelist_add_addr_to_address_set(&node->rs->ipv6_addr,
+                                       node->rs->ipv6_orport, 0);
   }
   if (node->ri) {
-    if (node->ri->addr)
-      address_set_add_ipv4h(the_nodelist->node_addrs, node->ri->addr);
+    if (node->ri->addr) {
+      tor_addr_from_ipv4h(&tmp_addr, node->ri->addr);
+      nodelist_add_addr_to_address_set(&tmp_addr, node->ri->or_port, 0);
+    }
     if (!tor_addr_is_null(&node->ri->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->ri->ipv6_addr);
+      nodelist_add_addr_to_address_set(&node->ri->ipv6_addr,
+                                       node->ri->ipv6_orport, 0);
   }
   if (node->md) {
     if (!tor_addr_is_null(&node->md->ipv6_addr))
-      address_set_add(the_nodelist->node_addrs, &node->md->ipv6_addr);
+      nodelist_add_addr_to_address_set(&node->md->ipv6_addr,
+                                       node->md->ipv6_orport, 0);
+  }
+}
+
+/** Add the given address into the nodelist address set. */
+void
+nodelist_add_addr_to_address_set(const tor_addr_t *addr,
+                                 uint16_t or_port, uint16_t dir_port)
+{
+  if (BUG(!addr) || tor_addr_is_null(addr) ||
+      (!tor_addr_is_v4(addr) && tor_addr_family(addr) != AF_INET6) ||
+      !the_nodelist || !the_nodelist->node_addrs ||
+      !the_nodelist->reentry_set) {
+    return;
+  }
+  address_set_add(the_nodelist->node_addrs, addr);
+  if (or_port != 0) {
+    addr_port_set_add(the_nodelist->reentry_set, addr, or_port);
+  }
+  if (dir_port != 0) {
+    addr_port_set_add(the_nodelist->reentry_set, addr, dir_port);
   }
 }
 
@@ -482,6 +520,21 @@ nodelist_probably_contains_address(const tor_addr_t *addr)
     return 0;
 
   return address_set_probably_contains(the_nodelist->node_addrs, addr);
+}
+
+/** Return true if <b>addr</b> is the address of some node in the nodelist and
+ * corresponds also to the given port. If not, probably return false. */
+bool
+nodelist_reentry_probably_contains(const tor_addr_t *addr, uint16_t port)
+{
+  if (BUG(!addr) || BUG(!port))
+    return false;
+
+  if (!the_nodelist || !the_nodelist->reentry_set)
+    return false;
+
+  return addr_port_set_probably_contains(the_nodelist->reentry_set,
+                                         addr, port);
 }
 
 /** Add <b>ri</b> to an appropriate node in the nodelist.  If we replace an
@@ -612,10 +665,15 @@ nodelist_set_consensus(networkstatus_t *ns)
                     node->rs = NULL);
 
   /* Conservatively estimate that every node will have 2 addresses. */
-  const int estimated_addresses = smartlist_len(ns->routerstatus_list) *
-                                  get_estimated_address_per_node();
+  int estimated_addresses = smartlist_len(ns->routerstatus_list) *
+                            get_estimated_address_per_node();
+  estimated_addresses += (get_n_authorities(V3_DIRINFO | BRIDGE_DIRINFO) *
+                          get_estimated_address_per_node());
   address_set_free(the_nodelist->node_addrs);
+  addr_port_set_free(the_nodelist->reentry_set);
   the_nodelist->node_addrs = address_set_new(estimated_addresses);
+  /* Times two here is for both the ORPort and DirPort. */
+  the_nodelist->reentry_set = addr_port_set_new(estimated_addresses * 2);
 
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
     node_t *node = node_get_or_create(rs->identity_digest);
@@ -664,6 +722,9 @@ nodelist_set_consensus(networkstatus_t *ns)
   SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
     node_add_to_address_set(node);
   } SMARTLIST_FOREACH_END(node);
+  /* Then, add all trusted configured directories. Some might not be in the
+   * consensus so make sure we know them. */
+  dirlist_add_trusted_dir_addresses();
 
   if (! authdir) {
     SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
@@ -839,6 +900,8 @@ nodelist_free_all(void)
 
   address_set_free(the_nodelist->node_addrs);
   the_nodelist->node_addrs = NULL;
+  addr_port_set_free(the_nodelist->reentry_set);
+  the_nodelist->reentry_set = NULL;
 
   tor_free(the_nodelist);
 }
