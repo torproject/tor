@@ -1,0 +1,4 @@
+  o Minor bugfixes (SOCKS5):
+    - Handle partial socks5 messages correctly.  Previously, our code would
+      send an incorrect error message if it got a socks5 request that wasn't
+      complete. Fixes bug 40190; bugfix on 0.3.5.1-alpha.

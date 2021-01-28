@@ -550,6 +550,7 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
   if (parsed == -1) {
     log_warn(LD_APP, "socks5: parsing failed - invalid client request");
     res = SOCKS_RESULT_INVALID;
+    socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
     goto end;
   } else if (parsed == -2) {
     res = SOCKS_RESULT_TRUNCATED;
@@ -561,6 +562,7 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
 
   if (socks5_client_request_get_version(trunnel_req) != 5) {
     res = SOCKS_RESULT_INVALID;
+    socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
     goto end;
   }
 
@@ -594,6 +596,7 @@ parse_socks5_client_request(const uint8_t *raw_data, socks_request_t *req,
       tor_addr_to_str(req->address, &destaddr, sizeof(req->address), 1);
     } break;
     default: {
+      socks_request_set_socks5_error(req, SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED);
       res = -1;
     } break;
   }
@@ -774,8 +777,10 @@ handle_socks_message(const uint8_t *raw_data, size_t datalen,
     } else {
       res = parse_socks5_client_request(raw_data, req,
                                         datalen, drain_out);
-      if (res != SOCKS_RESULT_DONE) {
+      if (BUG(res == SOCKS_RESULT_INVALID && req->replylen == 0)) {
         socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
+      }
+      if (res != SOCKS_RESULT_DONE) {
         goto end;
       }
 
