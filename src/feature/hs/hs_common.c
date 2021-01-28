@@ -27,6 +27,7 @@
 #include "feature/hs/hs_service.h"
 #include "feature/hs_common/shared_random_client.h"
 #include "feature/nodelist/describe.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"
@@ -276,7 +277,9 @@ hs_get_time_period_num(time_t now)
   if (now != 0) {
     current_time = now;
   } else {
-    networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
+    networkstatus_t *ns =
+      networkstatus_get_reasonably_live_consensus(approx_time(),
+                                                  usable_consensus_flavor());
     current_time = ns ? ns->valid_after : approx_time();
   }
 
@@ -1107,7 +1110,8 @@ hs_in_period_between_tp_and_srv,(const networkstatus_t *consensus, time_t now))
   time_t srv_start_time, tp_start_time;
 
   if (!consensus) {
-    consensus = networkstatus_get_live_consensus(now);
+    consensus = networkstatus_get_reasonably_live_consensus(now,
+                                                  usable_consensus_flavor());
     if (!consensus) {
       return 0;
     }
@@ -1352,7 +1356,9 @@ hs_get_responsible_hsdirs(const ed25519_public_key_t *blinded_pk,
   sorted_nodes = smartlist_new();
 
   /* Make sure we actually have a live consensus */
-  networkstatus_t *c = networkstatus_get_live_consensus(approx_time());
+  networkstatus_t *c =
+    networkstatus_get_reasonably_live_consensus(approx_time(),
+                                                usable_consensus_flavor());
   if (!c || smartlist_len(c->routerstatus_list) == 0) {
       log_warn(LD_REND, "No live consensus so we can't get the responsible "
                "hidden service directories.");

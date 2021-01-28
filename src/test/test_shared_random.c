@@ -167,6 +167,15 @@ mock_networkstatus_get_live_consensus(time_t now)
   return &mock_consensus;
 }
 
+/* Mock function to immediately return our local 'mock_consensus'. */
+static networkstatus_t *
+mock_networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
+{
+  (void) now;
+  (void) flavor;
+  return &mock_consensus;
+}
+
 static void
 test_get_state_valid_until_time(void *arg)
 {
@@ -179,6 +188,8 @@ test_get_state_valid_until_time(void *arg)
 
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   retval = parse_rfc1123_time("Mon, 20 Apr 2015 01:00:00 UTC",
                               &mock_consensus.fresh_until);
@@ -235,7 +246,7 @@ test_get_state_valid_until_time(void *arg)
   }
 
  done:
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 /** Test the function that calculates the start time of the current SRV
@@ -251,6 +262,8 @@ test_get_start_time_of_current_run(void *arg)
 
   MOCK(networkstatus_get_live_consensus,
        mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   retval = parse_rfc1123_time("Mon, 20 Apr 2015 01:00:00 UTC",
                               &mock_consensus.fresh_until);
@@ -335,6 +348,7 @@ test_get_start_time_of_current_run(void *arg)
   /* Next test is testing it without a consensus to use the testing voting
    * interval . */
   UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 
   /* Now let's alter the voting schedule and check the correctness of the
    * function. Voting interval of 10 seconds, means that an SRV protocol run
@@ -366,8 +380,8 @@ test_get_start_time_functions(void *arg)
   (void) arg;
   int retval;
 
-  MOCK(networkstatus_get_live_consensus,
-       mock_networkstatus_get_live_consensus);
+  MOCK(networkstatus_get_reasonably_live_consensus,
+       mock_networkstatus_get_reasonably_live_consensus);
 
   retval = parse_rfc1123_time("Mon, 20 Apr 2015 01:00:00 UTC",
                               &mock_consensus.fresh_until);
@@ -388,7 +402,7 @@ test_get_start_time_functions(void *arg)
             start_time_of_protocol_run);
 
  done:
-  UNMOCK(networkstatus_get_live_consensus);
+  UNMOCK(networkstatus_get_reasonably_live_consensus);
 }
 
 static void

@@ -29,6 +29,7 @@
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_ident.h"
 #include "feature/nodelist/describe.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"
@@ -1302,9 +1303,10 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
     goto cannot;
   }
 
-  /* Without a live consensus we can't do any client actions. It is needed to
-   * compute the hashring for a service. */
-  if (!networkstatus_get_live_consensus(approx_time())) {
+  /* Without a usable consensus we can't do any client actions. It is needed
+   * to compute the hashring for a service. */
+  if (!networkstatus_get_reasonably_live_consensus(approx_time(),
+                                         usable_consensus_flavor())) {
     log_info(LD_REND, "Can't fetch descriptor for service %s because we "
                       "are missing a live consensus. Stalling connection.",
              safe_str_client(ed25519_fmt(identity_pk)));

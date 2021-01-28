@@ -13,6 +13,7 @@
 #include "app/config/config.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/voting_schedule.h"
+#include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "lib/encoding/binascii.h"
 
@@ -55,7 +56,9 @@ int
 get_voting_interval(void)
 {
   int interval;
-  networkstatus_t *consensus = networkstatus_get_live_consensus(time(NULL));
+  networkstatus_t *consensus =
+    networkstatus_get_reasonably_live_consensus(time(NULL),
+                                                usable_consensus_flavor());
 
   if (consensus) {
     /* Ideally we have a live consensus and we can just use that. */
@@ -147,7 +150,8 @@ sr_get_current(const networkstatus_t *ns)
   if (ns) {
     consensus = ns;
   } else {
-    consensus = networkstatus_get_live_consensus(approx_time());
+    consensus = networkstatus_get_reasonably_live_consensus(approx_time(),
+                                                  usable_consensus_flavor());
   }
   /* Ideally we would never be asked for an SRV without a live consensus. Make
    * sure this assumption is correct. */
@@ -170,7 +174,8 @@ sr_get_previous(const networkstatus_t *ns)
   if (ns) {
     consensus = ns;
   } else {
-    consensus = networkstatus_get_live_consensus(approx_time());
+    consensus = networkstatus_get_reasonably_live_consensus(approx_time(),
+                                                  usable_consensus_flavor());
   }
   /* Ideally we would never be asked for an SRV without a live consensus. Make
    * sure this assumption is correct. */
@@ -242,13 +247,14 @@ sr_state_get_start_time_of_current_protocol_run(void)
   int voting_interval = get_voting_interval();
   time_t beginning_of_curr_round;
 
-  /* This function is not used for voting purposes, so if we have a live
-     consensus, use its valid-after as the beginning of the current round.
-     If we have no consensus but we're an authority, use our own
-     schedule.  Otherwise, try using our view of the voting interval
-     to figure out when the current round _should_ be starting.
-  */
-  networkstatus_t *ns = networkstatus_get_live_consensus(approx_time());
+  /* This function is not used for voting purposes, so if we have a reasonably
+   * live consensus, use its valid-after as the beginning of the current
+   * round. If we have no consensus but we're an authority, use our own
+   * schedule. Otherwise, try using our view of the voting interval to figure
+   * out when the current round _should_ be starting. */
+  networkstatus_t *ns =
+    networkstatus_get_reasonably_live_consensus(approx_time(),
+                                                usable_consensus_flavor());
   if (ns) {
     beginning_of_curr_round = ns->valid_after;
   } else if (authdir_mode(get_options()) || ASSUME_AUTHORITY_SCHEDULING) {
