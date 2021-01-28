@@ -343,10 +343,12 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
-  /* Statistics: Mark this circuit as an RP circuit so that we collect
-     stats from it. */
+  /* Statistics: Mark circuits as RP circuits */
   if (options->HiddenServiceStatistics) {
+    /* `circ` is the RP <-> service circuit */
     circ->circuit_carries_hs_traffic_stats = 1;
+    /* `rend_circ` is the client <-> RP circuit */
+    rend_circ->circuit_carries_hs_traffic_stats = 1;
   }
 
   /* Send the RENDEZVOUS2 cell to the client. */
