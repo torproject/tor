@@ -1,3 +1,24 @@
+Changes in version 0.4.5.5-rc - 2021-02-01
+  Tor 0.4.5.5-rc is the third release candidate in its series. We're
+  coming closer and closer to a stable release series. This release
+  fixes an annoyance with address detection code, and somewhat mitigates
+  an ongoing denial-of-service attack.
+
+  We anticipate no more code changes between this and the stable
+  release, though of course that could change.
+
+  o Major feature (exit):
+    - Re-entry into the network is now denied at the Exit level to all
+      relays' ORPorts and authorities' ORPorts and DirPorts. This change
+      should help mitgate a set of denial-of-service attacks. Closes
+      ticket 2667.
+
+  o Minor bugfixes (relay, configuration):
+    - Don't attempt to discover our address (IPv4 or IPv6) if no ORPort
+      for it can be found in the configuration. Fixes bug 40254; bugfix
+      on 0.4.5.1-alpha.
+
+
 Changes in version 0.4.5.4-rc - 2021-01-22
   Tor 0.4.5.4-rc is the second release candidate in its series. It fixes
   several bugs present in previous releases.
