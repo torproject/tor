@@ -1,0 +1,4 @@
+  o Major feature (exit):
+    - Re-entry into the network is now denied at the Exit level to all relays'
+      ORPort and authorities' ORPort+DirPort. This is to help mitigate a series
+      of attacks. See ticket for more information. Closes ticket 2667.
