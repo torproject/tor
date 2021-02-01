@@ -670,8 +670,12 @@ nodelist_set_consensus(const networkstatus_t *ns)
   address_set_free(the_nodelist->node_addrs);
   addr_port_set_free(the_nodelist->reentry_set);
   the_nodelist->node_addrs = address_set_new(estimated_addresses);
-  /* Times two here is for both the ORPort and DirPort. */
-  the_nodelist->reentry_set = addr_port_set_new(estimated_addresses * 2);
+  /* Times two here is for both the ORPort and DirPort. We double it again in
+   * order to minimize as much as possible the false positive when looking up
+   * this set. Reason is that Exit streams that are legitimate but end up a
+   * false positive against this set will thus be considered reentry and be
+   * rejected which means a bad UX. */
+  the_nodelist->reentry_set = addr_port_set_new(estimated_addresses * 2 * 2);
 
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
     node_t *node = node_get_or_create(rs->identity_digest);
