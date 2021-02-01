@@ -4231,6 +4231,15 @@ my_exit_policy_rejects(const tor_addr_t *addr,
   return 0;
 }
 
+/** Return true iff the consensus allows network reentry. The default value is
+ * false if the parameter is not found. */
+static bool
+network_reentry_is_allowed(void)
+{
+  /* Default is false, re-entry is not allowed. */
+  return !!networkstatus_get_param(NULL, "allow-network-reentry", 0, 0, 1);
+}
+
 /** Connect to conn's specified addr and port. If it worked, conn
  * has now been added to the connection_array.
  *
@@ -4268,6 +4277,8 @@ connection_exit_connect(edge_connection_t *edge_conn)
    * infinite-length circuits (see "A Practical Congestion Attack on Tor Using
    * Long Paths", Usenix Security 2009). See also ticket 2667.
    *
+   * Skip this if the network reentry is allowed (known from the consensus).
+   *
    * The TORPROTOCOL reason is used instead of EXITPOLICY so client do NOT
    * attempt to retry connecting onto another circuit that will also fail
    * bringing considerable more load on the network if so.
@@ -4278,6 +4289,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
    * reason that makes the client retry results in much worst consequences in
    * case of an attack so this is a small price to pay. */
   if (!connection_edge_is_rendezvous_stream(edge_conn) &&
+      !network_reentry_is_allowed() &&
       nodelist_reentry_probably_contains(&conn->addr, conn->port)) {
     log_info(LD_EXIT, "%s tried to connect back to a known relay address. "
                       "Closing.", connection_describe(conn));
