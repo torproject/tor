@@ -35,8 +35,7 @@ node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(networkstatus_t *ns);
 void nodelist_ensure_freshness(networkstatus_t *ns);
 int nodelist_probably_contains_address(const tor_addr_t *addr);
-bool nodelist_reentry_probably_contains(const tor_addr_t *addr,
-                                        uint16_t port);
+bool nodelist_reentry_contains(const tor_addr_t *addr, uint16_t port);
 void nodelist_add_addr_to_address_set(const tor_addr_t *addr,
                                       uint16_t or_port, uint16_t dir_port);
 
