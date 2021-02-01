@@ -4290,7 +4290,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
    * case of an attack so this is a small price to pay. */
   if (!connection_edge_is_rendezvous_stream(edge_conn) &&
       !network_reentry_is_allowed() &&
-      nodelist_reentry_probably_contains(&conn->addr, conn->port)) {
+      nodelist_reentry_contains(&conn->addr, conn->port)) {
     log_info(LD_EXIT, "%s tried to connect back to a known relay address. "
                       "Closing.", connection_describe(conn));
     connection_edge_end(edge_conn, END_STREAM_REASON_CONNECTREFUSED);
