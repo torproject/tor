@@ -5937,7 +5937,7 @@ static int
 fd_is_nonblocking(tor_socket_t fd)
 {
   int flags = fcntl(fd, F_GETFL, 0);
-  return (flags & O_NONBLOCK) == O_NONBLOCK;
+  return (flags & O_NONBLOCK) != 0;
 }
 #endif /* !defined(_WIN32) */
 
