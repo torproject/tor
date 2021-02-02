@@ -163,6 +163,7 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
+static bool network_reentry_is_allowed(void);
 
 /**
  * Cast a `connection_t *` to an `edge_connection_t *`.
@@ -2400,6 +2401,25 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
             /* Tell the exit: we won't accept any ipv6 connection to an IPv4
              * address. */
             conn->entry_cfg.ipv6_traffic = 0;
+          }
+
+          /* Next, yet another check: we know it's a direct IP address. Is it
+           * the IP address of a known relay and its ORPort, or of a directory
+           * authority and its OR or Dir Port? If so, and if a consensus param
+           * says to, then exit relays will refuse this request (see ticket
+           * 2667 for details). Let's just refuse it locally right now, to
+           * save time and network load but also to give the user a more
+           * useful log message. */
+          if (!network_reentry_is_allowed() &&
+              nodelist_reentry_contains(&addr, socks->port)) {
+            log_warn(LD_APP, "Not attempting connection to %s:%d because "
+                     "the network would reject it. Are you trying to send "
+                     "Tor traffic over Tor? This traffic can be harmful to "
+                     "the Tor network. If you really need it, try using "
+                     "a bridge as a workaround.",
+                     safe_str_client(socks->address), socks->port);
+            connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+            return -1;
           }
         }
       }

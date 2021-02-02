@@ -1,0 +1,5 @@
+  o Minor features (client):
+    - Clients now check whether their streams are attempting to re-enter
+      the Tor network (i.e. to send Tor traffic over Tor), and they close
+      them preemptively if they think exit relays will refuse them. See
+      ticket 2667 for details. Close ticket 40271.
