@@ -1,5 +1,7 @@
 Changes in version 0.4.4.7 - 2021-02-03
-  BLURB BLURB
+  Tor 0.4.4.7 backports numerous bugfixes from later releases,
+  including one that made v3 onion services more susceptible to
+  denial-of-service attacks.
 
   o Major bugfixes (onion service v3, backport from 0.4.5.3-rc):
     - Stop requiring a live consensus for v3 clients and services, and
