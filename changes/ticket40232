@@ -1,0 +1,4 @@
+  o Minor features (logging, IPv6):
+    - In src/core/mainloop/mainloop.c and src/core/mainloop/connection.c,
+      put brackets around IPv6 addresses in log messages. Closes ticket
+      40232. Patch by Neel Chauhan.
