@@ -55,8 +55,6 @@ static smartlist_t *fallback_dir_servers = NULL;
 static void
 add_trusted_dir_to_nodelist_addr_set(const dir_server_t *dir)
 {
-  tor_addr_t tmp_addr;
-
   tor_assert(dir);
   tor_assert(dir->is_authority);
 
