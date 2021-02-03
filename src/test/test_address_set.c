@@ -210,8 +210,8 @@ test_exit_no_reentry(void *arg)
   nodelist_set_consensus(dummy_ns);
 
   /* The address set is empty. Try it anyway */
-  tt_assert(!nodelist_reentry_probably_contains(&addr_v4, 244));
-  tt_assert(!nodelist_reentry_probably_contains(&addr_v6, 244));
+  tt_assert(!nodelist_reentry_contains(&addr_v4, 244));
+  tt_assert(!nodelist_reentry_contains(&addr_v6, 244));
 
   /* Now let's populate the network */
   md = tor_malloc_zero(sizeof(*md));
@@ -238,12 +238,12 @@ test_exit_no_reentry(void *arg)
 
   /* First let's try an address that is on the no-reentry list, but with a
      different port */
-  tt_assert(!nodelist_reentry_probably_contains(&addr_v4, 666));
-  tt_assert(!nodelist_reentry_probably_contains(&addr_v6, 444));
+  tt_assert(!nodelist_reentry_contains(&addr_v4, 666));
+  tt_assert(!nodelist_reentry_contains(&addr_v6, 444));
 
   /* OK now let's try with the right address and right port */
-  tt_assert(nodelist_reentry_probably_contains(&addr_v4, 444));
-  tt_assert(nodelist_reentry_probably_contains(&addr_v6, 666));
+  tt_assert(nodelist_reentry_contains(&addr_v4, 444));
+  tt_assert(nodelist_reentry_contains(&addr_v6, 666));
 
  done:
   routerstatus_free(rs); routerinfo_free(ri); microdesc_free(md);
