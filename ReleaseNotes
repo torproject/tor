@@ -2,6 +2,80 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.3.5.13 - 2020-02-03
+  Tor 0.3.5.13 backports numerous bugfixes from later releases,
+  including one that made v3 onion services more susceptible to
+  denial-of-service attacks, and a feature that makes some kinds of
+  DoS attacks harder to perform.
+
+  o Major bugfixes (onion service v3, backport from 0.4.5.3-rc):
+    - Stop requiring a live consensus for v3 clients and services, and
+      allow a "reasonably live" consensus instead. This allows v3 onion
+      services to work even if the authorities fail to generate a
+      consensus for more than 2 hours in a row. Fixes bug 40237; bugfix
+      on 0.3.5.1-alpha.
+
+  o Major bugfixes (stats, onion services, backport from 0.4.4.5):
+    - Fix a bug where we were undercounting the Tor network's total
+      onion service traffic, by ignoring any traffic originating from
+      clients. Now we count traffic from both clients and services.
+      Fixes bug 40117; bugfix on 0.2.6.2-alpha.
+
+  o Major feature (exit, backport from 0.4.5.5-rc):
+    - Re-entry into the network is now denied at the Exit level to all
+      relays' ORPorts and authorities' ORPorts and DirPorts. This change
+      should help mitgate a set of denial-of-service attacks. Closes
+      ticket 2667.
+
+  o Minor feature (build system, backport from 0.4.5.4-rc):
+    - New "make lsp" command to generate the compile_commands.json file
+      used by the ccls language server. The "bear" program is needed for
+      this. Closes ticket 40227.
+
+  o Minor features (compilation, backport from 0.4.5.2-rc):
+    - Disable deprecation warnings when building with OpenSSL 3.0.0 or
+      later. There are a number of APIs newly deprecated in OpenSSL
+      3.0.0 that Tor still requires. (A later version of Tor will try to
+      stop depending on these APIs.) Closes ticket 40165.
+
+  o Minor features (crypto, backport from 0.4.5.3-rc):
+    - Fix undefined behavior on our Keccak library. The bug only
+      appeared on platforms with 32-byte CPU cache lines (e.g. armv5tel)
+      and would result in wrong digests. Fixes bug 40210; bugfix on
+      0.2.8.1-alpha. Thanks to Bernhard Übelacker, Arnd Bergmann and
+      weasel for diagnosing this.
+
+  o Minor bugfixes (compatibility, backport from 0.4.5.1-rc):
+    - Strip '\r' characters when reading text files on Unix platforms.
+      This should resolve an issue where a relay operator migrates a
+      relay from Windows to Unix, but does not change the line ending of
+      Tor's various state files to match the platform, and the CRLF line
+      endings from Windows end up leaking into other files such as the
+      extra-info document. Fixes bug 33781; bugfix on 0.0.9pre5.
+
+  o Minor bugfixes (compilation, backport from 0.4.5.1-rc):
+    - Resolve a compilation warning that could occur in
+      test_connection.c. Fixes bug 40113; bugfix on 0.2.9.3-alpha.
+
+  o Minor bugfixes (compilation, backport from 0.4.5.3-rc):
+    - Fix a compilation warning about unreachable fallthrough
+      annotations when building with "--enable-all-bugs-are-fatal" on
+      some compilers. Fixes bug 40241; bugfix on 0.3.5.4-alpha.
+
+  o Minor bugfixes (SOCKS5, backport from 0.4.5.3-rc):
+    - Handle partial SOCKS5 messages correctly. Previously, our code
+      would send an incorrect error message if it got a SOCKS5 request
+      that wasn't complete. Fixes bug 40190; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (testing, backport from 0.4.5.2-alpha):
+    - Fix our Python reference-implementation for the v3 onion service
+      handshake so that it works correctly with the version of hashlib
+      provided by Python 3.9. Fixes part of bug 40179; bugfix
+      on 0.3.1.6-rc.
+    - Fix the `tortls/openssl/log_one_error` test to work with OpenSSL
+      3.0.0. Fixes bug 40170; bugfix on 0.2.8.1-alpha.
+
+
 Changes in version 0.3.5.12 - 2020-11-12
   Tor 0.4.3.7 backports several bugfixes from later releases. It
   includes a fix for TROVE-2020-005, a security issue that could be
