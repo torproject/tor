@@ -1,7 +1,8 @@
 Changes in version 0.4.3.8 - 2021-02-03
   Tor 0.4.3.8 backports numerous bugfixes from later releases,
   including one that made v3 onion services more susceptible to
-  denial-of-service attacks.
+  denial-of-service attacks, and a feature that makes some kinds of
+  DoS attacks harder to perform.
 
   Note that this is, in all likelihood, the last release of Tor 0.4.3.x,
   which will reach end-of-life on 15 Feb 2021.
@@ -18,6 +19,12 @@ Changes in version 0.4.3.8 - 2021-02-03
       onion service traffic, by ignoring any traffic originating from
       clients. Now we count traffic from both clients and services.
       Fixes bug 40117; bugfix on 0.2.6.2-alpha.
+
+  o Major feature (exit, backport from 0.4.5.5-rc):
+    - Re-entry into the network is now denied at the Exit level to all
+      relays' ORPorts and authorities' ORPorts and DirPorts. This change
+      should help mitgate a set of denial-of-service attacks. Closes
+      ticket 2667.
 
   o Minor feature (build system, backport from 0.4.5.4-rc):
     - New "make lsp" command to generate the compile_commands.json file
