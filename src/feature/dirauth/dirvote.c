@@ -4424,6 +4424,7 @@ get_all_possible_sybil(const smartlist_t *routers)
   // Return the digestmap: it now contains all the possible sybils
   return omit_as_sybil;
 }
+
 /** Given a platform string as in a routerinfo_t (possibly null), return a
  * newly allocated version string for a networkstatus document, or NULL if the
  * platform doesn't give a Tor version. */
