@@ -49,6 +49,42 @@ static smartlist_t *trusted_dir_servers = NULL;
  * and all fallback directory servers. */
 static smartlist_t *fallback_dir_servers = NULL;
 
+/** Helper: From a given trusted directory entry, add the v4 or/and v6 address
+ * to the nodelist address set. */
+static void
+add_trusted_dir_to_nodelist_addr_set(const dir_server_t *dir)
+{
+  tor_addr_t tmp_addr;
+
+  tor_assert(dir);
+  tor_assert(dir->is_authority);
+
+  /* Add IPv4 and then IPv6 if applicable. For authorities, we add the ORPort
+   * and DirPort so re-entry into the network back to them is not possible. */
+  tor_addr_from_ipv4h(&tmp_addr, dir->addr);
+  nodelist_add_addr_to_address_set(&tmp_addr, dir->or_port, dir->dir_port);
+  if (!tor_addr_is_null(&dir->ipv6_addr)) {
+    /* IPv6 DirPort is not a thing yet for authorities. */
+    nodelist_add_addr_to_address_set(&dir->ipv6_addr, dir->ipv6_orport, 0);
+  }
+}
+
+/** Go over the trusted directory server list and add their address(es) to the
+ * nodelist address set. This is called every time a new consensus is set. */
+MOCK_IMPL(void,
+dirlist_add_trusted_dir_addresses, (void))
+{
+  if (!trusted_dir_servers) {
+    return;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, const dir_server_t *, ent) {
+    if (ent->is_authority) {
+      add_trusted_dir_to_nodelist_addr_set(ent);
+    }
+  } SMARTLIST_FOREACH_END(ent);
+}
+
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
 int
