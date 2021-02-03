@@ -137,7 +137,7 @@ typedef struct nodelist_t {
 
   /* Set of addresses + port that belong to nodes we know and that we don't
    * allow network re-entry towards them. */
-  addr_port_set_t *reentry_set;
+  digestmap_t *reentry_set;
 
   /* The valid-after time of the last live consensus that initialized the
    * nodelist.  We use this to detect outdated nodelists that need to be
@@ -489,6 +489,42 @@ node_add_to_address_set(const node_t *node)
   }
 }
 
+/** Build a construction for the reentry set consisting of an address and port
+ * pair.
+ *
+ * If the given address is _not_ AF_INET or AF_INET6, then the item is an
+ * array of 0s.
+ *
+ * Return a pointer to a static buffer containing the item. Next call to this
+ * function invalidates its previous content. */
+static char *
+build_addr_port_item(const tor_addr_t *addr, const uint16_t port)
+{
+  /* At most 16 bytes are put in this (IPv6) and then 2 bytes for the port
+   * which is within the maximum of 20 bytes (DIGEST_LEN). */
+  static char data[DIGEST_LEN];
+
+  memset(data, 0, sizeof(data));
+  switch (tor_addr_family(addr)) {
+  case AF_INET:
+    memcpy(data, &addr->addr.in_addr.s_addr, 4);
+    break;
+  case AF_INET6:
+    memcpy(data, &addr->addr.in6_addr.s6_addr, 16);
+    break;
+  case AF_UNSPEC:
+    /* Leave the 0. */
+    break;
+  default:
+    /* LCOV_EXCL_START */
+    tor_fragile_assert();
+    /* LCOV_EXCL_STOP */
+  }
+
+  memcpy(data + 16, &port, sizeof(port));
+  return data;
+}
+
 /** Add the given address into the nodelist address set. */
 void
 nodelist_add_addr_to_address_set(const tor_addr_t *addr,
@@ -502,10 +538,12 @@ nodelist_add_addr_to_address_set(const tor_addr_t *addr,
   }
   address_set_add(the_nodelist->node_addrs, addr);
   if (or_port != 0) {
-    addr_port_set_add(the_nodelist->reentry_set, addr, or_port);
+    digestmap_set(the_nodelist->reentry_set,
+                  build_addr_port_item(addr, or_port), (void*) 1);
   }
   if (dir_port != 0) {
-    addr_port_set_add(the_nodelist->reentry_set, addr, dir_port);
+    digestmap_set(the_nodelist->reentry_set,
+                  build_addr_port_item(addr, dir_port), (void*) 1);
   }
 }
 
@@ -526,7 +564,7 @@ nodelist_probably_contains_address(const tor_addr_t *addr)
 /** Return true if <b>addr</b> is the address of some node in the nodelist and
  * corresponds also to the given port. If not, probably return false. */
 bool
-nodelist_reentry_probably_contains(const tor_addr_t *addr, uint16_t port)
+nodelist_reentry_contains(const tor_addr_t *addr, uint16_t port)
 {
   if (BUG(!addr) || BUG(!port))
     return false;
@@ -534,8 +572,8 @@ nodelist_reentry_probably_contains(const tor_addr_t *addr, uint16_t port)
   if (!the_nodelist || !the_nodelist->reentry_set)
     return false;
 
-  return addr_port_set_probably_contains(the_nodelist->reentry_set,
-                                         addr, port);
+  return digestmap_get(the_nodelist->reentry_set,
+                       build_addr_port_item(addr, port)) != NULL;
 }
 
 /** Add <b>ri</b> to an appropriate node in the nodelist.  If we replace an
@@ -671,15 +709,12 @@ nodelist_set_consensus(networkstatus_t *ns)
                             get_estimated_address_per_node();
   estimated_addresses += (get_n_authorities(V3_DIRINFO | BRIDGE_DIRINFO) *
                           get_estimated_address_per_node());
+  /* Clear our sets because we will repopulate them with what this new
+   * consensus contains. */
   address_set_free(the_nodelist->node_addrs);
-  addr_port_set_free(the_nodelist->reentry_set);
   the_nodelist->node_addrs = address_set_new(estimated_addresses);
-  /* Times two here is for both the ORPort and DirPort. We double it again in
-   * order to minimize as much as possible the false positive when looking up
-   * this set. Reason is that Exit streams that are legitimate but end up a
-   * false positive against this set will thus be considered reentry and be
-   * rejected which means a bad UX. */
-  the_nodelist->reentry_set = addr_port_set_new(estimated_addresses * 2 * 2);
+  digestmap_free(the_nodelist->reentry_set, NULL);
+  the_nodelist->reentry_set = digestmap_new();
 
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
     node_t *node = node_get_or_create(rs->identity_digest);
@@ -906,7 +941,7 @@ nodelist_free_all(void)
 
   address_set_free(the_nodelist->node_addrs);
   the_nodelist->node_addrs = NULL;
-  addr_port_set_free(the_nodelist->reentry_set);
+  digestmap_free(the_nodelist->reentry_set, NULL);
   the_nodelist->reentry_set = NULL;
 
   tor_free(the_nodelist);
