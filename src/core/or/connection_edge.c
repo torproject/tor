@@ -4200,6 +4200,31 @@ connection_exit_connect(edge_connection_t *edge_conn)
     return;
   }
 
+  /* Next, check for attempts to connect back into the Tor network. We don't
+   * want to allow these for the same reason we don't want to allow
+   * infinite-length circuits (see "A Practical Congestion Attack on Tor Using
+   * Long Paths", Usenix Security 2009). See also ticket 2667.
+   *
+   * The TORPROTOCOL reason is used instead of EXITPOLICY so client do NOT
+   * attempt to retry connecting onto another circuit that will also fail
+   * bringing considerable more load on the network if so.
+   *
+   * Since the address+port set here is a bloomfilter, in very rare cases, the
+   * check will create a false positive meaning that the destination could
+   * actually be legit and thus being denied exit. However, sending back a
+   * reason that makes the client retry results in much worst consequences in
+   * case of an attack so this is a small price to pay. */
+  if (!connection_edge_is_rendezvous_stream(edge_conn) &&
+      nodelist_reentry_probably_contains(&conn->addr, conn->port)) {
+    log_info(LD_EXIT, "%s:%d tried to connect back to a known relay address. "
+                      "Closing.", escaped_safe_str_client(conn->address),
+             conn->port);
+    connection_edge_end(edge_conn, END_STREAM_REASON_TORPROTOCOL);
+    circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
+    connection_free(conn);
+    return;
+  }
+
 #ifdef HAVE_SYS_UN_H
   if (conn->socket_family != AF_UNIX) {
 #else
