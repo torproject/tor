@@ -4212,7 +4212,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     log_info(LD_EXIT, "%s:%d tried to connect back to a known relay address. "
                       "Closing.", escaped_safe_str_client(conn->address),
              conn->port);
-    connection_edge_end(edge_conn, END_STREAM_REASON_TORPROTOCOL);
+    connection_edge_end(edge_conn, END_STREAM_REASON_CONNECTREFUSED);
     circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
     connection_free(conn);
     return;
