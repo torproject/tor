@@ -68,7 +68,6 @@
  *   router_upload_dir_desc_to_dirservers() in router.c
  *   upload_service_descriptor() in rendservice.c
  * - directory_get_from_dirserver(), called from
- *   rend_client_refetch_renddesc() in rendclient.c
  *   run_scheduled_events() in main.c
  *   do_hup() in main.c
  * - connection_dir_process_inbuf(), called from

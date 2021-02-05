@@ -46,7 +46,6 @@
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/relay_config.h"
 #include "feature/rend/rendcache.h"
-#include "feature/rend/rendclient.h"
 #include "feature/stats/bwhist.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/rephist.h"
@@ -120,7 +119,6 @@ tor_free_all(int postfork)
   addressmap_free_all();
   dirserv_free_all();
   rend_cache_free_all();
-  rend_service_authorization_free_all();
   rep_hist_free_all();
   bwhist_free_all();
   circuit_free_all();

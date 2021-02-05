@@ -15,10 +15,6 @@
  *   some more effort:
  *
  *   - circuit_list_path_impl()
- *   - Functions dealing with cpaths in HSv2 create_rend_cpath() and
- *     create_rend_cpath_legacy()
- *   - The cpath related parts of rend_service_receive_introduction() and
- *     rend_client_send_introduction().
  **/
 
 #define CRYPT_PATH_PRIVATE

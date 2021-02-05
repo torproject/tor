@@ -23,7 +23,7 @@
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_intropoint.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/rend/rendclient.h"
+#include "feature/rend/rendcache.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendmid.h"
 #include "feature/rend/rendparse.h"

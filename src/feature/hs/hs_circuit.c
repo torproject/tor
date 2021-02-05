@@ -29,7 +29,6 @@
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/rend/rendservice.h"
-#include "feature/rend/rendclient.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -647,9 +646,7 @@ cleanup_on_free_client_circ(circuit_t *circ)
 {
   tor_assert(circ);
 
-  if (circuit_is_hs_v2(circ)) {
-    rend_client_circuit_cleanup_on_free(circ);
-  } else if (circuit_is_hs_v3(circ)) {
+  if (circuit_is_hs_v3(circ)) {
     hs_client_circuit_cleanup_on_free(circ);
   }
   /* It is possible the circuit has an HS purpose but no identifier (rend_data

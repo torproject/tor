@@ -37,7 +37,6 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"
@@ -1520,9 +1519,7 @@ handle_control_hsfetch(control_connection_t *conn,
   /* Trigger the fetch using the built rend query and possibly a list of HS
    * directory to use. This function ignores the client cache thus this will
    * always send a fetch command. */
-  if (version == HS_VERSION_TWO) {
-    rend_client_fetch_v2_desc(rend_query, hsdirs);
-  } else if (version == HS_VERSION_THREE) {
+  if (version == HS_VERSION_THREE) {
     hs_control_hsfetch_command(&v3_pk, hsdirs);
   }
 

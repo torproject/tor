@@ -2,7 +2,6 @@
 # ADD_C_FILE: INSERT SOURCES HERE.
 LIBTOR_APP_A_SOURCES += 			\
 	src/feature/rend/rendcache.c		\
-	src/feature/rend/rendclient.c		\
 	src/feature/rend/rendcommon.c		\
 	src/feature/rend/rendmid.c		\
 	src/feature/rend/rendparse.c		\
@@ -15,7 +14,6 @@ noinst_HEADERS +=					\
 	src/feature/rend/rend_intro_point_st.h		\
 	src/feature/rend/rend_service_descriptor_st.h	\
 	src/feature/rend/rendcache.h			\
-	src/feature/rend/rendclient.h			\
 	src/feature/rend/rendcommon.h			\
 	src/feature/rend/rendmid.h			\
 	src/feature/rend/rendparse.h			\

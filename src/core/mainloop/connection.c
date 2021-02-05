@@ -106,7 +106,6 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/routermode.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/connstats.h"
 #include "feature/stats/rephist.h"

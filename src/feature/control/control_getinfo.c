@@ -542,25 +542,14 @@ getinfo_helper_dir(control_connection_t *control_conn,
     hostname_type_t addr_type;
 
     question += strlen("hs/client/desc/id/");
-    if (rend_valid_v2_service_id(question)) {
-      addr_type = ONION_V2_HOSTNAME;
-    } else if (hs_address_is_valid(question)) {
+    if (hs_address_is_valid(question)) {
       addr_type = ONION_V3_HOSTNAME;
     } else {
       *errmsg = "Invalid address";
       return -1;
     }
 
-    if (addr_type == ONION_V2_HOSTNAME) {
-      rend_cache_entry_t *e = NULL;
-      if (!rend_cache_lookup_entry(question, -1, &e)) {
-        /* Descriptor found in cache */
-        *answer = tor_strdup(e->desc);
-      } else {
-        *errmsg = "Not found in cache";
-        return -1;
-      }
-    } else {
+    if (addr_type == ONION_V3_HOSTNAME) {
       ed25519_public_key_t service_pk;
       const char *desc;
 
@@ -584,25 +573,14 @@ getinfo_helper_dir(control_connection_t *control_conn,
     hostname_type_t addr_type;
 
     question += strlen("hs/service/desc/id/");
-    if (rend_valid_v2_service_id(question)) {
-      addr_type = ONION_V2_HOSTNAME;
-    } else if (hs_address_is_valid(question)) {
+    if (hs_address_is_valid(question)) {
       addr_type = ONION_V3_HOSTNAME;
     } else {
       *errmsg = "Invalid address";
       return -1;
     }
-    rend_cache_entry_t *e = NULL;
 
-    if (addr_type == ONION_V2_HOSTNAME) {
-      if (!rend_cache_lookup_v2_desc_as_service(question, &e)) {
-        /* Descriptor found in cache */
-        *answer = tor_strdup(e->desc);
-      } else {
-        *errmsg = "Not found in cache";
-        return -1;
-      }
-    } else {
+    if (addr_type == ONION_V3_HOSTNAME) {
       ed25519_public_key_t service_pk;
       char *desc;
 

@@ -2389,14 +2389,6 @@ test_options_validate__rend(void *ignored)
             "Failed to configure rendezvous options. See logs for details.");
   tor_free(msg);
 
-  free_options_test_data(tdata);
-  tdata = get_options_test_data("HidServAuth failed\n");
-  ret = options_validate(NULL, tdata->opt, &msg);
-  tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Failed to configure client authorization for hidden "
-            "services. See logs for details.");
-  tor_free(msg);
-
  done:
   policies_free_all();
   teardown_capture_of_logs();

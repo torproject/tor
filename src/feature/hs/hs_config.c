@@ -28,7 +28,6 @@
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_service.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "lib/encoding/confline.h"
 #include "lib/conf/confdecl.h"
@@ -716,11 +715,6 @@ int
 hs_config_client_auth_all(const or_options_t *options, int validate_only)
 {
   int ret = -1;
-
-  /* Configure v2 authorization. */
-  if (rend_parse_service_authorization(options, validate_only) < 0) {
-    goto done;
-  }
 
   /* Configure v3 authorization. */
   if (hs_config_client_authorization(options, validate_only) < 0) {

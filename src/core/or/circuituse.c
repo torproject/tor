@@ -58,7 +58,6 @@
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
@@ -2448,11 +2447,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       extend_info = hs_client_get_random_intro_from_edge(edge_conn);
       if (!extend_info) {
         log_info(LD_REND, "No intro points: re-fetching service descriptor.");
-        if (edge_conn->rend_data) {
-          rend_client_refetch_v2_renddesc(edge_conn->rend_data);
-        } else {
-          hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
-        }
+        hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
         connection_ap_mark_as_waiting_for_renddesc(conn);
         return 0;
       }

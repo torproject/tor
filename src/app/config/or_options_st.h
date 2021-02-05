@@ -428,9 +428,6 @@ struct or_options_t {
   int NumCPUs; /**< How many CPUs should we try to use? */
   struct config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
-  struct config_line_t *HidServAuth; /**< List of configuration lines for
-                               * client-side authorizations for hidden
-                               * services */
   char *ClientOnionAuthDir; /**< Directory to keep client
                              * onion service authorization secret keys */
   char *ContactInfo; /**< Contact info to be published in the directory. */

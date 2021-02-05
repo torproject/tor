@@ -96,7 +96,6 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
@@ -251,23 +250,8 @@ connection_mark_unattached_ap_,(entry_connection_t *conn, int endreason,
                                 int line, const char *file))
 {
   connection_t *base_conn = ENTRY_TO_CONN(conn);
-  edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
   tor_assert(base_conn->type == CONN_TYPE_AP);
   ENTRY_TO_EDGE_CONN(conn)->edge_has_sent_end = 1; /* no circ yet */
-
-  /* If this is a rendezvous stream and it is failing without ever
-   * being attached to a circuit, assume that an attempt to connect to
-   * the destination hidden service has just ended.
-   *
-   * XXXX This condition doesn't limit to only streams failing
-   * without ever being attached.  That sloppiness should be harmless,
-   * but we should fix it someday anyway. */
-  if ((edge_conn->on_circuit != NULL || edge_conn->edge_has_sent_end) &&
-      connection_edge_is_rendezvous_stream(edge_conn)) {
-    if (edge_conn->rend_data) {
-      rend_client_note_connection_attempt_ended(edge_conn->rend_data);
-    }
-  }
 
   if (base_conn->marked_for_close) {
     /* This call will warn as appropriate. */
@@ -1636,12 +1620,12 @@ consider_plaintext_ports(entry_connection_t *conn, uint16_t port)
  * The possible recognized forms are (where true is returned):
  *
  *  If address is of the form "y.onion" with a well-formed handle y:
- *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
- *     ONION_V3_HOSTNAME depending on the HS version.
+ *     Put a NUL after y, lower-case it, and return ONION_V3_HOSTNAME
+ *     depending on the HS version.
  *
  *  If address is of the form "x.y.onion" with a well-formed handle x:
  *     Drop "x.", put a NUL after y, lower-case it, and return
- *     ONION_V2_HOSTNAME or ONION_V3_HOSTNAME depending on the HS version.
+ *     ONION_V3_HOSTNAME depending on the HS version.
  *
  * If address is of the form "y.onion" with a badly-formed handle y:
  *     Return BAD_HOSTNAME and log a message.
@@ -1691,14 +1675,6 @@ parse_extended_hostname(char *address, hostname_type_t *type_out)
   if (q != address) {
     memmove(address, q, strlen(q) + 1 /* also get \0 */);
   }
-  /* v2 onion address check. */
-  if (strlen(query) == REND_SERVICE_ID_LEN_BASE32) {
-    *type_out = ONION_V2_HOSTNAME;
-    if (rend_valid_v2_service_id(query)) {
-      goto success;
-    }
-    goto failed;
-  }
 
   /* v3 onion address check. */
   if (strlen(query) == HS_SERVICE_ADDR_LEN_BASE32) {
@@ -1718,8 +1694,7 @@ parse_extended_hostname(char *address, hostname_type_t *type_out)
  failed:
   /* otherwise, return to previous state and return 0 */
   *s = '.';
-  const bool is_onion = (*type_out == ONION_V2_HOSTNAME) ||
-    (*type_out == ONION_V3_HOSTNAME);
+  const bool is_onion = (*type_out == ONION_V3_HOSTNAME);
   log_warn(LD_APP, "Invalid %shostname %s; rejecting",
            is_onion ? "onion " : "",
            safe_str_client(address));
@@ -2004,41 +1979,7 @@ connection_ap_handle_onion(entry_connection_t *conn,
   int rend_cache_lookup_result = -ENOENT;
   int descriptor_is_usable = 0;
 
-  if (addresstype == ONION_V2_HOSTNAME) { /* it's a v2 hidden service */
-    rend_cache_entry_t *entry = NULL;
-    /* Look up if we have client authorization configured for this hidden
-     * service.  If we do, associate it with the rend_data. */
-    rend_service_authorization_t *client_auth =
-      rend_client_lookup_service_authorization(socks->address);
-
-    const uint8_t *cookie = NULL;
-    rend_auth_type_t auth_type = REND_NO_AUTH;
-    if (client_auth) {
-      log_info(LD_REND, "Using previously configured client authorization "
-               "for hidden service request.");
-      auth_type = client_auth->auth_type;
-      cookie = client_auth->descriptor_cookie;
-    }
-
-    /* Fill in the rend_data field so we can start doing a connection to
-     * a hidden service. */
-    rend_data_t *rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data =
-      rend_data_client_create(socks->address, NULL, (char *) cookie,
-                              auth_type);
-    if (rend_data == NULL) {
-      return -1;
-    }
-    onion_address = rend_data_get_address(rend_data);
-    log_info(LD_REND,"Got a hidden service request for ID '%s'",
-             safe_str_client(onion_address));
-
-    rend_cache_lookup_result = rend_cache_lookup_entry(onion_address,-1,
-                                                       &entry);
-    if (!rend_cache_lookup_result && entry) {
-      descriptor_is_usable = rend_client_any_intro_points_usable(entry);
-    }
-  } else { /* it's a v3 hidden service */
-    tor_assert(addresstype == ONION_V3_HOSTNAME);
+  if (addresstype == ONION_V3_HOSTNAME) {
     const hs_descriptor_t *cached_desc = NULL;
     int retval;
     /* Create HS conn identifier with HS pubkey */
@@ -2108,13 +2049,7 @@ connection_ap_handle_onion(entry_connection_t *conn,
     edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
     connection_ap_mark_as_non_pending_circuit(conn);
     base_conn->state = AP_CONN_STATE_RENDDESC_WAIT;
-    if (addresstype == ONION_V2_HOSTNAME) {
-      tor_assert(edge_conn->rend_data);
-      rend_client_refetch_v2_renddesc(edge_conn->rend_data);
-      /* Whatever the result of the refetch, we don't go further. */
-      return 0;
-    } else {
-      tor_assert(addresstype == ONION_V3_HOSTNAME);
+    if (addresstype == ONION_V3_HOSTNAME) {
       tor_assert(edge_conn->hs_ident);
       /* Attempt to fetch the hsv3 descriptor. Check the retval to see how it
        * went and act accordingly. */
@@ -2313,7 +2248,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   }
 
   /* Now, we handle everything that isn't a .onion address. */
-  if (addresstype != ONION_V2_HOSTNAME && addresstype != ONION_V3_HOSTNAME) {
+  if (addresstype != ONION_V3_HOSTNAME) {
     /* Not a hidden-service request.  It's either a hostname or an IP,
      * possibly with a .exit that we stripped off.  We're going to check
      * if we're allowed to connect/resolve there, and then launch the
@@ -2579,8 +2514,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     return 0;
   } else {
     /* If we get here, it's a request for a .onion address! */
-    tor_assert(addresstype == ONION_V2_HOSTNAME ||
-               addresstype == ONION_V3_HOSTNAME);
+    tor_assert(addresstype == ONION_V3_HOSTNAME);
     tor_assert(!automap);
     return connection_ap_handle_onion(conn, socks, circ, addresstype);
   }

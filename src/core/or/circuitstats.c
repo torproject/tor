@@ -34,7 +34,6 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendservice.h"
 #include "feature/relay/router.h"
 #include "app/config/statefile.h"

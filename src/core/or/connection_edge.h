@@ -80,7 +80,6 @@ typedef enum hostname_type_t {
   BAD_HOSTNAME,
   EXIT_HOSTNAME,
   NORMAL_HOSTNAME,
-  ONION_V2_HOSTNAME,
   ONION_V3_HOSTNAME,
 } hostname_type_t;
 

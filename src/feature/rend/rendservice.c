@@ -34,7 +34,6 @@
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerset.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendparse.h"
 #include "feature/rend/rendservice.h"

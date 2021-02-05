@@ -103,7 +103,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/relay/relay_config.h"
 #include "feature/relay/transport_config.h"
-#include "feature/rend/rendclient.h"
+#include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
 #include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
@@ -504,7 +504,6 @@ static const config_var_t option_vars_[] = {
   VAR("HiddenServiceOnionBalanceInstance",
       LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
-  V(HidServAuth,                 LINELIST, NULL),
   V(ClientOnionAuthDir,          FILENAME, NULL),
   OBSOLETE("CloseHSClientCircuitsImmediatelyOnTimeout"),
   OBSOLETE("CloseHSServiceRendCircuitsImmediatelyOnTimeout"),

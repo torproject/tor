@@ -1559,9 +1559,8 @@ hs_clean_last_hid_serv_requests(time_t now)
  * <b>req_key_str</b> from the history of times of requests to hidden service
  * directories.
  *
- * This is called from rend_client_note_connection_attempt_ended(), which
- * must be idempotent, so any future changes to this function must leave it
- * idempotent too. */
+ * This is called from purge_hid_serv_request(), which must be idempotent, so
+ * any future changes to this function must leave it idempotent too. */
 void
 hs_purge_hid_serv_from_last_hid_serv_requests(const char *req_key_str)
 {

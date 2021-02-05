@@ -48,7 +48,6 @@
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
 #include "feature/rend/rendcache.h"
-#include "feature/rend/rendclient.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
@@ -2861,7 +2860,6 @@ handle_response_fetch_renddesc_v2(dir_connection_t *conn,
                                             conn->identity_digest,
                                             body);
         conn->base_.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2;
-        rend_client_desc_trynow(service_id);
         memwipe(service_id, 0, sizeof(service_id));
       }
       break;
@@ -3023,17 +3021,6 @@ void
 connection_dir_client_refetch_hsdesc_if_needed(dir_connection_t *dir_conn)
 {
   connection_t *conn = TO_CONN(dir_conn);
-
-  /* If we were trying to fetch a v2 rend desc and did not succeed, retry as
-   * needed. (If a fetch is successful, the connection state is changed to
-   * DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2 or DIR_PURPOSE_HAS_FETCHED_HSDESC to
-   * mark that refetching is unnecessary.) */
-  if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
-      dir_conn->rend_data &&
-      rend_valid_v2_service_id(
-           rend_data_get_address(dir_conn->rend_data))) {
-    rend_client_refetch_v2_renddesc(dir_conn->rend_data);
-  }
 
   /* Check for v3 rend desc fetch */
   if (conn->purpose == DIR_PURPOSE_FETCH_HSDESC &&
