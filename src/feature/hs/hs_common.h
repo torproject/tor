@@ -150,7 +150,7 @@ typedef enum {
 
 /** Represents the mapping from a virtual port of a rendezvous service to a
  * real port on some IP. */
-typedef struct rend_service_port_config_t {
+typedef struct hs_port_config_t {
   /** The incoming HS virtual port we're mapping */
   uint16_t virtual_port;
   /** Is this an AF_UNIX port? */
@@ -161,7 +161,7 @@ typedef struct rend_service_port_config_t {
   tor_addr_t real_addr;
   /** The socket path to connect to, if is_unix_addr */
   char unix_addr[FLEXIBLE_ARRAY_MEMBER];
-} rend_service_port_config_t;
+} hs_port_config_t;
 
 void hs_init(void);
 void hs_free_all(void);
@@ -260,6 +260,11 @@ void hs_purge_hid_serv_from_last_hid_serv_requests(const char *desc_id);
 void hs_purge_last_hid_serv_requests(void);
 
 int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
+hs_port_config_t *hs_parse_port_config(const char *string, const char *sep,
+                                       char **err_msg_out);
+void hs_port_config_free_(hs_port_config_t *p);
+#define hs_port_config_free(p) \
+  FREE_AND_NULL(hs_port_config_t, hs_port_config_free_, (p))
 
 void hs_inc_rdv_stream_counter(origin_circuit_t *circ);
 void hs_dec_rdv_stream_counter(origin_circuit_t *circ);

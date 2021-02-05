@@ -64,7 +64,7 @@ init_store(hs_service_t *service)
                         format_label("onion", service->onion_address));
     if (base_metrics[i].port_as_label && service->config.ports) {
       SMARTLIST_FOREACH_BEGIN(service->config.ports,
-                              const rend_service_port_config_t *, p) {
+                              const hs_port_config_t *, p) {
         metrics_store_entry_add_label(entry,
                       format_label("port", port_to_str(p->virtual_port)));
       } SMARTLIST_FOREACH_END(p);

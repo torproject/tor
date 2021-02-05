@@ -71,7 +71,7 @@ typedef struct rend_service_t {
                     * this service is ephemeral. */
   int dir_group_readable; /**< if 1, allow group read
                              permissions on directory */
-  smartlist_t *ports; /**< List of rend_service_port_config_t */
+  smartlist_t *ports; /**< List of hs_port_config_t */
   rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
                                * authorization is performed. */
   smartlist_t *clients; /**< List of rend_authorized_client_t's of
@@ -188,14 +188,6 @@ int rend_service_set_connection_addr_port(edge_connection_t *conn,
 void rend_service_dump_stats(int severity);
 void rend_service_free_all(void);
 void rend_service_init(void);
-
-rend_service_port_config_t *rend_service_parse_port_config(const char *string,
-                                                           const char *sep,
-                                                           char **err_msg_out);
-void rend_service_port_config_free_(rend_service_port_config_t *p);
-#define rend_service_port_config_free(p) \
-  FREE_AND_NULL(rend_service_port_config_t, rend_service_port_config_free_, \
-                (p))
 
 void rend_authorized_client_free_(rend_authorized_client_t *client);
 #define rend_authorized_client_free(client) \

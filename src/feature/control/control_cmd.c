@@ -1727,8 +1727,7 @@ handle_control_add_onion(control_connection_t *conn,
   for (arg = args->kwargs; arg; arg = arg->next) {
     if (!strcasecmp(arg->key, "Port")) {
       /* "Port=VIRTPORT[,TARGET]". */
-      rend_service_port_config_t *cfg =
-          rend_service_parse_port_config(arg->value, ",", NULL);
+      hs_port_config_t *cfg = hs_parse_port_config(arg->value, ",", NULL);
       if (!cfg) {
         control_write_endreply(conn, 512, "Invalid VIRTPORT/TARGET");
         goto out;
@@ -1987,8 +1986,8 @@ handle_control_add_onion(control_connection_t *conn,
 
  out:
   if (port_cfgs) {
-    SMARTLIST_FOREACH(port_cfgs, rend_service_port_config_t*, p,
-                      rend_service_port_config_free(p));
+    SMARTLIST_FOREACH(port_cfgs, hs_port_config_t*, p,
+                      hs_port_config_free(p));
     smartlist_free(port_cfgs);
   }
 

@@ -460,50 +460,50 @@ test_getinfo_helper_onion(void *arg)
 }
 
 static void
-test_rend_service_parse_port_config(void *arg)
+test_hs_parse_port_config(void *arg)
 {
   const char *sep = ",";
-  rend_service_port_config_t *cfg = NULL;
+  hs_port_config_t *cfg = NULL;
   char *err_msg = NULL;
 
   (void)arg;
 
   /* Test "VIRTPORT" only. */
-  cfg = rend_service_parse_port_config("80", sep, &err_msg);
+  cfg = hs_parse_port_config("80", sep, &err_msg);
   tt_assert(cfg);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test "VIRTPORT,TARGET" (Target is port). */
-  rend_service_port_config_free(cfg);
-  cfg = rend_service_parse_port_config("80,8080", sep, &err_msg);
+  hs_port_config_free(cfg);
+  cfg = hs_parse_port_config("80,8080", sep, &err_msg);
   tt_assert(cfg);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test "VIRTPORT,TARGET" (Target is IPv4:port). */
-  rend_service_port_config_free(cfg);
-  cfg = rend_service_parse_port_config("80,192.0.2.1:8080", sep, &err_msg);
+  hs_port_config_free(cfg);
+  cfg = hs_parse_port_config("80,192.0.2.1:8080", sep, &err_msg);
   tt_assert(cfg);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test "VIRTPORT,TARGET" (Target is IPv6:port). */
-  rend_service_port_config_free(cfg);
-  cfg = rend_service_parse_port_config("80,[2001:db8::1]:8080", sep, &err_msg);
+  hs_port_config_free(cfg);
+  cfg = hs_parse_port_config("80,[2001:db8::1]:8080", sep, &err_msg);
   tt_assert(cfg);
   tt_ptr_op(err_msg, OP_EQ, NULL);
-  rend_service_port_config_free(cfg);
+  hs_port_config_free(cfg);
   cfg = NULL;
 
   /* XXX: Someone should add tests for AF_UNIX targets if supported. */
 
   /* Test empty config. */
-  rend_service_port_config_free(cfg);
-  cfg = rend_service_parse_port_config("", sep, &err_msg);
+  hs_port_config_free(cfg);
+  cfg = hs_parse_port_config("", sep, &err_msg);
   tt_ptr_op(cfg, OP_EQ, NULL);
   tt_assert(err_msg);
 
   /* Test invalid port. */
   tor_free(err_msg);
-  cfg = rend_service_parse_port_config("90001", sep, &err_msg);
+  cfg = hs_parse_port_config("90001", sep, &err_msg);
   tt_ptr_op(cfg, OP_EQ, NULL);
   tt_assert(err_msg);
   tor_free(err_msg);
@@ -513,24 +513,24 @@ test_rend_service_parse_port_config(void *arg)
 
   /* quoted unix port */
   tor_free(err_msg);
-  cfg = rend_service_parse_port_config("100 unix:\"/tmp/foo bar\"",
+  cfg = hs_parse_port_config("100 unix:\"/tmp/foo bar\"",
                                        " ", &err_msg);
   tt_assert(cfg);
   tt_ptr_op(err_msg, OP_EQ, NULL);
-  rend_service_port_config_free(cfg);
+  hs_port_config_free(cfg);
   cfg = NULL;
 
   /* quoted unix port */
   tor_free(err_msg);
-  cfg = rend_service_parse_port_config("100 unix:\"/tmp/foo bar\"",
+  cfg = hs_parse_port_config("100 unix:\"/tmp/foo bar\"",
                                        " ", &err_msg);
   tt_assert(cfg);
   tt_ptr_op(err_msg, OP_EQ, NULL);
-  rend_service_port_config_free(cfg);
+  hs_port_config_free(cfg);
   cfg = NULL;
 
   /* quoted unix port, missing end quote */
-  cfg = rend_service_parse_port_config("100 unix:\"/tmp/foo bar",
+  cfg = hs_parse_port_config("100 unix:\"/tmp/foo bar",
                                        " ", &err_msg);
   tt_ptr_op(cfg, OP_EQ, NULL);
   tt_str_op(err_msg, OP_EQ, "Couldn't process address <unix:\"/tmp/foo bar> "
@@ -539,7 +539,7 @@ test_rend_service_parse_port_config(void *arg)
 
   /* bogus IP address */
   MOCK(tor_addr_lookup, mock_tor_addr_lookup__fail_on_bad_addrs);
-  cfg = rend_service_parse_port_config("100 foo!!.example.com:9000",
+  cfg = hs_parse_port_config("100 foo!!.example.com:9000",
                                        " ", &err_msg);
   UNMOCK(tor_addr_lookup);
   tt_ptr_op(cfg, OP_EQ, NULL);
@@ -548,7 +548,7 @@ test_rend_service_parse_port_config(void *arg)
   tor_free(err_msg);
 
   /* bogus port port */
-  cfg = rend_service_parse_port_config("100 99999",
+  cfg = hs_parse_port_config("100 99999",
                                        " ", &err_msg);
   tt_ptr_op(cfg, OP_EQ, NULL);
   tt_str_op(err_msg, OP_EQ, "Unparseable or out-of-range port \"99999\" "
@@ -556,14 +556,14 @@ test_rend_service_parse_port_config(void *arg)
   tor_free(err_msg);
 
   /* Wrong target address and port separation */
-  cfg = rend_service_parse_port_config("80,127.0.0.1 1234", sep,
+  cfg = hs_parse_port_config("80,127.0.0.1 1234", sep,
                                        &err_msg);
   tt_ptr_op(cfg, OP_EQ, NULL);
   tt_assert(err_msg);
   tor_free(err_msg);
 
  done:
-  rend_service_port_config_free(cfg);
+  hs_port_config_free(cfg);
   tor_free(err_msg);
 }
 
@@ -2214,7 +2214,7 @@ struct testcase_t controller_tests[] = {
   { "add_onion_helper_keyarg_v3", test_add_onion_helper_keyarg_v3, 0,
     NULL, NULL },
   { "getinfo_helper_onion", test_getinfo_helper_onion, 0, NULL, NULL },
-  { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
+  { "hs_parse_port_config", test_hs_parse_port_config, 0,
     NULL, NULL },
   { "add_onion_helper_clientauth", test_add_onion_helper_clientauth, 0, NULL,
     NULL },

@@ -37,6 +37,7 @@
 #include "feature/relay/routermode.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/net/resolve.h"
 
 #include "core/or/edge_connection_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -57,12 +58,12 @@ static const char *str_ed25519_basepoint =
 
 #ifdef HAVE_SYS_UN_H
 
-/** Given <b>ports</b>, a smarlist containing rend_service_port_config_t,
+/** Given <b>ports</b>, a smarlist containing hs_port_config_t,
  * add the given <b>p</b>, a AF_UNIX port to the list. Return 0 on success
  * else return -ENOSYS if AF_UNIX is not supported (see function in the
  * #else statement below). */
 static int
-add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
+add_unix_port(smartlist_t *ports, hs_port_config_t *p)
 {
   tor_assert(ports);
   tor_assert(p);
@@ -76,7 +77,7 @@ add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
  * on success else return -ENOSYS if AF_UNIX is not supported (see function
  * in the #else statement below). */
 static int
-set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
+set_unix_port(edge_connection_t *conn, hs_port_config_t *p)
 {
   tor_assert(conn);
   tor_assert(p);
@@ -92,7 +93,7 @@ set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
 #else /* !defined(HAVE_SYS_UN_H) */
 
 static int
-set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
+set_unix_port(edge_connection_t *conn, hs_port_config_t *p)
 {
   (void) conn;
   (void) p;
@@ -100,7 +101,7 @@ set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
 }
 
 static int
-add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
+add_unix_port(smartlist_t *ports, hs_port_config_t *p)
 {
   (void) ports;
   (void) p;
@@ -859,7 +860,7 @@ hs_get_subcredential(const ed25519_public_key_t *identity_pk,
 int
 hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
 {
-  rend_service_port_config_t *chosen_port;
+  hs_port_config_t *chosen_port;
   unsigned int warn_once = 0;
   smartlist_t *matching_ports;
 
@@ -867,7 +868,7 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
   tor_assert(conn);
 
   matching_ports = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(ports, rend_service_port_config_t *, p) {
+  SMARTLIST_FOREACH_BEGIN(ports, hs_port_config_t *, p) {
     if (TO_CONN(conn)->port != p->virtual_port) {
       continue;
     }
@@ -910,6 +911,138 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
     }
   }
   return (chosen_port) ? 0 : -1;
+}
+
+/** Return a new hs_port_config_t with its path set to
+ * <b>socket_path</b> or empty if <b>socket_path</b> is NULL */
+static hs_port_config_t *
+hs_port_config_new(const char *socket_path)
+{
+  if (!socket_path)
+    return tor_malloc_zero(sizeof(hs_port_config_t) + 1);
+
+  const size_t pathlen = strlen(socket_path) + 1;
+  hs_port_config_t *conf =
+    tor_malloc_zero(sizeof(hs_port_config_t) + pathlen);
+  memcpy(conf->unix_addr, socket_path, pathlen);
+  conf->is_unix_addr = 1;
+  return conf;
+}
+
+/** Parses a virtual-port to real-port/socket mapping separated by
+ * the provided separator and returns a new hs_port_config_t,
+ * or NULL and an optional error string on failure.
+ *
+ * The format is: VirtualPort SEP (IP|RealPort|IP:RealPort|'socket':path)?
+ *
+ * IP defaults to 127.0.0.1; RealPort defaults to VirtualPort.
+ */
+hs_port_config_t *
+hs_parse_port_config(const char *string, const char *sep,
+                               char **err_msg_out)
+{
+  smartlist_t *sl;
+  int virtport;
+  int realport = 0;
+  uint16_t p;
+  tor_addr_t addr;
+  hs_port_config_t *result = NULL;
+  unsigned int is_unix_addr = 0;
+  const char *socket_path = NULL;
+  char *err_msg = NULL;
+  char *addrport = NULL;
+
+  sl = smartlist_new();
+  smartlist_split_string(sl, string, sep,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+  if (smartlist_len(sl) < 1 || BUG(smartlist_len(sl) > 2)) {
+    err_msg = tor_strdup("Bad syntax in hidden service port configuration.");
+    goto err;
+  }
+  virtport = (int)tor_parse_long(smartlist_get(sl,0), 10, 1, 65535, NULL,NULL);
+  if (!virtport) {
+    tor_asprintf(&err_msg, "Missing or invalid port %s in hidden service "
+                   "port configuration", escaped(smartlist_get(sl,0)));
+
+    goto err;
+  }
+  if (smartlist_len(sl) == 1) {
+    /* No addr:port part; use default. */
+    realport = virtport;
+    tor_addr_from_ipv4h(&addr, 0x7F000001u); /* 127.0.0.1 */
+  } else {
+    int ret;
+
+    const char *addrport_element = smartlist_get(sl,1);
+    const char *rest = NULL;
+    int is_unix;
+    ret = port_cfg_line_extract_addrport(addrport_element, &addrport,
+                                         &is_unix, &rest);
+
+    if (ret < 0) {
+      tor_asprintf(&err_msg, "Couldn't process address <%s> from hidden "
+                   "service configuration", addrport_element);
+      goto err;
+    }
+
+    if (rest && strlen(rest)) {
+      err_msg = tor_strdup("HiddenServicePort parse error: invalid port "
+                           "mapping");
+      goto err;
+    }
+
+    if (is_unix) {
+      socket_path = addrport;
+      is_unix_addr = 1;
+    } else if (strchr(addrport, ':') || strchr(addrport, '.')) {
+      /* else try it as an IP:port pair if it has a : or . in it */
+      if (tor_addr_port_lookup(addrport, &addr, &p)<0) {
+        err_msg = tor_strdup("Unparseable address in hidden service port "
+                             "configuration.");
+        goto err;
+      }
+      realport = p?p:virtport;
+    } else {
+      /* No addr:port, no addr -- must be port. */
+      realport = (int)tor_parse_long(addrport, 10, 1, 65535, NULL, NULL);
+      if (!realport) {
+        tor_asprintf(&err_msg, "Unparseable or out-of-range port %s in "
+                     "hidden service port configuration.",
+                     escaped(addrport));
+        goto err;
+      }
+      tor_addr_from_ipv4h(&addr, 0x7F000001u); /* Default to 127.0.0.1 */
+    }
+  }
+
+  /* Allow room for unix_addr */
+  result = hs_port_config_new(socket_path);
+  result->virtual_port = virtport;
+  result->is_unix_addr = is_unix_addr;
+  if (!is_unix_addr) {
+    result->real_port = realport;
+    tor_addr_copy(&result->real_addr, &addr);
+    result->unix_addr[0] = '\0';
+  }
+
+ err:
+  tor_free(addrport);
+  if (err_msg_out != NULL) {
+    *err_msg_out = err_msg;
+  } else {
+    tor_free(err_msg);
+  }
+  SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
+  smartlist_free(sl);
+
+  return result;
+}
+
+/** Release all storage held in a hs_port_config_t. */
+void
+hs_port_config_free_(hs_port_config_t *p)
+{
+  tor_free(p);
 }
 
 /** Using a base32 representation of a service address, parse its content into
@@ -1140,7 +1273,7 @@ hs_service_requires_uptime_circ(const smartlist_t *ports)
 {
   tor_assert(ports);
 
-  SMARTLIST_FOREACH_BEGIN(ports, rend_service_port_config_t *, p) {
+  SMARTLIST_FOREACH_BEGIN(ports, hs_port_config_t *, p) {
     if (smartlist_contains_int_as_string(get_options()->LongLivedPorts,
                                          p->virtual_port)) {
       return 1;

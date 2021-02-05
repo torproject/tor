@@ -210,7 +210,7 @@ typedef struct hs_service_config_t {
   /** Have we explicitly set HiddenServiceVersion? */
   unsigned int hs_version_explicitly_set : 1;
 
-  /** List of rend_service_port_config_t */
+  /** List of hs_port_config_t */
   smartlist_t *ports;
 
   /** Path on the filesystem where the service persistent data is stored. NULL

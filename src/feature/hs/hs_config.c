@@ -487,8 +487,8 @@ config_generic_service(const hs_opts_t *hs_opts,
        portline; portline = portline->next) {
     char *err_msg = NULL;
     /* XXX: Can we rename this? */
-    rend_service_port_config_t *portcfg =
-      rend_service_parse_port_config(portline->value, " ", &err_msg);
+    hs_port_config_t *portcfg =
+      hs_parse_port_config(portline->value, " ", &err_msg);
     if (!portcfg) {
       if (err_msg) {
         log_warn(LD_CONFIG, "%s", err_msg);

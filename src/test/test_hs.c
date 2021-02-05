@@ -646,14 +646,12 @@ test_single_onion_poisoning(void *arg)
   /* Add port to service 1 */
   service_1->ports = smartlist_new();
   service_2->ports = smartlist_new();
-  rend_service_port_config_t *port1 = rend_service_parse_port_config("80", " ",
-                                                                     &err_msg);
+  hs_port_config_t *port1 = hs_parse_port_config("80", " ", &err_msg);
   tt_assert(port1);
   tt_ptr_op(err_msg, OP_EQ, NULL);
   smartlist_add(service_1->ports, port1);
 
-  rend_service_port_config_t *port2 = rend_service_parse_port_config("90", " ",
-                                                                     &err_msg);
+  hs_port_config_t *port2 = hs_parse_port_config("90", " ", &err_msg);
   /* Add port to service 2 */
   tt_assert(port2);
   tt_ptr_op(err_msg, OP_EQ, NULL);

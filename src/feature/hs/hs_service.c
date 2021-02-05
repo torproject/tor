@@ -264,8 +264,8 @@ service_clear_config(hs_service_config_t *config)
   }
   tor_free(config->directory_path);
   if (config->ports) {
-    SMARTLIST_FOREACH(config->ports, rend_service_port_config_t *, p,
-                      rend_service_port_config_free(p););
+    SMARTLIST_FOREACH(config->ports, hs_port_config_t *, p,
+                      hs_port_config_free(p););
     smartlist_free(config->ports);
   }
   if (config->clients) {
