@@ -526,8 +526,8 @@ router_perform_bandwidth_test(int num_circs, time_t now)
   origin_circuit_t *circ = NULL;
 
   log_notice(LD_OR,"Performing bandwidth self-test...done.");
-  while ((circ = circuit_get_next_by_pk_and_purpose(circ, NULL,
-                                              CIRCUIT_PURPOSE_TESTING))) {
+  while ((circ = circuit_get_next_by_purpose(circ,
+                                             CIRCUIT_PURPOSE_TESTING))) {
     /* dump cells_per_circuit drop cells onto this circ */
     int i = cells_per_circuit;
     if (circ->base_.state != CIRCUIT_STATE_OPEN)

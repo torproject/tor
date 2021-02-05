@@ -33,9 +33,6 @@ struct edge_connection_t {
   /** A pointer to which node in the circ this conn exits at.  Set for AP
    * connections and for hidden service exit connections. */
   struct crypt_path_t *cpath_layer;
-  /** What rendezvous service are we querying for (if an AP) or providing (if
-   * an exit)? */
-  rend_data_t *rend_data;
 
   /* Hidden service connection identifier for edge connections. Used by the HS
    * client-side code to identify client SOCKS connections and by the

@@ -91,8 +91,6 @@
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
-#include "feature/rend/rendcache.h"
-#include "feature/rend/rendservice.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/connstats.h"
@@ -1468,8 +1466,7 @@ get_my_roles(const or_options_t *options)
   int is_relay = server_mode(options);
   int is_dirauth = authdir_mode_v3(options);
   int is_bridgeauth = authdir_mode_bridge(options);
-  int is_hidden_service = !!hs_service_get_num_services() ||
-                          !!rend_num_services();
+  int is_hidden_service = !!hs_service_get_num_services();
   int is_dirserver = dir_server_mode(options);
   int sending_control_events = control_any_per_second_event_enabled();
 
@@ -1826,7 +1823,7 @@ check_network_participation_callback(time_t now, const or_options_t *options)
   /* If we're running an onion service, we can't become dormant. */
   /* XXXX this would be nice to change, so that we can be dormant with a
    * service. */
-  if (hs_service_get_num_services() || rend_num_services()) {
+  if (hs_service_get_num_services()) {
     goto found_activity;
   }
 
@@ -2013,7 +2010,6 @@ clean_caches_callback(time_t now, const or_options_t *options)
 {
   /* Remove old information from rephist and the rend cache. */
   rep_history_clean(now - options->RephistTrackTime);
-  rend_cache_clean(now, REND_CACHE_TYPE_SERVICE);
   hs_cache_clean_as_client(now);
   hs_cache_clean_as_dir(now);
   microdesc_cache_rebuild(NULL, 0);
@@ -2032,7 +2028,6 @@ rend_cache_failure_clean_callback(time_t now, const or_options_t *options)
   /* We don't keep entries that are more than five minutes old so we try to
    * clean it as soon as we can since we want to make sure the client waits
    * as little as possible for reachability reasons. */
-  rend_cache_failure_clean(now);
   hs_cache_client_intro_state_clean(now);
   return 30;
 }

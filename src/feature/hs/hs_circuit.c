@@ -28,7 +28,6 @@
 #include "feature/hs/hs_service.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/nodelist.h"
-#include "feature/rend/rendservice.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -105,57 +104,6 @@ create_rend_cpath(const uint8_t *ntor_key_seed, size_t seed_len,
   return cpath;
 }
 
-/** We are a v2 legacy HS client: Create and return a crypt path for the hidden
- * service on the other side of the rendezvous circuit <b>circ</b>. Initialize
- * the crypt path crypto using the body of the RENDEZVOUS1 cell at
- * <b>rend_cell_body</b> (which must be at least DH1024_KEY_LEN+DIGEST_LEN
- * bytes).
- */
-static crypt_path_t *
-create_rend_cpath_legacy(origin_circuit_t *circ, const uint8_t *rend_cell_body)
-{
-  crypt_path_t *hop = NULL;
-  char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN];
-
-  /* first DH1024_KEY_LEN bytes are g^y from the service. Finish the dh
-   * handshake...*/
-  tor_assert(circ->build_state);
-  tor_assert(circ->build_state->pending_final_cpath);
-  hop = circ->build_state->pending_final_cpath;
-
-  tor_assert(hop->rend_dh_handshake_state);
-  if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN, hop->rend_dh_handshake_state,
-                               (char*)rend_cell_body, DH1024_KEY_LEN,
-                               keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
-    log_warn(LD_GENERAL, "Couldn't complete DH handshake.");
-    goto err;
-  }
-  /* ... and set up cpath. */
-  if (cpath_init_circuit_crypto(hop,
-                                keys+DIGEST_LEN, sizeof(keys)-DIGEST_LEN,
-                                0, 0) < 0)
-    goto err;
-
-  /* Check whether the digest is right... */
-  if (tor_memneq(keys, rend_cell_body+DH1024_KEY_LEN, DIGEST_LEN)) {
-    log_warn(LD_PROTOCOL, "Incorrect digest of key material.");
-    goto err;
-  }
-
-  /* clean up the crypto stuff we just made */
-  crypto_dh_free(hop->rend_dh_handshake_state);
-  hop->rend_dh_handshake_state = NULL;
-
-  goto done;
-
- err:
-  hop = NULL;
-
- done:
-  memwipe(keys, 0, sizeof(keys));
-  return hop;
-}
-
 /** Append the final <b>hop</b> to the cpath of the rend <b>circ</b>, and mark
  * <b>circ</b> ready for use to transfer HS relay cells. */
 static void
@@ -184,13 +132,6 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   /* Append the hop to the cpath of this circuit */
   cpath_extend_linked_list(&circ->cpath, hop);
 
-  /* In legacy code, 'pending_final_cpath' points to the final hop we just
-   * appended to the cpath. We set the original pointer to NULL so that we
-   * don't double free it. */
-  if (circ->build_state) {
-    circ->build_state->pending_final_cpath = NULL;
-  }
-
   /* Finally, mark circuit as ready to be used for client streams */
   if (!is_service_side) {
     circuit_try_attaching_streams(circ);
@@ -198,7 +139,7 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
 }
 
 /** For a given circuit and a service introduction point object, register the
- * intro circuit to the circuitmap. This supports legacy intro point. */
+ * intro circuit to the circuitmap. */
 static void
 register_intro_circ(const hs_service_intro_point_t *ip,
                     origin_circuit_t *circ)
@@ -206,13 +147,8 @@ register_intro_circ(const hs_service_intro_point_t *ip,
   tor_assert(ip);
   tor_assert(circ);
 
-  if (ip->base.is_only_legacy) {
-    hs_circuitmap_register_intro_circ_v2_service_side(circ,
-                                                      ip->legacy_key_digest);
-  } else {
-    hs_circuitmap_register_intro_circ_v3_service_side(circ,
-                                         &ip->auth_key_kp.pubkey);
-  }
+  hs_circuitmap_register_intro_circ_v3_service_side(circ,
+                                                    &ip->auth_key_kp.pubkey);
 }
 
 /** Return the number of opened introduction circuit for the given circuit that
@@ -605,10 +541,6 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
 
   /* Populate the introduce1 data object. */
   memset(intro1_data, 0, sizeof(hs_cell_introduce1_data_t));
-  if (ip->legacy.key != NULL) {
-    intro1_data->is_legacy = 1;
-    intro1_data->legacy_key = ip->legacy.key;
-  }
   intro1_data->auth_pk = &ip->auth_key_cert->signed_key;
   intro1_data->enc_pk = &ip->enc_key;
   intro1_data->subcredential = subcredential;
@@ -635,8 +567,8 @@ cleanup_on_close_client_circ(circuit_t *circ)
   if (circuit_is_hs_v3(circ)) {
     hs_client_circuit_cleanup_on_close(circ);
   }
-  /* It is possible the circuit has an HS purpose but no identifier (rend_data
-   * or hs_ident). Thus possible that this passes through. */
+  /* It is possible the circuit has an HS purpose but no identifier (hs_ident).
+   * Thus possible that this passes through. */
 }
 
 /** Helper: cleanup function for client circuit. This is for every HS version.
@@ -649,8 +581,8 @@ cleanup_on_free_client_circ(circuit_t *circ)
   if (circuit_is_hs_v3(circ)) {
     hs_client_circuit_cleanup_on_free(circ);
   }
-  /* It is possible the circuit has an HS purpose but no identifier (rend_data
-   * or hs_ident). Thus possible that this passes through. */
+  /* It is possible the circuit has an HS purpose but no identifier (hs_ident).
+   * Thus possible that this passes through. */
 }
 
 /* ========== */
@@ -664,12 +596,7 @@ hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip)
 {
   tor_assert(ip);
 
-  if (ip->base.is_only_legacy) {
-    return hs_circuitmap_get_intro_circ_v2_service_side(ip->legacy_key_digest);
-  } else {
-    return hs_circuitmap_get_intro_circ_v3_service_side(
-                                        &ip->auth_key_kp.pubkey);
-  }
+  return hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
 }
 
 /** Return an introduction point established circuit matching the given intro
@@ -682,12 +609,7 @@ hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
 
   tor_assert(ip);
 
-  if (ip->base.is_only_legacy) {
-    circ = hs_circuitmap_get_intro_circ_v2_service_side(ip->legacy_key_digest);
-  } else {
-    circ = hs_circuitmap_get_intro_circ_v3_service_side(
-                                        &ip->auth_key_kp.pubkey);
-  }
+  circ = hs_circuitmap_get_intro_circ_v3_service_side(&ip->auth_key_kp.pubkey);
 
   /* Only return circuit if it is established. */
   return (circ && TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO) ?
@@ -695,8 +617,7 @@ hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
 }
 
 /** Called when we fail building a rendezvous circuit at some point other than
- * the last hop: launches a new circuit to the same rendezvous point. This
- * supports legacy service.
+ * the last hop: launches a new circuit to the same rendezvous point.
  *
  * We currently relaunch connections to rendezvous points if:
  * - A rendezvous circuit timed out before connecting to RP.
@@ -726,8 +647,6 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
   /* Legacy services don't have a hidden service ident. */
   if (circ->hs_ident) {
     retry_service_rendezvous_point(circ);
-  } else {
-    rend_service_relaunch_rendezvous(circ);
   }
 
  done:
@@ -762,9 +681,7 @@ hs_circ_launch_intro_point(hs_service_t *service,
     goto end;
   }
   /* We only use a one-hop path on the first attempt. If the first attempt
-   * fails, we use a 3-hop path for reachability / reliability.
-   * (Unlike v2, retries is incremented by the caller before it calls this
-   * function.) */
+   * fails, we use a 3-hop path for reachability / reliability. */
   if (direct_conn && ip->circuit_retries == 1) {
     circ_flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
   }
@@ -952,10 +869,8 @@ hs_circ_handle_intro_established(const hs_service_t *service,
   }
 
   /* Try to parse the payload into a cell making sure we do actually have a
-   * valid cell. For a legacy node, it's an empty payload so as long as we
-   * have the cell, we are good. */
-  if (!ip->base.is_only_legacy &&
-      hs_cell_parse_intro_established(payload, payload_len) < 0) {
+   * valid cell. */
+  if (hs_cell_parse_intro_established(payload, payload_len) < 0) {
     log_warn(LD_REND, "Unable to parse the INTRO_ESTABLISHED cell on "
                       "circuit %u for service %s",
              TO_CIRCUIT(circ)->n_circ_id,
@@ -1108,31 +1023,6 @@ hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
   }
 
   finalize_rend_circuit(circ, hop, is_service_side);
-
-  return 0;
-}
-
-/** We are a v2 legacy HS client and we just received a RENDEZVOUS1 cell
- * <b>rend_cell_body</b> on <b>circ</b>. Finish up the DH key exchange and then
- * extend the crypt path of <b>circ</b> so that the hidden service is on the
- * other side. */
-int
-hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
-                                             const uint8_t *rend_cell_body)
-{
-
-  if (BUG(!circuit_purpose_is_correct_for_rend(
-                                      TO_CIRCUIT(circ)->purpose, 0))) {
-    return -1;
-  }
-
-  crypt_path_t *hop = create_rend_cpath_legacy(circ, rend_cell_body);
-  if (!hop) {
-    log_warn(LD_GENERAL, "Couldn't get v2 cpath.");
-    return -1;
-  }
-
-  finalize_rend_circuit(circ, hop, 0);
 
   return 0;
 }
@@ -1381,31 +1271,20 @@ hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ)
    * confirmed rendezsvous circuit but without an introduction ACK. */
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_REND_READY);
 
-  /* The v2 and v3 circuit are handled differently:
-   *
-   * v2: A circ's pending_final_cpath field is non-NULL iff it is a rend circ
-   * and we have tried to send an INTRODUCE1 cell specifying it. Thus, if the
-   * pending_final_cpath field *is* NULL, then we want to not spare it.
-   *
-   * v3: When the INTRODUCE1 cell is sent, the introduction encryption public
+  /* When the INTRODUCE1 cell is sent, the introduction encryption public
    * key is copied in the rendezvous circuit hs identifier. If it is a valid
    * key, we know that this circuit is waiting the ACK on the introduction
    * circuit. We want to _not_ spare the circuit if the key was never set. */
 
-  if (circ->rend_data) {
-    /* v2. */
-    if (circ->build_state && circ->build_state->pending_final_cpath != NULL) {
-      return true;
-    }
-  } else if (circ->hs_ident) {
+  if (circ->hs_ident) {
     /* v3. */
     if (curve25519_public_key_is_ok(&circ->hs_ident->intro_enc_pk)) {
       return true;
     }
   } else {
-    /* A circuit with an HS purpose without an hs_ident or rend_data in theory
-     * can not happen. In case, scream loudly and return false to the caller
-     * that the rendezvous was not sent in the INTRO1 cell. */
+    /* A circuit with an HS purpose without an hs_ident in theory can not
+     * happen. In case, scream loudly and return false to the caller that the
+     * rendezvous was not sent in the INTRO1 cell. */
     tor_assert_nonfatal_unreached();
   }
 

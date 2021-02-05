@@ -34,7 +34,6 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "core/mainloop/mainloop.h"
 #include "feature/nodelist/networkstatus.h"
-#include "feature/rend/rendservice.h"
 #include "feature/relay/router.h"
 #include "app/config/statefile.h"
 #include "core/or/circuitlist.h"
@@ -43,6 +42,7 @@
 #include "lib/time/tvdiff.h"
 #include "lib/encoding/confline.h"
 #include "feature/dirauth/authmode.h"
+#include "feature/hs/hs_service.h"
 #include "feature/relay/relay_periodic.h"
 
 #include "core/or/crypt_path_st.h"
@@ -145,8 +145,8 @@ circuit_build_times_disabled_(const or_options_t *options,
      *
      * If we fix both of these issues someday, we should test
      * these modes with LearnCircuitBuildTimeout on again. */
-    int single_onion_disabled = rend_service_allow_non_anonymous_connection(
-                                                                      options);
+    int single_onion_disabled = hs_service_allow_non_anonymous_connection(
+                                                               options);
 
     if (consensus_disabled || config_disabled || dirauth_disabled ||
         state_disabled || single_onion_disabled) {

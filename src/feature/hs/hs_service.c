@@ -29,7 +29,6 @@
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/node_select.h"
 #include "feature/nodelist/nodelist.h"
-#include "feature/rend/rendservice.h"
 #include "lib/crypt_ops/crypto_ope.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -2666,8 +2665,6 @@ run_housekeeping_event(time_t now)
 static void
 run_build_descriptor_event(time_t now)
 {
-  /* For v2 services, this step happens in the upload event. */
-
   /* Run v3+ events. */
   /* We start by rotating the descriptors only if needed. */
   rotate_all_descriptors(now);
@@ -2838,11 +2835,6 @@ run_build_circuit_event(time_t now)
   if (router_have_consensus_path() == CONSENSUS_PATH_UNKNOWN ||
       !have_completed_a_circuit()) {
     return;
-  }
-
-  /* Run v2 check. */
-  if (rend_num_services() > 0) {
-    rend_consider_services_intro_points(now);
   }
 
   /* Run v3+ check. */
@@ -3280,13 +3272,6 @@ refresh_service_descriptor(const hs_service_t *service,
 STATIC void
 run_upload_descriptor_event(time_t now)
 {
-  /* v2 services use the same function for descriptor creation and upload so
-   * we do everything here because the intro circuits were checked before. */
-  if (rend_num_services() > 0) {
-    rend_consider_services_upload(now);
-    rend_consider_descriptor_republication();
-  }
-
   /* Run v3+ check. */
   FOR_EACH_SERVICE_BEGIN(service) {
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
@@ -3615,6 +3600,54 @@ service_encode_descriptor(const hs_service_t *service,
 /* Public API */
 /* ========== */
 
+/* Are HiddenServiceSingleHopMode and HiddenServiceNonAnonymousMode consistent?
+ */
+static int
+hs_service_non_anonymous_mode_consistent(const or_options_t *options)
+{
+  /* !! is used to make these options boolean */
+  return (!! options->HiddenServiceSingleHopMode ==
+          !! options->HiddenServiceNonAnonymousMode);
+}
+
+/* Do the options allow onion services to make direct (non-anonymous)
+ * connections to introduction or rendezvous points?
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ * Returns true if tor is in HiddenServiceSingleHopMode. */
+int
+hs_service_allow_non_anonymous_connection(const or_options_t *options)
+{
+  tor_assert(hs_service_non_anonymous_mode_consistent(options));
+  return options->HiddenServiceSingleHopMode ? 1 : 0;
+}
+
+/* Do the options allow us to reveal the exact startup time of the onion
+ * service?
+ * Single Onion Services prioritise availability over hiding their
+ * startup time, as their IP address is publicly discoverable anyway.
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ * Returns true if tor is in non-anonymous hidden service mode. */
+int
+hs_service_reveal_startup_time(const or_options_t *options)
+{
+  tor_assert(hs_service_non_anonymous_mode_consistent(options));
+  return hs_service_non_anonymous_mode_enabled(options);
+}
+
+/* Is non-anonymous mode enabled using the HiddenServiceNonAnonymousMode
+ * config option?
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ */
+int
+hs_service_non_anonymous_mode_enabled(const or_options_t *options)
+{
+  tor_assert(hs_service_non_anonymous_mode_consistent(options));
+  return options->HiddenServiceNonAnonymousMode ? 1 : 0;
+}
+
 /** Called when a circuit was just cleaned up. This is done right before the
  * circuit is marked for close. */
 void
@@ -3641,7 +3674,7 @@ hs_service_circuit_cleanup_on_close(const circuit_t *circ)
   }
 }
 
-/** This is called every time the service map (v2 or v3) changes that is if an
+/** This is called every time the service map changes that is if an
  * element is added or removed. */
 void
 hs_service_map_has_changed(void)
@@ -3992,9 +4025,6 @@ hs_service_lists_fnames_for_sandbox(smartlist_t *file_list,
   tor_assert(file_list);
   tor_assert(dir_list);
 
-  /* Add files and dirs for legacy services. */
-  rend_services_add_filenames_to_lists(file_list, dir_list);
-
   /* Add files and dirs for v3+. */
   FOR_EACH_SERVICE_BEGIN(service) {
     /* Skip ephemeral service, they don't touch the disk. */
@@ -4046,9 +4076,6 @@ hs_service_receive_introduce2(origin_circuit_t *circ, const uint8_t *payload,
   if (circ->hs_ident) {
     ret = service_handle_introduce2(circ, payload, payload_len);
     hs_stats_note_introduce2_cell(1);
-  } else {
-    ret = rend_service_receive_introduction(circ, payload, payload_len);
-    hs_stats_note_introduce2_cell(0);
   }
 
  done:
@@ -4075,12 +4102,8 @@ hs_service_receive_intro_established(origin_circuit_t *circ,
     goto err;
   }
 
-  /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
-   * identifier hs_ident. Can't be both. */
   if (circ->hs_ident) {
     ret = service_handle_intro_established(circ, payload, payload_len);
-  } else {
-    ret = rend_service_intro_established(circ, payload, payload_len);
   }
 
   if (ret < 0) {
@@ -4099,21 +4122,15 @@ hs_service_circuit_has_opened(origin_circuit_t *circ)
 {
   tor_assert(circ);
 
-  /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
-   * identifier hs_ident. Can't be both. */
   switch (TO_CIRCUIT(circ)->purpose) {
   case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
     if (circ->hs_ident) {
       service_intro_circ_has_opened(circ);
-    } else {
-      rend_service_intro_has_opened(circ);
     }
     break;
   case CIRCUIT_PURPOSE_S_CONNECT_REND:
     if (circ->hs_ident) {
       service_rendezvous_circ_has_opened(circ);
-    } else {
-      rend_service_rendezvous_has_opened(circ);
     }
     break;
   default:
@@ -4141,11 +4158,6 @@ hs_service_get_version_from_key(const hs_service_t *service)
     version = HS_VERSION_THREE;
     goto end;
   }
-  /* Version 2 check. */
-  if (rend_service_key_on_disk(directory_path)) {
-    version = HS_VERSION_TWO;
-    goto end;
-  }
 
  end:
   return version;
@@ -4156,13 +4168,6 @@ hs_service_get_version_from_key(const hs_service_t *service)
 int
 hs_service_load_all_keys(void)
 {
-  /* Load v2 service keys if we have v2. */
-  if (rend_num_services() != 0) {
-    if (rend_service_load_all_keys(NULL) < 0) {
-      goto err;
-    }
-  }
-
   /* Load or/and generate them for v3+. */
   SMARTLIST_FOREACH_BEGIN(hs_service_staging_list, hs_service_t *, service) {
     /* Ignore ephemeral service, they already have their keys set. */
@@ -4362,9 +4367,6 @@ hs_service_init(void)
   tor_assert(!hs_service_map);
   tor_assert(!hs_service_staging_list);
 
-  /* v2 specific. */
-  rend_service_init();
-
   hs_service_map = tor_malloc_zero(sizeof(struct hs_service_ht));
   HT_INIT(hs_service_ht, hs_service_map);
 
@@ -4375,7 +4377,6 @@ hs_service_init(void)
 void
 hs_service_free_all(void)
 {
-  rend_service_free_all();
   service_free_all();
   hs_config_free_all();
 }

@@ -47,9 +47,7 @@
 #include "feature/relay/relay_find_addr.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
-#include "feature/rend/rendcache.h"
 #include "feature/rend/rendcommon.h"
-#include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 
 #include "lib/cc/ctassert.h"
@@ -66,7 +64,6 @@
 #include "feature/nodelist/networkstatus_st.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
-#include "feature/rend/rend_service_descriptor_st.h"
 
 /** Maximum size, in bytes, for any directory object that we've downloaded. */
 #define MAX_DIR_DL_SIZE ((1<<24)-1) /* 16 MB - 1 */
@@ -119,10 +116,6 @@ dir_conn_purpose_to_string(int purpose)
       return "status vote fetch";
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
       return "consensus signature fetch";
-    case DIR_PURPOSE_FETCH_RENDDESC_V2:
-      return "hidden-service v2 descriptor fetch";
-    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
-      return "hidden-service v2 descriptor upload";
     case DIR_PURPOSE_FETCH_HSDESC:
       return "hidden-service descriptor fetch";
     case DIR_PURPOSE_UPLOAD_HSDESC:
@@ -949,7 +942,6 @@ directory_request_new(uint8_t dir_purpose)
   tor_assert(dir_purpose >= DIR_PURPOSE_MIN_);
   tor_assert(dir_purpose <= DIR_PURPOSE_MAX_);
   tor_assert(dir_purpose != DIR_PURPOSE_SERVER);
-  tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2);
   tor_assert(dir_purpose != DIR_PURPOSE_HAS_FETCHED_HSDESC);
 
   directory_request_t *result = tor_malloc_zero(sizeof(*result));
@@ -1085,21 +1077,6 @@ directory_request_add_header(directory_request_t *req,
                              const char *val)
 {
   config_line_prepend(&req->additional_headers, key, val);
-}
-/**
- * Set an object containing HS data to be associated with this request.  Note
- * that only an alias to <b>query</b> is stored, so the <b>query</b> object
- * must outlive the request.
- */
-void
-directory_request_set_rend_query(directory_request_t *req,
-                                 const rend_data_t *query)
-{
-  if (query) {
-    tor_assert(req->dir_purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 ||
-               req->dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2);
-  }
-  req->rend_query = query;
 }
 /**
  * Set an object containing HS connection identifier to be associated with
@@ -1249,7 +1226,6 @@ directory_initiate_request,(directory_request_t *request))
   const uint8_t router_purpose = request->router_purpose;
   const dir_indirection_t indirection = request->indirection;
   const char *resource = request->resource;
-  const rend_data_t *rend_query = request->rend_query;
   const hs_ident_dir_conn_t *hs_ident = request->hs_ident;
   circuit_guard_state_t *guard_state = request->guard_state;
 
@@ -1285,7 +1261,7 @@ directory_initiate_request,(directory_request_t *request))
 
   if (purpose_needs_anonymity(dir_purpose, router_purpose, resource)) {
     tor_assert(anonymized_connection ||
-               rend_non_anonymous_mode_enabled(options));
+               hs_service_non_anonymous_mode_enabled(options));
   }
 
   /* use encrypted begindir connections for everything except relays
@@ -1337,15 +1313,7 @@ directory_initiate_request,(directory_request_t *request))
   /* XXXX This is a bad name for this field now. */
   conn->dirconn_direct = !anonymized_connection;
 
-  /* copy rendezvous data, if any */
-  if (rend_query) {
-    /* We can't have both v2 and v3+ identifier. */
-    tor_assert_nonfatal(!hs_ident);
-    conn->rend_data = rend_data_dup(rend_query);
-  }
   if (hs_ident) {
-    /* We can't have both v2 and v3+ identifier. */
-    tor_assert_nonfatal(!rend_query);
     conn->hs_ident = hs_ident_dir_conn_dup(hs_ident);
   }
 
@@ -1680,25 +1648,12 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "POST";
       url = tor_strdup("/tor/post/consensus-signature");
       break;
-    case DIR_PURPOSE_FETCH_RENDDESC_V2:
-      tor_assert(resource);
-      tor_assert(strlen(resource) <= REND_DESC_ID_V2_LEN_BASE32);
-      tor_assert(!payload);
-      httpcommand = "GET";
-      tor_asprintf(&url, "/tor/rendezvous2/%s", resource);
-      break;
     case DIR_PURPOSE_FETCH_HSDESC:
       tor_assert(resource);
       tor_assert(strlen(resource) <= ED25519_BASE64_LEN);
       tor_assert(!payload);
       httpcommand = "GET";
       tor_asprintf(&url, "/tor/hs/3/%s", resource);
-      break;
-    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
-      tor_assert(!resource);
-      tor_assert(payload);
-      httpcommand = "POST";
-      url = tor_strdup("/tor/rendezvous2/publish");
       break;
     case DIR_PURPOSE_UPLOAD_HSDESC:
       tor_assert(resource);
@@ -1843,10 +1798,6 @@ static int handle_response_upload_vote(dir_connection_t *,
                                        const response_handler_args_t *);
 static int handle_response_upload_signatures(dir_connection_t *,
                                              const response_handler_args_t *);
-static int handle_response_fetch_renddesc_v2(dir_connection_t *,
-                                             const response_handler_args_t *);
-static int handle_response_upload_renddesc_v2(dir_connection_t *,
-                                              const response_handler_args_t *);
 static int handle_response_upload_hsdesc(dir_connection_t *,
                                          const response_handler_args_t *);
 
@@ -2193,9 +2144,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     case DIR_PURPOSE_FETCH_MICRODESC:
       rv = handle_response_fetch_microdesc(conn, &args);
       break;
-    case DIR_PURPOSE_FETCH_RENDDESC_V2:
-      rv = handle_response_fetch_renddesc_v2(conn, &args);
-      break;
     case DIR_PURPOSE_UPLOAD_DIR:
       rv = handle_response_upload_dir(conn, &args);
       break;
@@ -2204,9 +2152,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       break;
     case DIR_PURPOSE_UPLOAD_VOTE:
       rv = handle_response_upload_vote(conn, &args);
-      break;
-    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
-      rv = handle_response_upload_renddesc_v2(conn, &args);
       break;
     case DIR_PURPOSE_UPLOAD_HSDESC:
       rv = handle_response_upload_hsdesc(conn, &args);
@@ -2797,152 +2742,6 @@ handle_response_fetch_hsdesc_v3(dir_connection_t *conn,
            (int)body_len, status_code, escaped(reason));
 
   hs_client_dir_fetch_done(conn, reason, body, status_code);
-  return 0;
-}
-
-/**
- * Handler function: processes a response to a request for a v2 hidden service
- * descriptor.
- **/
-static int
-handle_response_fetch_renddesc_v2(dir_connection_t *conn,
-                                  const response_handler_args_t *args)
-{
-  tor_assert(conn->base_.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2);
-  const int status_code = args->status_code;
-  const char *reason = args->reason;
-  const char *body = args->body;
-  const size_t body_len = args->body_len;
-
-#define SEND_HS_DESC_FAILED_EVENT(reason)                               \
-  (control_event_hsv2_descriptor_failed(conn->rend_data,                \
-                                        conn->identity_digest,          \
-                                        reason))
-#define SEND_HS_DESC_FAILED_CONTENT()                                   \
-  (control_event_hs_descriptor_content(                                 \
-                                rend_data_get_address(conn->rend_data), \
-                                conn->requested_resource,               \
-                                conn->identity_digest,                  \
-                                NULL))
-
-  tor_assert(conn->rend_data);
-  log_info(LD_REND,"Received rendezvous descriptor (body size %d, status %d "
-           "(%s))",
-           (int)body_len, status_code, escaped(reason));
-  switch (status_code) {
-  case 200:
-    {
-      rend_cache_entry_t *entry = NULL;
-
-      if (rend_cache_store_v2_desc_as_client(body,
-                                             conn->requested_resource,
-                                             conn->rend_data, &entry) < 0) {
-        log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
-                 "Retrying at another directory.");
-        /* We'll retry when connection_about_to_close_connection()
-         * cleans this dir conn up. */
-        SEND_HS_DESC_FAILED_EVENT("BAD_DESC");
-        SEND_HS_DESC_FAILED_CONTENT();
-      } else {
-        char service_id[REND_SERVICE_ID_LEN_BASE32 + 1];
-        /* Should never be NULL here if we found the descriptor. */
-        tor_assert(entry);
-        rend_get_service_id(entry->parsed->pk, service_id);
-
-        /* success. notify pending connections about this. */
-        log_info(LD_REND, "Successfully fetched v2 rendezvous "
-                 "descriptor.");
-        control_event_hsv2_descriptor_received(service_id,
-                                               conn->rend_data,
-                                               conn->identity_digest);
-        control_event_hs_descriptor_content(service_id,
-                                            conn->requested_resource,
-                                            conn->identity_digest,
-                                            body);
-        conn->base_.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2;
-        memwipe(service_id, 0, sizeof(service_id));
-      }
-      break;
-    }
-  case 404:
-    /* Not there. We'll retry when
-     * connection_about_to_close_connection() cleans this conn up. */
-    log_info(LD_REND,"Fetching v2 rendezvous descriptor failed: "
-             "Retrying at another directory.");
-    SEND_HS_DESC_FAILED_EVENT("NOT_FOUND");
-    SEND_HS_DESC_FAILED_CONTENT();
-    break;
-  case 400:
-    log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
-             "http status 400 (%s). Dirserver didn't like our "
-             "v2 rendezvous query? Retrying at another directory.",
-             escaped(reason));
-    SEND_HS_DESC_FAILED_EVENT("QUERY_REJECTED");
-    SEND_HS_DESC_FAILED_CONTENT();
-    break;
-  default:
-    log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
-             "http status %d (%s) response unexpected while "
-             "fetching v2 hidden service descriptor (server %s). "
-             "Retrying at another directory.",
-             status_code, escaped(reason),
-             connection_describe_peer(TO_CONN(conn)));
-    SEND_HS_DESC_FAILED_EVENT("UNEXPECTED");
-    SEND_HS_DESC_FAILED_CONTENT();
-    break;
-  }
-
-  return 0;
-}
-
-/**
- * Handler function: processes a response to a POST request to upload a v2
- * hidden service descriptor.
- **/
-static int
-handle_response_upload_renddesc_v2(dir_connection_t *conn,
-                                   const response_handler_args_t *args)
-{
-  tor_assert(conn->base_.purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2);
-  const int status_code = args->status_code;
-  const char *reason = args->reason;
-
-#define SEND_HS_DESC_UPLOAD_FAILED_EVENT(reason)                        \
-    (control_event_hs_descriptor_upload_failed(                         \
-                                conn->identity_digest,                  \
-                                rend_data_get_address(conn->rend_data), \
-                                reason))
-
-  log_info(LD_REND,"Uploaded rendezvous descriptor (status %d "
-           "(%s))",
-           status_code, escaped(reason));
-  /* Without the rend data, we'll have a problem identifying what has been
-   * uploaded for which service. */
-  tor_assert(conn->rend_data);
-  switch (status_code) {
-  case 200:
-    log_info(LD_REND,
-             "Uploading rendezvous descriptor: finished with status "
-             "200 (%s)", escaped(reason));
-    control_event_hs_descriptor_uploaded(conn->identity_digest,
-                                   rend_data_get_address(conn->rend_data));
-    rend_service_desc_has_uploaded(conn->rend_data);
-    break;
-  case 400:
-    log_warn(LD_REND,"http status 400 (%s) response from dirserver "
-             "%s. Malformed rendezvous descriptor?",
-             escaped(reason), connection_describe_peer(TO_CONN(conn)));
-    SEND_HS_DESC_UPLOAD_FAILED_EVENT("UPLOAD_REJECTED");
-    break;
-  default:
-    log_warn(LD_REND,"http status %d (%s) response unexpected (server "
-             "%s).",
-             status_code, escaped(reason),
-             connection_describe_peer(TO_CONN(conn)));
-    SEND_HS_DESC_UPLOAD_FAILED_EVENT("UNEXPECTED");
-    break;
-  }
-
   return 0;
 }
 

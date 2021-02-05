@@ -71,12 +71,12 @@
 #include "core/or/relay.h"
 #include "core/or/scheduler.h"
 #include "feature/client/entrynodes.h"
+#include "feature/hs/hs_service.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/relay/router.h"
-#include "feature/rend/rendservice.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/rephist.h"
 #include "lib/evloop/timers.h"
@@ -1897,7 +1897,7 @@ channel_do_open_actions(channel_t *chan)
     if (!get_options()->ConnectionPadding) {
       /* Disable if torrc disabled */
       channelpadding_disable_padding_on_channel(chan);
-    } else if (rend_service_allow_non_anonymous_connection(get_options()) &&
+    } else if (hs_service_allow_non_anonymous_connection(get_options()) &&
                !networkstatus_get_param(NULL,
                                         CHANNELPADDING_SOS_PARAM,
                                         CHANNELPADDING_SOS_DEFAULT, 0, 1)) {

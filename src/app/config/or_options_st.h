@@ -336,7 +336,7 @@ struct or_options_t {
   /* Makes hidden service clients and servers non-anonymous on this tor
    * instance. Allows the non-anonymous HiddenServiceSingleHopMode. Enables
    * non-anonymous behaviour in the hidden service protocol.
-   * Use rend_service_non_anonymous_mode_enabled() instead of using this option
+   * Use hs_service_non_anonymous_mode_enabled() instead of using this option
    * directly.
    */
   int HiddenServiceNonAnonymousMode;

@@ -69,7 +69,6 @@
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/relay/selftest.h"
-#include "feature/rend/rendcommon.h"
 #include "feature/stats/predict_ports.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/trace/events.h"
@@ -1331,16 +1330,13 @@ circuit_truncated(origin_circuit_t *circ, int reason)
  *     CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT)
  *
  *   - A hidden service connecting to a rendezvous point, which the
- *     client picked (CIRCUIT_PURPOSE_S_CONNECT_REND, via
- *     rend_service_receive_introduction() and
- *     rend_service_relaunch_rendezvous)
+ *     client picked (CIRCUIT_PURPOSE_S_CONNECT_REND.
  *
  * There are currently two situations where we picked the exit node
  * ourselves, making DEFAULT_ROUTE_LEN a safe circuit length:
  *
  *   - We are a hidden service connecting to an introduction point
- *     (CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, via
- *     rend_service_launch_establish_intro())
+ *     (CIRCUIT_PURPOSE_S_ESTABLISH_INTRO).
  *
  *   - We are a router testing its own reachabiity
  *     (CIRCUIT_PURPOSE_TESTING, via router_do_reachability_checks())
@@ -2030,7 +2026,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
 
   if (state->onehop_tunnel) {
     log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel%s.",
-              (rend_allow_non_anonymous_connection(get_options()) ?
+              (hs_service_allow_non_anonymous_connection(get_options()) ?
                ", or intro or rendezvous connection" : ""));
     state->desired_path_len = 1;
   } else {

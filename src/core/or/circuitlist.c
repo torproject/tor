@@ -43,7 +43,6 @@
  * For hidden services, we need to be able to look up introduction point
  * circuits and rendezvous circuits by cookie, key, etc.  These are
  * currently handled with linear searches in
- * circuit_get_ready_rend_circuit_by_rend_data(),
  * circuit_get_next_by_pk_and_purpose(), and with hash lookups in
  * circuit_get_rendezvous() and circuit_get_intro_point().
  *
@@ -77,6 +76,7 @@
 #include "feature/dircommon/directory.h"
 #include "feature/client/entrynodes.h"
 #include "core/mainloop/mainloop.h"
+#include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_ident.h"
@@ -88,7 +88,6 @@
 #include "core/or/policies.h"
 #include "core/or/relay.h"
 #include "core/crypto/relay_crypto.h"
-#include "feature/rend/rendcache.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/bwhist.h"
@@ -135,7 +134,6 @@ static smartlist_t *circuits_pending_other_guards = NULL;
  * circuit_mark_for_close and which are waiting for circuit_about_to_free. */
 static smartlist_t *circuits_pending_close = NULL;
 
-static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
 static void circuit_about_to_free_atexit(circuit_t *circ);
 static void circuit_about_to_free(circuit_t *circ);
 
@@ -1163,8 +1161,6 @@ circuit_free_(circuit_t *circ)
 
     if (ocirc->build_state) {
         extend_info_free(ocirc->build_state->chosen_exit);
-        cpath_free(ocirc->build_state->pending_final_cpath);
-        cpath_ref_decref(ocirc->build_state->service_pending_final_cpath_ref);
     }
     tor_free(ocirc->build_state);
 
@@ -1177,7 +1173,6 @@ circuit_free_(circuit_t *circ)
     circuit_clear_cpath(ocirc);
 
     crypto_pk_free(ocirc->intro_key);
-    rend_data_free(ocirc->rend_data);
 
     /* Finally, free the identifier of the circuit and nullify it so multiple
      * cleanup will work. */
@@ -1352,18 +1347,6 @@ circuit_free_all(void)
     }
   }
   HT_CLEAR(chan_circid_map, &chan_circid_map);
-}
-
-/** Release a crypt_path_reference_t*, which may be NULL. */
-static void
-cpath_ref_decref(crypt_path_reference_t *cpath_ref)
-{
-  if (cpath_ref != NULL) {
-    if (--(cpath_ref->refcount) == 0) {
-      cpath_free(cpath_ref->cpath);
-      tor_free(cpath_ref);
-    }
-  }
 }
 
 /** A helper function for circuit_dump_by_conn() below. Log a bunch
@@ -1684,37 +1667,6 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
   smartlist_free(detached);
 }
 
-/** Return a circ such that
- *  - circ-\>rend_data-\>onion_address is equal to
- *    <b>rend_data</b>-\>onion_address,
- *  - circ-\>rend_data-\>rend_cookie is equal to
- *    <b>rend_data</b>-\>rend_cookie, and
- *  - circ-\>purpose is equal to CIRCUIT_PURPOSE_C_REND_READY.
- *
- * Return NULL if no such circuit exists.
- */
-origin_circuit_t *
-circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
-{
-  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
-    if (!circ->marked_for_close &&
-        circ->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
-      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-      if (ocirc->rend_data == NULL) {
-        continue;
-      }
-      if (!rend_cmp_service_ids(rend_data_get_address(rend_data),
-                                rend_data_get_address(ocirc->rend_data)) &&
-          tor_memeq(ocirc->rend_data->rend_cookie,
-                    rend_data->rend_cookie,
-                    REND_COOKIE_LEN))
-        return ocirc;
-    }
-  }
-  SMARTLIST_FOREACH_END(circ);
-  return NULL;
-}
-
 /** Return the first introduction circuit originating from the global circuit
  * list after <b>start</b> or at the start of the list if <b>start</b> is
  * NULL. Return NULL if no circuit is found.
@@ -1811,14 +1763,10 @@ circuit_get_next_service_rp_circ(origin_circuit_t *start)
 }
 
 /** Return the first circuit originating here in global_circuitlist after
- * <b>start</b> whose purpose is <b>purpose</b>, and where <b>digest</b> (if
- * set) matches the private key digest of the rend data associated with the
- * circuit. Return NULL if no circuit is found. If <b>start</b> is NULL,
- * begin at the start of the list.
- */
+ * <b>start</b> whose purpose is <b>purpose</b>. Return NULL if no circuit is
+ * found. If <b>start</b> is NULL, begin at the start of the list. */
 origin_circuit_t *
-circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
-                                   const uint8_t *digest, uint8_t purpose)
+circuit_get_next_by_purpose(origin_circuit_t *start, uint8_t purpose)
 {
   int idx;
   smartlist_t *lst = circuit_get_global_list();
@@ -1830,7 +1778,6 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
 
   for ( ; idx < smartlist_len(lst); ++idx) {
     circuit_t *circ = smartlist_get(lst, idx);
-    origin_circuit_t *ocirc;
 
     if (circ->marked_for_close)
       continue;
@@ -1841,12 +1788,7 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
     if (BUG(!CIRCUIT_PURPOSE_IS_ORIGIN(circ->purpose))) {
       break;
     }
-    ocirc = TO_ORIGIN_CIRCUIT(circ);
-    if (!digest)
-      return ocirc;
-    if (rend_circuit_pk_digest_eq(ocirc, digest)) {
-      return ocirc;
-    }
+    return TO_ORIGIN_CIRCUIT(circ);
   }
   return NULL;
 }
@@ -2670,7 +2612,7 @@ circuits_handle_oom(size_t current_allocation)
              tor_zlib_get_total_allocation(),
              tor_zstd_get_total_allocation(),
              tor_lzma_get_total_allocation(),
-             rend_cache_get_total_allocation());
+             hs_cache_get_total_allocation());
 
   {
     size_t mem_target = (size_t)(get_options()->MaxMemInQueues *

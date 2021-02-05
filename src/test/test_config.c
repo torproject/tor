@@ -41,7 +41,6 @@
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
 #include "core/or/policies.h"
-#include "feature/rend/rendservice.h"
 #include "feature/relay/relay_find_addr.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"

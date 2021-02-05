@@ -44,6 +44,7 @@
 #include "feature/dirparse/routerparse.h"
 #include "feature/hibernate/hibernate.h"
 #include "feature/hs/hs_dos.h"
+#include "feature/hs/hs_service.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/routerlist.h"
@@ -51,8 +52,6 @@
 #include "feature/relay/ext_orport.h"
 #include "feature/relay/routerkeys.h"
 #include "feature/relay/routermode.h"
-#include "feature/rend/rendcache.h"
-#include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/bwhist.h"
 #include "feature/stats/rephist.h"
@@ -427,7 +426,6 @@ dumpstats(int severity)
   dumpmemusage(severity);
 
   rep_hist_dump_stats(now,severity);
-  rend_service_dump_stats(severity);
   hs_service_dump_stats(severity);
 }
 
@@ -553,7 +551,6 @@ tor_init(int argc, char *argv[])
   rep_hist_init();
   bwhist_init();
   /* Initialize the service cache. */
-  rend_cache_init();
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
                       * cheap. */
 

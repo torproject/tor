@@ -130,7 +130,6 @@ src_test_test_SOURCES += \
 	src/test/log_test_helpers.c \
 	src/test/hs_test_helpers.c \
 	src/test/opts_test_helpers.c \
-	src/test/rend_test_helpers.c \
 	src/test/resolve_test_helpers.c \
 	src/test/rng_test_helpers.c \
 	src/test/test.c \
@@ -181,7 +180,6 @@ src_test_test_SOURCES += \
 	src/test/test_geoip.c \
 	src/test/test_guardfraction.c \
 	src/test/test_extorport.c \
-	src/test/test_hs.c \
 	src/test/test_hs_common.c \
 	src/test/test_hs_config.c \
 	src/test/test_hs_cell.c \
@@ -196,7 +194,6 @@ src_test_test_SOURCES += \
 	src/test/test_hs_descriptor.c \
 	src/test/test_hs_dos.c \
 	src/test/test_hs_metrics.c \
-	src/test/test_introduce.c \
 	src/test/test_keypin.c \
 	src/test/test_link_handshake.c \
 	src/test/test_logging.c \
@@ -227,7 +224,6 @@ src_test_test_SOURCES += \
 	src/test/test_relay.c \
 	src/test/test_relaycell.c \
 	src/test/test_relaycrypt.c \
-	src/test/test_rendcache.c \
 	src/test/test_replay.c \
 	src/test/test_router.c \
 	src/test/test_routerkeys.c \
@@ -380,7 +376,6 @@ noinst_HEADERS+= \
 	src/test/hs_test_helpers.h \
 	src/test/log_test_helpers.h \
 	src/test/opts_test_helpers.h \
-	src/test/rend_test_helpers.h \
 	src/test/resolve_test_helpers.h \
 	src/test/rng_test_helpers.h \
 	src/test/test.h \

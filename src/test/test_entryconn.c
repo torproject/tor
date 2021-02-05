@@ -17,7 +17,6 @@
 #include "feature/nodelist/nodelist.h"
 
 #include "feature/hs/hs_cache.h"
-#include "feature/rend/rendcache.h"
 
 #include "core/or/entry_connection_st.h"
 #include "core/or/socks_request_st.h"
@@ -748,7 +747,6 @@ test_entryconn_rewrite_onion_v3(void *arg)
   /* Make an onion connection using the SOCKS request */
   conn->entry_cfg.onion_traffic = 1;
   ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_SOCKS_WAIT;
-  tt_assert(!ENTRY_TO_EDGE_CONN(conn)->rend_data);
   tt_assert(!ENTRY_TO_EDGE_CONN(conn)->hs_ident);
 
   /* Handle SOCKS and rewrite! */
@@ -763,7 +761,6 @@ test_entryconn_rewrite_onion_v3(void *arg)
             "25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid");
   /* check that HS information got attached to the connection */
   tt_assert(ENTRY_TO_EDGE_CONN(conn)->hs_ident);
-  tt_assert(!ENTRY_TO_EDGE_CONN(conn)->rend_data);
 
  done:
   hs_free_all();

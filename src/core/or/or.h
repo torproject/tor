@@ -415,60 +415,6 @@ typedef struct rend_service_authorization_t {
   rend_auth_type_t auth_type;
 } rend_service_authorization_t;
 
-/** Client- and server-side data that is used for hidden service connection
- * establishment. Not all fields contain data depending on where this struct
- * is used. */
-typedef struct rend_data_t {
-  /* Hidden service protocol version of this base object. */
-  uint32_t version;
-
-  /** List of HSDir fingerprints on which this request has been sent to. This
-   * contains binary identity digest of the directory of size DIGEST_LEN. */
-  smartlist_t *hsdirs_fp;
-
-  /** Rendezvous cookie used by both, client and service. */
-  char rend_cookie[REND_COOKIE_LEN];
-
-  /** Number of streams associated with this rendezvous circuit. */
-  int nr_streams;
-} rend_data_t;
-
-typedef struct rend_data_v2_t {
-  /* Rendezvous base data. */
-  rend_data_t base_;
-
-  /** Onion address (without the .onion part) that a client requests. */
-  char onion_address[REND_SERVICE_ID_LEN_BASE32+1];
-
-  /** Descriptor ID for each replicas computed from the onion address. If
-   * the onion address is empty, this array MUST be empty. We keep them so
-   * we know when to purge our entry in the last hsdir request table. */
-  char descriptor_id[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS][DIGEST_LEN];
-
-  /** (Optional) descriptor cookie that is used by a client. */
-  char descriptor_cookie[REND_DESC_COOKIE_LEN];
-
-  /** Authorization type for accessing a service used by a client. */
-  rend_auth_type_t auth_type;
-
-  /** Descriptor ID for a client request. The control port command HSFETCH
-   * uses this. It's set if the descriptor query should only use this
-   * descriptor ID. */
-  char desc_id_fetch[DIGEST_LEN];
-
-  /** Hash of the hidden service's PK used by a service. */
-  char rend_pk_digest[DIGEST_LEN];
-} rend_data_v2_t;
-
-/* From a base rend_data_t object <b>d</d>, return the v2 object. */
-static inline
-rend_data_v2_t *TO_REND_DATA_V2(const rend_data_t *d)
-{
-  tor_assert(d);
-  tor_assert(d->version == 2);
-  return DOWNCAST(rend_data_v2_t, d);
-}
-
 /* Stub because we can't include hs_ident.h. */
 struct hs_ident_edge_conn_t;
 struct hs_ident_dir_conn_t;

@@ -1950,11 +1950,6 @@ hs_client_note_connection_attempt_succeeded(const edge_connection_t *conn)
 {
   tor_assert(connection_edge_is_rendezvous_stream(conn));
 
-  if (BUG(conn->rend_data && conn->hs_ident)) {
-    log_warn(LD_BUG, "Stream had both rend_data and hs_ident..."
-             "Prioritizing hs_ident");
-  }
-
   if (conn->hs_ident) { /* It's v3: pass it to the prop224 handler */
     note_connection_attempt_succeeded(conn->hs_ident);
     return;
@@ -2094,8 +2089,6 @@ hs_client_circuit_has_opened(origin_circuit_t *circ)
 {
   tor_assert(circ);
 
-  /* Handle both version. v2 uses rend_data and v3 uses the hs circuit
-   * identifier hs_ident. Can't be both. */
   switch (TO_CIRCUIT(circ)->purpose) {
   case CIRCUIT_PURPOSE_C_INTRODUCING:
     if (circ->hs_ident) {

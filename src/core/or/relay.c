@@ -78,7 +78,6 @@
 #include "core/or/reasons.h"
 #include "core/or/relay.h"
 #include "core/crypto/relay_crypto.h"
-#include "feature/rend/rendcache.h"
 #include "feature/rend/rendcommon.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/routerlist.h"
@@ -2711,8 +2710,8 @@ cell_queues_check_size(void)
   alloc += half_streams_get_total_allocation();
   alloc += buf_get_total_allocation();
   alloc += tor_compress_get_total_allocation();
-  const size_t rend_cache_total = rend_cache_get_total_allocation();
-  alloc += rend_cache_total;
+  const size_t hs_cache_total = hs_cache_get_total_allocation();
+  alloc += hs_cache_total;
   const size_t geoip_client_cache_total =
     geoip_client_cache_total_allocation();
   alloc += geoip_client_cache_total;
@@ -2724,9 +2723,9 @@ cell_queues_check_size(void)
       /* If we're spending over 20% of the memory limit on hidden service
        * descriptors, free them until we're down to 10%. Do the same for geoip
        * client cache. */
-      if (rend_cache_total > get_options()->MaxMemInQueues / 5) {
+      if (hs_cache_total > get_options()->MaxMemInQueues / 5) {
         const size_t bytes_to_remove =
-          rend_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
+          hs_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
         alloc -= hs_cache_handle_oom(now, bytes_to_remove);
       }
       if (geoip_client_cache_total > get_options()->MaxMemInQueues / 5) {

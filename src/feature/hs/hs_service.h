@@ -398,6 +398,11 @@ service_authorized_client_free_(hs_service_authorized_client_t *client);
   FREE_AND_NULL(hs_service_authorized_client_t, \
                            service_authorized_client_free_, (c))
 
+/* Config options. */
+int hs_service_allow_non_anonymous_connection(const or_options_t *options);
+int hs_service_non_anonymous_mode_enabled(const or_options_t *options);
+int hs_service_reveal_startup_time(const or_options_t *options);
+
 #ifdef HS_SERVICE_PRIVATE
 
 #ifdef TOR_UNIT_TESTS

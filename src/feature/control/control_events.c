@@ -2066,8 +2066,6 @@ control_event_hs_descriptor_upload(const char *onion_address,
 /** send HS_DESC event after got response from hs directory.
  *
  * NOTE: this is an internal function used by following functions:
- * control_event_hsv2_descriptor_received
- * control_event_hsv2_descriptor_failed
  * control_event_hsv3_descriptor_failed
  *
  * So do not call this function directly.
@@ -2138,82 +2136,6 @@ control_event_hs_descriptor_upload_end(const char *action,
   tor_free(reason_field);
 }
 
-/** For an HS descriptor query <b>rend_data</b>, using the
- * <b>onion_address</b> and HSDir fingerprint <b>hsdir_fp</b>, find out
- * which descriptor ID in the query is the right one.
- *
- * Return a pointer of the binary descriptor ID found in the query's object
- * or NULL if not found. */
-static const char *
-get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
-{
-  int replica;
-  const char *desc_id = NULL;
-  const rend_data_v2_t *rend_data_v2 = TO_REND_DATA_V2(rend_data);
-
-  /* Possible if the fetch was done using a descriptor ID. This means that
-   * the HSFETCH command was used. */
-  if (!tor_digest_is_zero(rend_data_v2->desc_id_fetch)) {
-    desc_id = rend_data_v2->desc_id_fetch;
-    goto end;
-  }
-
-  /* Without a directory fingerprint at this stage, we can't do much. */
-  if (hsdir_fp == NULL) {
-     goto end;
-  }
-
-  /* OK, we have an onion address so now let's find which descriptor ID
-   * is the one associated with the HSDir fingerprint. */
-  for (replica = 0; replica < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
-       replica++) {
-    const char *digest = rend_data_get_desc_id(rend_data, replica, NULL);
-
-    SMARTLIST_FOREACH_BEGIN(rend_data->hsdirs_fp, char *, fingerprint) {
-      if (tor_memcmp(fingerprint, hsdir_fp, DIGEST_LEN) == 0) {
-        /* Found it! This descriptor ID is the right one. */
-        desc_id = digest;
-        goto end;
-      }
-    } SMARTLIST_FOREACH_END(fingerprint);
-  }
-
- end:
-  return desc_id;
-}
-
-/** send HS_DESC RECEIVED event
- *
- * called when we successfully received a hidden service descriptor.
- */
-void
-control_event_hsv2_descriptor_received(const char *onion_address,
-                                       const rend_data_t *rend_data,
-                                       const char *hsdir_id_digest)
-{
-  char *desc_id_field = NULL;
-  const char *desc_id;
-
-  if (BUG(!rend_data || !hsdir_id_digest || !onion_address)) {
-    return;
-  }
-
-  desc_id = get_desc_id_from_query(rend_data, hsdir_id_digest);
-  if (desc_id != NULL) {
-    char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-    /* Set the descriptor ID digest to base32 so we can send it. */
-    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                  DIGEST_LEN);
-    /* Extra whitespace is needed before the value. */
-    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
-  }
-
-  event_hs_descriptor_receive_end("RECEIVED", onion_address, desc_id_field,
-                                  TO_REND_DATA_V2(rend_data)->auth_type,
-                                  hsdir_id_digest, NULL);
-  tor_free(desc_id_field);
-}
-
 /* Send HS_DESC RECEIVED event
  *
  * Called when we successfully received a hidden service descriptor. */
@@ -2251,40 +2173,6 @@ control_event_hs_descriptor_uploaded(const char *id_digest,
 
   control_event_hs_descriptor_upload_end("UPLOADED", onion_address,
                                          id_digest, NULL);
-}
-
-/** Send HS_DESC event to inform controller that query <b>rend_data</b>
- * failed to retrieve hidden service descriptor from directory identified by
- * <b>id_digest</b>. If NULL, "UNKNOWN" is used. If <b>reason</b> is not NULL,
- * add it to REASON= field.
- */
-void
-control_event_hsv2_descriptor_failed(const rend_data_t *rend_data,
-                                     const char *hsdir_id_digest,
-                                     const char *reason)
-{
-  char *desc_id_field = NULL;
-  const char *desc_id;
-
-  if (BUG(!rend_data)) {
-    return;
-  }
-
-  desc_id = get_desc_id_from_query(rend_data, hsdir_id_digest);
-  if (desc_id != NULL) {
-    char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-    /* Set the descriptor ID digest to base32 so we can send it. */
-    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
-                  DIGEST_LEN);
-    /* Extra whitespace is needed before the value. */
-    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
-  }
-
-  event_hs_descriptor_receive_end("FAILED", rend_data_get_address(rend_data),
-                                  desc_id_field,
-                                  TO_REND_DATA_V2(rend_data)->auth_type,
-                                  hsdir_id_digest, reason);
-  tor_free(desc_id_field);
 }
 
 /** Send HS_DESC event to inform controller that the query to

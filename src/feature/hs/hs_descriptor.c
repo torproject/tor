@@ -64,7 +64,6 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dirparse/parsecommon.h"
-#include "feature/rend/rendcache.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_config.h"
 #include "feature/nodelist/torcert.h" /* tor_cert_encode_ed22519() */

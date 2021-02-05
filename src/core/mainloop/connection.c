@@ -897,7 +897,6 @@ connection_free_minimal(connection_t *conn)
     }
   }
   if (CONN_IS_EDGE(conn)) {
-    rend_data_free(TO_EDGE_CONN(conn)->rend_data);
     hs_ident_edge_conn_free(TO_EDGE_CONN(conn)->hs_ident);
   }
   if (conn->type == CONN_TYPE_CONTROL) {
@@ -926,7 +925,6 @@ connection_free_minimal(connection_t *conn)
     tor_compress_free(dir_conn->compress_state);
     dir_conn_clear_spool(dir_conn);
 
-    rend_data_free(dir_conn->rend_data);
     hs_ident_dir_conn_free(dir_conn->hs_ident);
     if (dir_conn->guard_state) {
       /* Cancel before freeing, if it's still there. */
@@ -4802,34 +4800,6 @@ MOCK_IMPL(connection_t *,
 connection_get_by_type_nonlinked,(int type))
 {
   CONN_GET_TEMPLATE(conn, conn->type == type && !conn->linked);
-}
-
-/** Return a connection of type <b>type</b> that has rendquery equal
- * to <b>rendquery</b>, and that is not marked for close. If state
- * is non-zero, conn must be of that state too.
- */
-connection_t *
-connection_get_by_type_state_rendquery(int type, int state,
-                                       const char *rendquery)
-{
-  tor_assert(type == CONN_TYPE_DIR ||
-             type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);
-  tor_assert(rendquery);
-
-  CONN_GET_TEMPLATE(conn,
-       (conn->type == type &&
-        (!state || state == conn->state)) &&
-        (
-         (type == CONN_TYPE_DIR &&
-          TO_DIR_CONN(conn)->rend_data &&
-          !rend_cmp_service_ids(rendquery,
-                    rend_data_get_address(TO_DIR_CONN(conn)->rend_data)))
-         ||
-              (CONN_IS_EDGE(conn) &&
-               TO_EDGE_CONN(conn)->rend_data &&
-               !rend_cmp_service_ids(rendquery,
-                    rend_data_get_address(TO_EDGE_CONN(conn)->rend_data)))
-         ));
 }
 
 /** Return a new smartlist of dir_connection_t * from get_connection_array()

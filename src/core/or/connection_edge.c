@@ -97,7 +97,6 @@
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/rend/rendcommon.h"
-#include "feature/rend/rendservice.h"
 #include "feature/stats/predict_ports.h"
 #include "feature/stats/rephist.h"
 #include "lib/buf/buffers.h"
@@ -3823,13 +3822,7 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
   conn->base_.address = tor_strdup("(rendezvous)");
   conn->base_.state = EXIT_CONN_STATE_CONNECTING;
 
-  /* The circuit either has an hs identifier for v3+ or a rend_data for legacy
-   * service. */
-  if (origin_circ->rend_data) {
-    conn->rend_data = rend_data_dup(origin_circ->rend_data);
-    tor_assert(connection_edge_is_rendezvous_stream(conn));
-    ret = rend_service_set_connection_addr_port(conn, origin_circ);
-  } else if (origin_circ->hs_ident) {
+  if (origin_circ->hs_ident) {
     /* Setup the identifier to be the one for the circuit service. */
     conn->hs_ident =
       hs_ident_edge_conn_new(&origin_circ->hs_ident->identity_pk);
@@ -4392,10 +4385,8 @@ int
 connection_edge_is_rendezvous_stream(const edge_connection_t *conn)
 {
   tor_assert(conn);
-  /* It should not be possible to set both of these structs */
-  tor_assert_nonfatal(!(conn->rend_data && conn->hs_ident));
 
-  if (conn->rend_data || conn->hs_ident) {
+  if (conn->hs_ident) {
     return 1;
   }
   return 0;

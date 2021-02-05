@@ -64,7 +64,6 @@
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/routerset.h"
 #include "feature/nodelist/torcert.h"
-#include "feature/rend/rendservice.h"
 #include "lib/encoding/binascii.h"
 #include "lib/err/backtrace.h"
 #include "lib/geoip/geoip.h"
@@ -2471,7 +2470,6 @@ void
 router_dir_info_changed(void)
 {
   need_to_update_have_min_dir_info = 1;
-  rend_hsdir_routers_changed();
   hs_service_dir_info_changed();
   hs_client_dir_info_changed();
 }

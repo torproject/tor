@@ -142,9 +142,6 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_MICRODESC:
       return 0;
     case DIR_PURPOSE_HAS_FETCHED_HSDESC:
-    case DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2:
-    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
-    case DIR_PURPOSE_FETCH_RENDDESC_V2:
     case DIR_PURPOSE_FETCH_HSDESC:
     case DIR_PURPOSE_UPLOAD_HSDESC:
       return 1;

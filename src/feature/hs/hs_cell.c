@@ -9,7 +9,6 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "lib/crypt_ops/crypto_util.h"
-#include "feature/rend/rendservice.h"
 #include "feature/hs_common/replaycache.h"
 
 #include "feature/hs/hs_cell.h"
@@ -194,36 +193,9 @@ parse_introduce2_encrypted(const uint8_t *decrypted_data,
   return NULL;
 }
 
-/** Build a legacy ESTABLISH_INTRO cell with the given circuit nonce and RSA
- * encryption key. The encoded cell is put in cell_out that MUST at least be
- * of the size of RELAY_PAYLOAD_SIZE. Return the encoded cell length on
- * success else a negative value and cell_out is untouched. */
-static ssize_t
-build_legacy_establish_intro(const char *circ_nonce, crypto_pk_t *enc_key,
-                             uint8_t *cell_out)
-{
-  ssize_t cell_len;
-
-  tor_assert(circ_nonce);
-  tor_assert(enc_key);
-  tor_assert(cell_out);
-
-  memwipe(cell_out, 0, RELAY_PAYLOAD_SIZE);
-
-  cell_len = rend_service_encode_establish_intro_cell((char*)cell_out,
-                                                      RELAY_PAYLOAD_SIZE,
-                                                      enc_key, circ_nonce);
-  return cell_len;
-}
-
 /** Parse an INTRODUCE2 cell from payload of size payload_len for the given
  * service and circuit which are used only for logging purposes. The resulting
  * parsed cell is put in cell_ptr_out.
- *
- * This function only parses prop224 INTRODUCE2 cells even when the intro point
- * is a legacy intro point. That's because intro points don't actually care
- * about the contents of the introduce cell. Legacy INTRODUCE cells are only
- * used by the legacy system now.
  *
  * Return 0 on success else a negative value and cell_ptr_out is untouched. */
 static int
@@ -457,28 +429,6 @@ introduce1_set_auth_key(trn_cell_introduce1_t *cell,
          data->auth_pk->pubkey, trn_cell_introduce1_getlen_auth_key(cell));
 }
 
-/** Set the legacy ID field in the INTRODUCE1 cell from the given data. */
-static void
-introduce1_set_legacy_id(trn_cell_introduce1_t *cell,
-                         const hs_cell_introduce1_data_t *data)
-{
-  tor_assert(cell);
-  tor_assert(data);
-
-  if (data->is_legacy) {
-    uint8_t digest[DIGEST_LEN];
-    if (BUG(crypto_pk_get_digest(data->legacy_key, (char *) digest) < 0)) {
-      return;
-    }
-    memcpy(trn_cell_introduce1_getarray_legacy_key_id(cell),
-           digest, trn_cell_introduce1_getlen_legacy_key_id(cell));
-  } else {
-    /* We have to zeroed the LEGACY_KEY_ID field. */
-    memset(trn_cell_introduce1_getarray_legacy_key_id(cell), 0,
-           trn_cell_introduce1_getlen_legacy_key_id(cell));
-  }
-}
-
 /** Build and add to the given DoS cell extension the given parameter type and
  * value. */
 static void
@@ -608,8 +558,7 @@ build_establish_intro_extensions(const hs_service_config_t *service_config,
 /** Build an ESTABLISH_INTRO cell with the given circuit nonce and intro point
  * object. The encoded cell is put in cell_out that MUST at least be of the
  * size of RELAY_PAYLOAD_SIZE. Return the encoded cell length on success else
- * a negative value and cell_out is untouched. This function also supports
- * legacy cell creation. */
+ * a negative value and cell_out is untouched. */
 ssize_t
 hs_cell_build_establish_intro(const char *circ_nonce,
                               const hs_service_config_t *service_config,
@@ -624,16 +573,6 @@ hs_cell_build_establish_intro(const char *circ_nonce,
   tor_assert(circ_nonce);
   tor_assert(service_config);
   tor_assert(ip);
-
-  /* Quickly handle the legacy IP. */
-  if (ip->base.is_only_legacy) {
-    tor_assert(ip->legacy_key);
-    cell_len = build_legacy_establish_intro(circ_nonce, ip->legacy_key,
-                                            cell_out);
-    tor_assert(cell_len <= RELAY_PAYLOAD_SIZE);
-    /* Success or not we are done here. */
-    goto done;
-  }
 
   /* Build the extensions, if any. */
   extensions = build_establish_intro_extensions(service_config, ip);
@@ -1022,9 +961,6 @@ hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
   trn_cell_extension_set_num(ext, 0);
   trn_cell_introduce1_set_extensions(cell, ext);
 
-  /* Set the legacy ID field. */
-  introduce1_set_legacy_id(cell, data);
-
   /* Set the authentication key. */
   introduce1_set_auth_key(cell, data);
 
@@ -1066,18 +1002,6 @@ hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len)
   trn_cell_introduce_ack_t *cell = NULL;
 
   tor_assert(payload);
-
-  /* If it is a legacy IP, rend-spec.txt specifies that a ACK is 0 byte and a
-   * NACK is 1 byte. We can't use the legacy function for this so we have to
-   * do a special case. */
-  if (payload_len <= 1) {
-    if (payload_len == 0) {
-      ret = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
-    } else {
-      ret = TRUNNEL_HS_INTRO_ACK_STATUS_UNKNOWN_ID;
-    }
-    goto end;
-  }
 
   if (trn_cell_introduce_ack_parse(&cell, payload, payload_len) < 0) {
     log_info(LD_REND, "Invalid INTRODUCE_ACK cell. Unable to parse it.");

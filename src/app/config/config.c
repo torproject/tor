@@ -103,8 +103,6 @@
 #include "feature/relay/routermode.h"
 #include "feature/relay/relay_config.h"
 #include "feature/relay/transport_config.h"
-#include "feature/rend/rendcommon.h"
-#include "feature/rend/rendservice.h"
 #include "lib/geoip/geoip.h"
 #include "feature/stats/geoip_stats.h"
 #include "lib/compress/compress.h"
@@ -2089,7 +2087,7 @@ options_act,(const or_options_t *old_options))
     return -1;
   }
 
-  if (rend_non_anonymous_mode_enabled(options)) {
+  if (hs_service_non_anonymous_mode_enabled(options)) {
     log_warn(LD_GENERAL, "This copy of Tor was compiled or configured to run "
              "in a non-anonymous mode. It will provide NO ANONYMITY.");
   }
@@ -3199,7 +3197,7 @@ options_validate_single_onion(or_options_t *options, char **msg)
   }
 
   /* Now that we've checked that the two options are consistent, we can safely
-   * call the rend_service_* functions that abstract these options. */
+   * call the hs_service_* functions that abstract these options. */
 
   /* If you run an anonymous client with an active Single Onion service, the
    * client loses anonymity. */
@@ -3208,13 +3206,13 @@ options_validate_single_onion(or_options_t *options, char **msg)
                                options->NATDPort_set ||
                                options->DNSPort_set ||
                                options->HTTPTunnelPort_set);
-  if (rend_service_non_anonymous_mode_enabled(options) && client_port_set) {
+  if (hs_service_non_anonymous_mode_enabled(options) && client_port_set) {
     REJECT("HiddenServiceNonAnonymousMode is incompatible with using Tor as "
            "an anonymous client. Please set Socks/Trans/NATD/DNSPort to 0, or "
            "revert HiddenServiceNonAnonymousMode to 0.");
   }
 
-  if (rend_service_allow_non_anonymous_connection(options)
+  if (hs_service_allow_non_anonymous_connection(options)
       && options->UseEntryGuards) {
     /* Single Onion services only use entry guards when uploading descriptors;
      * all other connections are one-hop. Further, Single Onions causes the
@@ -3564,7 +3562,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
 
   if (!(options->UseEntryGuards) &&
       (options->RendConfigLines != NULL) &&
-      !rend_service_allow_non_anonymous_connection(options)) {
+      !hs_service_allow_non_anonymous_connection(options)) {
     log_warn(LD_CONFIG,
              "UseEntryGuards is disabled, but you have configured one or more "
              "hidden services on this Tor instance.  Your hidden services "
@@ -3607,7 +3605,7 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   }
 
   /* Single Onion Services: non-anonymous hidden services */
-  if (rend_service_non_anonymous_mode_enabled(options)) {
+  if (hs_service_non_anonymous_mode_enabled(options)) {
     log_warn(LD_CONFIG,
              "HiddenServiceNonAnonymousMode is set. Every hidden service on "
              "this tor instance is NON-ANONYMOUS. If "

@@ -26,7 +26,6 @@
 #include "test/test.h"
 #include "test/test_helpers.h"
 #include "test/log_test_helpers.h"
-#include "test/rend_test_helpers.h"
 #include "test/hs_test_helpers.h"
 
 #include "core/or/or.h"
@@ -58,7 +57,6 @@
 #include "feature/hs/hs_service.h"
 #include "feature/nodelist/networkstatus.h"
 #include "feature/nodelist/nodelist.h"
-#include "feature/rend/rendservice.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/fs/dir.h"
 
@@ -383,14 +381,13 @@ test_load_keys(void *arg)
 {
   int ret;
   char *conf = NULL;
-  char *hsdir_v2 = tor_strdup(get_fname("hs2"));
   char *hsdir_v3 = tor_strdup(get_fname("hs3"));
   char addr[HS_SERVICE_ADDR_LEN_BASE32 + 1];
 
   (void) arg;
 
-  /* We'll register two services, a v2 and a v3, then we'll load keys and
-   * validate that both are in a correct state. */
+  /* We'll register one service then we'll load keys and validate that both
+   * are in a correct state. */
 
   hs_init();
 
@@ -398,15 +395,6 @@ test_load_keys(void *arg)
   "HiddenServiceDir %s\n" \
   "HiddenServiceVersion %d\n" \
   "HiddenServicePort 65535\n"
-
-  /* v2 service. */
-  tor_asprintf(&conf, conf_fmt, hsdir_v2, HS_VERSION_TWO);
-  ret = helper_config_service(conf);
-  tor_free(conf);
-  tt_int_op(ret, OP_EQ, 0);
-  /* This one should now be registered into the v2 list. */
-  tt_int_op(get_hs_service_staging_list_size(), OP_EQ, 0);
-  tt_int_op(rend_num_services(), OP_EQ, 1);
 
   /* v3 service. */
   tor_asprintf(&conf, conf_fmt, hsdir_v3, HS_VERSION_THREE);
@@ -441,7 +429,6 @@ test_load_keys(void *arg)
   tt_assert(!s->config.is_client_auth_enabled);
 
  done:
-  tor_free(hsdir_v2);
   tor_free(hsdir_v3);
   hs_free_all();
 }
@@ -634,8 +621,8 @@ test_access_service(void *arg)
 
   (void) arg;
 
-  /* We'll register two services, a v2 and a v3, then we'll load keys and
-   * validate that both are in a correct state. */
+  /* We'll register one service then we'll load keys and validate that both
+   * are in a correct state. */
 
   hs_init();
 

@@ -27,8 +27,8 @@
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "lib/time/compat_time.h"
-#include "feature/rend/rendservice.h"
 #include "lib/evloop/timers.h"
+#include "feature/hs/hs_service.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/or_connection_st.h"
@@ -744,7 +744,7 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
     return CHANNELPADDING_WONTPAD;
   }
 
-  if (rend_service_allow_non_anonymous_connection(options) &&
+  if (hs_service_allow_non_anonymous_connection(options) &&
       !consensus_nf_pad_single_onion) {
     /* If the consensus just changed values, this channel may still
      * think padding is enabled. Negotiate it off. */
