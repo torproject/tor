@@ -1,0 +1,4 @@
+  o Minor bugfixes (compatibility):
+    - Fix a failure in the test cases when running on the hppa architecture,
+      along with a related test that might fail on other architectures in the
+      future. Fixes bug 40274; bugfix on 0.2.5.1-alpha.
