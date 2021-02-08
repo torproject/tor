@@ -138,6 +138,18 @@ static authority_cert_t *legacy_key_certificate = NULL;
  * used by tor-gencert to sign new signing keys and make new key
  * certificates. */
 
+/** Indicate if the IPv6 address should be omitted from the descriptor when
+ * publishing it. This can happen if the IPv4 is reachable but the
+ * auto-discovered IPv6 is not. We still publish the descriptor.
+ *
+ * Only relays should look at this and only for their descriptor.
+ *
+ * XXX: The real harder fix is to never put in the routerinfo_t a non
+ * reachable address and instead use the last resolved address cache to do
+ * reachability test or anything that has to do with what address tor thinks
+ * it has. */
+static bool omit_ipv6_on_publish = false;
+
 /** Return a readonly string with human readable description
  * of <b>err</b>.
  */
@@ -1419,7 +1431,11 @@ decide_if_publishable_server(void)
       return 0;
     }
   }
-  if (!router_orport_seems_reachable(options, AF_INET6)) {
+  /* We could be flagged to omit the IPv6 and if so, don't check for
+   * reachability on the IPv6. This can happen if the address was
+   * auto-discovered but turns out to be non reachable. */
+  if (!omit_ipv6_on_publish &&
+      !router_orport_seems_reachable(options, AF_INET6)) {
     // We have an ipv6 orport, and it doesn't seem reachable.
     if (!publish_even_when_ipv6_orport_unreachable) {
       return 0;
@@ -2108,7 +2124,8 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   ri->ipv4_dirport = routerconf_find_dir_port(options, 0);
 
   /* Optionally check for an IPv6. We still publish without one. */
-  if (relay_find_addr_to_publish(options, AF_INET6, RELAY_FIND_ADDR_NO_FLAG,
+  if (!omit_ipv6_on_publish &&
+      relay_find_addr_to_publish(options, AF_INET6, RELAY_FIND_ADDR_NO_FLAG,
                                  &ri->ipv6_addr)) {
     ri->ipv6_orport = routerconf_find_or_port(options, AF_INET6);
     router_check_descriptor_address_consistency(&ri->ipv6_addr);
@@ -2481,18 +2498,6 @@ router_new_consensus_params(const networkstatus_t *ns)
   publish_even_when_ipv4_orport_unreachable = ar;
   publish_even_when_ipv6_orport_unreachable = ar || ar6;
 }
-
-/** Indicate if the IPv6 address should be omitted from the descriptor when
- * publishing it. This can happen if the IPv4 is reachable but the
- * auto-discovered IPv6 is not. We still publish the descriptor.
- *
- * Only relays should look at this and only for their descriptor.
- *
- * XXX: The real harder fix is to never put in the routerinfo_t a non
- * reachable address and instead use the last resolved address cache to do
- * reachability test or anything that has to do with what address tor thinks
- * it has. */
-static bool omit_ipv6_on_publish = false;
 
 /** Mark our descriptor out of data iff the IPv6 omit status flag is flipped
  * it changes from its previous value.
