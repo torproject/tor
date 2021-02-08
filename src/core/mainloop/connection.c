@@ -5242,6 +5242,8 @@ connection_reached_eof(connection_t *conn)
       return connection_dir_reached_eof(TO_DIR_CONN(conn));
     case CONN_TYPE_CONTROL:
       return connection_control_reached_eof(TO_CONTROL_CONN(conn));
+    case CONN_TYPE_METRICS:
+      return metrics_connection_reached_eof(conn);
     default:
       log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();

@@ -1,0 +1,3 @@
+  o Minor bugfixes (metrics port):
+    - Fix a bug warning when the socket was unexpectedly closed. Fixes bug
+      40257; bugfix on 0.4.5.1-alpha
