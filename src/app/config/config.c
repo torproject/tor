@@ -428,19 +428,6 @@ static const config_var_t option_vars_[] = {
   V(DormantTimeoutDisabledByIdleStreams, BOOL,     "1"),
   V(DormantOnFirstStartup,       BOOL,      "0"),
   V(DormantCanceledByStartup,    BOOL,      "0"),
-  /* DoS circuit creation options. */
-  V(DoSCircuitCreationEnabled,   AUTOBOOL, "auto"),
-  V(DoSCircuitCreationMinConnections,      POSINT, "0"),
-  V(DoSCircuitCreationRate,      POSINT,     "0"),
-  V(DoSCircuitCreationBurst,     POSINT,     "0"),
-  V(DoSCircuitCreationDefenseType,         INT,  "0"),
-  V(DoSCircuitCreationDefenseTimePeriod,   INTERVAL, "0"),
-  /* DoS connection options. */
-  V(DoSConnectionEnabled,        AUTOBOOL, "auto"),
-  V(DoSConnectionMaxConcurrentCount,       POSINT, "0"),
-  V(DoSConnectionDefenseType,    INT,      "0"),
-  /* DoS single hop client options. */
-  V(DoSRefuseSingleHopClientRendezvous,    AUTOBOOL, "auto"),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(TestingEnableConnBwEvent,    BOOL,     "0"),
   V(TestingEnableCellStatsEvent, BOOL,     "0"),
