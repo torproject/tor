@@ -2713,6 +2713,13 @@ networkstatus_check_required_protocols(const networkstatus_t *ns,
   const bool consensus_postdates_this_release =
     ns->valid_after >= tor_get_approx_release_date();
 
+  if (! consensus_postdates_this_release) {
+    // We can't meaningfully warn about this case: This consensus is from
+    // before we were released, so whatever is says about required or
+    // recommended versions may no longer be true.
+    return 0;
+  }
+
   tor_assert(warning_out);
 
   if (client_mode) {
@@ -2730,7 +2737,7 @@ networkstatus_check_required_protocols(const networkstatus_t *ns,
                  "%s on the Tor network. The missing protocols are: %s",
                  func, missing);
     tor_free(missing);
-    return consensus_postdates_this_release ? 1 : 0;
+    return 1;
   }
 
   if (! protover_all_supported(recommended, &missing)) {
