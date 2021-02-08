@@ -1,0 +1,4 @@
+  o Major bugfixes (IPv6, relay):
+    - Fix a bug that prevented a relay to publish its descriptor in the case of
+      an auto-discovered IPv6 that was found unreachable for which we always
+      publish if the IPv4 is correct. Fixes bug 40279; bugfix on 0.4.5.1-alpha.
