@@ -800,6 +800,8 @@ test_hs_control_add_onion_helper_add_service(void *arg)
   rend_service_port_config_t *portcfg;
   smartlist_t *portcfgs;
   char *address_out_good, *address_out_bad;
+  hs_service_t *service_good = NULL;
+  hs_service_t *service_bad = NULL;
 
   (void) arg;
 
@@ -831,7 +833,7 @@ test_hs_control_add_onion_helper_add_service(void *arg)
   add_onion_helper_add_service(HS_VERSION_THREE, &sk_good, portcfgs, 1, 1,
                           REND_V3_AUTH, NULL, list_good, &address_out_good);
 
-  hs_service_t *service_good = find_service(global_map, &pk_good);
+  service_good = find_service(global_map, &pk_good);
   tt_int_op(smartlist_len(service_good->config.clients), OP_EQ, 1);
 
   hs_service_free(service_good);
@@ -846,7 +848,7 @@ test_hs_control_add_onion_helper_add_service(void *arg)
   add_onion_helper_add_service(HS_VERSION_THREE, &sk_bad, portcfgs, 1, 1,
                           REND_V3_AUTH, NULL, list_bad, &address_out_bad);
 
-  hs_service_t *service_bad = find_service(global_map, &pk_bad);
+  service_bad = find_service(global_map, &pk_bad);
 
   tt_int_op(smartlist_len(service_bad->config.clients), OP_EQ, 0);
 
