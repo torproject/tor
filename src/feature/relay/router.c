@@ -2673,9 +2673,13 @@ check_descriptor_ipaddress_changed(time_t now)
 
     /* Attempt to discovery the publishable address for the family which will
      * actively attempt to discover the address if we are configured with a
-     * port for the family. */
-    relay_find_addr_to_publish(get_options(), family, RELAY_FIND_ADDR_NO_FLAG,
-                               &current);
+     * port for the family.
+     *
+     * It is OK to ignore the returned value here since in the failure case,
+     * that is the address was not found, the current value is set to UNSPEC.
+     * Add this (void) so Coverity is happy. */
+    (void) relay_find_addr_to_publish(get_options(), family,
+                                      RELAY_FIND_ADDR_NO_FLAG, &current);
 
     /* The "current" address might be UNSPEC meaning it was not discovered nor
      * found in our current cache. If we had an address before and we have
