@@ -469,9 +469,6 @@ test_protover_supported_protocols(void *arg)
   /* No DirCache versions appear anywhere in the code. */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_DIRCACHE,
-                                            PROTOVER_DIRCACHE_V1));
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_DIRCACHE,
                                             PROTOVER_DIRCACHE_V2));
 
   /* No Desc versions appear anywhere in the code. */

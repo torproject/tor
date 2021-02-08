@@ -1,0 +1,6 @@
+  o Minor features (protocol versions):
+    - Stop claiming to support the "DirCache=1" subprotocol version.
+      Technically, we stopped supporting this subprotocol back in
+      0.4.5.1-alpha, but we needed to wait for the authorities to stop
+      listing it as "required" before we can drop support. Closes ticket
+      40221.
