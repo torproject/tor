@@ -1116,6 +1116,43 @@ client_filename_is_valid(const char *filename)
   return ret;
 }
 
+/** Parse an base32-encoded authorized client from a string.
+ *
+ * Return the key on success, return NULL, otherwise. */
+hs_service_authorized_client_t *
+parse_authorized_client_key(const char *key_str, int severity)
+{
+  hs_service_authorized_client_t *client = NULL;
+
+  /* We expect a specific length of the base64 encoded key so make sure we
+   * have that so we don't successfully decode a value with a different length
+   * and end up in trouble when copying the decoded key into a fixed length
+   * buffer. */
+  if (strlen(key_str) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
+    log_fn(severity, LD_REND, "Client authorization encoded base32 public key "
+                              "length is invalid: %s", key_str);
+    goto err;
+  }
+
+  client = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
+  if (base32_decode((char *) client->client_pk.public_key,
+                    sizeof(client->client_pk.public_key),
+                    key_str, strlen(key_str)) !=
+      sizeof(client->client_pk.public_key)) {
+    log_fn(severity, LD_REND, "Client authorization public key cannot be "
+             "decoded: %s", key_str);
+    goto err;
+  }
+
+  return client;
+
+ err:
+  if (client != NULL) {
+    service_authorized_client_free(client);
+  }
+  return NULL;
+}
+
 /** Parse an authorized client from a string. The format of a client string
  * looks like (see rend-spec-v3.txt):
  *
@@ -1162,23 +1199,7 @@ parse_authorized_client(const char *client_key_str)
     goto err;
   }
 
-  /* We expect a specific length of the base32 encoded key so make sure we
-   * have that so we don't successfully decode a value with a different length
-   * and end up in trouble when copying the decoded key into a fixed length
-   * buffer. */
-  if (strlen(pubkey_b32) != BASE32_NOPAD_LEN(CURVE25519_PUBKEY_LEN)) {
-    log_warn(LD_REND, "Client authorization encoded base32 public key "
-                      "length is invalid: %s", pubkey_b32);
-    goto err;
-  }
-
-  client = tor_malloc_zero(sizeof(hs_service_authorized_client_t));
-  if (base32_decode((char *) client->client_pk.public_key,
-                    sizeof(client->client_pk.public_key),
-                    pubkey_b32, strlen(pubkey_b32)) !=
-      sizeof(client->client_pk.public_key)) {
-    log_warn(LD_REND, "Client authorization public key cannot be decoded: %s",
-             pubkey_b32);
+  if ((client = parse_authorized_client_key(pubkey_b32, LOG_WARN)) == NULL) {
     goto err;
   }
 
@@ -1302,7 +1323,7 @@ load_client_keys(hs_service_t *service)
 }
 
 /** Release all storage held in <b>client</b>. */
-STATIC void
+void
 service_authorized_client_free_(hs_service_authorized_client_t *client)
 {
   if (!client) {
@@ -3682,15 +3703,17 @@ hs_service_upload_desc_to_dir(const char *encoded_desc,
 /** Add the ephemeral service using the secret key sk and ports. Both max
  * streams parameter will be set in the newly created service.
  *
- * Ownership of sk and ports is passed to this routine.  Regardless of
- * success/failure, callers should not touch these values after calling this
- * routine, and may assume that correct cleanup has been done on failure.
+ * Ownership of sk, ports, and auth_clients_v3 is passed to this routine.
+ * Regardless of success/failure, callers should not touch these values
+ * after calling this routine, and may assume that correct cleanup has
+ * been done on failure.
  *
  * Return an appropriate hs_service_add_ephemeral_status_t. */
 hs_service_add_ephemeral_status_t
 hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
                          int max_streams_per_rdv_circuit,
-                         int max_streams_close_circuit, char **address_out)
+                         int max_streams_close_circuit,
+                         smartlist_t *auth_clients_v3, char **address_out)
 {
   hs_service_add_ephemeral_status_t ret;
   hs_service_t *service = NULL;
@@ -3732,6 +3755,16 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
                         "for v3 service.");
     ret = RSAE_BADVIRTPORT;
     goto err;
+  }
+
+  if (auth_clients_v3) {
+    service->config.clients = smartlist_new();
+    SMARTLIST_FOREACH(auth_clients_v3, hs_service_authorized_client_t *, c, {
+      if (c != NULL) {
+        smartlist_add(service->config.clients, c);
+      }
+    });
+    smartlist_free(auth_clients_v3);
   }
 
   /* Build the onion address for logging purposes but also the control port

@@ -1,0 +1,4 @@
+  o Major features (control port, onion services):
+    - Add support for creating version 3 onion services with authorization
+      from the control port. Previously, we could only create version 2
+      services here. Closes ticket 40084. Patch by Neel Chauhan.

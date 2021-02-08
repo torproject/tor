@@ -3818,6 +3818,7 @@ upload_service_descriptor(rend_service_t *service)
       smartlist_clear(client_cookies);
       switch (service->auth_type) {
         case REND_NO_AUTH:
+        case REND_V3_AUTH:
           /* Do nothing here. */
           break;
         case REND_BASIC_AUTH:

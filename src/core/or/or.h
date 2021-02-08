@@ -404,6 +404,8 @@ typedef enum rend_auth_type_t {
   REND_NO_AUTH      = 0,
   REND_BASIC_AUTH   = 1,
   REND_STEALTH_AUTH = 2,
+  REND_V3_AUTH      = 3, /* Dummy flag to allow adding v3 services on the
+                          * control port */
 } rend_auth_type_t;
 
 /** Client-side configuration of authorization for a hidden service. */
