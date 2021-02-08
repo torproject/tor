@@ -795,7 +795,7 @@ test_hs_control_add_onion_helper_add_service(void *arg)
   char *key_new_blob_good = NULL, *key_new_blob_bad = NULL;
   const char *key_new_alg_good = NULL, *key_new_alg_bad = NULL;
   hs_service_authorized_client_t *client_good, *client_bad;
-  smartlist_t *list_v2, *list_good, *list_bad;
+  smartlist_t *list_good, *list_bad;
   hs_service_ht *global_map;
   rend_service_port_config_t *portcfg;
   smartlist_t *portcfgs;
@@ -825,22 +825,30 @@ test_hs_control_add_onion_helper_add_service(void *arg)
             "N2NU7BSRL6YODZCYPN4CREB54TYLKGIE2KYOQWLFYC23ZJVCE5DQ", LOG_INFO);
   client_bad = parse_authorized_client_key("dummy", LOG_INFO);
 
-  list_v2 = smartlist_new();
   list_good = smartlist_new();
   smartlist_add(list_good, client_good);
+
+  add_onion_helper_add_service(HS_VERSION_THREE, &sk_good, portcfgs, 1, 1,
+                          REND_V3_AUTH, NULL, list_good, &address_out_good);
+
+  hs_service_t *service_good = find_service(global_map, &pk_good);
+  tt_int_op(smartlist_len(service_good->config.clients), OP_EQ, 1);
+
+  hs_service_free(service_good);
+
   list_bad = smartlist_new();
   smartlist_add(list_bad, client_bad);
 
-  add_onion_helper_add_service(HS_VERSION_THREE, &sk_good, portcfgs, 1, 1,
-                          REND_V3_AUTH, list_v2, list_good, &address_out_good);
+  portcfg = rend_service_parse_port_config("8080", ",", NULL);
+  portcfgs = smartlist_new();
+  smartlist_add(portcfgs, portcfg);
+
   add_onion_helper_add_service(HS_VERSION_THREE, &sk_bad, portcfgs, 1, 1,
-                          REND_V3_AUTH, list_v2, list_bad, &address_out_bad);
+                          REND_V3_AUTH, NULL, list_bad, &address_out_bad);
 
-  hs_service_t *srv_good = find_service(global_map, &pk_good);
-  hs_service_t *srv_bad = find_service(global_map, &pk_bad);
+  hs_service_t *service_bad = find_service(global_map, &pk_bad);
 
-  tt_int_op(smartlist_len(srv_good->config.clients), OP_EQ, 1);
-  tt_int_op(smartlist_len(srv_bad->config.clients), OP_EQ, 0);
+  tt_int_op(smartlist_len(service_bad->config.clients), OP_EQ, 0);
 
  done:
   tor_free(key_new_blob_good);
@@ -848,11 +856,8 @@ test_hs_control_add_onion_helper_add_service(void *arg)
   tor_free(address_out_good);
   tor_free(address_out_bad);
 
-  service_authorized_client_free(client_good);
-
-  smartlist_free(list_v2);
-  smartlist_free(list_good);
-  smartlist_free(list_bad);
+  hs_service_free(service_good);
+  hs_service_free(service_bad);
 }
 
 struct testcase_t hs_control_tests[] = {
