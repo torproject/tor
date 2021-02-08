@@ -8,6 +8,7 @@
 
 #define CONFIG_PRIVATE
 #define CONNECTION_PRIVATE
+#define MAINLOOP_PRIVATE
 #define METRICS_STORE_ENTRY_PRIVATE
 
 #include "test/test.h"
@@ -17,6 +18,7 @@
 #include "app/config/config.h"
 
 #include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/connection_st.h"
 #include "core/or/policies.h"
 #include "core/or/port_cfg_st.h"
@@ -96,43 +98,62 @@ static char _c_buf[256];
 #define WRITE(conn, msg) \
   buf_add(conn->inbuf, (msg), (strlen(msg)));
 
+/* Free the previous conn object if any and allocate a new connection. In
+ * order to be allowed, set its address to 1.2.3.4 as per the policy. */
+#define NEW_ALLOWED_CONN()                              \
+  do {                                                  \
+    close_closeable_connections();                      \
+    conn = connection_new(CONN_TYPE_METRICS, AF_INET);  \
+    tor_addr_from_ipv4h(&conn->addr, 0x01020304);       \
+  } while (0)
+
 static void
 test_connection(void *arg)
 {
   int ret;
-  connection_t *conn = connection_new(CONN_TYPE_METRICS, AF_INET);
+  connection_t *conn = NULL;
   or_options_t *options = get_options_mutable();
 
   (void) arg;
+
+  /* Notice that in this test, we will allocate a new connection at every test
+   * case. This is because the metrics_connection_process_inbuf() marks for
+   * close the connection in case of an error and thus we can't call again an
+   * inbuf process function on a marked for close connection. */
+
+  tor_init_connection_lists();
 
   /* Setup policy. */
   set_metrics_port(options);
 
   /* Set 1.2.3.5 IP, we should get rejected. */
+  NEW_ALLOWED_CONN();
   tor_addr_from_ipv4h(&conn->addr, 0x01020305);
   ret = metrics_connection_process_inbuf(conn);
   tt_int_op(ret, OP_EQ, -1);
 
-  /* Set 1.2.3.4 so from now on we are allowed to process the inbuf. */
-  tor_addr_from_ipv4h(&conn->addr, 0x01020304);
-
   /* No HTTP request yet. */
+  NEW_ALLOWED_CONN();
   ret = metrics_connection_process_inbuf(conn);
-  tt_int_op(ret, OP_EQ, -1);
+  tt_int_op(ret, OP_EQ, 0);
+  connection_free_minimal(conn);
 
   /* Bad request. */
+  NEW_ALLOWED_CONN();
   WRITE(conn, "HTTP 4.7\r\n\r\n");
   ret = metrics_connection_process_inbuf(conn);
   tt_int_op(ret, OP_EQ, -1);
   CONTAINS(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
 
   /* Path not found. */
+  NEW_ALLOWED_CONN();
   WRITE(conn, "GET /badpath HTTP/1.0\r\n\r\n");
   ret = metrics_connection_process_inbuf(conn);
   tt_int_op(ret, OP_EQ, -1);
   CONTAINS(conn, "HTTP/1.0 404 Not Found\r\n\r\n");
 
   /* Method not allowed. */
+  NEW_ALLOWED_CONN();
   WRITE(conn, "POST /something HTTP/1.0\r\n\r\n");
   ret = metrics_connection_process_inbuf(conn);
   tt_int_op(ret, OP_EQ, -1);
@@ -140,6 +161,7 @@ test_connection(void *arg)
 
   /* Ask for metrics. The content should be above 0. We don't test the
    * validity of the returned content but it is certainly not an error. */
+  NEW_ALLOWED_CONN();
   WRITE(conn, "GET /metrics HTTP/1.0\r\n\r\n");
   ret = metrics_connection_process_inbuf(conn);
   tt_int_op(ret, OP_EQ, 0);
