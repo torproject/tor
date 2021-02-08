@@ -4826,7 +4826,7 @@ addressmap_register_auto(const char *from, const char *to,
   }
 
   addressmap_register(from, tor_strdup(to), expires, addrmap_source,
-                      from_wildcard, to_wildcard);
+                      from_wildcard, to_wildcard, 0);
 
   return 0;
 }

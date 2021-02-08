@@ -1477,30 +1477,39 @@ control_event_descriptors_changed(smartlist_t *routers)
  * mode of the mapping.
  */
 int
-control_event_address_mapped(const char *from, const char *to, time_t expires,
-                             const char *error, const int cached)
+control_event_address_mapped(const char *from, const char *to,
+                             time_t expires, const char *error,
+                             const int cached, uint64_t stream_id)
 {
+  char *stream_id_str = NULL;
   if (!EVENT_IS_INTERESTING(EVENT_ADDRMAP))
     return 0;
+
+  if (stream_id) {
+    tor_asprintf(&stream_id_str, " STREAMID=%"PRIu64"", stream_id);
+  }
 
   if (expires < 3 || expires == TIME_MAX)
     send_control_event(EVENT_ADDRMAP,
                                 "650 ADDRMAP %s %s NEVER %s%s"
-                                "CACHED=\"%s\"\r\n",
-                                  from, to, error?error:"", error?" ":"",
-                                cached?"YES":"NO");
+                                "CACHED=\"%s\"%s\r\n",
+                                from, to, error ? error : "", error ? " " : "",
+                                cached ? "YES" : "NO",
+                                stream_id ? stream_id_str : "");
   else {
     char buf[ISO_TIME_LEN+1];
     char buf2[ISO_TIME_LEN+1];
     format_local_iso_time(buf,expires);
     format_iso_time(buf2,expires);
     send_control_event(EVENT_ADDRMAP,
-                                "650 ADDRMAP %s %s \"%s\""
-                                " %s%sEXPIRES=\"%s\" CACHED=\"%s\"\r\n",
-                                from, to, buf,
-                                error?error:"", error?" ":"",
-                                buf2, cached?"YES":"NO");
+                                "650 ADDRMAP %s %s \"%s\" %s%sEXPIRES=\"%s\" "
+                                "CACHED=\"%s\"%s\r\n",
+                                from, to, buf, error ? error : "",
+                                error ? " " : "", buf2, cached ? "YES" : "NO",
+                                stream_id ? stream_id_str: "");
   }
+
+  tor_free(stream_id_str);
 
   return 0;
 }

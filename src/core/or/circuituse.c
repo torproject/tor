@@ -2733,6 +2733,11 @@ consider_recording_trackhost(const entry_connection_t *conn,
   const or_options_t *options = get_options();
   char *new_address = NULL;
   char fp[HEX_DIGEST_LEN+1];
+  uint64_t stream_id = 0;
+
+  if (conn) {
+    stream_id = ENTRY_TO_CONN(conn)->global_identifier;
+  }
 
   /* Search the addressmap for this conn's destination. */
   /* If they're not in the address map.. */
@@ -2756,7 +2761,7 @@ consider_recording_trackhost(const entry_connection_t *conn,
 
   addressmap_register(conn->socks_request->address, new_address,
                       time(NULL) + options->TrackHostExitsExpire,
-                      ADDRMAPSRC_TRACKEXIT, 0, 0);
+                      ADDRMAPSRC_TRACKEXIT, 0, 0, stream_id);
 }
 
 /** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and send a
