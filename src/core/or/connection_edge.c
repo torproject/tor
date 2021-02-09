@@ -3521,9 +3521,11 @@ tell_controller_about_resolved_result(entry_connection_t *conn,
 {
   uint64_t stream_id = 0;
 
-  if (conn) {
-    stream_id = ENTRY_TO_CONN(conn)->global_identifier;
+  if (BUG(!conn)) {
+    return;
   }
+
+  stream_id = ENTRY_TO_CONN(conn)->global_identifier;
 
   expires = time(NULL) + ttl;
   if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {

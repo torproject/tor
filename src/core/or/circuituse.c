@@ -2735,9 +2735,11 @@ consider_recording_trackhost(const entry_connection_t *conn,
   char fp[HEX_DIGEST_LEN+1];
   uint64_t stream_id = 0;
 
-  if (conn) {
-    stream_id = ENTRY_TO_CONN(conn)->global_identifier;
+  if (BUG(!conn)) {
+    return;
   }
+
+  stream_id = ENTRY_TO_CONN(conn)->global_identifier;
 
   /* Search the addressmap for this conn's destination. */
   /* If they're not in the address map.. */
@@ -2801,8 +2803,9 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
 
   tor_assert(conn->socks_request);
   if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
-    if (!conn->use_begindir)
+    if (!conn->use_begindir) {
       consider_recording_trackhost(conn, circ);
+    }
     if (connection_ap_handshake_send_begin(conn) < 0)
       return -1;
   } else {
