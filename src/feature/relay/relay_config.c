@@ -188,6 +188,41 @@ describe_relay_port(const port_cfg_t *port)
   return buf;
 }
 
+/** Return true iff port p1 is equal to p2.
+ *
+ * This does a field by field comparaison. */
+static bool
+port_cfg_eq(const port_cfg_t *p1, const port_cfg_t *p2)
+{
+  bool ret = true;
+
+  tor_assert(p1);
+  tor_assert(p2);
+
+  /* Address, port and type. */
+  ret &= tor_addr_eq(&p1->addr, &p2->addr);
+  ret &= (p1->port == p2->port);
+  ret &= (p1->type == p2->type);
+
+  /* Mode. */
+  ret &= (p1->is_unix_addr == p2->is_unix_addr);
+  ret &= (p1->is_group_writable == p2->is_group_writable);
+  ret &= (p1->is_world_writable == p2->is_world_writable);
+  ret &= (p1->relax_dirmode_check == p2->relax_dirmode_check);
+  ret &= (p1->explicit_addr == p2->explicit_addr);
+
+  /* Entry config flags. */
+  ret &= tor_memeq(&p1->entry_cfg, &p2->entry_cfg,
+                    sizeof(entry_port_cfg_t));
+  /* Server config flags. */
+  ret &= tor_memeq(&p1->server_cfg, &p2->server_cfg,
+                    sizeof(server_port_cfg_t));
+  /* Unix address path if any. */
+  ret &= !strcmp(p1->unix_addr, p2->unix_addr);
+
+  return ret;
+}
+
 /** Attempt to find duplicate ORPort that would be superseded by another and
  * remove them from the given ports list. This is possible if we have for
  * instance:
@@ -241,20 +276,42 @@ remove_duplicate_orports(smartlist_t *ports)
       if (next->type != CONN_TYPE_OR_LISTENER) {
         continue;
       }
+      /* Remove duplicates. */
+      if (port_cfg_eq(current, next)) {
+        removing[j] = true;
+        continue;
+      }
       /* Don't compare addresses of different family. */
       if (tor_addr_family(&current->addr) != tor_addr_family(&next->addr)) {
         continue;
       }
+      /* At this point, we have a port of the same type and same address
+       * family. Now, we want to avoid comparing addresses that are different
+       * but are both explicit. As an example, these are not duplicates:
+       *
+       *    ORPort 127.0.0.:9001 NoAdvertise
+       *    ORPort 1.2.3.4:9001 NoListen
+       *
+       * Any implicit address must be considered for removal since an explicit
+       * one will always supersedes it. */
+      if (!tor_addr_eq(&current->addr, &next->addr) &&
+          current->explicit_addr && next->explicit_addr) {
+        continue;
+      }
 
-      /* Same port, we keep the explicit one. */
+      /* Port value is the same so we either have a duplicate or a port that
+       * supersedes another. */
       if (current->port == next->port) {
-        removing[j] = true;
+        /* Do not remove the explicit address. As stated before above, we keep
+         * explicit addresses which supersedes implicit ones. */
         if (!current->explicit_addr && next->explicit_addr) {
-          char *next_str = tor_strdup(describe_relay_port(next));
-          log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
-                   describe_relay_port(current), next_str);
-          tor_free(next_str);
+          continue;
         }
+        removing[j] = true;
+        char *next_str = tor_strdup(describe_relay_port(next));
+        log_warn(LD_CONFIG, "Configuration port %s superseded by %s",
+                 next_str, describe_relay_port(current));
+        tor_free(next_str);
       }
     }
   }
