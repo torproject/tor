@@ -160,7 +160,7 @@ pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
         cstr!(
             "Cons=1-2 \
              Desc=1-2 \
-             DirCache=1-2 \
+             DirCache=2 \
              FlowCtrl=1 \
              HSDir=1-2 \
              HSIntro=3-5 \
@@ -175,7 +175,7 @@ pub(crate) fn get_supported_protocols_cstr() -> &'static CStr {
         cstr!(
             "Cons=1-2 \
              Desc=1-2 \
-             DirCache=1-2 \
+             DirCache=2 \
              FlowCtrl=1 \
              HSDir=1-2 \
              HSIntro=3-5 \
