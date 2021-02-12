@@ -1,16 +1,11 @@
-<!--
-* Use this issue template for reporting a new bug.
--->
-
 ### Summary
 
 
 
 ### Steps to reproduce:
 
-1. step 1
-2. step 2
-3. ...
+1. Step 1
+2. ...
 
 ### What is the current bug behavior?
 
@@ -22,21 +17,16 @@
 
 ### Environment
 
-<!--
-Please fill in the following information in bug reports, removing the comments like this one in brackets.
--->
+- Which version of Tor are you using? Run `tor --version` to get the version if you are unsure.
+- Which operating system are you using? For example: Debian GNU/Linux 10.1, Windows 10, Ubuntu Xenial, FreeBSD 12.2, etc.
+- Which installation method did you use? Distribution package (apt, pkg, homebrew), from source tarball, from Git, etc.
 
-- Version: e.g. 0.10, output of --version (without backslashes)
-- Operating system: Debian GNU/Linux 9.1 (stretch), Windows 7, Ubuntu Xenial, etc
-- Install method: distribution package, from source tarball, from git, etc
-- etc...
-
-### Relevant logs and/or screenshots:
+### Relevant logs and/or screenshots
 
 
 
-### Possible fixes:
+### Possible fixes
 
 
 
-/label ~bug
+/label ~Bug
