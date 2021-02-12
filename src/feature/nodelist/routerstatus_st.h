@@ -58,6 +58,7 @@ struct routerstatus_t {
                              */
   unsigned int is_staledesc:1; /** True iff the authorities think this router
                                 * should upload a new descriptor soon. */
+  unsigned int is_sybil:1; /** True iff this router is a sybil. */
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */

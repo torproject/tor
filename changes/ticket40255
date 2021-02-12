@@ -1,0 +1,5 @@
+  o Major features (directory authority, sybil):
+    - When voting for a relay with a Sybil-like appearance, add the Sybil
+      flag when clearing out the other flags. This lets a relay operator
+      know why their relay hasn't been voted on. Closes ticket 40255.
+      Patch by Neel Chauhan.
