@@ -6046,6 +6046,7 @@ port_parse_config(smartlist_t *out,
       port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
       if (ok) {
         tor_addr_copy(&addr, &default_addr);
+        addr_is_explicit = false;
       } else if (tor_addr_port_lookup(addrport, &addr, &ptmp) == 0) {
         if (ptmp == 0) {
           log_warn(LD_CONFIG, "%sPort line has address but no port", portname);

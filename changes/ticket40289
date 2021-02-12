@@ -1,0 +1,6 @@
+  o Minor bugfixes (relay, config):
+    - Fix a problem in the removal of duplicate ORPort from the internal port
+      list when loading config file. We were removing wrong ports breaking valid
+      torrc uses cases for multiple ORPorts of the same address family. Fixes
+      bug 40289; bugfix on 0.4.5.1-alpha.
+
