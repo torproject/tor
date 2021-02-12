@@ -6924,12 +6924,14 @@ test_config_duplicate_orports(void *arg)
 
   /* We have four address here, 1 IPv4 on 9050, IPv6 on 9050, IPv6 on 9051 and
    * a different IPv6 on 9051. */
-  tt_int_op(smartlist_len(ports), OP_EQ, 3);
+  tt_int_op(smartlist_len(ports), OP_EQ, 4);
   tt_str_op(describe_relay_port(smartlist_get(ports, 0)), OP_EQ,
             "ORPort 9050");
   tt_str_op(describe_relay_port(smartlist_get(ports, 1)), OP_EQ,
             "ORPort [4242::1]:9051");
   tt_str_op(describe_relay_port(smartlist_get(ports, 2)), OP_EQ,
+            "ORPort [4242::2]:9051");
+  tt_str_op(describe_relay_port(smartlist_get(ports, 3)), OP_EQ,
             "ORPort 9050");
 
   /* Reset. Test different ORPort value. */
