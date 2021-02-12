@@ -1,3 +1,46 @@
+Changes in version 0.4.5.6 - 2021-02-15
+  BLURB
+
+  Below are the changes since 0.4.4.4-rc. For a complete list of changes
+  since 0.4.4.XXXX, see the ReleaseNotes file.
+
+  o Major bugfixes (IPv6, relay):
+    - Fix a bug that prevented a relay from publishing its descriptor if
+      an auto-discovered IPv6 that was found unreachable. Fixes bug
+      40279; bugfix on 0.4.5.1-alpha.
+
+  o Minor features (protocol versions):
+    - Stop claiming to support the "DirCache=1" subprotocol version.
+      Technically, we stopped supporting this subprotocol back in
+      0.4.5.1-alpha, but we needed to wait for the authorities to stop
+      listing it as "required" before we could drop it from the list.
+      Closes ticket 40221.
+
+  o Minor bugfixes (logging):
+    - Avoid a spurious log message about missing subprotocol versions,
+      when the consensus that we're reading from is older than the
+      current release. Previously we had made this message nonfatal, but
+      in practice, it is never relevant when the consensus is older than
+      the current release. Fixes bug 40281; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (metrics port):
+    - Fix a bug warning when a metrics port socket was unexpectedly
+      closed. Fixes bug 40257; bugfix on 0.4.5.1-alpha
+
+  o Minor bugfixes (relay):
+    - Allow relays to have a RFC1918 address if PublishServerDescriptor
+      is set to 0 and AssumeReachable is set to 1. This is to support
+      the use case of a bridge on a local network, exposed via a
+      pluggable transport. Fixes bug 40208; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (relay, config):
+    - Fix a problem in the removal of duplicate ORPorts from the
+      internal port list when loading the config file. We were removing
+      the wrong ports, breaking valid torrc uses cases for multiple
+      ORPorts of the same address family. Fixes bug 40289; bugfix
+      on 0.4.5.1-alpha.
+
+
 Changes in version 0.4.5.5-rc - 2021-02-01
   Tor 0.4.5.5-rc is the third release candidate in its series. We're
   coming closer and closer to a stable release series. This release
