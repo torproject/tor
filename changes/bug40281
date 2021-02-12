@@ -1,0 +1,6 @@
+  o Minor bugfixes (logging):
+    - Avoid a spurious log message about missing subprotocol versions, when
+      the consensus that we're reading from is older than the current
+      release. .  Previously we had made this message nonfatal in this case,
+      but in practice, it is never relevant when the consensus is older than
+      the current release.  Fixes bug 40281; bugfix on 0.4.0.1-alpha.
