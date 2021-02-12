@@ -1,0 +1,6 @@
+  o Minor bugfixes (relay):
+    - Allow relays to have a RFC1918 address if PublishServerDescriptor is set
+      to 0 and AssumeReachable is set to 1. This is to support the use case of a
+      bridge on a local network that can be used by restricted users on that
+      network to reach the Tor network. Fixes bug 40208; bugfix on
+      0.4.5.1-alpha.

@@ -1460,6 +1460,7 @@ test_config_find_my_address(void *arg)
 
   options = options_new();
   options_init(options);
+  options->PublishServerDescriptor_ = V3_DIRINFO;
 
   /*
    * Case 0:
@@ -1780,6 +1781,22 @@ test_config_find_my_address(void *arg)
 
   tt_int_op(n_get_interface_address6, OP_EQ, ++prev_n_get_interface_address6);
   VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_INTERFACE, NULL);
+  CLEANUP_FOUND_ADDRESS;
+
+  /*
+   * Case 15: Address is a local address (internal) but we unset
+   * PublishServerDescriptor_ so we are allowed to hold it.
+   */
+  options->PublishServerDescriptor_ = NO_DIRINFO;
+  if (p->family == AF_INET) {
+    options->AssumeReachable = 1;
+  }
+  config_line_append(&options->Address, "Address", p->internal_ip);
+
+  tor_addr_parse(&test_addr, p->internal_ip);
+  retval = find_my_address(options, p->family, LOG_NOTICE, &resolved_addr,
+                           &method_used, &hostname_out);
+  VALIDATE_FOUND_ADDRESS(true, RESOLVED_ADDR_CONFIGURED, NULL);
   CLEANUP_FOUND_ADDRESS;
 
   UNMOCK(get_interface_address6);
