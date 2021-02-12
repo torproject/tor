@@ -193,7 +193,19 @@ address_can_be_used(const tor_addr_t *addr, const or_options_t *options,
     goto allow;
   }
 
-  /* We have a private IP address. It is allowed only if we set custom
+  /* We allow internal addresses to be used if the PublishServerDescriptor is
+   * unset and AssumeReachable (or for IPv6) is set.
+   *
+   * This is to cover the case where a relay/bridge might be run behind a
+   * firewall on a local network to users can reach the network through it
+   * using Tor Browser for instance. */
+  if (options->PublishServerDescriptor_ == NO_DIRINFO &&
+      (options->AssumeReachable ||
+       (tor_addr_family(addr) == AF_INET6 && options->AssumeReachableIPv6))) {
+    goto allow;
+  }
+
+  /* We have a private IP address. This is also allowed if we set custom
    * directory authorities. */
   if (using_default_dir_authorities(options)) {
     log_fn(warn_severity, LD_CONFIG,

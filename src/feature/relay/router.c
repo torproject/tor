@@ -2124,8 +2124,7 @@ router_build_fresh_unsigned_routerinfo,(routerinfo_t **ri_out))
   ri->ipv4_dirport = routerconf_find_dir_port(options, 0);
 
   /* Optionally check for an IPv6. We still publish without one. */
-  if (!omit_ipv6_on_publish &&
-      relay_find_addr_to_publish(options, AF_INET6, RELAY_FIND_ADDR_NO_FLAG,
+  if (relay_find_addr_to_publish(options, AF_INET6, RELAY_FIND_ADDR_NO_FLAG,
                                  &ri->ipv6_addr)) {
     ri->ipv6_orport = routerconf_find_or_port(options, AF_INET6);
     router_check_descriptor_address_consistency(&ri->ipv6_addr);
