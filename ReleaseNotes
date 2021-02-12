@@ -5,20 +5,8 @@ changes in each development snapshot, see the ChangeLog file.
 Changes in version 0.4.5.6 - 2021-02-15
   BLURB
 
-  Below are the changes since 0.4.4.XXXX. For a complete list of changes
+  Below are the changes since 0.4.4.XX. For a list only of the changes
   since 0.4.5.5-rc, see the ChangeLog file.
-
-  o Major bugfixes (IPv6, relay):
-    - Fix a bug that prevented a relay from publishing its descriptor if
-      an auto-discovered IPv6 that was found unreachable. Fixes bug
-      40279; bugfix on 0.4.5.1-alpha.
-
-  o Minor features (protocol versions):
-    - Stop claiming to support the "DirCache=1" subprotocol version.
-      Technically, we stopped supporting this subprotocol back in
-      0.4.5.1-alpha, but we needed to wait for the authorities to stop
-      listing it as "required" before we could drop it from the list.
-      Closes ticket 40221.
 
   o Minor bugfixes (logging):
     - Avoid a spurious log message about missing subprotocol versions,
@@ -27,38 +15,11 @@ Changes in version 0.4.5.6 - 2021-02-15
       in practice, it is never relevant when the consensus is older than
       the current release. Fixes bug 40281; bugfix on 0.4.0.1-alpha.
 
-  o Minor bugfixes (metrics port):
-    - Fix a bug warning when a metrics port socket was unexpectedly
-      closed. Fixes bug 40257; bugfix on 0.4.5.1-alpha
-
-  o Minor bugfixes (relay):
-    - Allow relays to have a RFC1918 address if PublishServerDescriptor
-      is set to 0 and AssumeReachable is set to 1. This is to support
-      the use case of a bridge on a local network, exposed via a
-      pluggable transport. Fixes bug 40208; bugfix on 0.4.5.1-alpha.
-
-  o Minor bugfixes (relay, config):
-    - Fix a problem in the removal of duplicate ORPorts from the
-      internal port list when loading the config file. We were removing
-      the wrong ports, breaking valid torrc uses cases for multiple
-      ORPorts of the same address family. Fixes bug 40289; bugfix
-      on 0.4.5.1-alpha.
-
   o Major feature (exit):
     - Re-entry into the network is now denied at the Exit level to all
       relays' ORPorts and authorities' ORPorts and DirPorts. This change
       should help mitgate a set of denial-of-service attacks. Closes
       ticket 2667.
-
-  o Minor bugfixes (relay, configuration):
-    - Don't attempt to discover our address (IPv4 or IPv6) if no ORPort
-      for it can be found in the configuration. Fixes bug 40254; bugfix
-      on 0.4.5.1-alpha.
-
-
-  o Major bugfixes (authority, IPv6):
-    - Do not consider multiple relays in the same IPv6 /64 network to be
-      sybils. Fixes bug 40243; bugfix on 0.4.5.1-alpha.
 
   o Major bugfixes (directory cache, performance, windows):
     - Limit the number of items in the consensus diff cache to 64 on
@@ -75,34 +36,16 @@ Changes in version 0.4.5.6 - 2021-02-15
     - Log more information for directory authority operators during the
       consensus voting process, and while processing relay descriptors.
       Closes ticket 40245.
-    - Reject obsolete router/extrainfo descriptors earlier and more
-      quietly, to avoid spamming the logs. Fixes bug 40238; bugfix
-      on 0.4.5.1-alpha.
 
   o Minor bugfixes (compilation):
-    - Fix another warning about unreachable fallthrough annotations when
-      building with "--enable-all-bugs-are-fatal" on some compilers.
-      Fixes bug 40241; bugfix on 0.4.5.3-rc.
     - Change the linker flag ordering in our library search code so that
       it works for compilers that need the libraries to be listed in the
       right order. Fixes bug 33624; bugfix on 0.1.1.0-alpha.
-
-  o Minor bugfixes (config, bridge):
-    - Don't initiate a connection to a bridge configured to use a
-      missing transport. This change reverts an earlier fix that would
-      try to avoid such situations during configuration chcecking, but
-      which doesn't work with DisableNetwork. Fixes bug 40106; bugfix
-      on 0.4.5.1-alpha.
 
   o Minor bugfixes (onion services):
     - Avoid a non-fatal assertion in certain edge-cases when
       establishing a circuit to an onion service. Fixes bug 32666;
       bugfix on 0.3.0.3-alpha.
-
-  o Minor bugfixes (relay):
-    - If we were unable to build our descriptor, don't mark it as having
-      been advertised. Also remove an harmless BUG(). Fixes bug 40231;
-      bugfix on 0.4.5.1-alpha.
 
 
   o Major bugfixes (onion service v3):
@@ -131,27 +74,6 @@ Changes in version 0.4.5.6 - 2021-02-15
     - Fix the "--enable-static-tor" switch to properly set the "-static"
       compile option onto the tor binary only. Fixes bug 40111; bugfix
       on 0.2.3.1-alpha.
-
-  o Minor bugfixes (config, bridge):
-    - Really fix the case where torrc has a missing ClientTransportPlugin
-      but is configured with a Bridge line and UseBridges. Previously,
-      we didn't look at the managed proxy list and thus would fail for
-      the "exec" case. Fixes bug 40106; bugfix on 0.4.5.1-alpha.
-
-  o Minor bugfixes (logging, relay):
-    - Log our address as reported by the directory authorities, if none
-      was configured or detected before. Fixes bug 40201; bugfix
-      on 0.4.5.1-alpha.
-    - When a launching bandwidth testing circuit, don't incorrectly call
-      it a reachability test, or trigger a "CHECKING_REACHABILITY"
-      control event. Fixes bug 40205; bugfix on 0.4.5.1-alpha.
-
-  o Minor bugfixes (relay, statistics):
-    - Report the correct connection statistics in our extrainfo
-      documents. Previously there was a problem in the file loading
-      function which would wrongly truncate a state file, causing the
-      wrong information to be reported. Fixes bug 40226; bugfix
-      on 0.4.5.1-alpha.
 
   o Minor bugfixes (SOCKS5):
     - Handle partial SOCKS5 messages correctly. Previously, our code
@@ -192,16 +114,6 @@ Changes in version 0.4.5.6 - 2021-02-15
       objects, potentially leading to bugs. Fixes bug 32880; bugfix on
       0.2.3.6-alpha. Patch by Neel Chauhan.
 
-  o Minor bugfixes (compilation):
-    - Use the correct 'ranlib' program when building libtor.a.
-      Previously we used the default ranlib, which broke some kinds of
-      cross-compilation. Fixes bug 40172; bugfix on 0.4.5.1-alpha.
-    - Remove a duplicate typedef in metrics_store.c. Fixes bug 40177;
-      bugfix on 0.4.5.1-alpha.
-    - When USDT tracing is enabled, and STAP_PROBEV() is missing, don't
-      attempt to build. Linux supports that macro but not the BSDs.
-      Fixes bug 40174; bugfix on 0.4.5.1-alpha.
-
   o Minor bugfixes (configuration):
     - Exit Tor on a misconfiguration when the Bridge line is configured
       to use a transport but no corresponding ClientTransportPlugin can
@@ -209,13 +121,6 @@ Changes in version 0.4.5.6 - 2021-02-15
       bridge directly without using the transport, making it easier for
       adversaries to notice the bridge. Fixes bug 25528; bugfix
       on 0.2.6.1-alpha.
-    - Fix an issue where an ORPort was compared with other kinds of
-      ports, when it should have been only checked against other
-      ORPorts. This bug would lead to "DirPort auto" getting ignored.
-      Fixes bug 40195; bugfix on 0.4.5.1-alpha.
-    - Fix a bug where a second non-ORPort with a variant family (ex:
-      SocksPort [::1]:9050) would be ignored due to a configuration
-      parsing error. Fixes bug 40183; bugfix on 0.4.5.1-alpha.
 
   o Minor bugfixes (crash, relay, signing key):
     - Avoid assertion failures when we run Tor from the command line
@@ -230,22 +135,10 @@ Changes in version 0.4.5.6 - 2021-02-15
       level message. (This event can happen naturally, and is no reason
       for concern). Fixes bug 40142; bugfix on 0.4.1.1-alpha.
 
-  o Minor bugfixes (relay, address discovery):
-    - Don't trigger an IP change when no new valid IP can be found.
-      Fixes bug 40071; bugfix on 0.4.5.1-alpha.
-    - When attempting to discover our IP, use a simple test circuit,
-      rather than a descriptor fetch: the same address information is
-      present in NETINFO cells, and is better authenticated there. Fixes
-      bug 40071; bugfix on 0.4.5.1-alpha.
-
   o Minor bugfixes (testing):
     - Fix the `config/parse_tcp_proxy_line` test so that it works
       correctly on systems where the DNS provider hijacks invalid
       queries. Fixes part of bug 40179; bugfix on 0.4.3.1-alpha.
-    - Fix unit tests that used newly generated list of routers so that
-      they check them with respect to the date when they were generated,
-      not with respect to the current time. Fixes bug 40187; bugfix
-      on 0.4.5.1-alpha.
     - Fix our Python reference-implementation for the v3 onion service
       handshake so that it works correctly with the version of hashlib
       provided by Python 3.9. Fixes part of bug 40179; bugfix
@@ -256,21 +149,6 @@ Changes in version 0.4.5.6 - 2021-02-15
   o Removed features (controller):
     - Remove the "GETINFO network-status" controller command. It has
       been deprecated since 0.3.1.1-alpha. Closes ticket 22473.
-
-Changes in version 0.4.5.1-alpha - 2020-11-01
-  Tor 0.4.5.1-alpha is the first alpha release in the 0.4.5.x series. It
-  improves support for IPv6, address discovery and self-testing, code
-  metrics and tracing.
-
-  This release also fixes TROVE-2020-005, a security issue that could be
-  used, under certain cases, by an adversary to observe traffic patterns
-  on a limited number of circuits intended for a different relay. To
-  mount this attack, the adversary would need to actively extend
-  circuits to an incorrect address, as well as compromise a relay's
-  legacy RSA-1024 key. We'll be backporting this fix to other release
-  series soon, after it has had some testing.
-
-  Here are the changes since 0.4.4.5.
 
   o Major features (build):
     - When building Tor, first link all object files into a single
@@ -553,12 +431,6 @@ Changes in version 0.4.5.1-alpha - 2020-11-01
       same time. Fixes bug 40129; bugfix on 0.4.4.1-alpha.
     - Resolve a compilation warning that could occur in
       test_connection.c. Fixes bug 40113; bugfix on 0.2.9.3-alpha.
-
-  o Minor bugfixes (configuration):
-    - Fix bug where %including a pattern ending with */ would include
-      files and folders (instead of folders only) in versions of glibc <
-      2.19. Fixes bug 40141; bugfix on 0.4.5.0-alpha-dev. Patch by
-      Daniel Pinto.
 
   o Minor bugfixes (control port):
     - Make sure we send the SOCKS request address in relay begin cells
