@@ -2,7 +2,7 @@ Changes in version 0.4.5.6 - 2021-02-15
   BLURB
 
   Below are the changes since 0.4.4.4-rc. For a complete list of changes
-  since 0.4.4.XXXX, see the ReleaseNotes file.
+  since 0.4.4.7, see the ReleaseNotes file.
 
   o Major bugfixes (IPv6, relay):
     - Fix a bug that prevented a relay from publishing its descriptor if

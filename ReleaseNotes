@@ -5,14 +5,8 @@ changes in each development snapshot, see the ChangeLog file.
 Changes in version 0.4.5.6 - 2021-02-15
   BLURB
 
-  Below are the changes since 0.4.4.5. For a list only of the changes
+  Below are the changes since 0.4.4.7. For a list only of the changes
   since 0.4.5.5-rc, see the ChangeLog file.
-
-  o Major feature (exit):
-    - Re-entry into the network is now denied at the Exit level to all
-      relays' ORPorts and authorities' ORPorts and DirPorts. This change
-      should help mitgate a set of denial-of-service attacks. Closes
-      ticket 2667.
 
   o Major features (build):
     - When building Tor, first link all object files into a single
@@ -52,26 +46,11 @@ Changes in version 0.4.5.6 - 2021-02-15
       to be enabled at configure time. See documentation in
       doc/HACKING/Tracing.md. Closes ticket 32910.
 
-  o Major bugfixes (security):
-    - When completing a channel, relays now check more thoroughly to
-      make sure that it matches any pending circuits before attaching
-      those circuits. Previously, address correctness and Ed25519
-      identities were not checked in this case, but only when extending
-      circuits on an existing channel. Fixes bug 40080; bugfix on
-      0.2.7.2-alpha. Resolves TROVE-2020-005.
-
   o Major bugfixes (directory cache, performance, windows):
     - Limit the number of items in the consensus diff cache to 64 on
       Windows. We hope this will mitigate an issue where Windows relay
       operators reported Tor using 100% CPU, while we investigate better
       solutions. Fixes bug 24857; bugfix on 0.3.1.1-alpha.
-
-  o Major bugfixes (onion service v3):
-    - Stop requiring a live consensus for v3 clients and services, and
-      allow a "reasonably live" consensus instead. This allows v3 onion
-      services to work even if the authorities fail to generate a
-      consensus for more than 2 hours in a row. Fixes bug 40237; bugfix
-      on 0.3.5.1-alpha.
 
   o Major bugfixes (relay, windows):
     - Fix a bug in our implementation of condition variables on Windows.
@@ -87,11 +66,6 @@ Changes in version 0.4.5.6 - 2021-02-15
       first TLS record, which can be smaller than the N bytes requested,
       and not check for more data until the next mainloop event. Fixes
       bug 40006; bugfix on 0.1.0.5-rc.
-
-  o Minor feature (build system):
-    - New "make lsp" command to generate the compile_commands.json file
-      used by the ccls language server. The "bear" program is needed for
-      this. Closes ticket 40227.
 
   o Minor features (address discovery):
     - If no Address statements are found, relays now prioritize guessing
@@ -124,12 +98,6 @@ Changes in version 0.4.5.6 - 2021-02-15
     - If the configure script has given any warnings, remind the user
       about them at the end of the script. Related to 40138.
 
-  o Minor features (compilation):
-    - Disable deprecation warnings when building with OpenSSL 3.0.0 or
-      later. There are a number of APIs newly deprecated in OpenSSL
-      3.0.0 that Tor still requires. (A later version of Tor will try to
-      stop depending on these APIs.) Closes ticket 40165.
-
   o Minor features (configuration):
     - Allow using wildcards (* and ?) with the %include option on
       configuration files. Closes ticket 25140. Patch by Daniel Pinto.
@@ -157,30 +125,13 @@ Changes in version 0.4.5.6 - 2021-02-15
       address. We keep "GETINFO address" for backwards-compatibility.
       Closes ticket 40039. Patch by Neel Chauhan.
 
-  o Minor features (crypto):
-    - Fix undefined behavior on our Keccak library. The bug only
-      appeared on platforms with 32-byte CPU cache lines (e.g. armv5tel)
-      and would result in wrong digests. Fixes bug 40210; bugfix on
-      0.2.8.1-alpha. Thanks to Bernhard Übelacker, Arnd Bergmann and
-      weasel for diagnosing this.
-
   o Minor features (directory authorities):
-    - Authorities now list a different set of protocols as required and
-      recommended. These lists have been chosen so that only truly
-      recommended and/or required protocols are included, and so that
-      clients using 0.2.9 or later will continue to work (even though
-      they are not supported), whereas only relays running 0.3.5 or
-      later will meet the requirements. Closes ticket 40162.
     - Add a new consensus method 30 that removes the unnecessary "="
       padding from ntor-onion-key. Closes ticket 7869. Patch by
       Daniel Pinto.
     - Directory authorities now reject descriptors from relays running
       Tor versions from the obsolete 0.4.1 series. Resolves ticket
       34357. Patch by Neel Chauhan.
-    - Make it possible to specify multiple ConsensusParams torrc lines.
-      Now directory authority operators can for example put the main
-      ConsensusParams config in one torrc file and then add to it from a
-      different torrc file. Closes ticket 40164.
     - The AssumeReachable option no longer stops directory authorities
       from checking whether other relays are running. A new
       AuthDirTestReachability option can be used to disable these
@@ -302,10 +253,6 @@ Changes in version 0.4.5.6 - 2021-02-15
       if statistics are enabled. Closes ticket 33263.
 
   o Minor features (subprotocol versions):
-    - Tor no longer allows subprotocol versions larger than 63.
-      Previously version numbers up to UINT32_MAX were allowed, which
-      significantly complicated our code. Implements proposal 318;
-      closes ticket 40133.
     - Use the new limitations on subprotocol versions due to proposal
       318 to simplify our implementation. Part of ticket 40133.
 
@@ -318,14 +265,6 @@ Changes in version 0.4.5.6 - 2021-02-15
   o Minor features (testing):
     - Added unit tests for channel_matches_target_addr_for_extend().
       Closes Ticket 33919. Patch by MrSquanchee.
-
-  o Minor features (tests, v2 onion services):
-    - Fix a rendezvous cache unit test that was triggering an underflow
-      on the global rend cache allocation. Fixes bug 40125; bugfix
-      on 0.2.8.1-alpha.
-    - Fix another rendezvous cache unit test that was triggering an
-      underflow on the global rend cache allocation. Fixes bug 40126;
-      bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (circuit padding):
     - When circpad_send_padding_cell_for_callback is called,
@@ -349,29 +288,13 @@ Changes in version 0.4.5.6 - 2021-02-15
       objects, potentially leading to bugs. Fixes bug 32880; bugfix on
       0.2.3.6-alpha. Patch by Neel Chauhan.
 
-  o Minor bugfixes (compatibility):
-    - Strip '\r' characters when reading text files on Unix platforms.
-      This should resolve an issue where a relay operator migrates a
-      relay from Windows to Unix, but does not change the line ending of
-      Tor's various state files to match the platform, and the CRLF line
-      endings from Windows end up leaking into other files such as the
-      extra-info document. Fixes bug 33781; bugfix on 0.0.9pre5.
-
   o Minor bugfixes (compilation):
     - Change the linker flag ordering in our library search code so that
       it works for compilers that need the libraries to be listed in the
       right order. Fixes bug 33624; bugfix on 0.1.1.0-alpha.
-    - Fix a compilation warning about unreachable fallthrough
-      annotations when building with "--enable-all-bugs-are-fatal" on
-      some compilers. Fixes bug 40241; bugfix on 0.3.5.4-alpha.
     - Fix the "--enable-static-tor" switch to properly set the "-static"
       compile option onto the tor binary only. Fixes bug 40111; bugfix
       on 0.2.3.1-alpha.
-    - Fix compiler warnings that would occur when building with
-      "--enable-all-bugs-are-fatal" and "--disable-module-relay" at the
-      same time. Fixes bug 40129; bugfix on 0.4.4.1-alpha.
-    - Resolve a compilation warning that could occur in
-      test_connection.c. Fixes bug 40113; bugfix on 0.2.9.3-alpha.
 
   o Minor bugfixes (configuration):
     - Exit Tor on a misconfiguration when the Bridge line is configured
@@ -404,8 +327,6 @@ Changes in version 0.4.5.6 - 2021-02-15
     - Turn warning-level log message about SENDME failure into a debug-
       level message. (This event can happen naturally, and is no reason
       for concern). Fixes bug 40142; bugfix on 0.4.1.1-alpha.
-    - Remove a debug logging statement that uselessly spammed the logs.
-      Fixes bug 40135; bugfix on 0.3.5.0-alpha.
     - When logging a rate-limited message about how many messages have
       been suppressed in the last N seconds, give an accurate value for
       N, rounded up to the nearest minute. Previously we would report
@@ -417,11 +338,6 @@ Changes in version 0.4.5.6 - 2021-02-15
     - Avoid a non-fatal assertion in certain edge-cases when
       establishing a circuit to an onion service. Fixes bug 32666;
       bugfix on 0.3.0.3-alpha.
-
-  o Minor bugfixes (relay configuration, crash):
-    - Avoid a fatal assert() when failing to create a listener
-      connection for an address that was in use. Fixes bug 40073; bugfix
-      on 0.3.5.1-alpha.
 
   o Minor bugfixes (rust, protocol versions):
     - Declare support for the onion service introduction point denial of
@@ -438,11 +354,6 @@ Changes in version 0.4.5.6 - 2021-02-15
       evidence that we're reachable on some other address. Fixes bug
       20165; bugfix on 0.1.0.1-rc.
 
-  o Minor bugfixes (SOCKS5):
-    - Handle partial SOCKS5 messages correctly. Previously, our code
-      would send an incorrect error message if it got a SOCKS5 request
-      that wasn't complete. Fixes bug 40190; bugfix on 0.3.5.1-alpha.
-
   o Minor bugfixes (spec conformance):
     - Use the correct key type when generating signing->link
       certificates. Fixes bug 40124; bugfix on 0.2.7.2-alpha.
@@ -455,22 +366,6 @@ Changes in version 0.4.5.6 - 2021-02-15
       treated empty strings as normal strings, which led to
       protocols_known being set. Fixes bug 34232; bugfix on
       0.3.3.2-alpha. Patch by Neel Chauhan.
-
-  o Minor bugfixes (testing):
-    - Fix the `config/parse_tcp_proxy_line` test so that it works
-      correctly on systems where the DNS provider hijacks invalid
-      queries. Fixes part of bug 40179; bugfix on 0.4.3.1-alpha.
-    - Fix our Python reference-implementation for the v3 onion service
-      handshake so that it works correctly with the version of hashlib
-      provided by Python 3.9. Fixes part of bug 40179; bugfix
-      on 0.3.1.6-rc.
-    - Fix the `tortls/openssl/log_one_error` test to work with OpenSSL
-      3.0.0. Fixes bug 40170; bugfix on 0.2.8.1-alpha.
-
-  o Minor bugfixes (v2 onion services):
-    - For HSFETCH commands on v2 onion services addresses, check the
-      length of bytes decoded, not the base32 length. Fixes bug 34400;
-      bugfix on 0.4.1.1-alpha. Patch by Neel Chauhan.
 
   o Code simplification and refactoring:
     - Add and use a set of functions to perform down-casts on constant
