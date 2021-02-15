@@ -1,3 +1,62 @@
+
+Changes in version 0.4.5.6 - 2021-02-15
+  The Tor 0.4.5.x release series is dedicated to the memory of Karsten
+  Loesing (1979-2020), Tor developer, cypherpunk, husband, and father.
+  Karsten is best known for creating the Tor metrics portal and leading
+  the metrics team, but he was involved in Tor from the early days. For
+  example, while he was still a student he invented and implemented the
+  v2 onion service directory design, and he also served as an ambassador
+  to the many German researchers working in the anonymity field. We
+  loved him and respected him for his patience, his consistency, and his
+  welcoming approach to growing our community.
+
+  This release series introduces significant improvements in relay IPv6
+  address discovery, a new "MetricsPort" mechanism for relay operators
+  to measure performance, LTTng support, build system improvements to
+  help when using Tor as a static library, and significant bugfixes
+  related to Windows relay performance. It also includes numerous
+  smaller features and bugfixes.
+
+  Below are the changes since 0.4.4.4-rc. For a complete list of changes
+  since 0.4.4.7, see the ReleaseNotes file.
+
+  o Major bugfixes (IPv6, relay):
+    - Fix a bug that prevented a relay from publishing its descriptor if
+      an auto-discovered IPv6 that was found unreachable. Fixes bug
+      40279; bugfix on 0.4.5.1-alpha.
+
+  o Minor features (protocol versions):
+    - Stop claiming to support the "DirCache=1" subprotocol version.
+      Technically, we stopped supporting this subprotocol back in
+      0.4.5.1-alpha, but we needed to wait for the authorities to stop
+      listing it as "required" before we could drop it from the list.
+      Closes ticket 40221.
+
+  o Minor bugfixes (logging):
+    - Avoid a spurious log message about missing subprotocol versions,
+      when the consensus that we're reading from is older than the
+      current release. Previously we had made this message nonfatal, but
+      in practice, it is never relevant when the consensus is older than
+      the current release. Fixes bug 40281; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (metrics port):
+    - Fix a bug warning when a metrics port socket was unexpectedly
+      closed. Fixes bug 40257; bugfix on 0.4.5.1-alpha
+
+  o Minor bugfixes (relay):
+    - Allow relays to have a RFC1918 address if PublishServerDescriptor
+      is set to 0 and AssumeReachable is set to 1. This is to support
+      the use case of a bridge on a local network, exposed via a
+      pluggable transport. Fixes bug 40208; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (relay, config):
+    - Fix a problem in the removal of duplicate ORPorts from the
+      internal port list when loading the config file. We were removing
+      the wrong ports, breaking valid torrc uses cases for multiple
+      ORPorts of the same address family. Fixes bug 40289; bugfix
+      on 0.4.5.1-alpha.
+
+
 Changes in version 0.4.4.7 - 2021-02-03
   Tor 0.4.4.7 backports numerous bugfixes from later releases,
   including one that made v3 onion services more susceptible to
