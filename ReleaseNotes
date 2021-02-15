@@ -3,7 +3,22 @@ release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
 Changes in version 0.4.5.6 - 2021-02-15
-  BLURB
+  The Tor 0.4.5.x release series is dedicated to the memory of Karsten
+  Loesing (1979-2020), Tor developer, cypherpunk, husband, and
+  father. Karsten is best known for creating the Tor metrics portal and
+  leading the metrics team, but he was involved in Tor from the early
+  days. For example, while he was still a student he invented and implemented
+  the v2 onion service directory design, and he also served as an ambassador
+  to the many German researchers working in the anonymity field. We loved him
+  and respected him for his patience, his consistency, and his welcoming
+  approach to growing our community.
+
+  This release series introduces significant improvements in relay IPv6
+  address discovery, a new "MetricsPort" mechanism for relay operators to
+  measure performance, LTTng support, build system improvements to help when
+  using Tor as a static library, and significant bugfixes related to
+  Windows relay performance.  It also includes numerous smaller features and
+  bugfixes.
 
   Below are the changes since 0.4.4.7. For a list only of the changes
   since 0.4.5.5-rc, see the ChangeLog file.
