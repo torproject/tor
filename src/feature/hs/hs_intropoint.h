@@ -52,7 +52,6 @@ STATIC void
 get_auth_key_from_cell(ed25519_public_key_t *auth_key_out,
                        unsigned int cell_type, const void *cell);
 
-STATIC int introduce1_cell_is_legacy(const uint8_t *request);
 STATIC int handle_introduce1(or_circuit_t *client_circ,
                              const uint8_t *request, size_t request_len);
 STATIC int validate_introduce1_parsed_cell(const trn_cell_introduce1_t *cell);
