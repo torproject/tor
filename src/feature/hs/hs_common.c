@@ -5,8 +5,6 @@
  * \file hs_common.c
  * \brief Contains code shared between different HS protocol version as well
  *        as useful data structures and accessors used by other subsystems.
- *        The rendcommon.c should only contains code relating to the v2
- *        protocol.
  **/
 
 #define HS_COMMON_PRIVATE
@@ -638,7 +636,6 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
   chosen_port = smartlist_choose(matching_ports);
   smartlist_free(matching_ports);
   if (chosen_port) {
-    /* Remember, v2 doesn't use an hs_ident. */
     if (conn->hs_ident) {
       /* There is always a connection identifier at this point. Regardless of a
        * Unix or TCP port, note the virtual port. */
@@ -1350,8 +1347,8 @@ hs_hsdir_requery_period(const or_options_t *options)
 
 /** Tracks requests for fetching hidden service descriptors. It's used by
  *  hidden service clients, to avoid querying HSDirs that have already failed
- *  giving back a descriptor. The same data structure is used to track both v2
- *  and v3 HS descriptor requests.
+ *  giving back a descriptor. The same data structure is used to track v3 HS
+ *  descriptor requests.
  *
  * The string map is a key/value store that contains the last request times to
  * hidden service directories for certain queries. Specifically:
@@ -1360,8 +1357,7 @@ hs_hsdir_requery_period(const or_options_t *options)
  *   value = time_t of last request for that hs_identity to that HSDir
  *
  * where 'hsdir_identity' is the identity digest of the HSDir node, and
- * 'hs_identity' is the descriptor ID of the HS in the v2 case, or the ed25519
- * blinded public key of the HS in the v3 case. */
+ * 'hs_identity' is the ed25519 blinded public key of the HS for v3. */
 static strmap_t *last_hid_serv_requests_ = NULL;
 
 /** Returns last_hid_serv_requests_, initializing it to a new strmap if
@@ -1375,10 +1371,10 @@ get_last_hid_serv_requests(void)
 }
 
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor request key <b>req_key_str</b> which is the descriptor ID
- * for a v2 service or the blinded key for v3. If <b>set</b> is non-zero,
- * assign the current time <b>now</b> and return that.  Otherwise, return the
- * most recent request time, or 0 if no such request has been sent before. */
+ * for descriptor request key <b>req_key_str</b> which is the blinded key for
+ * v3. If <b>set</b> is non-zero, assign the current time <b>now</b> and
+ * return that. Otherwise, return the most recent request time, or 0 if no
+ * such request has been sent before. */
 time_t
 hs_lookup_last_hid_serv_request(routerstatus_t *hs_dir,
                                 const char *req_key_str,
@@ -1460,8 +1456,7 @@ hs_purge_hid_serv_from_last_hid_serv_requests(const char *req_key_str)
      * check on the strings we are about to compare. The key is variable sized
      * since it's composed as follows:
      *   key = base32(hsdir_identity) + base32(req_key_str)
-     * where 'req_key_str' is the descriptor ID of the HS in the v2 case, or
-     * the ed25519 blinded public key of the HS in the v3 case. */
+     * where 'req_key_str' is the ed25519 blinded public key of the HS v3. */
     if (strlen(key) < REND_DESC_ID_V2_LEN_BASE32 + strlen(req_key_str)) {
       iter = strmap_iter_next(last_hid_serv_requests, iter);
       continue;

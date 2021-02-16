@@ -328,7 +328,9 @@ struct curve25519_public_key_t;
  * passed through from a destroy or truncate cell. */
 #define END_CIRC_REASON_FLAG_REMOTE     512
 
-/** Length of v2 descriptor ID (32 base32 chars = 160 bits). */
+/** Length of v2 descriptor ID (32 base32 chars = 160 bits).
+ *
+ * XXX: It is still used by v3 code but should be renamed or maybe removed. */
 #define REND_DESC_ID_V2_LEN_BASE32 BASE32_DIGEST_LEN
 
 /** Maximum length of authorized client names for a hidden service. */

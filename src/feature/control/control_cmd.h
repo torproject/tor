@@ -82,8 +82,6 @@ typedef struct control_cmd_syntax_t {
  * multiple versions so this union stores the key and passes it to the HS
  * subsystem depending on the requested version. */
 typedef union add_onion_secret_key_t {
-  /* Hidden service v2 secret key. */
-  crypto_pk_t *v2;
   /* Hidden service v3 secret key. */
   ed25519_secret_key_t *v3;
 } add_onion_secret_key_t;

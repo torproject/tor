@@ -359,16 +359,6 @@ note_connection_attempt_succeeded(const hs_ident_edge_conn_t *hs_conn_ident)
   /* Remove from the hid serv cache all requests for that service so we can
    * query the HSDir again later on for various reasons. */
   purge_hid_serv_request(&hs_conn_ident->identity_pk);
-
-  /* The v2 subsystem cleans up the intro point time out flag at this stage.
-   * We don't try to do it here because we still need to keep intact the intro
-   * point state for future connections. Even though we are able to connect to
-   * the service, doesn't mean we should reset the timed out intro points.
-   *
-   * It is not possible to have successfully connected to an intro point
-   * present in our cache that was on error or timed out. Every entry in that
-   * cache have a 2 minutes lifetime so ultimately the intro point(s) state
-   * will be reset and thus possible to be retried. */
 }
 
 /** Given the pubkey of a hidden service in <b>onion_identity_pk</b>, fetch its

@@ -135,7 +135,7 @@ typedef enum {
 } hs_auth_key_type_t;
 
 /** Return value when adding an ephemeral service through the ADD_ONION
- * control port command. Both v2 and v3 share these. */
+ * control port command. */
 typedef enum {
   RSAE_BADAUTH     = -5, /**< Invalid auth_type/auth_clients */
   RSAE_BADVIRTPORT = -4, /**< Invalid VIRTPORT/TARGET(s) */

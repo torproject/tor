@@ -76,7 +76,6 @@ bool circuit_purpose_is_hs_client(const uint8_t purpose);
 bool circuit_purpose_is_hs_service(const uint8_t purpose);
 bool circuit_purpose_is_hs_vanguards(const uint8_t purpose);
 
-bool circuit_is_hs_v2(const circuit_t *circ);
 bool circuit_is_hs_v3(const circuit_t *circ);
 
 int circuit_should_use_vanguards(uint8_t);
