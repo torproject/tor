@@ -1241,16 +1241,6 @@ The following options are useful only for clients (that is, if
     **FascistFirewall** is set. This option is deprecated; use ReachableAddresses
     instead. (Default: 80, 443)
 
-[[HidServAuth]] **HidServAuth** __onion-address__ __auth-cookie__ [__service-name__]::
-    Client authorization for a v2 hidden service. Valid onion addresses contain 16
-    characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
-    characters in A-Za-z0-9+/. The service name is only used for internal
-    purposes, e.g., for Tor controllers. This option may be used multiple times
-    for different hidden services. If a hidden service uses authorization and
-    this option is not set, the hidden service is not accessible. Hidden
-    services can be configured to require authorization using the
-    **HiddenServiceAuthorizeClient** option.
-
 [[HTTPTunnelPort]] **HTTPTunnelPort** ['address'**:**]{empty}__port__|**auto** [_isolation flags_]::
     Open this port to listen for proxy connections using the "HTTP CONNECT"
     protocol instead of SOCKS. Set this to
@@ -3215,20 +3205,6 @@ The next section describes the per service options that can only be set
    not an authorization mechanism; it is instead meant to be a mild
    inconvenience to port-scanners.) (Default: 0)
 
-[[HiddenServiceAuthorizeClient]] **HiddenServiceAuthorizeClient** __auth-type__ __client-name__,__client-name__,__...__::
-    If configured, the v2 hidden service is accessible for authorized clients
-    only. The auth-type can either be \'basic' for a general-purpose
-    authorization protocol or \'stealth' for a less scalable protocol that also
-    hides service activity from unauthorized clients. Only clients that are
-    listed here are authorized to access the hidden service. Valid client names
-    are 1 to 16 characters long and only use characters in A-Za-z0-9+-_ (no
-    spaces). If this option is set, the hidden service is not accessible for
-    clients without authorization any more. Generated authorization data can be
-    found in the hostname file. Clients need to put this authorization data in
-    their configuration file using **HidServAuth**. This option is only for v2
-    services; v3 services configure client authentication in a subdirectory of
-    HiddenServiceDir instead (see <<client-authorization,CLIENT AUTHORIZATION>>).
-
 [[HiddenServiceDir]] **HiddenServiceDir** __DIRECTORY__::
     Store data files for a hidden service in DIRECTORY. Every hidden service
     must have a separate directory. You may use this option  multiple times to
@@ -3323,7 +3299,7 @@ The next section describes the per service options that can only be set
 
 [[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
     Number of introduction points the hidden service will have. You can't
-    have more than 10 for v2 service and 20 for v3. (Default: 3)
+    have more than 20. (Default: 3)
 
 [[HiddenServicePort]] **HiddenServicePort** __VIRTPORT__ [__TARGET__]::
     Configure a virtual port VIRTPORT for a hidden service. You may use this
@@ -3337,17 +3313,9 @@ The next section describes the per service options that can only be set
     connects to that VIRTPORT, one of the TARGETs from those lines will be
     chosen at random. Note that address-port pairs have to be comma-separated.
 
-[[HiddenServiceVersion]] **HiddenServiceVersion** **2**|**3**::
+[[HiddenServiceVersion]] **HiddenServiceVersion** **3**::
     A list of rendezvous service descriptor versions to publish for the hidden
-    service. Currently, versions 2 and 3 are supported. (Default: 3)
-
-[[RendPostPeriod]] **RendPostPeriod** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Every time the specified period elapses, Tor uploads any rendezvous
-    service descriptors to the directory servers. This information is also
-    uploaded whenever it changes. Minimum value allowed is 10 minutes and
-    maximum is 3.5 days. This option is only for v2 services.
-    (Default: 1 hour)
-
+    service. Currently, only version 3 is supported. (Default: 3)
 
 
 **PER INSTANCE OPTIONS:**
@@ -3395,8 +3363,6 @@ The next section describes the per service options that can only be set
 
 [[client-authorization]]
 == CLIENT AUTHORIZATION
-
-(Version 3 only)
 
 Service side:
 
