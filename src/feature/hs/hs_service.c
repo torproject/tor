@@ -4075,7 +4075,7 @@ hs_service_receive_introduce2(origin_circuit_t *circ, const uint8_t *payload,
 
   if (circ->hs_ident) {
     ret = service_handle_introduce2(circ, payload, payload_len);
-    hs_stats_note_introduce2_cell(1);
+    hs_stats_note_introduce2_cell();
   }
 
  done:

@@ -67,9 +67,7 @@ void rep_hist_hs_stats_init(time_t now);
 void rep_hist_hs_stats_term(void);
 time_t rep_hist_hs_stats_write(time_t now, bool is_v3);
 
-char *rep_hist_get_hs_v2_stats_string(void);
 void rep_hist_seen_new_rp_cell(bool is_v2);
-void rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey);
 
 char *rep_hist_get_hs_v3_stats_string(void);
 void rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key);
@@ -93,10 +91,6 @@ extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
 typedef struct hs_v2_stats_t {
   /** How many v2 relay cells have we seen as rendezvous points? */
   uint64_t rp_v2_relay_cells_seen;
-
-  /** Set of unique public key digests we've seen this stat period
-   * (could also be implemented as sorted smartlist). */
-  digestmap_t *v2_onions_seen_this_period;
 } hs_v2_stats_t;
 
 /** Structure that contains the various statistics we keep about v3

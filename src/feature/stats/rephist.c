@@ -1722,7 +1722,6 @@ static hs_v2_stats_t *
 hs_v2_stats_new(void)
 {
   hs_v2_stats_t *new_hs_v2_stats = tor_malloc_zero(sizeof(hs_v2_stats_t));
-  new_hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
 
   return new_hs_v2_stats;
 }
@@ -1737,8 +1736,6 @@ hs_v2_stats_free_(hs_v2_stats_t *victim_hs_v2_stats)
   if (!victim_hs_v2_stats) {
     return;
   }
-
-  digestmap_free(victim_hs_v2_stats->v2_onions_seen_this_period, NULL);
   tor_free(victim_hs_v2_stats);
 }
 
@@ -1753,38 +1750,7 @@ rep_hist_reset_hs_v2_stats(time_t now)
 
   hs_v2_stats->rp_v2_relay_cells_seen = 0;
 
-  digestmap_free(hs_v2_stats->v2_onions_seen_this_period, NULL);
-  hs_v2_stats->v2_onions_seen_this_period = digestmap_new();
-
   start_of_hs_v2_stats_interval = now;
-}
-
-/** As HSDirs, we saw another v2 onion with public key <b>pubkey</b>. Check
- *  whether we have counted it before, if not count it now! */
-void
-rep_hist_hsdir_stored_maybe_new_v2_onion(const crypto_pk_t *pubkey)
-{
-  char pubkey_hash[DIGEST_LEN];
-
-  if (!hs_v2_stats) {
-    return; // We're not collecting stats
-  }
-
-  /* Get the digest of the pubkey which will be used to detect whether
-     we've seen this hidden service before or not.  */
-  if (crypto_pk_get_digest(pubkey, pubkey_hash) < 0) {
-    /*  This fail should not happen; key has been validated by
-        descriptor parsing code first. */
-    return;
-  }
-
-  /* Check if this is the first time we've seen this hidden
-     service. If it is, count it as new. */
-  if (!digestmap_get(hs_v2_stats->v2_onions_seen_this_period,
-                     pubkey_hash)) {
-    digestmap_set(hs_v2_stats->v2_onions_seen_this_period,
-                  pubkey_hash, (void*)(uintptr_t)1);
-  }
 }
 
 /*** HSv3 stats ******/
@@ -1989,8 +1955,7 @@ rep_hist_format_hs_stats(time_t now, bool is_v3)
   uint64_t rp_cells_seen = is_v3 ?
     hs_v3_stats->rp_v3_relay_cells_seen : hs_v2_stats->rp_v2_relay_cells_seen;
   size_t onions_seen = is_v3 ?
-    digest256map_size(hs_v3_stats->v3_onions_seen_this_period) :
-    digestmap_size(hs_v2_stats->v2_onions_seen_this_period);
+    digest256map_size(hs_v3_stats->v3_onions_seen_this_period) : 0;
   time_t start_of_hs_stats_interval = is_v3 ?
     start_of_hs_v3_stats_interval : start_of_hs_v2_stats_interval;
 
