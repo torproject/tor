@@ -328,69 +328,8 @@ struct curve25519_public_key_t;
  * passed through from a destroy or truncate cell. */
 #define END_CIRC_REASON_FLAG_REMOTE     512
 
-/** Length of 'y' portion of 'y.onion' URL. */
-#define REND_SERVICE_ID_LEN_BASE32 16
-
-/** Length of 'y.onion' including '.onion' URL. */
-#define REND_SERVICE_ADDRESS_LEN (16+1+5)
-
-/** Length of a binary-encoded rendezvous service ID. */
-#define REND_SERVICE_ID_LEN 10
-
-/** Time period for which a v2 descriptor will be valid. */
-#define REND_TIME_PERIOD_V2_DESC_VALIDITY (24*60*60)
-
-/** Time period within which two sets of v2 descriptors will be uploaded in
- * parallel. */
-#define REND_TIME_PERIOD_OVERLAPPING_V2_DESCS (60*60)
-
-/** Number of non-consecutive replicas (i.e. distributed somewhere
- * in the ring) for a descriptor. */
-#define REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS 2
-
-/** Number of consecutive replicas for a descriptor. */
-#define REND_NUMBER_OF_CONSECUTIVE_REPLICAS 3
-
 /** Length of v2 descriptor ID (32 base32 chars = 160 bits). */
 #define REND_DESC_ID_V2_LEN_BASE32 BASE32_DIGEST_LEN
-
-/** Length of the base32-encoded secret ID part of versioned hidden service
- * descriptors. */
-#define REND_SECRET_ID_PART_LEN_BASE32 BASE32_DIGEST_LEN
-
-/** Length of the base32-encoded hash of an introduction point's
- * identity key. */
-#define REND_INTRO_POINT_ID_LEN_BASE32 BASE32_DIGEST_LEN
-
-/** Length of the descriptor cookie that is used for client authorization
- * to hidden services. */
-#define REND_DESC_COOKIE_LEN 16
-
-/** Length of the base64-encoded descriptor cookie that is used for
- * exchanging client authorization between hidden service and client. */
-#define REND_DESC_COOKIE_LEN_BASE64 22
-
-/** Length of client identifier in encrypted introduction points for hidden
- * service authorization type 'basic'. */
-#define REND_BASIC_AUTH_CLIENT_ID_LEN 4
-
-/** Multiple of the number of clients to which the real number of clients
- * is padded with fake clients for hidden service authorization type
- * 'basic'. */
-#define REND_BASIC_AUTH_CLIENT_MULTIPLE 16
-
-/** Length of client entry consisting of client identifier and encrypted
- * session key for hidden service authorization type 'basic'. */
-#define REND_BASIC_AUTH_CLIENT_ENTRY_LEN (REND_BASIC_AUTH_CLIENT_ID_LEN \
-                                          + CIPHER_KEY_LEN)
-
-/** Maximum size of v2 hidden service descriptors. */
-#define REND_DESC_MAX_SIZE (20 * 1024)
-
-/** Legal characters for use in authorized client names for a hidden
- * service. */
-#define REND_LEGAL_CLIENTNAME_CHARACTERS \
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-_"
 
 /** Maximum length of authorized client names for a hidden service. */
 #define REND_CLIENTNAME_MAX_LEN 16
@@ -402,18 +341,9 @@ struct curve25519_public_key_t;
 /** Client authorization type that a hidden service performs. */
 typedef enum rend_auth_type_t {
   REND_NO_AUTH      = 0,
-  REND_BASIC_AUTH   = 1,
-  REND_STEALTH_AUTH = 2,
-  REND_V3_AUTH      = 3, /* Dummy flag to allow adding v3 services on the
+  REND_V3_AUTH      = 1, /* Dummy flag to allow adding v3 services on the
                           * control port */
 } rend_auth_type_t;
-
-/** Client-side configuration of authorization for a hidden service. */
-typedef struct rend_service_authorization_t {
-  uint8_t descriptor_cookie[REND_DESC_COOKIE_LEN];
-  char onion_address[REND_SERVICE_ADDRESS_LEN+1];
-  rend_auth_type_t auth_type;
-} rend_service_authorization_t;
 
 /* Stub because we can't include hs_ident.h. */
 struct hs_ident_edge_conn_t;
@@ -1013,15 +943,9 @@ typedef struct vote_timing_t vote_timing_t;
 
 typedef struct microdesc_cache_t microdesc_cache_t;
 
-/********************************* rendcommon.c ***************************/
-
-typedef struct rend_authorized_client_t rend_authorized_client_t;
-typedef struct rend_encoded_v2_service_descriptor_t
-               rend_encoded_v2_service_descriptor_t;
-
 /** The maximum number of non-circuit-build-timeout failures a hidden
  * service client will tolerate while trying to build a circuit to an
- * introduction point.  See also rend_intro_point_t.unreachable_count. */
+ * introduction point. */
 #define MAX_INTRO_POINT_REACHABILITY_FAILURES 5
 
 /** The minimum and maximum number of distinct INTRODUCE2 cells which a
@@ -1049,9 +973,6 @@ typedef struct rend_encoded_v2_service_descriptor_t
  * before giving up. We try to reuse intro point that fails during their
  * lifetime so this is a hard limit on the amount of time we do that. */
 #define MAX_INTRO_POINT_CIRCUIT_RETRIES 3
-
-typedef struct rend_intro_point_t rend_intro_point_t;
-typedef struct rend_service_descriptor_t rend_service_descriptor_t;
 
 /********************************* routerlist.c ***************************/
 
