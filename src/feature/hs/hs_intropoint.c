@@ -512,6 +512,11 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
    * ESTABLISH_INTRO and pass it to the appropriate cell handler */
   const uint8_t first_byte = request[0];
   switch (first_byte) {
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0:
+    case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
+      /* Likely version 2 onion service which is now obsolete. Avoid a
+       * protocol warning considering they still exists on the network. */
+      goto err;
     case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519:
       return handle_establish_intro(circ, request, request_len);
     default:
