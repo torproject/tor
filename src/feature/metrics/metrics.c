@@ -258,6 +258,15 @@ metrics_connection_reached_eof(connection_t *conn)
   return 0;
 }
 
+/** Called when conn has no more bytes left on its outbuf. Return 0 indicating
+ * success. */
+int
+metrics_connection_finished_flushing(connection_t *conn)
+{
+  tor_assert(conn);
+  return 0;
+}
+
 /** Initialize the subsystem. */
 void
 metrics_init(void)
