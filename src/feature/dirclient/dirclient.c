@@ -696,24 +696,6 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   return 0;
 }
 
-/** Return true iff <b>conn</b> is the client side of a directory connection
- * we launched to ourself in order to determine the reachability of our
- * dir_port. */
-static int
-directory_conn_is_self_reachability_test(dir_connection_t *conn)
-{
-  if (conn->requested_resource &&
-      !strcmpstart(conn->requested_resource,"authority")) {
-    const routerinfo_t *me = router_get_my_routerinfo();
-    if (me &&
-        router_digest_is_me(conn->identity_digest) &&
-        tor_addr_eq(&TO_CONN(conn)->addr, &me->ipv4_addr) &&
-        me->ipv4_dirport == conn->base_.port)
-      return 1;
-  }
-  return 0;
-}
-
 /** Called when we are unable to complete the client's request to a directory
  * server due to a network error: Mark the router as down and try again if
  * possible.
@@ -725,9 +707,6 @@ connection_dir_client_request_failed(dir_connection_t *conn)
     /* We haven't seen a success on this guard state, so consider it to have
      * failed. */
     entry_guard_failed(&conn->guard_state);
-  }
-  if (directory_conn_is_self_reachability_test(conn)) {
-    return; /* this was a test fetch. don't retry. */
   }
   if (!entry_list_is_constrained(get_options()))
     router_set_status(conn->identity_digest, 0); /* don't try this one again */
@@ -2516,8 +2495,6 @@ handle_response_fetch_desc(dir_connection_t *conn,
     SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
     smartlist_free(which);
   }
-  if (directory_conn_is_self_reachability_test(conn))
-    router_dirport_found_reachable();
 
   return 0;
 }
