@@ -1157,7 +1157,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([AC_LANG_PROGRAM([[
 ]])])], [openssl_ver_mismatch=no], [
    # This is a kludge to figure out whether compilation failed, or whether
    # running the program failed.
-   if test "$ac_retval" == "1"; then
+   if test "$ac_retval" = "1"; then
       openssl_ver_mismatch=inconclusive
    else
       openssl_ver_mismatch=yes
