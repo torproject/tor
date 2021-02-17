@@ -1357,8 +1357,8 @@ decide_to_advertise_dir_impl(const or_options_t *options,
 int
 router_should_advertise_dirport(const or_options_t *options, uint16_t dir_port)
 {
-  /* supports_tunnelled_dir_requests is not relevant, pass 0 */
-  return decide_to_advertise_dir_impl(options, dir_port, 0) ? dir_port : 0;
+  /* Only authorities should advertise a DirPort now. */
+  return authdir_mode(options) ? dir_port : 0;
 }
 
 /** Front-end to decide_to_advertise_dir_impl(): return 0 if we don't want to
