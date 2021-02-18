@@ -294,19 +294,22 @@ client_likes_consensus(const struct consensus_cache_entry_t *ent,
 /** Return the compression level we should use for sending a compressed
  * response of size <b>n_bytes</b>. */
 STATIC compression_level_t
-choose_compression_level(ssize_t n_bytes)
+choose_compression_level(void)
 {
-  if (! have_been_under_memory_pressure()) {
-    return HIGH_COMPRESSION; /* we have plenty of RAM. */
-  } else if (n_bytes < 0) {
-    return HIGH_COMPRESSION; /* unknown; might be big. */
-  } else if (n_bytes < 1024) {
-    return LOW_COMPRESSION;
-  } else if (n_bytes < 2048) {
-    return MEDIUM_COMPRESSION;
-  } else {
-    return HIGH_COMPRESSION;
-  }
+  /* This is the compression level choice for a stream.
+   *
+   * We always return LOW because this compression is done in the main thread
+   * thus we save CPU time as much as possible, and it is also done more than
+   * background compression for document we serve pre-compressed.
+   *
+   * GZip highest compression level (9) gives us a ratio of 49.72%
+   * Zstd lowest compression level (1) gives us a ratio of 47.38%
+   *
+   * Thus, as the network moves more and more to use Zstd when requesting
+   * directory documents that are not pre-cached, even at the
+   * lowest level, we still gain over GZip and thus help with load and CPU
+   * time on the network. */
+  return LOW_COMPRESSION;
 }
 
 /** Information passed to handle a GET request. */
@@ -1044,7 +1047,7 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
     if (smartlist_len(items)) {
       if (compress_method != NO_METHOD) {
         conn->compress_state = tor_compress_new(1, compress_method,
-                           choose_compression_level(estimated_len));
+                           choose_compression_level());
         SMARTLIST_FOREACH(items, const char *, c,
                  connection_buf_add_compress(c, strlen(c), conn, 0));
         connection_buf_add_compress("", 0, conn, 1);
@@ -1109,7 +1112,7 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
 
     if (compress_method != NO_METHOD)
       conn->compress_state = tor_compress_new(1, compress_method,
-                                      choose_compression_level(size_guess));
+                                      choose_compression_level());
 
     const int initial_flush_result = connection_dirserv_flushed_some(conn);
     tor_assert_nonfatal(initial_flush_result == 0);
@@ -1204,7 +1207,7 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
       write_http_response_header(conn, -1, compress_method, cache_lifetime);
       if (compress_method != NO_METHOD)
         conn->compress_state = tor_compress_new(1, compress_method,
-                                        choose_compression_level(size_guess));
+                                        choose_compression_level());
       clear_spool = 0;
       /* Prime the connection with some data. */
       int initial_flush_result = connection_dirserv_flushed_some(conn);
@@ -1301,7 +1304,7 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
                                60*60);
     if (compress_method != NO_METHOD) {
       conn->compress_state = tor_compress_new(1, compress_method,
-                                              choose_compression_level(len));
+                                              choose_compression_level());
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_buf_add_compress(
                 c->cache_info.signed_descriptor_body,
