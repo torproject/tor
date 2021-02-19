@@ -1,0 +1,3 @@
+  o Minor bugfixes (metrics port):
+    - Fix a BUG() on the MetricsPort for an internal missing handler. Fixes bug
+      40295; bugfix on 0.4.5.1-alpha.
