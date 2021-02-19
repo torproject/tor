@@ -5187,6 +5187,8 @@ connection_finished_flushing(connection_t *conn)
       return connection_dir_finished_flushing(TO_DIR_CONN(conn));
     case CONN_TYPE_CONTROL:
       return connection_control_finished_flushing(TO_CONTROL_CONN(conn));
+    case CONN_TYPE_METRICS:
+      return metrics_connection_finished_flushing(conn);
     default:
       log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
