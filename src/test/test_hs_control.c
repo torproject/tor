@@ -835,6 +835,7 @@ test_hs_control_add_onion_helper_add_service(void *arg)
   service_good = find_service(global_map, &pk_good);
   tt_int_op(smartlist_len(service_good->config.clients), OP_EQ, 1);
 
+  remove_service(global_map, service_good);
   hs_service_free(service_good);
 
   list_bad = smartlist_new();
