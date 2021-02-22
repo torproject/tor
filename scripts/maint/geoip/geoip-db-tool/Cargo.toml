@@ -10,7 +10,5 @@ publish = false
 
 [dependencies]
 ipnetwork= "0.17.0"
-rangemap= "0.1.9"
-# I use this for now to avoid a performance hit due to a bug on 0.1.9
-# rangemap = {version = "*", path = "/home/nickm/src/rangemap/" }
+rangemap = "0.1.10"
 argh = "0.1.4"
