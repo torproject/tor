@@ -1929,13 +1929,12 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
   }
 }
 
-/** We just received a SOCKS request in <b>conn</b> to an onion address of type
- *  <b>addresstype</b>. Start connecting to the onion service. */
+/** We just received a SOCKS request in <b>conn</b> to a v3 onion. Start
+ *  connecting to the onion service. */
 static int
 connection_ap_handle_onion(entry_connection_t *conn,
                            socks_request_t *socks,
-                           origin_circuit_t *circ,
-                           hostname_type_t addresstype)
+                           origin_circuit_t *circ)
 {
   time_t now = approx_time();
   connection_t *base_conn = ENTRY_TO_CONN(conn);
@@ -1978,38 +1977,36 @@ connection_ap_handle_onion(entry_connection_t *conn,
   int rend_cache_lookup_result = -ENOENT;
   int descriptor_is_usable = 0;
 
-  if (addresstype == ONION_V3_HOSTNAME) {
-    const hs_descriptor_t *cached_desc = NULL;
-    int retval;
-    /* Create HS conn identifier with HS pubkey */
-    hs_ident_edge_conn_t *hs_conn_ident =
-      tor_malloc_zero(sizeof(hs_ident_edge_conn_t));
+  const hs_descriptor_t *cached_desc = NULL;
+  int retval;
+  /* Create HS conn identifier with HS pubkey */
+  hs_ident_edge_conn_t *hs_conn_ident =
+    tor_malloc_zero(sizeof(hs_ident_edge_conn_t));
 
-    retval = hs_parse_address(socks->address, &hs_conn_ident->identity_pk,
-                              NULL, NULL);
-    if (retval < 0) {
-      log_warn(LD_GENERAL, "failed to parse hs address");
-      tor_free(hs_conn_ident);
-      return -1;
-    }
-    ENTRY_TO_EDGE_CONN(conn)->hs_ident = hs_conn_ident;
+  retval = hs_parse_address(socks->address, &hs_conn_ident->identity_pk,
+                            NULL, NULL);
+  if (retval < 0) {
+    log_warn(LD_GENERAL, "failed to parse hs address");
+    tor_free(hs_conn_ident);
+    return -1;
+  }
+  ENTRY_TO_EDGE_CONN(conn)->hs_ident = hs_conn_ident;
 
-    onion_address = socks->address;
+  onion_address = socks->address;
 
-    /* Check the v3 desc cache */
-    cached_desc = hs_cache_lookup_as_client(&hs_conn_ident->identity_pk);
-    if (cached_desc) {
-      rend_cache_lookup_result = 0;
-      descriptor_is_usable =
-        hs_client_any_intro_points_usable(&hs_conn_ident->identity_pk,
-                                          cached_desc);
-      log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
-               (descriptor_is_usable) ? "usable" : "unusable",
-               safe_str_client(onion_address),
-               (descriptor_is_usable) ? "Not fetching." : "Refetching.");
-    } else {
-      rend_cache_lookup_result = -ENOENT;
-    }
+  /* Check the v3 desc cache */
+  cached_desc = hs_cache_lookup_as_client(&hs_conn_ident->identity_pk);
+  if (cached_desc) {
+    rend_cache_lookup_result = 0;
+    descriptor_is_usable =
+      hs_client_any_intro_points_usable(&hs_conn_ident->identity_pk,
+                                        cached_desc);
+    log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
+             (descriptor_is_usable) ? "usable" : "unusable",
+             safe_str_client(onion_address),
+             (descriptor_is_usable) ? "Not fetching." : "Refetching.");
+  } else {
+    rend_cache_lookup_result = -ENOENT;
   }
 
   /* Lookup the given onion address. If invalid, stop right now.
@@ -2048,27 +2045,25 @@ connection_ap_handle_onion(entry_connection_t *conn,
     edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
     connection_ap_mark_as_non_pending_circuit(conn);
     base_conn->state = AP_CONN_STATE_RENDDESC_WAIT;
-    if (addresstype == ONION_V3_HOSTNAME) {
-      tor_assert(edge_conn->hs_ident);
-      /* Attempt to fetch the hsv3 descriptor. Check the retval to see how it
-       * went and act accordingly. */
-      int ret = hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
-      switch (ret) {
-      case HS_CLIENT_FETCH_MISSING_INFO:
-        /* Keeping the connection in descriptor wait state is fine because
-         * once we get enough dirinfo or a new live consensus, the HS client
-         * subsystem is notified and every connection in that state will
-         * trigger a fetch for the service key. */
-      case HS_CLIENT_FETCH_LAUNCHED:
-      case HS_CLIENT_FETCH_PENDING:
-      case HS_CLIENT_FETCH_HAVE_DESC:
-        return 0;
-      case HS_CLIENT_FETCH_ERROR:
-      case HS_CLIENT_FETCH_NO_HSDIRS:
-      case HS_CLIENT_FETCH_NOT_ALLOWED:
-        /* Can't proceed further and better close the SOCKS request. */
-        return -1;
-      }
+    tor_assert(edge_conn->hs_ident);
+    /* Attempt to fetch the hsv3 descriptor. Check the retval to see how it
+     * went and act accordingly. */
+    int ret = hs_client_refetch_hsdesc(&edge_conn->hs_ident->identity_pk);
+    switch (ret) {
+    case HS_CLIENT_FETCH_MISSING_INFO:
+      /* Keeping the connection in descriptor wait state is fine because
+       * once we get enough dirinfo or a new live consensus, the HS client
+       * subsystem is notified and every connection in that state will
+       * trigger a fetch for the service key. */
+    case HS_CLIENT_FETCH_LAUNCHED:
+    case HS_CLIENT_FETCH_PENDING:
+    case HS_CLIENT_FETCH_HAVE_DESC:
+      return 0;
+    case HS_CLIENT_FETCH_ERROR:
+    case HS_CLIENT_FETCH_NO_HSDIRS:
+    case HS_CLIENT_FETCH_NOT_ALLOWED:
+      /* Can't proceed further and better close the SOCKS request. */
+      return -1;
     }
   }
 
@@ -2515,7 +2510,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* If we get here, it's a request for a .onion address! */
     tor_assert(addresstype == ONION_V3_HOSTNAME);
     tor_assert(!automap);
-    return connection_ap_handle_onion(conn, socks, circ, addresstype);
+    return connection_ap_handle_onion(conn, socks, circ);
   }
 
   return 0; /* unreached but keeps the compiler happy */
