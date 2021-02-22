@@ -1,0 +1,4 @@
+  o Minor bugfixes (directory authority):
+    - Now that exit relays don't allow exit connections to directory authority
+      DirPorts (network reentry), disable authorities' reachability self test
+      on the DirPort. Fixes bug 40287; bugfix on 0.4.5.5-rc.
