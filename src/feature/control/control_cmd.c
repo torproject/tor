@@ -1437,7 +1437,6 @@ handle_control_hsfetch(control_connection_t *conn,
                        const control_cmd_args_t *args)
 
 {
-  char *desc_id = NULL;
   smartlist_t *hsdirs = NULL;
   ed25519_public_key_t v3_pk;
   uint32_t version;
@@ -1472,13 +1471,6 @@ handle_control_hsfetch(control_connection_t *conn,
     } else {
       tor_assert_nonfatal_unreached();
     }
-  }
-
-  /* Using a descriptor ID, we force the user to provide at least one
-   * hsdir server using the SERVER= option. */
-  if (desc_id && (!hsdirs || !smartlist_len(hsdirs))) {
-    control_write_endreply(conn, 512, "SERVER option is required");
-    goto done;
   }
 
   /* We are about to trigger HSDir fetch so send the OK now because after
