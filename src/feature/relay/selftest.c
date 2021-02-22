@@ -31,6 +31,8 @@
 
 #include "feature/control/control_events.h"
 
+#include "feature/dirauth/authmode.h"
+
 #include "feature/dirclient/dirclient.h"
 #include "feature/dircommon/directory.h"
 
@@ -142,12 +144,14 @@ router_orport_seems_reachable(const or_options_t *options,
  *   - we've seen a successful reachability check, or
  *   - there is no DirPort set, or
  *   - AssumeReachable is set, or
+ *   - We're a dir auth (see ticket #40287), or
  *   - the network is disabled.
  */
 int
 router_dirport_seems_reachable(const or_options_t *options)
 {
   int reach_checks_disabled = router_reachability_checks_disabled(options) ||
+                              authdir_mode(options) ||
                               !options->DirPort_set;
   return reach_checks_disabled ||
          can_reach_dir_port;
