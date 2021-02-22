@@ -1936,6 +1936,7 @@ connection_ap_handle_onion(entry_connection_t *conn,
                            socks_request_t *socks,
                            origin_circuit_t *circ)
 {
+  int retval;
   time_t now = approx_time();
   connection_t *base_conn = ENTRY_TO_CONN(conn);
 
@@ -1971,14 +1972,8 @@ connection_ap_handle_onion(entry_connection_t *conn,
     return -1;
   }
 
-  /* Interface: Regardless of HS version after the block below we should have
-     set onion_address, rend_cache_lookup_result, and descriptor_is_usable. */
-  const char *onion_address = NULL;
-  int rend_cache_lookup_result = -ENOENT;
   int descriptor_is_usable = 0;
 
-  const hs_descriptor_t *cached_desc = NULL;
-  int retval;
   /* Create HS conn identifier with HS pubkey */
   hs_ident_edge_conn_t *hs_conn_ident =
     tor_malloc_zero(sizeof(hs_ident_edge_conn_t));
@@ -1992,45 +1987,23 @@ connection_ap_handle_onion(entry_connection_t *conn,
   }
   ENTRY_TO_EDGE_CONN(conn)->hs_ident = hs_conn_ident;
 
-  onion_address = socks->address;
-
   /* Check the v3 desc cache */
+  const hs_descriptor_t *cached_desc = NULL;
+  unsigned int refetch_desc = 0;
   cached_desc = hs_cache_lookup_as_client(&hs_conn_ident->identity_pk);
   if (cached_desc) {
-    rend_cache_lookup_result = 0;
     descriptor_is_usable =
       hs_client_any_intro_points_usable(&hs_conn_ident->identity_pk,
                                         cached_desc);
     log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
              (descriptor_is_usable) ? "usable" : "unusable",
-             safe_str_client(onion_address),
+             safe_str_client(socks->address),
              (descriptor_is_usable) ? "Not fetching." : "Refetching.");
   } else {
-    rend_cache_lookup_result = -ENOENT;
-  }
-
-  /* Lookup the given onion address. If invalid, stop right now.
-   * Otherwise, we might have it in the cache or not. */
-  unsigned int refetch_desc = 0;
-  if (rend_cache_lookup_result < 0) {
-    switch (-rend_cache_lookup_result) {
-    case EINVAL:
-      /* We should already have rejected this address! */
-      log_warn(LD_BUG,"Invalid service name '%s'",
-               safe_str_client(onion_address));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
-      return -1;
-    case ENOENT:
-      /* We didn't have this; we should look it up. */
-      log_info(LD_REND, "No descriptor found in our cache for %s. Fetching.",
-               safe_str_client(onion_address));
-      refetch_desc = 1;
-      break;
-    default:
-      log_warn(LD_BUG, "Unknown cache lookup error %d",
-               rend_cache_lookup_result);
-      return -1;
-    }
+    /* We couldn't find this descriptor; we should look it up. */
+    log_info(LD_REND, "No descriptor found in our cache for %s. Fetching.",
+             safe_str_client(socks->address));
+    refetch_desc = 1;
   }
 
   /* Help predict that we'll want to do hidden service circuits in the
