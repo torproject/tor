@@ -1,0 +1,5 @@
+  o Minor bugfixes (relay):
+    - Remove a spammy log notice that should not have been indicating the
+      operator that its IPv4/v6 was missing but it was not. Fixes bug 40300;
+      bugfix on 0.4.5.1-alpha.
+
