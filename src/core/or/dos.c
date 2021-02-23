@@ -776,58 +776,54 @@ dos_should_refuse_single_hop_client(void)
 void
 dos_log_heartbeat(void)
 {
-  char *conn_msg = NULL;
-  char *cc_msg = NULL;
-  char *single_hop_client_msg = NULL;
-  char *circ_stats_msg = NULL;
-  char *hs_dos_intro2_msg = NULL;
+  smartlist_t *elems = smartlist_new();
 
   /* Stats number coming from relay.c append_cell_to_circuit_queue(). */
-  tor_asprintf(&circ_stats_msg,
-               " %" PRIu64 " circuits killed with too many cells.",
-               stats_n_circ_max_cell_reached);
+  smartlist_add_asprintf(elems,
+                         "%" PRIu64 " circuits killed with too many cells",
+                         stats_n_circ_max_cell_reached);
 
   if (dos_cc_enabled) {
-    tor_asprintf(&cc_msg,
-                 " %" PRIu64 " circuits rejected,"
-                 " %" PRIu32 " marked addresses.",
-                 cc_num_rejected_cells, cc_num_marked_addrs);
+    smartlist_add_asprintf(elems,
+                           "%" PRIu64 " circuits rejected, "
+                           "%" PRIu32 " marked addresses",
+                           cc_num_rejected_cells, cc_num_marked_addrs);
+  } else {
+    smartlist_add_asprintf(elems, "[DoSCircuitCreationEnabled disabled]");
   }
 
   if (dos_conn_enabled) {
-    tor_asprintf(&conn_msg,
-                 " %" PRIu64 " connections closed.",
-                 conn_num_addr_rejected);
-    tor_asprintf(&conn_msg,
-                 " %" PRIu64 " connect() connections closed.",
-                 conn_num_addr_connect_rejected);
+    smartlist_add_asprintf(elems,
+                           "%" PRIu64 " same address concurrent "
+                           "connections rejected", conn_num_addr_rejected);
+    smartlist_add_asprintf(elems,
+                           "%" PRIu64 " connections rejected",
+                           conn_num_addr_connect_rejected);
+  } else {
+    smartlist_add_asprintf(elems, "[DoSConnectionEnabled disabled]");
   }
 
   if (dos_should_refuse_single_hop_client()) {
-    tor_asprintf(&single_hop_client_msg,
-                 " %" PRIu64 " single hop clients refused.",
-                 num_single_hop_client_refused);
+    smartlist_add_asprintf(elems,
+                           "%" PRIu64 " single hop clients refused",
+                           num_single_hop_client_refused);
+  } else {
+    smartlist_add_asprintf(elems,
+                           "[DoSRefuseSingleHopClientRendezvous disabled]");
   }
 
   /* HS DoS stats. */
-  tor_asprintf(&hs_dos_intro2_msg,
-               " %" PRIu64 " INTRODUCE2 rejected.",
-               hs_dos_get_intro2_rejected_count());
+  smartlist_add_asprintf(elems,
+                         "%" PRIu64 " INTRODUCE2 rejected",
+                         hs_dos_get_intro2_rejected_count());
 
-  log_notice(LD_HEARTBEAT,
-             "DoS mitigation since startup:%s%s%s%s%s",
-             circ_stats_msg,
-             (cc_msg != NULL) ? cc_msg : " [cc not enabled]",
-             (conn_msg != NULL) ? conn_msg : " [conn not enabled]",
-             (single_hop_client_msg != NULL) ? single_hop_client_msg : "",
-             (hs_dos_intro2_msg != NULL) ? hs_dos_intro2_msg : "");
+  char *msg = smartlist_join_strings(elems, ", ", 0, NULL);
 
-  tor_free(conn_msg);
-  tor_free(cc_msg);
-  tor_free(single_hop_client_msg);
-  tor_free(circ_stats_msg);
-  tor_free(hs_dos_intro2_msg);
-  return;
+  log_notice(LD_HEARTBEAT, "DoS mitigation since startup: %s.", msg);
+
+  tor_free(msg);
+  SMARTLIST_FOREACH(elems, char *, e, tor_free(e));
+  smartlist_free(elems);
 }
 
 /* Called when a new client connection has been established on the given
