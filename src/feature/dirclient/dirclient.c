@@ -1164,6 +1164,7 @@ directory_request_set_routerstatus(directory_request_t *req,
 {
   req->routerstatus = status;
 }
+
 /**
  * Helper: update the addresses, ports, and identities in <b>req</b>
  * from the routerstatus object in <b>req</b>.  Return 0 on success.
@@ -1206,7 +1207,7 @@ directory_request_set_dir_from_routerstatus(directory_request_t *req)
     return -1;
   }
 
-    /* At this point, if we are a client making a direct connection to a
+  /* At this point, if we are a client making a direct connection to a
    * directory server, we have selected a server that has at least one address
    * allowed by ClientUseIPv4/6 and Reachable{"",OR,Dir}Addresses. This
    * selection uses the preference in ClientPreferIPv6{OR,Dir}Port, if
@@ -1219,6 +1220,37 @@ directory_request_set_dir_from_routerstatus(directory_request_t *req)
                                             req->indirection, &use_or_ap,
                                             &use_dir_ap) < 0) {
     return -1;
+  }
+
+  /* One last thing: If we're talking to an authority, we might want to use
+   * a special HTTP port for it based on our purpose.
+   */
+  if (req->indirection == DIRIND_DIRECT_CONN && status->is_authority) {
+    const dir_server_t *ds = router_get_trusteddirserver_by_digest(
+                                            status->identity_digest);
+    if (ds) {
+      const tor_addr_port_t *v4 = NULL;
+      if (authdir_mode_v3(get_options())) {
+        // An authority connecting to another authority should always
+        // prefer the VOTING usage, if one is specifically configured.
+        v4 = trusted_dir_server_get_dirport_exact(
+                                    ds, AUTH_USAGE_VOTING, AF_INET);
+      }
+      if (! v4) {
+        // Everybody else should prefer a usage dependent on their
+        // the dir_purpose.
+        auth_dirport_usage_t usage =
+          auth_dirport_usage_for_purpose(req->dir_purpose);
+        v4 = trusted_dir_server_get_dirport(ds, usage, AF_INET);
+      }
+      tor_assert_nonfatal(v4);
+      if (v4) {
+        // XXXX We could, if we wanted, also select a v6 address.  But a v4
+        // address must exist here, and we as a relay are required to support
+        // ipv4.  So we just that.
+        tor_addr_port_copy(&use_dir_ap, v4);
+      }
+    }
   }
 
   directory_request_set_or_addr_port(req, &use_or_ap);
@@ -1239,7 +1271,7 @@ directory_initiate_request,(directory_request_t *request))
     tor_assert_nonfatal(
                ! directory_request_dir_contact_info_specified(request));
     if (directory_request_set_dir_from_routerstatus(request) < 0) {
-      return;
+      return; // or here XXXX
     }
   }
 
@@ -1362,6 +1394,8 @@ directory_initiate_request,(directory_request_t *request))
     if (BUG(guard_state)) {
       entry_guard_cancel(&guard_state);
     }
+
+    // XXXX This is the case where we replace.
 
     switch (connection_connect(TO_CONN(conn), conn->base_.address, &addr,
                                port, &socket_error)) {

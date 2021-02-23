@@ -297,6 +297,42 @@ router_addr_is_trusted_dir_type(const tor_addr_t *addr, dirinfo_type_t type)
   return false;
 }
 
+/** Return an appropriate usage value describing which authdir port to use
+ * for a given directory connection purpose.
+ */
+auth_dirport_usage_t
+auth_dirport_usage_for_purpose(int purpose)
+{
+  switch (purpose) {
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      return AUTH_USAGE_DOWNLOAD;
+
+    case DIR_PURPOSE_UPLOAD_DIR:
+      return AUTH_USAGE_UPLOAD;
+
+    case DIR_PURPOSE_UPLOAD_VOTE:
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+      return AUTH_USAGE_VOTING;
+
+    case DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2:
+    case DIR_PURPOSE_SERVER:
+    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
+    case DIR_PURPOSE_FETCH_RENDDESC_V2:
+    case DIR_PURPOSE_UPLOAD_HSDESC:
+    case DIR_PURPOSE_FETCH_HSDESC:
+    case DIR_PURPOSE_HAS_FETCHED_HSDESC:
+    default:
+      tor_assert_nonfatal_unreached();
+      return AUTH_USAGE_LEGACY;
+  }
+}
+
 /** Create a directory server at <b>address</b>:<b>port</b>, with OR identity
  * key <b>digest</b> which has DIGEST_LEN bytes.  If <b>address</b> is NULL,
  * add ourself.  If <b>is_authority</b>, this is a directory authority.  Return
@@ -373,6 +409,7 @@ dir_server_new(int is_authority,
   ent->fake_status.ipv4_dirport = ent->ipv4_dirport;
   ent->fake_status.ipv4_orport = ent->ipv4_orport;
   ent->fake_status.ipv6_orport = ent->ipv6_orport;
+  ent->fake_status.is_authority = !! is_authority;
 
   return ent;
 }
@@ -465,7 +502,7 @@ trusted_dir_server_add_dirport(dir_server_t *ds,
  * Helper for trusted_dir_server_get_dirport: only return the exact requested
  * usage type.
  */
-static const tor_addr_port_t *
+const tor_addr_port_t *
 trusted_dir_server_get_dirport_exact(const dir_server_t *ds,
                                      auth_dirport_usage_t usage,
                                      int addr_family)

@@ -40,6 +40,8 @@ smartlist_t *router_get_trusted_dir_servers_mutable(void);
 smartlist_t *router_get_fallback_dir_servers_mutable(void);
 void mark_all_dirservers_up(smartlist_t *server_list);
 
+auth_dirport_usage_t auth_dirport_usage_for_purpose(int purpose);
+
 dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
 dir_server_t *router_get_fallback_dirserver_by_digest(
                                                    const char *digest);
@@ -51,6 +53,10 @@ MOCK_DECL(int, router_digest_is_trusted_dir_type,
         (const char *digest, dirinfo_type_t type));
 
 const tor_addr_port_t *trusted_dir_server_get_dirport(const dir_server_t *ds,
+                                                  auth_dirport_usage_t usage,
+                                                  int addr_family);
+const tor_addr_port_t *trusted_dir_server_get_dirport_exact(
+                                                  const dir_server_t *ds,
                                                   auth_dirport_usage_t usage,
                                                   int addr_family);
 
