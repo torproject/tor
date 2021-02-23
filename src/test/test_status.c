@@ -360,7 +360,9 @@ test_status_hb_not_in_consensus(void *arg)
                  "initiated 0 and received 0 v4 connections; "
                  "initiated 0 and received 0 v5 connections.\n");
   expect_log_msg("DoS mitigation since startup: 0 circuits killed with "
-                 "too many cells. [cc not enabled] [conn not enabled] "
+                 "too many cells, [DoSCircuitCreationEnabled disabled], "
+                 "[DoSConnectionEnabled disabled], "
+                 "[DoSRefuseSingleHopClientRendezvous disabled], "
                  "0 INTRODUCE2 rejected.\n");
   tt_int_op(mock_saved_log_n_entries(), OP_EQ, 6);
 

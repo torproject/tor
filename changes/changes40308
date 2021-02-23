@@ -1,0 +1,5 @@
+  o Minor feature (DoS log heartbeat):
+    - Change the DoS subsystem heartbeat line format so be more clear on what
+      has been detected/rejected and which option is disabled if any. Closes
+      ticket 40308.
+
