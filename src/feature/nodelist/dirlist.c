@@ -43,6 +43,14 @@
 #include "feature/dirclient/dir_server_st.h"
 #include "feature/nodelist/node_st.h"
 
+/** Information about an (HTTP) dirport for a directory authority. */
+struct auth_dirport_t {
+  /** What is the intended usage for this dirport? One of AUTH_USAGE_* */
+  auth_dirport_usage_t usage;
+  /** What is the correct address/port ? */
+  tor_addr_port_t dirport;
+};
+
 /** Global list of a dir_server_t object for each directory
  * authority. */
 static smartlist_t *trusted_dir_servers = NULL;
@@ -65,6 +73,11 @@ add_trusted_dir_to_nodelist_addr_set(const dir_server_t *dir)
   if (!tor_addr_is_null(&dir->ipv6_addr)) {
     /* IPv6 DirPort is not a thing yet for authorities. */
     nodelist_add_addr_to_address_set(&dir->ipv6_addr, dir->ipv6_orport, 0);
+  }
+  if (dir->auth_dirports) {
+    SMARTLIST_FOREACH_BEGIN(dir->auth_dirports, const auth_dirport_t *, p) {
+      nodelist_add_addr_to_address_set(&p->dirport.addr, 0, p->dirport.port);
+    } SMARTLIST_FOREACH_END(p);
   }
 }
 
@@ -256,7 +269,10 @@ MOCK_IMPL(int, router_digest_is_trusted_dir_type,
 /** Return true iff the given address matches a trusted directory that matches
  * at least one bit of type.
  *
- * If type is NO_DIRINFO or ALL_DIRINFO, any authority is matched. */
+ * If type is NO_DIRINFO or ALL_DIRINFO, any authority is matched.
+ *
+ * Only ORPorts' addresses are considered.
+ */
 bool
 router_addr_is_trusted_dir_type(const tor_addr_t *addr, dirinfo_type_t type)
 {
@@ -404,8 +420,96 @@ trusted_dir_server_new(const char *nickname, const char *address,
                           ipv6_addrport,
                           digest,
                           v3_auth_digest, type, weight);
+
+  if (ipv4_dirport) {
+    tor_addr_port_t p;
+    memset(&p, 0, sizeof(p));
+    tor_addr_copy(&p.addr, &ipv4_addr);
+    p.port = ipv4_dirport;
+    trusted_dir_server_add_dirport(result, AUTH_USAGE_LEGACY, &p);
+  }
   tor_free(hostname);
   return result;
+}
+
+/**
+ * Add @a dirport as an HTTP DirPort contact point for the directory authority
+ * @a ds, for use when contacting that authority for the given @a usage.
+ *
+ * Multiple ports of the same usage are allowed; if present, then only
+ * the first one of each address family is currently used.
+ */
+void
+trusted_dir_server_add_dirport(dir_server_t *ds,
+                               auth_dirport_usage_t usage,
+                               const tor_addr_port_t *dirport)
+{
+  tor_assert(ds);
+  tor_assert(dirport);
+
+  if (BUG(! ds->is_authority)) {
+    return;
+  }
+
+  if (ds->auth_dirports == NULL) {
+    ds->auth_dirports = smartlist_new();
+  }
+
+  auth_dirport_t *port = tor_malloc_zero(sizeof(auth_dirport_t));
+  port->usage = usage;
+  tor_addr_port_copy(&port->dirport, dirport);
+  smartlist_add(ds->auth_dirports, port);
+}
+
+/**
+ * Helper for trusted_dir_server_get_dirport: only return the exact requested
+ * usage type.
+ */
+static const tor_addr_port_t *
+trusted_dir_server_get_dirport_exact(const dir_server_t *ds,
+                                     auth_dirport_usage_t usage,
+                                     int addr_family)
+{
+  tor_assert(ds);
+  tor_assert_nonfatal(addr_family == AF_INET || addr_family == AF_INET6);
+  if (ds->auth_dirports == NULL)
+    return NULL;
+
+  SMARTLIST_FOREACH_BEGIN(ds->auth_dirports, const auth_dirport_t *, port) {
+    if (port->usage == usage &&
+        tor_addr_family(&port->dirport.addr) == addr_family) {
+      return &port->dirport;
+    }
+  } SMARTLIST_FOREACH_END(port);
+
+  return NULL;
+}
+
+/**
+ * Return the DirPort of the authority @a ds for with the usage type
+ * @a usage and address family @a addr_family.  If none is found, try
+ * again with an AUTH_USAGE_LEGACY dirport, if there is one.  Return NULL
+ * if no port can be found.
+ */
+const tor_addr_port_t *
+trusted_dir_server_get_dirport(const dir_server_t *ds,
+                               auth_dirport_usage_t usage,
+                               int addr_family)
+{
+  const tor_addr_port_t *port;
+
+  while (1) {
+    port = trusted_dir_server_get_dirport_exact(ds, usage, addr_family);
+    if (port)
+      return port;
+
+    // If we tried LEGACY, there is no fallback from this point.
+    if (usage == AUTH_USAGE_LEGACY)
+      return NULL;
+
+    // Try again with LEGACY.
+    usage = AUTH_USAGE_LEGACY;
+  }
 }
 
 /** Return a new dir_server_t for a fallback directory server at
@@ -447,6 +551,10 @@ dir_server_free_(dir_server_t *ds)
   if (!ds)
     return;
 
+  if (ds->auth_dirports) {
+    SMARTLIST_FOREACH(ds->auth_dirports, auth_dirport_t *, p, tor_free(p));
+    smartlist_free(ds->auth_dirports);
+  }
   tor_free(ds->nickname);
   tor_free(ds->description);
   tor_free(ds->address);
