@@ -196,6 +196,8 @@ clientmap_entry_new(geoip_client_action_t action, const tor_addr_t *addr,
   if (transport_name) {
     entry->transport_name = tor_strdup(transport_name);
   }
+  /* Initialize the DoS object. */
+  dos_geoip_entry_init(entry);
 
   /* Allocated and initialized, note down its size for the OOM handler. */
   geoip_increment_client_history_cache_size(clientmap_entry_size(entry));

@@ -63,9 +63,14 @@ static unsigned int dos_conn_enabled = 0;
  * They are initialized with the hardcoded default values. */
 static uint32_t dos_conn_max_concurrent_count;
 static dos_conn_defense_type_t dos_conn_defense_type;
+static uint32_t dos_conn_connect_rate = DOS_CONN_CONNECT_RATE_DEFAULT;
+static uint32_t dos_conn_connect_burst = DOS_CONN_CONNECT_BURST_DEFAULT;
+static int32_t dos_conn_connect_defense_time_period =
+  DOS_CONN_CONNECT_DEFENSE_TIME_PERIOD_DEFAULT;
 
 /* Keep some stats for the heartbeat so we can report out. */
 static uint64_t conn_num_addr_rejected;
+static uint64_t conn_num_addr_connect_rejected;
 
 /*
  * General interface of the denial of service mitigation subsystem.
@@ -190,6 +195,47 @@ get_param_conn_defense_type(const networkstatus_t *ns)
                                  DOS_CONN_DEFENSE_NONE, DOS_CONN_DEFENSE_MAX);
 }
 
+/* Return the connection connect rate parameters either from the configuration
+ * file or, if not found, consensus parameter. */
+static uint32_t
+get_param_conn_connect_rate(const networkstatus_t *ns)
+{
+  if (dos_get_options()->DoSConnectionConnectRate) {
+    return dos_get_options()->DoSConnectionConnectRate;
+  }
+  return networkstatus_get_param(ns, "DoSConnectionConnectRate",
+                                 DOS_CONN_CONNECT_RATE_DEFAULT,
+                                 1, INT32_MAX);
+}
+
+/* Return the connection connect burst parameters either from the
+ * configuration file or, if not found, consensus parameter. */
+STATIC uint32_t
+get_param_conn_connect_burst(const networkstatus_t *ns)
+{
+  if (dos_get_options()->DoSConnectionConnectBurst) {
+    return dos_get_options()->DoSConnectionConnectBurst;
+  }
+  return networkstatus_get_param(ns, "DoSConnectionConnectBurst",
+                                 DOS_CONN_CONNECT_BURST_DEFAULT,
+                                 1, INT32_MAX);
+}
+
+/* Return the connection connect defense time period from the configuration
+ * file or, if not found, the consensus parameter. */
+static int32_t
+get_param_conn_connect_defense_time_period(const networkstatus_t *ns)
+{
+  /* Time in seconds. */
+  if (dos_get_options()->DoSConnectionConnectDefenseTimePeriod) {
+    return dos_get_options()->DoSConnectionConnectDefenseTimePeriod;
+  }
+  return networkstatus_get_param(ns, "DoSConnectionConnectDefenseTimePeriod",
+                                 DOS_CONN_CONNECT_DEFENSE_TIME_PERIOD_DEFAULT,
+                                 DOS_CONN_CONNECT_DEFENSE_TIME_PERIOD_MIN,
+                                 INT32_MAX);
+}
+
 /* Set circuit creation parameters located in the consensus or their default
  * if none are present. Called at initialization or when the consensus
  * changes. */
@@ -208,6 +254,10 @@ set_dos_parameters(const networkstatus_t *ns)
   dos_conn_enabled = get_param_conn_enabled(ns);
   dos_conn_max_concurrent_count = get_param_conn_max_concurrent_count(ns);
   dos_conn_defense_type = get_param_conn_defense_type(ns);
+  dos_conn_connect_rate = get_param_conn_connect_rate(ns);
+  dos_conn_connect_burst = get_param_conn_connect_burst(ns);
+  dos_conn_connect_defense_time_period =
+    get_param_conn_connect_defense_time_period(ns);
 }
 
 /* Free everything for the circuit creation DoS mitigation subsystem. */
@@ -349,7 +399,7 @@ cc_has_exhausted_circuits(const dos_client_stats_t *stats)
 {
   tor_assert(stats);
   return stats->cc_stats.circuit_bucket == 0 &&
-         stats->concurrent_count >= dos_cc_min_concurrent_conn;
+         stats->conn_stats.concurrent_count >= dos_cc_min_concurrent_conn;
 }
 
 /* Mark client address by setting a timestamp in the stats object which tells
@@ -405,6 +455,20 @@ cc_channel_addr_is_marked(channel_t *chan)
 
 /* Concurrent connection private API. */
 
+/* Mark client connection stats by setting a timestamp which tells us until
+ * when it is marked as positively detected. */
+static void
+conn_mark_client(conn_client_stats_t *stats)
+{
+  tor_assert(stats);
+
+  /* We add a random offset of a maximum of half the defense time so it is
+   * less predictable and thus more difficult to game. */
+  stats->marked_until_ts =
+    approx_time() + dos_conn_connect_defense_time_period +
+    crypto_rand_int_range(1, dos_conn_connect_defense_time_period / 2);
+}
+
 /* Free everything for the connection DoS mitigation subsystem. */
 static void
 conn_free_all(void)
@@ -422,6 +486,63 @@ conn_consensus_has_changed(const networkstatus_t *ns)
   if (dos_conn_enabled && !get_param_conn_enabled(ns)) {
     conn_free_all();
   }
+}
+
+/** Called when a new client connection has arrived. The following will update
+ * the client connection statistics.
+ *
+ * The addr is used for logging purposes only.
+ *
+ * If the connect counter reaches its limit, it is marked. */
+static void
+conn_update_on_connect(conn_client_stats_t *stats, const tor_addr_t *addr)
+{
+  tor_assert(stats);
+  tor_assert(addr);
+
+  /* Update concurrent count for this new connect. */
+  stats->concurrent_count++;
+
+  /* Refill connect connection count. */
+  token_bucket_ctr_refill(&stats->connect_count, (uint32_t) approx_time());
+
+  /* Decrement counter for this new connection. */
+  if (token_bucket_ctr_get(&stats->connect_count) > 0) {
+    token_bucket_ctr_dec(&stats->connect_count, 1);
+  }
+
+  /* Assess connect counter. Mark it if counter is down to 0 and we haven't
+   * marked it before or it was reset. This is to avoid to re-mark it over and
+   * over again extending continously the blocked time. */
+  if (token_bucket_ctr_get(&stats->connect_count) == 0 &&
+      stats->marked_until_ts == 0) {
+    conn_mark_client(stats);
+  }
+
+  log_debug(LD_DOS, "Client address %s has now %u concurrent connections. "
+                    "Remaining %lu/sec connections are allowed.",
+            fmt_addr(addr), stats->concurrent_count,
+            token_bucket_ctr_get(&stats->connect_count));
+}
+
+/** Called when a client connection is closed. The following will update
+ * the client connection statistics.
+ *
+ * The addr is used for logging purposes only. */
+static void
+conn_update_on_close(conn_client_stats_t *stats, const tor_addr_t *addr)
+{
+  /* Extra super duper safety. Going below 0 means an underflow which could
+   * lead to most likely a false positive. In theory, this should never happen
+   * but lets be extra safe. */
+  if (BUG(stats->concurrent_count == 0)) {
+    return;
+  }
+
+  stats->concurrent_count--;
+  log_debug(LD_DOS, "Client address %s has lost a connection. Concurrent "
+                    "connections are now at %u",
+            fmt_addr(addr), stats->concurrent_count);
 }
 
 /* General private API */
@@ -549,9 +670,20 @@ dos_conn_addr_get_defense_type(const tor_addr_t *addr)
     goto end;
   }
 
+  /* Is this address marked as making too many client connections? */
+  if (entry->dos_stats.conn_stats.marked_until_ts >= approx_time()) {
+    conn_num_addr_connect_rejected++;
+    return dos_conn_defense_type;
+  }
+  /* Reset it to 0 here so that if the marked timestamp has expired that is
+   * we've gone beyond it, we have to reset it so the detection can mark it
+   * again in the future. */
+  entry->dos_stats.conn_stats.marked_until_ts = 0;
+
   /* Need to be above the maximum concurrent connection count to trigger a
    * defense. */
-  if (entry->dos_stats.concurrent_count > dos_conn_max_concurrent_count) {
+  if (entry->dos_stats.conn_stats.concurrent_count >
+      dos_conn_max_concurrent_count) {
     conn_num_addr_rejected++;
     return dos_conn_defense_type;
   }
@@ -576,7 +708,7 @@ dos_geoip_entry_about_to_free(const clientmap_entry_t *geoip_ent)
 
   /* The count is down to 0 meaning no connections right now, we can safely
    * clear the geoip entry from the cache. */
-  if (geoip_ent->dos_stats.concurrent_count == 0) {
+  if (geoip_ent->dos_stats.conn_stats.concurrent_count == 0) {
     goto end;
   }
 
@@ -595,6 +727,22 @@ dos_geoip_entry_about_to_free(const clientmap_entry_t *geoip_ent)
 
  end:
   return;
+}
+
+/** A new geoip client entry has been allocated, initialize its DoS object. */
+void
+dos_geoip_entry_init(clientmap_entry_t *geoip_ent)
+{
+  tor_assert(geoip_ent);
+
+  /* Initialize the connection count counter with the rate and burst
+   * parameters taken either from configuration or consensus.
+   *
+   * We do this even if the DoS connection detection is not enabled because it
+   * can be enabled at runtime and these counters need to be valid. */
+  token_bucket_ctr_init(&geoip_ent->dos_stats.conn_stats.connect_count,
+                        dos_conn_connect_rate, dos_conn_connect_burst,
+                        (uint32_t) approx_time());
 }
 
 /* Note down that we've just refused a single hop client. This increments a
@@ -650,6 +798,9 @@ dos_log_heartbeat(void)
     tor_asprintf(&conn_msg,
                  " %" PRIu64 " connections closed.",
                  conn_num_addr_rejected);
+    tor_asprintf(&conn_msg,
+                 " %" PRIu64 " connect() connections closed.",
+                 conn_num_addr_connect_rejected);
   }
 
   if (dos_should_refuse_single_hop_client()) {
@@ -711,11 +862,11 @@ dos_new_client_conn(or_connection_t *or_conn, const char *transport_name)
     goto end;
   }
 
-  entry->dos_stats.concurrent_count++;
+  /* Update stats from this new connect. */
+  conn_update_on_connect(&entry->dos_stats.conn_stats,
+                         &TO_CONN(or_conn)->addr);
+
   or_conn->tracked_for_dos_mitigation = 1;
-  log_debug(LD_DOS, "Client address %s has now %u concurrent connections.",
-            fmt_addr(&TO_CONN(or_conn)->addr),
-            entry->dos_stats.concurrent_count);
 
  end:
   return;
@@ -745,18 +896,8 @@ dos_close_client_conn(const or_connection_t *or_conn)
     goto end;
   }
 
-  /* Extra super duper safety. Going below 0 means an underflow which could
-   * lead to most likely a false positive. In theory, this should never happen
-   * but lets be extra safe. */
-  if (BUG(entry->dos_stats.concurrent_count == 0)) {
-    goto end;
-  }
-
-  entry->dos_stats.concurrent_count--;
-  log_debug(LD_DOS, "Client address %s has lost a connection. Concurrent "
-                    "connections are now at %u",
-            fmt_addr(&TO_CONN(or_conn)->addr),
-            entry->dos_stats.concurrent_count);
+  /* Update stats from this new close. */
+  conn_update_on_close(&entry->dos_stats.conn_stats, &TO_CONN(or_conn)->addr);
 
  end:
   return;
