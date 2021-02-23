@@ -1146,7 +1146,7 @@ directory_info_has_arrived(time_t now, int from_cache, int suppress_logs)
 
   if (server_mode(options) && !net_is_disabled() && !from_cache &&
       (have_completed_a_circuit() || !any_predicted_circuits(now)))
-   router_do_reachability_checks(1, 1);
+   router_do_reachability_checks();
 }
 
 /** Perform regular maintenance tasks for a single connection.  This
