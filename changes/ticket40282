@@ -1,6 +1,6 @@
-  o Major feature (relay):
-    - Relay do not use nor advertise a DirPort anymore. Only authorities do
-      because it is still used by them. Closes ticket 40282.
-    - Authority DirPort self reachability test has now been removed because
-      network reentry to that DirPort is not allowed anymore.
-
+  o Removed features (relay):
+    - Because DirPorts are only used on authorities, relays no longer
+      advertise them. Similarly, self-testing for DirPorts has been disabled,
+      since an unreachable DirPort is no reason for a relay not to advertise
+      itself. (Configuring a DirPort will still work, for now.)  Closes
+      ticket 40282.

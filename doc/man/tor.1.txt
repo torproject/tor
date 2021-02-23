@@ -2795,11 +2795,9 @@ details.)
      +
     The same flags are supported here as are supported by ORPort.
      +
-    As of Tor 0.4.6.1-alpha, non authoritative relays (see
+    As of Tor 0.4.6.1-alpha, non-authoritative relays (see
     AuthoritativeDirectory) will not publish the DirPort but will still listen
-    on it so to avoid any unknown issues by closing all the sudden all
-    DirPorts on the network for most relays. We expect relays to stop
-    listening at some point in future stable releases. It is thus safe for you
+    on it. Clients don't use the DirPorts on relays, so it is safe for you
     to remove the DirPort from your torrc configuration.
 
 [[DirPortFrontPage]] **DirPortFrontPage** __FILENAME__::
