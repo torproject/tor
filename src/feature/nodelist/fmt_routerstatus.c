@@ -87,7 +87,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     goto done;
 
   smartlist_add_asprintf(chunks,
-                   "s%s%s%s%s%s%s%s%s%s%s%s\n",
+                   "s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
                    rs->is_authority?" Authority":"",
                    rs->is_bad_exit?" BadExit":"",
@@ -98,6 +98,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                    rs->is_flagged_running?" Running":"",
                    rs->is_stable?" Stable":"",
                    rs->is_staledesc?" StaleDesc":"",
+                   rs->is_sybil?" Sybil":"",
                    rs->is_v2_dir?" V2Dir":"",
                    rs->is_valid?" Valid":"");
 

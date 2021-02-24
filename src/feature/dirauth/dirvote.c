@@ -4542,13 +4542,16 @@ routers_make_ed_keys_unique(smartlist_t *routers)
   } SMARTLIST_FOREACH_END(ri);
 }
 
-/** Routerstatus <b>rs</b> is part of a group of routers that are on
- * too narrow an IP-space. Clear out its flags since we don't want it be used
+/** Routerstatus <b>rs</b> is part of a group of routers that are on too
+ * narrow an IP-space. Clear out its flags since we don't want it be used
  * because of its Sybil-like appearance.
  *
  * Leave its BadExit flag alone though, since if we think it's a bad exit,
  * we want to vote that way in case all the other authorities are voting
  * Running and Exit.
+ *
+ * Also set the Sybil flag in order to let a relay operator know that's
+ * why their relay hasn't been voted on.
  */
 static void
 clear_status_flags_on_sybil(routerstatus_t *rs)
@@ -4556,6 +4559,7 @@ clear_status_flags_on_sybil(routerstatus_t *rs)
   rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
     rs->is_flagged_running = rs->is_named = rs->is_valid =
     rs->is_hs_dir = rs->is_v2_dir = rs->is_possible_guard = 0;
+  rs->is_sybil = 1;
   /* FFFF we might want some mechanism to check later on if we
    * missed zeroing any flags: it's easy to add a new flag but
    * forget to add it to this clause. */
@@ -4570,6 +4574,7 @@ const char DIRVOTE_UNIVERSAL_FLAGS[] =
   "HSDir "
   "Stable "
   "StaleDesc "
+  "Sybil "
   "V2Dir "
   "Valid";
 /** Space-separated list of all flags that we may or may not vote on,
@@ -4749,7 +4754,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
                                      routerstatuses, bw_file_headers,
                                      bw_file_digest256);
-
   } else {
     /*
      * No bandwidths file; clear the measured bandwidth cache in case we had
