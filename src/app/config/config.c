@@ -5437,6 +5437,75 @@ pt_parse_transport_line(const or_options_t *options,
   return r;
 }
 
+/**
+ * Parse a flag describing an extra dirport for a directory authority.
+ *
+ * Right now, the supported format is exactly:
+ * `{upload,download,voting}=http://[IP:PORT]/`.
+ * Other URL schemes, and other suffixes, might be supported in the future.
+ *
+ * Only call this function if `flag` starts with one of the above strings.
+ *
+ * Return 0 on success, and -1 on failure.
+ *
+ * If `ds` is provided, then add any parsed dirport to `ds`.  If `ds` is NULL,
+ * take no action other than parsing.
+ **/
+static int
+parse_dirauth_dirport(dir_server_t *ds, const char *flag)
+{
+  tor_assert(flag);
+
+  auth_dirport_usage_t usage;
+
+  if (!strcasecmpstart(flag, "upload=")) {
+    usage = AUTH_USAGE_UPLOAD;
+  } else if (!strcasecmpstart(flag, "download=")) {
+    usage = AUTH_USAGE_DOWNLOAD;
+  } else if (!strcasecmpstart(flag, "vote=")) {
+    usage = AUTH_USAGE_VOTING;
+  } else {
+    // We shouldn't get called with a flag that we don't recognize.
+    tor_assert_nonfatal_unreached();
+    return -1;
+  }
+
+  const char *eq = strchr(flag, '=');
+  tor_assert(eq);
+  const char *target = eq + 1;
+
+  // Find the part inside the http://{....}/
+  if (strcmpstart(target, "http://")) {
+    log_warn(LD_CONFIG, "Unsupported URL scheme in authority flag %s", flag);
+    return -1;
+  }
+  const char *addr = target + strlen("http://");
+
+  const char *eos = strchr(addr, '/');
+  size_t addr_len;
+  if (eos && strcmp(eos, "/")) {
+    log_warn(LD_CONFIG, "Unsupported URL prefix in authority flag %s", flag);
+    return -1;
+  } else if (eos) {
+    addr_len = eos - addr;
+  } else {
+    addr_len = strlen(addr);
+  }
+
+  // Finally, parse the addr:port part.
+  char *addr_string = tor_strndup(addr, addr_len);
+  tor_addr_port_t dirport;
+  memset(&dirport, 0, sizeof(dirport));
+  int rv = tor_addr_port_parse(LOG_WARN, addr_string,
+                               &dirport.addr, &dirport.port, -1);
+  if (ds != NULL && rv == 0) {
+    trusted_dir_server_add_dirport(ds, usage, &dirport);
+  }
+
+  tor_free(addr_string);
+  return rv;
+}
+
 /** Read the contents of a DirAuthority line from <b>line</b>. If
  * <b>validate_only</b> is 0, and the line is well-formed, and it
  * shares any bits with <b>required_type</b> or <b>required_type</b>
@@ -5457,6 +5526,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   char v3_digest[DIGEST_LEN];
   dirinfo_type_t type = 0;
   double weight = 1.0;
+  smartlist_t *extra_dirports = smartlist_new();
 
   memset(v3_digest, 0, sizeof(v3_digest));
 
@@ -5525,6 +5595,12 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
         }
         ipv6_addrport_ptr = &ipv6_addrport;
       }
+    } else if (!strcasecmpstart(flag, "upload=") ||
+               !strcasecmpstart(flag, "download=") ||
+               !strcasecmpstart(flag, "vote=")) {
+      // We'll handle these after creating the authority object.
+      smartlist_add(extra_dirports, flag);
+      flag =  NULL; // prevent double-free.
     } else {
       log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirAuthority line",
                flag);
@@ -5568,6 +5644,13 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     goto err;
   }
 
+  if (validate_only) {
+    SMARTLIST_FOREACH_BEGIN(extra_dirports, const char *, cp) {
+      if (parse_dirauth_dirport(NULL, cp) < 0)
+        goto err;
+    } SMARTLIST_FOREACH_END(cp);
+  }
+
   if (!validate_only && (!required_type || required_type & type)) {
     dir_server_t *ds;
     if (required_type)
@@ -5579,16 +5662,23 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
                                       ipv6_addrport_ptr,
                                       digest, v3_digest, type, weight)))
       goto err;
+
+    SMARTLIST_FOREACH_BEGIN(extra_dirports, const char *, cp) {
+      if (parse_dirauth_dirport(ds, cp) < 0)
+        goto err;
+    } SMARTLIST_FOREACH_END(cp);
     dir_server_add(ds);
   }
 
   r = 0;
   goto done;
 
-  err:
+ err:
   r = -1;
 
-  done:
+ done:
+  SMARTLIST_FOREACH(extra_dirports, char*, s, tor_free(s));
+  smartlist_free(extra_dirports);
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(addrport);
