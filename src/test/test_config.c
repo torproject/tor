@@ -3982,27 +3982,6 @@ test_config_directory_fetch(void *arg)
   tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
             OP_EQ, 1);
 
-  /* OR servers only fetch the consensus from the authorities when they don't
-   * know their own address, but never use multiple directories for bootstrap
-   */
-  or_options_free(options);
-  options = options_new();
-  options->ORPort_set = 1;
-
-  mock_relay_find_addr_to_publish_result = false;
-  tt_assert(server_mode(options) == 1);
-  tt_assert(public_server_mode(options) == 1);
-  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 1);
-  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
-            OP_EQ, 0);
-
-  mock_relay_find_addr_to_publish_result = true;
-  tt_assert(server_mode(options) == 1);
-  tt_assert(public_server_mode(options) == 1);
-  tt_int_op(dirclient_fetches_from_authorities(options), OP_EQ, 0);
-  tt_int_op(networkstatus_consensus_can_use_multiple_directories(options),
-            OP_EQ, 0);
-
   /* Exit OR servers only fetch the consensus from the authorities when they
    * refuse unknown exits, but never use multiple directories for bootstrap
    */
