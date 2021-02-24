@@ -2,4 +2,7 @@
     - Remove a spammy log notice that should not have been indicating the
       operator that its IPv4/v6 was missing but it was not. Fixes bug 40300;
       bugfix on 0.4.5.1-alpha.
-
+    - Do not query the address cache early in the boot process when deciding
+      if we a relay needs to fetch early directory information from an
+      authority. This resulted in a relay falsely believing it didn't have an
+      address and thus triggering an authority fetch at each boot.
