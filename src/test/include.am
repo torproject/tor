@@ -171,6 +171,7 @@ src_test_test_SOURCES += \
 	src/test/test_crypto_rng.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
+	src/test/test_dirauth_ports.c \
 	src/test/test_dirvote.c \
 	src/test/test_dir_common.c \
 	src/test/test_dir_handle_get.c \
