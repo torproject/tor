@@ -1,0 +1,14 @@
+[package]
+name = "geoip-db-tool"
+version = "0.1.0"
+authors = ["Nick Mathewson <nickm@torproject.org>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ipnetwork= "0.17.0"
+rangemap = "0.1.10"
+argh = "0.1.4"
