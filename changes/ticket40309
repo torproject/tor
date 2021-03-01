@@ -1,0 +1,3 @@
+  o New system requirements (mallinfo() deprecated):
+    - Remove mallinfo() usage entirely. Libc 2.33+ now deprecates it. Closes
+      ticket 40309.
