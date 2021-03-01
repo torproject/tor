@@ -520,7 +520,7 @@ conn_update_on_connect(conn_client_stats_t *stats, const tor_addr_t *addr)
   }
 
   log_debug(LD_DOS, "Client address %s has now %u concurrent connections. "
-                    "Remaining %lu/sec connections are allowed.",
+                    "Remaining %" TOR_PRIuSZ "/sec connections are allowed.",
             fmt_addr(addr), stats->concurrent_count,
             token_bucket_ctr_get(&stats->connect_count));
 }
