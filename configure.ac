@@ -1937,7 +1937,6 @@ AS_CASE([$malloc],
 
   [system], [
      # handle this later, including the jemalloc fallback
-    AC_CHECK_FUNCS(mallinfo)
   ],
 
   [AC_MSG_ERROR([--with-malloc=`$with_malloc' not supported, see --help])
