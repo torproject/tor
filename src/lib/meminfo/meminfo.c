@@ -17,6 +17,7 @@
 #include "lib/fs/files.h"
 #include "lib/log/log.h"
 #include "lib/malloc/malloc.h"
+#include "lib/string/util_string.h"
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -65,7 +66,7 @@ get_total_system_memory_impl(void)
   s = read_file_to_str_until_eof(fd, 65536, &file_size);
   if (!s)
     goto err;
-  cp = strstr(s, "MemTotal:");
+  cp = find_str_at_start_of_line(s, "MemTotal:");
   if (!cp)
     goto err;
   /* Use the system sscanf so that space will match a wider number of space */
