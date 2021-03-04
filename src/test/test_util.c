@@ -5338,26 +5338,149 @@ test_util_mathlog(void *arg)
   ;
 }
 
+/** Check that calling simplify_fraction32() with test_num/test_denom
+ * results in expect_num/expect_denom. */
+#define TEST_SIMPLIFY_F32_HELPER(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
+  STMT_BEGIN                                               \
+    uint32_t a,b;                                          \
+    a = test_num; b = test_denom;                          \
+    simplify_fraction32(&a,&b);                            \
+    tt_int_op(a, OP_EQ, expect_num);                       \
+    tt_int_op(b, OP_EQ, expect_denom);                     \
+  STMT_END
+
+/** Check that calling simplify_fraction32() with test_num/test_denom
+ * results in expect_num/expect_denom.
+ * If test_num is not zero, also check that the inverse fraction simplifies
+ * to the inverse of the expected result. */
+#define TEST_SIMPLIFY_FRACTION32(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
+  STMT_BEGIN                                               \
+    TEST_SIMPLIFY_F32_HELPER(test_num, test_denom,         \
+                             expect_num, expect_denom);    \
+    if (test_num != 0) {                                   \
+      TEST_SIMPLIFY_F32_HELPER(test_denom, test_num,       \
+                               expect_denom, expect_num);  \
+    }                                                      \
+  STMT_END
+
+/** Check that calling simplify_fraction64() with test_num/test_denom
+ * results in expect_num/expect_denom. */
+#define TEST_SIMPLIFY_F64_HELPER(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
+  STMT_BEGIN                                               \
+    uint64_t a,b;                                          \
+    a = test_num; b = test_denom;                          \
+    simplify_fraction64(&a,&b);                            \
+    tt_u64_op(a, OP_EQ, expect_num);                       \
+    tt_u64_op(b, OP_EQ, expect_denom);                     \
+  STMT_END
+
+/** Check that calling simplify_fraction64() with test_num/test_denom
+ * results in expect_num/expect_denom.
+ * If test_num is not zero, also check that the inverse fraction simplifies
+ * to the inverse of the expected result. */
+#define TEST_SIMPLIFY_FRACTION64(test_num, test_denom,     \
+                                 expect_num, expect_denom) \
+  STMT_BEGIN                                               \
+    TEST_SIMPLIFY_F64_HELPER(test_num, test_denom,         \
+                             expect_num, expect_denom);    \
+    if (test_num != 0) {                                   \
+      TEST_SIMPLIFY_F64_HELPER(test_denom, test_num,       \
+                               expect_denom, expect_num);  \
+    }                                                      \
+  STMT_END
+
+/** Check that calling simplify_fraction32() and simplify_fraction64() with
+ * test_num/test_denom results in expect_num/expect_denom.
+ * If test_num is not zero, also check that the inverse fraction simplifies
+ * to the inverse of the expected result. */
+#define TEST_SIMPLIFY_FRACTION(test_num, test_denom,       \
+                               expect_num, expect_denom)   \
+  TEST_SIMPLIFY_FRACTION32(test_num, test_denom,           \
+                           expect_num, expect_denom);      \
+  TEST_SIMPLIFY_FRACTION64(test_num, test_denom,           \
+                           expect_num, expect_denom);
+
+/* Test simplify_fraction32() and simplify_fraction64(). */
 static void
 test_util_fraction(void *arg)
 {
-  uint64_t a,b;
   (void)arg;
 
-  a = 99; b = 30;
-  simplify_fraction64(&a,&b);
-  tt_u64_op(a, OP_EQ, 33);
-  tt_u64_op(b, OP_EQ, 10);
+  /* Fractions that simplify: >1; =1; (0,1); 0 */
 
-  a = 3000000; b = 10000000;
-  simplify_fraction64(&a,&b);
-  tt_u64_op(a, OP_EQ, 3);
-  tt_u64_op(b, OP_EQ, 10);
+  /* 6700417 is the largest prime factor of UINT64_MAX */
+  TEST_SIMPLIFY_FRACTION64(        UINT64_MAX, 6700417,
+                           UINT64_MAX/6700417,       1);
 
-  a = 0; b = 15;
-  simplify_fraction64(&a,&b);
-  tt_u64_op(a, OP_EQ, 0);
-  tt_u64_op(b, OP_EQ, 1);
+  /* 65537 is the largest prime factor of UINT32_MAX */
+  TEST_SIMPLIFY_FRACTION(      UINT32_MAX, 65537,
+                         UINT32_MAX/65537,     1);
+
+  TEST_SIMPLIFY_FRACTION(99, 30,
+                         33, 10);
+
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, UINT64_MAX,
+                                    1,          1);
+
+  TEST_SIMPLIFY_FRACTION(UINT32_MAX, UINT32_MAX,
+                                  1,          1);
+
+  TEST_SIMPLIFY_FRACTION(31, 31,
+                          1,  1);
+
+  /* We don't need to test the max cases here, because we test inverses. */
+
+  TEST_SIMPLIFY_FRACTION(3000000, 10000000,
+                               3,       10);
+
+  TEST_SIMPLIFY_FRACTION64(0, UINT64_MAX,
+                           0,          1);
+
+  TEST_SIMPLIFY_FRACTION(0, UINT32_MAX,
+                         0,          1);
+
+  TEST_SIMPLIFY_FRACTION(0, 15,
+                         0,  1);
+
+  /* Fractions that don't simplify: >1; =1; (0,1); 0 */
+
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, 1,
+                           UINT64_MAX, 1);
+
+  TEST_SIMPLIFY_FRACTION(UINT32_MAX, 1,
+                         UINT32_MAX, 1);
+
+  /* INT32_MAX just happens to be prime, and not one of the factors of
+   * UINT64_MAX or UINT32_MAX. */
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, INT32_MAX,
+                           UINT64_MAX, INT32_MAX);
+
+  TEST_SIMPLIFY_FRACTION(UINT32_MAX, INT32_MAX,
+                         UINT32_MAX, INT32_MAX);
+
+  /* UINT64_MAX and INT64_MAX don't have any common factors. */
+  TEST_SIMPLIFY_FRACTION64(UINT64_MAX, INT64_MAX,
+                           UINT64_MAX, INT64_MAX);
+
+  TEST_SIMPLIFY_FRACTION(60, 1,
+                         60, 1);
+
+  TEST_SIMPLIFY_FRACTION(7, 3,
+                         7, 3);
+
+  TEST_SIMPLIFY_FRACTION(1, 1,
+                         1, 1);
+
+  /* We don't need to test the max cases here, because we test inverses. */
+
+  TEST_SIMPLIFY_FRACTION(2, 3,
+                         2, 3);
+
+  TEST_SIMPLIFY_FRACTION(0, 1,
+                         0, 1);
 
  done:
   ;
@@ -6130,6 +6253,11 @@ test_util_monotonic_time(void *arg)
     uint64_t ms = monotime_coarse_stamp_units_to_approx_msec(units);
     tt_u64_op(ms, OP_GE, 4950);
     tt_u64_op(ms, OP_LT, 5050);
+    /* Test that repeated conversions don't drift */
+    uint64_t rep_units = monotime_msec_to_approx_coarse_stamp_units(ms);
+    uint64_t rep_ms = monotime_coarse_stamp_units_to_approx_msec(rep_units);
+    tt_u64_op(rep_units, OP_EQ, units);
+    tt_u64_op(rep_ms, OP_EQ, ms);
   }
 
  done:

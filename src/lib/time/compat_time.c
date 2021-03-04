@@ -239,27 +239,56 @@ static struct mach_timebase_info mach_time_info;
 static struct mach_timebase_info mach_time_info_msec_cvt;
 static int32_t mach_time_msec_cvt_threshold;
 static int monotime_shift = 0;
+static uint64_t monotime_coarse_stamp_cvt_ms_threshold;
+static uint64_t monotime_ms_cvt_coarse_stamp_threshold;
 
 static void
 monotime_init_internal(void)
 {
   tor_assert(!monotime_initialized);
+  // Known values:
+  // 30/1 on PowerPC Mac OS X (unsupported: can't do constant-time crypto)
+  // 1/1 on x86_64 macOS
+  // 125/3 on ARM iOS
+  // Future devices may have different values.
   int r = mach_timebase_info(&mach_time_info);
   tor_assert(r == 0);
   tor_assert(mach_time_info.denom != 0);
 
+  /* We need to simplify this: future values may overflow the uint64_t.
+   * Apple's documentation includes a 1 billion / 6 million example:
+   * https://developer.apple.com/library/archive/qa/qa1643/_index.html */
+  simplify_fraction32(&mach_time_info.numer, &mach_time_info.denom);
+
   {
-    // approximate only.
-    uint64_t ns_per_tick = mach_time_info.numer / mach_time_info.denom;
-    uint64_t ms_per_tick = ns_per_tick * ONE_MILLION;
+    // approximate only
+    // we use monotime_shift to right-shift ticks to an approximate 32-bit
+    // millisecond timestamp
+    // we need to multiply the nanosecond per tick numerator by 1 million,
+    // so the right-shift "division" results in approximate milliseconds
+    // This multiplication will never overflow, because numer is 32-bit
+    uint64_t ms_shift_num = (uint64_t)mach_time_info.numer * ONE_MILLION;
+    uint64_t ms_shift_tick = ms_shift_num / mach_time_info.denom;
     // requires that tor_log2(0) == 0.
-    monotime_shift = tor_log2(ms_per_tick);
+    monotime_shift = tor_log2(ms_shift_tick);
+    // For any value above this amount, we should divide before multiplying,
+    // to avoid overflow.  For a value below this, we should multiply
+    // before dividing, to improve accuracy.
+    // Overflow can happen in monotime_coarse_stamp_units_to_approx_msec()
+    // when mach_time_info is 125/3, monotime_shift is 25, and
+    // units is > 128/125 * 2^33
+    monotime_coarse_stamp_cvt_ms_threshold = (
+      (UINT64_MAX / mach_time_info.numer) >> monotime_shift);
+    monotime_ms_cvt_coarse_stamp_threshold = (
+      (UINT64_MAX / ONE_MILLION) / mach_time_info.denom);
   }
   {
     // For converting ticks to milliseconds in a 32-bit-friendly way, we
     // will first right-shift by 20, and then multiply by 2048/1953, since
     // (1<<20) * 1953/2048 is about 1e6.  We precompute a new numerator and
     // denominator here to avoid multiple multiplies.
+    tor_assert(mach_time_info.numer <= UINT32_MAX / 2048);
+    tor_assert(mach_time_info.denom <= UINT32_MAX / 1953);
     mach_time_info_msec_cvt.numer = mach_time_info.numer * 2048;
     mach_time_info_msec_cvt.denom = mach_time_info.denom * 1953;
     // For any value above this amount, we should divide before multiplying,
@@ -843,17 +872,29 @@ uint64_t
 monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
 {
   /* Recover as much precision as we can. */
-  uint64_t abstime_diff = (units << monotime_shift);
-  return (abstime_diff * mach_time_info.numer) /
-    (mach_time_info.denom * ONE_MILLION);
+  if (units <= monotime_coarse_stamp_cvt_ms_threshold) {
+    uint64_t abstime_diff = (units << monotime_shift);
+    return ((abstime_diff * mach_time_info.numer) /
+            ((uint64_t)mach_time_info.denom * ONE_MILLION));
+  } else {
+    uint64_t approx_part_calc = (
+      units / ((uint64_t)mach_time_info.denom * ONE_MILLION));
+    return (approx_part_calc * mach_time_info.numer) << monotime_shift;
+  }
 }
 uint64_t
 monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
 {
-  uint64_t abstime_val =
-    (((uint64_t)msec) * ONE_MILLION * mach_time_info.denom) /
-    mach_time_info.numer;
-  return abstime_val >> monotime_shift;
+  /* Preserve as much precision as we can. */
+  if (msec <= monotime_ms_cvt_coarse_stamp_threshold) {
+    uint64_t abstime_val = (
+      (msec * ONE_MILLION * mach_time_info.denom) / mach_time_info.numer);
+    return abstime_val >> monotime_shift;
+  } else {
+    uint64_t approx_part_calc = (
+      (msec / mach_time_info.numer) >> monotime_shift);
+    return approx_part_calc * ONE_MILLION * mach_time_info.denom;
+  }
 }
 #else
 uint64_t

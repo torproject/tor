@@ -19,6 +19,7 @@ uint32_t round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor);
 uint64_t round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor);
 
 void simplify_fraction64(uint64_t *numer, uint64_t *denom);
+void simplify_fraction32(uint32_t *numer, uint32_t *denom);
 
 /* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
  * and positive <b>b</b>.  Works on integer types only. Not defined if a+(b-1)
