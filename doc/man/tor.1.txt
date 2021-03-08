@@ -1797,8 +1797,9 @@ The following options are useful only for clients (that is, if
     The default **VirtualAddrNetwork** address ranges on a
     properly configured machine will route to the loopback or link-local
     interface. The maximum number of bits for the network prefix is set to 104
-    for IPv6 and 16 for IPv4. However, a wider network - smaller prefix length
-    - is preferable since it reduces the chances for an attacker to guess the
+    for IPv6 and 16 for IPv4. However, a larger network
+    (that is, one with a smaller prefix length)
+    is preferable, since it reduces the chances for an attacker to guess the
     used IP. For local use, no change to the default VirtualAddrNetwork setting
     is needed.
 
