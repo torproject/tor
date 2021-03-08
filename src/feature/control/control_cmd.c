@@ -819,6 +819,7 @@ handle_control_extendcircuit(control_connection_t *conn,
   if (zero_circ) {
     /* start a new circuit */
     circ = origin_circuit_init(intended_purpose, 0);
+    circ->first_hop_from_controller = 1;
   }
 
   /* now circ refers to something that is ready to be extended */
