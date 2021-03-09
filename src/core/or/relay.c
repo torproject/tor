@@ -83,6 +83,7 @@
 #include "feature/nodelist/routerlist.h"
 #include "core/or/scheduler.h"
 #include "feature/hs/hs_metrics.h"
+#include "feature/stats/rephist.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cell_queue_st.h"
@@ -2720,6 +2721,9 @@ cell_queues_check_size(void)
   if (alloc >= get_options()->MaxMemInQueues_low_threshold) {
     last_time_under_memory_pressure = approx_time();
     if (alloc >= get_options()->MaxMemInQueues) {
+      /* Note this overload down */
+      rep_hist_note_overload(OVERLOAD_GENERAL);
+
       /* If we're spending over 20% of the memory limit on hidden service
        * descriptors, free them until we're down to 10%. Do the same for geoip
        * client cache. */

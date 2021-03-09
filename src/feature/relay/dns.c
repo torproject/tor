@@ -63,6 +63,7 @@
 #include "feature/relay/dns.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
+#include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/sandbox/sandbox.h"
@@ -1546,6 +1547,16 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   int was_wildcarded = 0;
 
   tor_addr_make_unspec(&addr);
+
+  /* Note down any DNS errors to the statistics module */
+  if (result == DNS_ERR_TIMEOUT) {
+    /* libevent timed out while resolving a name. However, because libevent
+     * handles retries and timeouts internally, this means that all attempts of
+     * libevent timed out. If we wanted to get more granular information about
+     * individual libevent attempts, we would have to implement our own DNS
+     * timeout/retry logic */
+    rep_hist_note_overload(OVERLOAD_GENERAL);
+  }
 
   /* Keep track of whether IPv6 is working */
   if (type == DNS_IPv6_AAAA) {
