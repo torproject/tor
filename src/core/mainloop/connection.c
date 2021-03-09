@@ -3439,6 +3439,16 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
   int priority = conn->type != CONN_TYPE_DIR;
   ssize_t conn_bucket = -1;
   size_t global_bucket_val = token_bucket_rw_get_read(&global_bucket);
+  if (global_bucket_val == 0) {
+    /* We reached our global read limit: count this as an overload.
+     *
+     * The token bucket is always initialized (see connection_bucket_init() and
+     * options_validate_relay_bandwidth()) and hence we can assume that if the
+     * token ever hits zero, it's a limit that got popped and not the bucket
+     * being uninitialized.
+     */
+    rep_hist_note_overload(OVERLOAD_READ);
+  }
 
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
@@ -3469,6 +3479,11 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   int priority = conn->type != CONN_TYPE_DIR;
   size_t conn_bucket = buf_datalen(conn->outbuf);
   size_t global_bucket_val = token_bucket_rw_get_write(&global_bucket);
+  if (global_bucket_val == 0) {
+    /* We reached our global write limit: We should count this as an overload.
+     * See above function for more information */
+    rep_hist_note_overload(OVERLOAD_WRITE);
+  }
 
   if (!connection_is_rate_limited(conn)) {
     /* be willing to write to local conns even if our buckets are empty */
