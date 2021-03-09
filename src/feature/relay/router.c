@@ -3372,6 +3372,12 @@ extrainfo_dump_to_string_stats_helper(smartlist_t *chunks,
       if (contents)
         smartlist_add(chunks, contents);
     }
+    if (options->OverloadStatistics) {
+      contents = rep_hist_get_overload_stats_lines();
+      if (contents) {
+        smartlist_add(chunks, contents);
+      }
+    }
     /* bridge statistics */
     if (should_record_bridge_info(options)) {
       const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);

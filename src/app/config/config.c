@@ -352,6 +352,7 @@ static const config_var_t option_vars_[] = {
   V(CacheDirectoryGroupReadable, AUTOBOOL,     "auto"),
   V(CellStatistics,              BOOL,     "0"),
   V(PaddingStatistics,           BOOL,     "1"),
+  V(OverloadStatistics,          BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
   V(CircuitBuildTimeout,         INTERVAL, "0"),
   OBSOLETE("CircuitIdleTimeout"),

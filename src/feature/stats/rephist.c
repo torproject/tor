@@ -183,6 +183,122 @@ static time_t started_tracking_stability = 0;
 /** Map from hex OR identity digest to or_history_t. */
 static digestmap_t *history_map = NULL;
 
+/** Represents a state of overload stats.
+ *
+ *  All the timestamps in this structure have already been rounded down to the
+ *  nearest hour. */
+typedef struct {
+  /* When did we last experience a general overload? */
+  time_t overload_general_time;
+
+  /* When did we last experience a bandwidth-related overload? */
+  time_t overload_ratelimits_time;
+  /* How many times have we gone off the our read limits? */
+  uint64_t overload_read_count;
+  /* How many times have we gone off the our write limits? */
+  uint64_t overload_write_count;
+
+  /* When did we last experience a file descriptor exhaustion? */
+  time_t overload_fd_exhausted_time;
+  /* How many times have we experienced a file descriptor exhaustion? */
+  uint64_t overload_fd_exhausted;
+} overload_stats_t;
+
+/** Current state of overload stats */
+static overload_stats_t overload_stats;
+
+/** Return true if this overload happened within the last `n_hours`. */
+static bool
+overload_happened_recently(time_t overload_time, unsigned n_hours)
+{
+  /* An overload is relevant if it happened in the last 72 hours */
+  if (overload_time > approx_time() - 3600 * n_hours) {
+    return true;
+  }
+  return false;
+}
+
+/* The current version of the overload stats version */
+#define OVERLOAD_STATS_VERSION 1
+
+/** Returns an allocated string for extra-info documents for publishing
+ *  overload statistics. */
+char *
+rep_hist_get_overload_stats_lines(void)
+{
+  char *result = NULL;
+  smartlist_t *chunks = smartlist_new();
+  char tbuf[ISO_TIME_LEN+1];
+
+  /* First encode the general overload */
+  if (overload_happened_recently(overload_stats.overload_general_time, 72)) {
+    format_iso_time(tbuf, overload_stats.overload_general_time);
+    smartlist_add_asprintf(chunks, "overload-general %d %s",
+                           OVERLOAD_STATS_VERSION, tbuf);
+  }
+
+  /* Now do bandwidth-related overloads */
+  if (overload_happened_recently(overload_stats.overload_ratelimits_time,24)) {
+    const or_options_t *options = get_options();
+    format_iso_time(tbuf, overload_stats.overload_ratelimits_time);
+    smartlist_add_asprintf(chunks,
+                           "overload-ratelimits %d %s %" PRIu64 " %" PRIu64
+                           " %" PRIu64 " %" PRIu64,
+                           OVERLOAD_STATS_VERSION, tbuf,
+                           options->BandwidthRate, options->BandwidthBurst,
+                           overload_stats.overload_read_count,
+                           overload_stats.overload_write_count);
+  }
+
+  /* Finally file descriptor overloads */
+  if (overload_happened_recently(
+                              overload_stats.overload_fd_exhausted_time, 72)) {
+    format_iso_time(tbuf, overload_stats.overload_fd_exhausted_time);
+    smartlist_add_asprintf(chunks, "overload-fd-exhausted %d %s",
+                           OVERLOAD_STATS_VERSION, tbuf);
+  }
+
+  /* Bail early if we had nothing to write */
+  if (smartlist_len(chunks) == 0) {
+    goto done;
+  }
+
+  result = smartlist_join_strings(chunks, "\n", 0, NULL);
+
+ done:
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
+  return result;
+}
+
+/** Round down the time in `a` to the beginning of the current hour */
+#define SET_TO_START_OF_HOUR(a) STMT_BEGIN \
+  (a) = approx_time() - (approx_time() % 3600); \
+STMT_END
+
+/** Note down an overload event of type `overload`. */
+void
+rep_hist_note_overload(overload_type_t overload)
+{
+  switch (overload) {
+  case OVERLOAD_GENERAL:
+    SET_TO_START_OF_HOUR(overload_stats.overload_general_time);
+    break;
+  case OVERLOAD_READ:
+    SET_TO_START_OF_HOUR(overload_stats.overload_ratelimits_time);
+    overload_stats.overload_read_count++;
+    break;
+  case OVERLOAD_WRITE:
+    SET_TO_START_OF_HOUR(overload_stats.overload_ratelimits_time);
+    overload_stats.overload_write_count++;
+    break;
+  case OVERLOAD_FD_EXHAUSTED:
+    SET_TO_START_OF_HOUR(overload_stats.overload_fd_exhausted_time);
+    overload_stats.overload_fd_exhausted++;
+    break;
+  }
+}
+
 /** Return the or_history_t for the OR with identity digest <b>id</b>,
  * creating it if necessary. */
 static or_history_t *

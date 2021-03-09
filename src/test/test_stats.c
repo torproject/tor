@@ -703,6 +703,114 @@ test_load_stats_file(void *arg)
   tor_free(content);
 }
 
+/** Test the overload stats logic. */
+static void
+test_overload_stats(void *arg)
+{
+  time_t current_time = 1010101010;
+  char *stats_str = NULL;
+  (void) arg;
+
+  /* Change time to 03-01-2002 23:36 UTC */
+  /* This should make the extrainfo timestamp be "2002-01-03 23:00:00" */
+  update_approx_time(current_time);
+
+  /* With an empty rephist we shouldn't get anything back */
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_assert(!stats_str);
+
+  /* Note a DNS overload */
+  rep_hist_note_overload(OVERLOAD_GENERAL);
+
+  /* Move the time forward one hour */
+  current_time += 3600;
+  update_approx_time(current_time);
+
+  /* Now check the string */
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-general 1 2002-01-03 23:00:00", OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Move the time forward 72 hours: see that the line has disappeared. */
+  current_time += 3600*72;
+  update_approx_time(current_time);
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_assert(!stats_str);
+
+  /* Now the time should be 2002-01-07 00:00:00 */
+
+  /* Note a DNS overload */
+  rep_hist_note_overload(OVERLOAD_GENERAL);
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-general 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Also note an fd exhaustion event */
+  rep_hist_note_overload(OVERLOAD_FD_EXHAUSTED);
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-general 1 2002-01-07 00:00:00\n"
+            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Move the time forward. Register DNS overload. See that the time changed */
+  current_time += 3600*2;
+  update_approx_time(current_time);
+
+  rep_hist_note_overload(OVERLOAD_GENERAL);
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-general 1 2002-01-07 02:00:00\n"
+            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Move the time forward. Register a bandwidth ratelimit event. See that the
+     string is added */
+  current_time += 3600*2;
+  update_approx_time(current_time);
+
+  /* Register the rate limit event */
+  rep_hist_note_overload(OVERLOAD_READ);
+  /* Also set some rate limiting values that should be reflected on the log */
+  get_options_mutable()->BandwidthRate = 1000;
+  get_options_mutable()->BandwidthBurst = 2000;
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-general 1 2002-01-07 02:00:00\n"
+            "overload-ratelimits 1 2002-01-07 04:00:00 1000 2000 1 0\n"
+            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Move the time forward 24 hours: no rate limit line anymore. */
+  current_time += 3600*24;
+  update_approx_time(current_time);
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-general 1 2002-01-07 02:00:00\n"
+            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Move the time forward 44 hours: no fd exhausted line anymore. */
+  current_time += 3600*44;
+  update_approx_time(current_time);
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-general 1 2002-01-07 02:00:00", OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Move the time forward 2 hours: there is nothing left. */
+  current_time += 3600*2;
+  update_approx_time(current_time);
+
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_assert(!stats_str);
+
+ done:
+  tor_free(stats_str);
+}
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -718,6 +826,7 @@ struct testcase_t stats_tests[] = {
   FORK(get_bandwidth_lines),
   FORK(rephist_v3_onions),
   FORK(load_stats_file),
+  FORK(overload_stats),
 
   END_OF_TESTCASES
 };
