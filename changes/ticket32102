@@ -1,3 +1,0 @@
-  o Minor features (build information):
-    - Add build informations to `tor --version` in order to ease reproducible
-      builds. Closes ticket 32102.

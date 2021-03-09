@@ -1,3 +1,0 @@
-  o Minor features (control port, stream handling):
-    - Add the stream ID argument to the event line in the ADDRMAP control
-      event. Closes ticket 40249. Patch by Neel Chauhan.

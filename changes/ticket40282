@@ -1,6 +1,0 @@
-  o Removed features (relay):
-    - Because DirPorts are only used on authorities, relays no longer
-      advertise them. Similarly, self-testing for DirPorts has been disabled,
-      since an unreachable DirPort is no reason for a relay not to advertise
-      itself. (Configuring a DirPort will still work, for now.)  Closes
-      ticket 40282.

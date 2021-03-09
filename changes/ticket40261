@@ -1,4 +1,0 @@
-  o Code simplification and refactoring (metrics, DoS):
-    - Move the DoS subsystem into the subsys manager including its configuration
-      options. Closes ticket 40261.
-

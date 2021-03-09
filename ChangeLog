@@ -1,3 +1,161 @@
+Changes in version 0.4.6.1-alpha - 2021-03-??
+  Tor 0.4.6.1-alpha is the first alpha release in the 0.4.6.x series. It
+  improves client circuit performance, adds missing features, and
+  improves some of our DoS handling and statistics reporting. It also
+  includes numerous smaller bugfixes.
+
+  o Major features (control port, onion services):
+    - Add controller support for creating version 3 onion services with
+      client authorization. Previously, only v2 onion services could be
+      created with client authorization. Closes ticket 40084. Patch by
+      Neel Chauhan.
+
+  o Major features (directory authorityl):
+    - When voting for a relay with a Sybil-like appearance, add the
+      Sybil flag when clearing out the other flags. This lets a relay
+      operator know why their relay hasn't been voted on. Closes ticket
+      40255. Patch by Neel Chauhan.
+
+  o Major features (relay, denial of service):
+    - Add a new DoS subsystem feature to control the rate of client
+      connections for relays. Closes ticket 40253.
+
+  o Major features (statistics):
+    - Relays now also publish statistics about the number of v3 onion
+      services and volume of v3 onion service traffic, in the same
+      manner they already do for v2 onions. Closes ticket 23126.
+
+  o Major bugfixes (circuit build timeout):
+    - Improve the accuracy of our circuit build timeout calculation for
+      60%, 70%, and 80% build rates for various guard choices. We now
+      use a maximum likelihood estimator for Pareto parameters of the
+      circuit build time distribution, instead of a "right-censored
+      estimator". This causes clients to ignore circuits that never
+      finish building in their timeout calculations. Previously, clients
+      were counting such unfinished circuits as having the highest
+      possible build time value, when in reality these circuits most
+      likely just contain relays that are offline. We also now wait a
+      bit longer to let circuits complete for measurement purposes,
+      lower the minimum possible effective timeout from 1.5 seconds to
+      10ms, and increase the resolution of the circuit build time
+      histogram from 50ms bin widths to 10ms bin widths. Additionally,
+      we alter our estimate Xm by taking the maximum of the top 10 most
+      common build time values of the 10ms histogram, and compute Xm as
+      the average of these. Fixes bug 40168; bugfix on 0.2.2.14-alpha.
+    - Remove max_time calculation and associated warn from circuit build
+      timeout 'alpha' parameter estimation, as this is no longer needed
+      by our new estimator from 40168. Fixes bug 34088; bugfix
+      on 0.2.2.9-alpha.
+
+  o Major bugfixes (signing key):
+    - In the tor-gencert utility, give an informative error message if
+      the passphrase given in `--create-identity-key` is too short.
+      Fixes bug 40189; bugfix on 0.2.0.1-alpha. Patch by Neel Chauhan.
+
+  o Minor features (bridge):
+    - We now announce the URL to Tor's new bridge status at
+      https://bridges.torproject.org/ when Tor is configured to run as a
+      bridge relay. Closes ticket 30477.
+
+  o Minor features (build system):
+    - New "make lsp" command to auto generate the compile_commands.json
+      file used by the ccls server. The "bear" program is needed for
+      this. Closes ticket 40227.
+
+  o Minor features (command-line interface):
+    - Add build informations to `tor --version` in order to ease
+      reproducible builds. Closes ticket 32102.
+    - When parsing command-line flags that take an optional argument,
+      treat the argument as absent if it would start with a '-'
+      character. Arguments in that form are not intelligible for any of
+      our optional-argument flags. Closes ticket 40223.
+    - Allow a relay operator to list the ed25519 keys on the command
+      line by adding the `rsa` and `ed25519` arguments to the
+      --list-fingerprint flag to show the respective RSA and ed25519
+      relay fingerprint. Closes ticket 33632. Patch by Neel Chauhan.
+
+  o Minor features (control port, stream handling):
+    - Add the stream ID argument to the event line in the ADDRMAP
+      control event. Closes ticket 40249. Patch by Neel Chauhan.
+
+  o Minor features (logging):
+    - Change the DoS subsystem heartbeat line format so be more clear on
+      what has been detected/rejected and which option is disabled if
+      any. Closes ticket 40308.
+    - In src/core/mainloop/mainloop.c and src/core/mainloop/connection.c,
+      put brackets around IPv6 addresses in log messages. Closes ticket
+      40232. Patch by Neel Chauhan.
+
+  o Minor features (performance, windows):
+    - Use SRWLocks to implement locking on Windows. Replaces the
+      critical section locking implementation with the faster SRWLocks
+      available since Windows Vista. Closes ticket 17927. Patch by
+      Daniel Pinto.
+
+  o Minor features (protocol, proxy support, defense in depth):
+    - Close HAProxy connections if they somehow manage to send us data
+      before we start reading. Closes another case of ticket 40017.
+
+  o Minor features (tests, portability):
+    - Port the hs_build_address.py test script to work with recent
+      versions of python. Closes ticket 40213. Patch from
+      Samanta Navarro.
+
+  o Minor bugfixes (build):
+    - Mini-report in the configure script now shows whether or not lzma
+      and zstd have been used, not just if enable flag passed in. Fixes
+      bug 40236; bugfix on 0.4.3.1-alpha.
+
+  o Minor bugfixes (compatibility):
+    - Fix a failure in the test cases when running on the hppa
+      architecture, along with a related test that might fail on other
+      architectures in the future. Fixes bug 40274; bugfix
+      on 0.2.5.1-alpha.
+
+  o Minor bugfixes (directory authorities, voting):
+    - Add a new consensus method (31) to support any future changes that
+      authorities decide to make to the value of bwweightscale or
+      maxunmeasuredbw. Previously, there was a bug that prevented the
+      authorities from parsing these consensus parameters correctly under
+      most circumstances. Fixes bug 19011; bugfix on 0.2.2.10-alpha.
+
+  o Minor bugfixes (ipv6):
+    - Allow non-SOCKSPorts to disable IPv4, IPv6, and Prefer IPv4. Some
+      rare configs might break, but in this case you can disable
+      NoIPv4Traffic and NoIPv6Traffic as needed. Fixes bug 33607; bugfix
+      on 0.4.1.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (key generation):
+    - Do not require a valid torrc when using the `--keygen` argument to
+      generate a signing key. This allows us to generate keys on systems
+      or users which may not run Tor. Fixes bug 40235; bugfix on
+      0.2.7.2-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (onion services, logging):
+    - Downgrade the severity of a few rendezvous circuit-related
+      warnings from warning to info. Fixes bug 40207; bugfix on
+      0.3.2.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (relay):
+    - Reduce the compression level for data streaming from HIGH to LOW.
+      Fixes bug 40301; bugfix on 0.3.5.1-alpha.
+
+  o Code simplification and refactoring:
+    - Remove the orconn_ext_or_id_map structure and related functions.
+      Nothing outside of unit tests looks up anything in this structure.
+      Closes ticket 33383. Patch by Neel Chauhan.
+
+  o Code simplification and refactoring (metrics, DoS):
+    - Move the DoS subsystem into the subsys manager including its
+      configuration options. Closes ticket 40261.
+
+  o Removed features (relay):
+    - Because DirPorts are only used on authorities, relays no longer
+      advertise them. Similarly, self-testing for DirPorts has been
+      disabled, since an unreachable DirPort is no reason for a relay
+      not to advertise itself. (Configuring a DirPort will still work,
+      for now.) Closes ticket 40282.
+
 
 Changes in version 0.4.5.6 - 2021-02-15
   The Tor 0.4.5.x release series is dedicated to the memory of Karsten

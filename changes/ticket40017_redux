@@ -1,3 +1,0 @@
-  o Minor features (protocol, proxy support, defense in depth):
-    - Close HAProxy connections if they somehow manage to send us data before
-      we start reading.  Closes another case of ticket 40017.

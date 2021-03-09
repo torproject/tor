@@ -1,4 +1,0 @@
-  o Minor bugfixes (circuit build timeout):
-    - Remove max_time calculation and associated warn from circuit build
-      timeout 'alpha' parameter estimation, as this is no longer needed
-      by our new estimator from 40168. Fixes bug 34088; bugfix on 0.2.2.9-alpha.
