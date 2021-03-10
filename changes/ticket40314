@@ -1,0 +1,4 @@
+  o Minor feature (Vote document):
+    - Add the "stats" line in a directory authority vote in order to report
+      various statistics that the authority has computed for the relays. This
+      will help us diagnose better the network. Close ticket 40314.
