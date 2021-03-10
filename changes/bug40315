@@ -1,0 +1,5 @@
+  o Minor bugfixes (Linux, relay):
+    - Fix a bug in determining total available system memory that would have
+      been triggered if the format of /proc/meminfo had ever changed
+      to include "MemTotal:" in the middle of a line. Fixes bug 40315;
+      bugfix on 0.2.5.4-alpha.
