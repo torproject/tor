@@ -197,7 +197,9 @@ register_service(hs_service_ht *map, hs_service_t *service)
   if (map == hs_service_map) {
     hs_service_map_has_changed();
   }
-  /* Setup metrics. */
+  /* Setup metrics. This is done here because in order to initialize metrics,
+   * we require tor to have fully initialized a service so the ports of the
+   * service can be looked at for instance. */
   hs_metrics_service_init(service);
 
   return 0;
