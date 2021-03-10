@@ -149,9 +149,11 @@ hs_metrics_service_init(hs_service_t *service)
 {
   tor_assert(service);
 
-  /* Calling this function twice on a service object is wrong. The caller must
-   * free the metrics before if so. */
-  if (BUG(service->metrics.store)) {
+  /* This function is called when we register a service and so it could either
+   * be a new service or a service that was just reloaded through a HUP signal
+   * for instance. Thus, it is possible that the service has already an
+   * initialized store. If so, just return. */
+  if (service->metrics.store) {
     return;
   }
 
