@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion service):
+    - Remove a harmless BUG() warning when reloading tor configured with onion
+      services. Fixes bug 40334; bugfix on 0.4.5.1-alpha.
