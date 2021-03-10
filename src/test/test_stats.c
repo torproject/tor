@@ -807,6 +807,45 @@ test_overload_stats(void *arg)
   stats_str = rep_hist_get_overload_stats_lines();
   tt_assert(!stats_str);
 
+  /* Now test the rate-limit rate-limiter ;) */
+  for (int i = 0; i < 10; i++) {
+    rep_hist_note_overload(OVERLOAD_READ);
+  }
+  /* We already have an event registered from the previous tests. We just
+   * registered ten more overload events, but only one should have been counted
+   * because of the rate limiter */
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 2 0",
+            OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Increment time by 59 secs and try again. No additional events should
+     register */
+  current_time += 59;
+  update_approx_time(current_time);
+
+  for (int i = 0; i < 10; i++) {
+    rep_hist_note_overload(OVERLOAD_READ);
+  }
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 2 0",
+            OP_EQ, stats_str);
+  tor_free(stats_str);
+
+  /* Now increment time by 2 secs -- taking it after the minute rate limiting
+     and see that events will register again */
+  current_time += 2;
+  update_approx_time(current_time);
+
+  for (int i = 0; i < 10; i++) {
+    rep_hist_note_overload(OVERLOAD_READ);
+    rep_hist_note_overload(OVERLOAD_WRITE);
+  }
+  stats_str = rep_hist_get_overload_stats_lines();
+  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 3 1",
+            OP_EQ, stats_str);
+  tor_free(stats_str);
+
  done:
   tor_free(stats_str);
 }

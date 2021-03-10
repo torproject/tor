@@ -280,18 +280,29 @@ STMT_END
 void
 rep_hist_note_overload(overload_type_t overload)
 {
+  static time_t last_read_counted = 0;
+  static time_t last_write_counted = 0;
+
   switch (overload) {
   case OVERLOAD_GENERAL:
     SET_TO_START_OF_HOUR(overload_stats.overload_general_time);
     break;
-  case OVERLOAD_READ:
+  case OVERLOAD_READ: {
     SET_TO_START_OF_HOUR(overload_stats.overload_ratelimits_time);
-    overload_stats.overload_read_count++;
+    if (approx_time() >= last_read_counted + 60) { /* Count once a minute */
+        overload_stats.overload_read_count++;
+        last_read_counted = approx_time();
+    }
     break;
-  case OVERLOAD_WRITE:
+  }
+  case OVERLOAD_WRITE: {
     SET_TO_START_OF_HOUR(overload_stats.overload_ratelimits_time);
-    overload_stats.overload_write_count++;
+    if (approx_time() >= last_write_counted + 60) { /* Count once a minute */
+      overload_stats.overload_write_count++;
+      last_write_counted = approx_time();
+    }
     break;
+  }
   case OVERLOAD_FD_EXHAUSTED:
     SET_TO_START_OF_HOUR(overload_stats.overload_fd_exhausted_time);
     overload_stats.overload_fd_exhausted++;
