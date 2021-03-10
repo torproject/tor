@@ -1,0 +1,3 @@
+  o Minor bugfixes (documentation):
+    - Fix a formatting error on the documentation for
+      VirtualAddrNetworkIPv6.  Fixes bug 40256; bugfix on 0.2.9.4-alpha.
