@@ -1,0 +1,4 @@
+  o Minor features (dormant mode):
+    - Add a new 'DormantTimeoutEnabled' option to allow coarse-grained
+      control over whether the client ever becomes dormant from inactivity.
+      Most people won't need this. Closes ticket 40228.
