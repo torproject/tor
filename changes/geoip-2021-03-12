@@ -6,4 +6,4 @@
       Database instead.  (See https://location.ipfire.org/ for more
       information).  This release updates our geoip files to match the
       IPFire Location Database as retrieved on 2021/03/12.  Closes
-      ticket 32978.
+      ticket 40224.
