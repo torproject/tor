@@ -1,3 +1,9 @@
   o Minor features (geoip data):
-    - Update the geoip files to match the IPFire Location Database,
-      as retrieved on 2021/03/12.
+    - We have switched geoip data sources. Previously we shipped
+      IP-to-country mappings from Maxmind's GeoLite2, but in 2019 they
+      changed their licensing term, so we were unable to update them after
+      that point.  We now ship geoip files based on the  IPFire Location
+      Database instead.  (See https://location.ipfire.org/ for more
+      information).  This release updates our geoip files to match the
+      IPFire Location Database as retrieved on 2021/03/12.  Closes
+      ticket 32978.
