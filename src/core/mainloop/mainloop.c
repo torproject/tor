@@ -1823,6 +1823,12 @@ check_network_participation_callback(time_t now, const or_options_t *options)
     goto found_activity;
   }
 
+  /* If we aren't allowed to become dormant, then participation doesn't
+     matter */
+  if (! options->DormantTimeoutEnabled) {
+    goto found_activity;
+  }
+
   /* If we're running an onion service, we can't become dormant. */
   /* XXXX this would be nice to change, so that we can be dormant with a
    * service. */

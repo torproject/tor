@@ -1888,6 +1888,12 @@ The following options control when Tor enters and leaves dormant mode:
     counts as client activity for the purpose of DormantClientTimeout.
     If false, then only network activity counts. (Default: 1)
 
+[[DormantTimeoutEnabled]] **DormantTimeoutEnabled** **0**|**1**::
+    If false, then no amount of time without activity is sufficient to
+    make Tor go dormant.  Setting this option to zero is only recommended for
+    special-purpose applications that need to use the Tor binary for
+    something other than sending or receiving Tor traffic. (Default: 1)
+
 == NODE SELECTION OPTIONS
 
 // These options are in alphabetical order, with exceptions as noted.

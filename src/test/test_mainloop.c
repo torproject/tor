@@ -231,6 +231,8 @@ test_mainloop_check_participation(void *arg)
   const time_t start = 1542658829;
   const time_t ONE_DAY = 24*60*60;
 
+  options->DormantTimeoutEnabled = 1;
+
   // Suppose we've been idle for a day or two
   reset_user_activity(start - 2*ONE_DAY);
   set_network_participation(true);

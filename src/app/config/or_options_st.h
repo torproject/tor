@@ -1065,6 +1065,13 @@ struct or_options_t {
    **/
   int DormantClientTimeout;
 
+  /**
+   * Boolean: If enabled, then we consider the timeout when deciding whether
+   * to be dormant.  If not enabled, then only the SIGNAL ACTIVE/DORMANT
+   * controls can change our status.
+   **/
+  int DormantTimeoutEnabled;
+
   /** Boolean: true if having an idle stream is sufficient to prevent a client
    * from becoming dormant.
    **/
