@@ -309,7 +309,7 @@ process_win32_console_ctrl(DWORD ctrl_type)
   activate_signal(SIGINT);
   return TRUE;
 }
-#endif
+#endif /* defined(_WIN32) */
 
 /**
  * Write current memory usage information to the log.
@@ -514,7 +514,7 @@ handle_signals(void)
      * to handle control signals like Ctrl+C in the console, we can use this to
      * simulate the SIGINT signal */
     if (enabled) SetConsoleCtrlHandler(process_win32_console_ctrl, TRUE);
-#endif
+#endif /* defined(_WIN32) */
 }
 
 /* Cause the signal handler for signal_num to be called in the event loop. */

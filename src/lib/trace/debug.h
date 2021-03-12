@@ -28,7 +28,7 @@
   log_debug(LD_GENERAL, "Tracepoint \"" XSTR(event_name) "\" from " \
                         "subsystem \"" XSTR(subsystem) "\" hit.")
 
-#else /* defined(USE_TRACING_INSTRUMENTATION_LOG_DEBUG) */
+#else /* !defined(USE_TRACING_INSTRUMENTATION_LOG_DEBUG) */
 
 /* NOP the debug event. */
 #define TOR_TRACE_LOG_DEBUG(subsystem, name, ...)

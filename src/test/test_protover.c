@@ -650,7 +650,7 @@ test_protover_vote_roundtrip_ours(void *args)
  */
 #define PROTOVER(proto_string, version_macro) \
   (proto_string "=" STR(version_macro))
-#endif
+#endif /* defined(COCCI) */
 
 #define DEBUG_PROTOVER(flags) \
   STMT_BEGIN \

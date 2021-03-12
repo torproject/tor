@@ -106,7 +106,7 @@ crypto_openssl_get_version_str(void)
 #else
   /* This old name was changed around OpenSSL 1.1.0 */
   const int query = SSLEAY_VERSION;
-#endif
+#endif /* defined(OPENSSL_VERSION) */
 
   if (crypto_openssl_version_str == NULL) {
     const char *raw_version = OpenSSL_version(query);

@@ -4532,7 +4532,7 @@ test_util_glob(void *ptr)
 #else
   const char *results_test3[] = {"dir1", "dir2", "file1", "file2",
                                  "forbidden"};
-#endif
+#endif /* defined(_WIN32) */
   TEST("*i*");
   EXPECT(results_test3);
 
@@ -4570,7 +4570,7 @@ test_util_glob(void *ptr)
   const char *results_test10[] = {"file1"};
   TEST("file1"PATH_SEPARATOR);
   EXPECT(results_test10);
-#endif
+#endif /* defined(__APPLE__) || defined(__darwin__) || ... */
 
   // test path separator at end - with wildcards and linux path separator
   const char *results_test11[] = {"dir1", "dir2", "forbidden"};
@@ -4584,7 +4584,7 @@ test_util_glob(void *ptr)
 #else
   const char *results_test12[] = {"dir1", "dir2", "empty", "file1", "file2",
                                   "forbidden"};
-#endif
+#endif /* defined(_WIN32) */
   TEST("*");
   EXPECT(results_test12);
 
@@ -4631,7 +4631,7 @@ test_util_glob(void *ptr)
     tor_free(pattern);
     tt_assert(!results);
   }
-#endif
+#endif /* !defined(_WIN32) */
 
 #undef TEST
 #undef EXPECT
@@ -4643,7 +4643,7 @@ test_util_glob(void *ptr)
   (void) chmod(dir1_forbidden, 0700);
   (void) chmod(dir2_forbidden, 0700);
   (void) chmod(forbidden_forbidden, 0700);
-#endif
+#endif /* !defined(_WIN32) */
   tor_free(dir1);
   tor_free(dir2);
   tor_free(forbidden);
@@ -4657,11 +4657,11 @@ test_util_glob(void *ptr)
     SMARTLIST_FOREACH(results, char *, f, tor_free(f));
     smartlist_free(results);
   }
-#else
+#else /* !defined(HAVE_GLOB) */
   tt_skip();
  done:
   return;
-#endif
+#endif /* defined(HAVE_GLOB) */
 }
 
 static void
@@ -4769,7 +4769,7 @@ test_util_get_glob_opened_files(void *ptr)
   // dot files are not special on windows
   const char *results_test3[] = {"", ".test-hidden", "dir1", "dir2", "empty",
                                  "file1", "file2", "forbidden"};
-#endif
+#endif /* !defined(_WIN32) */
   TEST("*"PATH_SEPARATOR"*");
   EXPECT(results_test3);
 
@@ -4781,7 +4781,7 @@ test_util_get_glob_opened_files(void *ptr)
   // dot files are not special on windows
   const char *results_test4[] = {"", ".test-hidden", "dir1", "dir2", "empty",
                                  "file1", "file2", "forbidden"};
-#endif
+#endif /* !defined(_WIN32) */
   TEST("*"PATH_SEPARATOR"*"PATH_SEPARATOR);
   EXPECT(results_test4);
 
@@ -4846,7 +4846,7 @@ test_util_get_glob_opened_files(void *ptr)
       TT_FAIL(("unable to chmod a file on cleanup: %s", strerror(errno)));
     }
   }
-#endif
+#endif /* !defined(_WIN32) */
   tor_free(dir1);
   tor_free(dir2);
   tor_free(forbidden);
@@ -4860,11 +4860,11 @@ test_util_get_glob_opened_files(void *ptr)
     SMARTLIST_FOREACH(results, char *, f, tor_free(f));
     smartlist_free(results);
   }
-#else
+#else /* !defined(HAVE_GLOB) */
   tt_skip();
  done:
   return;
-#endif
+#endif /* defined(HAVE_GLOB) */
 }
 
 static void

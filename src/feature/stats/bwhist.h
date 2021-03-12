@@ -38,7 +38,7 @@ STATIC void add_obs(bw_array_t *b, time_t when, uint64_t n);
 STATIC void bw_array_free_(bw_array_t *b);
 STATIC size_t bwhist_fill_bandwidth_history(char *buf, size_t len,
                                             const bw_array_t *b);
-#endif /* defined(REPHIST_PRIVATE) */
+#endif /* defined(BWHIST_PRIVATE) */
 
 #ifdef TOR_UNIT_TESTS
 extern struct bw_array_t *write_array;

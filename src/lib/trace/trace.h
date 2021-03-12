@@ -26,7 +26,7 @@ tracing_log_warning(void)
            "purpose, your tor is NOT safe to run.");
 }
 
-#else
+#else /* !defined(HAVE_TRACING) */
 
 /* NOP it. */
 #define tracing_log_warning()

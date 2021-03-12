@@ -571,7 +571,7 @@ wrap_closedir(void *arg)
 {
   closedir(arg);
 }
-#endif /* defined(HAVE_GLOB) */
+#endif /* defined(_WIN32) || ... */
 
 /** Return a new list containing the paths that match the pattern
  * <b>pattern</b>. Return NULL on error. On POSIX systems, errno is set by the
@@ -636,7 +636,7 @@ tor_glob(const char *pattern)
 #else
   (void)pattern;
   return result;
-#endif /* !defined(HAVE_GLOB) */
+#endif /* defined(_WIN32) || ... */
 
   return result;
 }

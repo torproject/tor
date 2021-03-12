@@ -40,7 +40,7 @@ struct metrics_store_entry_t {
   } u;
 };
 
-#endif /* METRICS_STORE_ENTRY_PRIVATE */
+#endif /* defined(METRICS_STORE_ENTRY_PRIVATE) */
 
 typedef struct metrics_store_entry_t metrics_store_entry_t;
 

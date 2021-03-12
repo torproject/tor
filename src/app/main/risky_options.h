@@ -14,4 +14,4 @@
 
 extern const char risky_option_list[];
 
-#endif
+#endif /* !defined(TOR_RISKY_OPTIONS_H) */

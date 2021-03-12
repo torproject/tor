@@ -46,6 +46,6 @@ typedef struct hs_metrics_entry_t {
 extern const hs_metrics_entry_t base_metrics[];
 extern const size_t base_metrics_size;
 
-#endif /* HS_METRICS_ENTRY_PRIVATE */
+#endif /* defined(HS_METRICS_ENTRY_PRIVATE) */
 
 #endif /* !defined(TOR_FEATURE_HS_METRICS_ENTRY_H) */

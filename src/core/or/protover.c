@@ -445,7 +445,7 @@ trailing_zeros(uint64_t x)
     x>>=1;
   }
   return i;
-#endif
+#endif /* defined(__GNUC__) */
 }
 
 /**

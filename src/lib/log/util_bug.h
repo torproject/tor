@@ -258,7 +258,7 @@
   abort()
 #else
 #define FALLTHROUGH_UNLESS_ALL_BUGS_ARE_FATAL FALLTHROUGH
-#endif
+#endif /* defined(ALL_BUGS_ARE_FATAL) */
 
 /** In older code, we used tor_fragile_assert() to mark optional failure
  * points. At these points, we could make some debug builds fail.

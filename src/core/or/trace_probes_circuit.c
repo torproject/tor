@@ -25,6 +25,6 @@
 #define TRACEPOINT_DEFINE
 #define TRACEPOINT_CREATE_PROBES
 
-#include "trace_probes_circuit.h"
+#include "core/or/trace_probes_circuit.h"
 
-#endif /* USE_TRACING_INSTRUMENTATION_LTTNG */
+#endif /* defined(USE_TRACING_INSTRUMENTATION_LTTNG) */

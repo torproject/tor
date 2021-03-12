@@ -72,7 +72,7 @@
 #include "core/or/or_handshake_state_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/var_cell_st.h"
-#include "src/feature/relay/relay_find_addr.h"
+#include "feature/relay/relay_find_addr.h"
 
 #include "lib/tls/tortls.h"
 #include "lib/tls/x509.h"

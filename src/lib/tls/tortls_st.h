@@ -80,7 +80,7 @@ struct tor_tls_t {
   uint64_t last_write_count;
   uint64_t last_read_count;
   long last_error;
-#endif
+#endif /* defined(ENABLE_NSS) */
 };
 
 #endif /* !defined(TOR_TORTLS_ST_H) */

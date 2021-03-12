@@ -61,7 +61,7 @@ void resolve_addr_reset_suggested(int family);
 
 #endif /* TOR_UNIT_TESTS */
 
-#endif /* RESOLVE_ADDR_PRIVATE */
+#endif /* defined(RESOLVE_ADDR_PRIVATE) */
 
-#endif /* TOR_CONFIG_RESOLVE_ADDR_H */
+#endif /* !defined(TOR_CONFIG_RESOLVE_ADDR_H) */
 

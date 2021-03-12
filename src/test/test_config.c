@@ -1215,7 +1215,7 @@ get_interface_address6_replacement(int severity, sa_family_t family,
 
   return 0;
 }
-#endif
+#endif /* 0 */
 
 static int n_get_interface_address6_failure = 0;
 
@@ -6041,7 +6041,7 @@ test_config_include_wildcards(void *data)
   tt_ptr_op(result, OP_EQ, NULL);
   tt_int_op(include_used, OP_EQ, 1);
   config_free_lines(result);
-#endif
+#endif /* !defined(_WIN32) */
 
   // test pattern *.conf
   tor_snprintf(torrc_contents, sizeof(torrc_contents),
@@ -6181,9 +6181,9 @@ test_config_include_hidden(void *data)
     len++;
   }
   tt_int_op(len, OP_EQ, 1);
-#else
+#else /* !defined(_WIN32) */
   tt_ptr_op(result, OP_EQ, NULL);
-#endif
+#endif /* defined(_WIN32) */
   config_free_lines(result);
 
   // test wildcards match hidden folders when explicitly in the pattern
@@ -6993,7 +6993,7 @@ test_config_multifamily_port(void *arg)
 
 #define CONFIG_TEST_SETUP(suffix, name, flags, setup, setup_data) \
   { #name#suffix, test_config_ ## name, flags, setup, setup_data }
-#endif
+#endif /* !defined(COCCI) */
 
 struct testcase_t config_tests[] = {
   CONFIG_TEST(adding_trusted_dir_server, TT_FORK),

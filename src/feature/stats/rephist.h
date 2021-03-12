@@ -145,6 +145,6 @@ struct hs_v2_stats_t;
 const struct hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);
 struct hs_v3_stats_t;
 const struct hs_v3_stats_t *rep_hist_get_hs_v3_stats(void);
-#endif
+#endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* !defined(TOR_REPHIST_H) */

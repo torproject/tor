@@ -4958,9 +4958,9 @@ options_init_logs(const or_options_t *old_options, const or_options_t *options,
         if (!validate_only) {
           add_syslog_log(severity, options->SyslogIdentityTag);
         }
-#else
+#else /* !defined(HAVE_SYSLOG_H) */
         log_warn(LD_CONFIG, "The android logging API is no longer supported.");
-#endif
+#endif /* defined(HAVE_SYSLOG_H) */
         goto cleanup;
       }
     }

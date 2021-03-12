@@ -852,4 +852,4 @@ resolve_addr_reset_suggested(int family)
   tor_addr_make_unspec(&last_suggested_addrs[af_to_idx(family)]);
 }
 
-#endif /* TOR_UNIT_TESTS */
+#endif /* defined(TOR_UNIT_TESTS) */

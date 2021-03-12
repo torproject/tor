@@ -52,7 +52,7 @@
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 
-#include "src/app/config/statefile.h"
+#include "app/config/statefile.h"
 
 static int control_setconf_helper(control_connection_t *conn,
                                   const control_cmd_args_t *args,
