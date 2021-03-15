@@ -493,8 +493,11 @@ dump_desc,(const char *desc, const char *type))
   tor_assert(desc);
   tor_assert(type);
 #ifndef TOR_UNIT_TESTS
-  /* On older versions of Tor we are disabling this function, since it
-   * can be called with strings that are far too long. */
+  /* For now, we are disabling this function, since it can be called with
+   * strings that are far too long.  We can turn it back on if we fix it
+   * someday, but we'd need to give it a length argument. A likelier
+   * resolution here is simply to remove this module entirely.  See tor#40286
+   * for background. */
   if (1)
     return;
 #endif
