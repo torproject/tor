@@ -1,0 +1,5 @@
+  o Major bugfixes (security, denial of service):
+    - Fix a bug in appending detached signatures to a pending consensus
+      document that could be used to crash a directory authority.
+      Fixes bug 40316; bugfix on 0.2.2.6-alpha. Tracked as
+      TROVE-2021-002 and CVE-2021-28090.
