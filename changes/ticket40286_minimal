@@ -1,0 +1,5 @@
+  o Major bugfixes (denial of service):
+    - Disable the dump_desc() function that we used to dump unparseable
+      information to disk. It was called incorrectly in several places,
+      in a way that could lead to excessive CPU usage.
+      Fixes bug 40286; bugfix on 0.2.2.1-alpha.
