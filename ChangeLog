@@ -34,7 +34,7 @@ Changes in version 0.4.5.7 - 2021-03-16
   o Minor features (geoip data):
     - We have switched geoip data sources. Previously we shipped IP-to-
       country mappings from Maxmind's GeoLite2, but in 2019 they changed
-      their licensing term, so we were unable to update them after that
+      their licensing terms, so we were unable to update them after that
       point. We now ship geoip files based on the IPFire Location
       Database instead. (See https://location.ipfire.org/ for more
       information). This release updates our geoip files to match the
@@ -73,7 +73,7 @@ Changes in version 0.4.5.7 - 2021-03-16
     - Remove a spammy log notice falsely claiming that the IPv4/v6
       address was missing. Fixes bug 40300; bugfix on 0.4.5.1-alpha.
     - Do not query the address cache early in the boot process when
-      deciding if we a relay needs to fetch early directory information
+      deciding if a relay needs to fetch early directory information
       from an authority. This bug resulted in a relay falsely believing
       it didn't have an address and thus triggering an authority fetch
       at each boot. Related to our fix for 40300.
