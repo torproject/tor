@@ -275,7 +275,6 @@ check-local:					\
 	check-spaces				\
 	check-changes				\
 	check-includes				\
-	check-best-practices			\
 	shellcheck
 
 # test-network requires a copy of Chutney in $CHUTNEY_PATH.
