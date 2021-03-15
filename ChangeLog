@@ -1,8 +1,11 @@
-Changes in version 0.4.6.1-alpha - 2021-03-??
+Changes in version 0.4.6.1-alpha - 2021-03-18
   Tor 0.4.6.1-alpha is the first alpha release in the 0.4.6.x series. It
   improves client circuit performance, adds missing features, and
   improves some of our DoS handling and statistics reporting. It also
   includes numerous smaller bugfixes.
+
+  Below are the changes since 0.4.5.7. (Note that this release DOES
+  include the fixes for the security bugs already fixed in 0.4.5.7.)
 
   o Major features (control port, onion services):
     - Add controller support for creating version 3 onion services with
@@ -100,6 +103,11 @@ Changes in version 0.4.6.1-alpha - 2021-03-??
     - Port the hs_build_address.py test script to work with recent
       versions of python. Closes ticket 40213. Patch from
       Samanta Navarro.
+
+  o Minor features (vote document):
+    - Add a "stats" line to directory authority votes, to report various
+      statistics that authorities computed about the relays. This will
+      help us diagnose the network better. Closes ticket 40314.
 
   o Minor bugfixes (build):
     - Mini-report in the configure script now shows whether or not lzma
