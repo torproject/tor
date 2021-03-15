@@ -3597,7 +3597,7 @@ dirvote_add_signatures_to_pending_consensus(
       strlen(pc->body) + strlen(new_signatures) + 1;
     pc->body = tor_realloc(pc->body, new_consensus_len);
     dst_end = pc->body + new_consensus_len;
-    dst = strstr(pc->body, "directory-signature ");
+    dst = (char *) find_str_at_start_of_line(pc->body, "directory-signature ");
     tor_assert(dst);
     strlcpy(dst, new_signatures, dst_end-dst);
 
