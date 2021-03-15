@@ -497,6 +497,12 @@ dump_desc,(const char *desc, const char *type))
 {
   tor_assert(desc);
   tor_assert(type);
+#ifndef TOR_UNIT_TESTS
+  /* On older versions of Tor we are disabling this function, since it
+   * can be called with strings that are far too long. */
+  if (1)
+    return;
+#endif
   size_t len;
   /* The SHA256 of the string */
   uint8_t digest_sha256[DIGEST256_LEN];
