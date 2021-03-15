@@ -34,7 +34,7 @@ Changes in version 0.4.4.8 - 2021-03-16
   o Minor features (geoip data, backport from 0.4.5.7):
     - We have switched geoip data sources. Previously we shipped IP-to-
       country mappings from Maxmind's GeoLite2, but in 2019 they changed
-      their licensing term, so we were unable to update them after that
+      their licensing terms, so we were unable to update them after that
       point. We now ship geoip files based on the IPFire Location
       Database instead. (See https://location.ipfire.org/ for more
       information). This release updates our geoip files to match the
