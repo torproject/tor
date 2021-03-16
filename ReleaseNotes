@@ -2,6 +2,91 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.5.7 - 2021-03-16
+  Tor 0.4.5.7 fixes two important denial-of-service bugs in earlier
+  versions of Tor.
+
+  One of these vulnerabilities (TROVE-2021-001) would allow an attacker
+  who can send directory data to a Tor instance to force that Tor
+  instance to consume huge amounts of CPU. This is easiest to exploit
+  against authorities, since anybody can upload to them, but directory
+  caches could also exploit this vulnerability against relays or clients
+  when they download. The other vulnerability (TROVE-2021-002) only
+  affects directory authorities, and would allow an attacker to remotely
+  crash the authority with an assertion failure. Patches have already
+  been provided to the authority operators, to help ensure
+  network stability.
+
+  We recommend that everybody upgrade to one of the releases that fixes
+  these issues (0.3.5.14, 0.4.4.8, or 0.4.5.7) as they become available
+  to you.
+
+  This release also updates our GeoIP data source, and fixes a few
+  smaller bugs in earlier releases.
+
+  o Major bugfixes (security, denial of service):
+    - Disable the dump_desc() function that we used to dump unparseable
+      information to disk. It was called incorrectly in several places,
+      in a way that could lead to excessive CPU usage. Fixes bug 40286;
+      bugfix on 0.2.2.1-alpha. This bug is also tracked as TROVE-2021-
+      001 and CVE-2021-28089.
+    - Fix a bug in appending detached signatures to a pending consensus
+      document that could be used to crash a directory authority. Fixes
+      bug 40316; bugfix on 0.2.2.6-alpha. Tracked as TROVE-2021-002
+      and CVE-2021-28090.
+
+  o Minor features (geoip data):
+    - We have switched geoip data sources. Previously we shipped IP-to-
+      country mappings from Maxmind's GeoLite2, but in 2019 they changed
+      their licensing terms, so we were unable to update them after that
+      point. We now ship geoip files based on the IPFire Location
+      Database instead. (See https://location.ipfire.org/ for more
+      information). This release updates our geoip files to match the
+      IPFire Location Database as retrieved on 2021/03/12. Closes
+      ticket 40224.
+
+  o Minor bugfixes (directory authority):
+    - Now that exit relays don't allow exit connections to directory
+      authority DirPorts (to prevent network reentry), disable
+      authorities' reachability self test on the DirPort. Fixes bug
+      40287; bugfix on 0.4.5.5-rc.
+
+  o Minor bugfixes (documentation):
+    - Fix a formatting error in the documentation for
+      VirtualAddrNetworkIPv6. Fixes bug 40256; bugfix on 0.2.9.4-alpha.
+
+  o Minor bugfixes (Linux, relay):
+    - Fix a bug in determining total available system memory that would
+      have been triggered if the format of Linux's /proc/meminfo file
+      had ever changed to include "MemTotal:" in the middle of a line.
+      Fixes bug 40315; bugfix on 0.2.5.4-alpha.
+
+  o Minor bugfixes (metrics port):
+    - Fix a BUG() warning on the MetricsPort for an internal missing
+      handler. Fixes bug 40295; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (onion service):
+    - Remove a harmless BUG() warning when reloading tor configured with
+      onion services. Fixes bug 40334; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (portability):
+    - Fix a non-portable usage of "==" with "test" in the configure
+      script. Fixes bug 40298; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Remove a spammy log notice falsely claiming that the IPv4/v6
+      address was missing. Fixes bug 40300; bugfix on 0.4.5.1-alpha.
+    - Do not query the address cache early in the boot process when
+      deciding if a relay needs to fetch early directory information
+      from an authority. This bug resulted in a relay falsely believing
+      it didn't have an address and thus triggering an authority fetch
+      at each boot. Related to our fix for 40300.
+
+  o Removed features (mallinfo deprecated):
+    - Remove mallinfo() usage entirely. Libc 2.33+ now deprecates it.
+      Closes ticket 40309.
+
+
 Changes in version 0.4.5.6 - 2021-02-15
   The Tor 0.4.5.x release series is dedicated to the memory of Karsten
   Loesing (1979-2020), Tor developer, cypherpunk, husband, and father.
