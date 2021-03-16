@@ -2,6 +2,54 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.4.8 - 2021-03-16
+  Tor 0.4.4.8 backports fixes for two important denial-of-service bugs
+  in earlier versions of Tor.
+
+  One of these vulnerabilities (TROVE-2021-001) would allow an attacker
+  who can send directory data to a Tor instance to force that Tor
+  instance to consume huge amounts of CPU. This is easiest to exploit
+  against authorities, since anybody can upload to them, but directory
+  caches could also exploit this vulnerability against relays or clients
+  when they download. The other vulnerability (TROVE-2021-002) only
+  affects directory authorities, and would allow an attacker to remotely
+  crash the authority with an assertion failure. Patches have already
+  been provided to the authority operators, to help ensure
+  network stability.
+
+  We recommend that everybody upgrade to one of the releases that fixes
+  these issues (0.3.5.14, 0.4.4.8, or 0.4.5.7) as they become available
+  to you.
+
+  This release also updates our GeoIP data source, and fixes a
+  compatibility issue.
+
+  o Major bugfixes (security, denial of service, backport from 0.4.5.7):
+    - Disable the dump_desc() function that we used to dump unparseable
+      information to disk. It was called incorrectly in several places,
+      in a way that could lead to excessive CPU usage. Fixes bug 40286;
+      bugfix on 0.2.2.1-alpha. This bug is also tracked as TROVE-2021-
+      001 and CVE-2021-28089.
+    - Fix a bug in appending detached signatures to a pending consensus
+      document that could be used to crash a directory authority. Fixes
+      bug 40316; bugfix on 0.2.2.6-alpha. Tracked as TROVE-2021-002
+      and CVE-2021-28090.
+
+  o Minor features (geoip data, backport from 0.4.5.7):
+    - We have switched geoip data sources. Previously we shipped IP-to-
+      country mappings from Maxmind's GeoLite2, but in 2019 they changed
+      their licensing terms, so we were unable to update them after that
+      point. We now ship geoip files based on the IPFire Location
+      Database instead. (See https://location.ipfire.org/ for more
+      information). This release updates our geoip files to match the
+      IPFire Location Database as retrieved on 2021/03/12. Closes
+      ticket 40224.
+
+  o Removed features (mallinfo deprecated, backport from 0.4.5.7):
+    - Remove mallinfo() usage entirely. Libc 2.33+ now deprecates it.
+      Closes ticket 40309.
+
+
 Changes in version 0.4.4.7 - 2021-02-03
   Tor 0.4.4.7 backports numerous bugfixes from later releases,
   including one that made v3 onion services more susceptible to
