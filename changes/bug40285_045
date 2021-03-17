@@ -1,0 +1,4 @@
+  o Minor bugfixes (controller):
+    - Fix a "BUG" warning that would appear when a controller chooses the
+      first hop for a circuit, and that circuit completes.  Fixes
+      bug 40285; bugfix on 0.3.2.1-alpha.
