@@ -171,6 +171,18 @@ struct origin_circuit_t {
   unsigned padding_negotiation_failed : 1;
 
   /**
+   * If this flag is set, then a controller chose the first hop of this
+   * circuit's path, and it's okay to ignore checks that we'd usually do
+   * on this circuit's first hop.
+   *
+   * This flag is distinct from the CIRCUIT_PURPOSE_CONTROLLER purpose: the
+   * purpose indicates _what tor can use the circuit for_.  Controller-created
+   * circuits can still have the CIRCUIT_PURPOSE_GENERAL purpose if Tor is
+   * allowed to attach streams to them.
+   */
+  unsigned first_hop_from_controller : 1;
+
+  /**
    * Tristate variable to guard against pathbias miscounting
    * due to circuit purpose transitions changing the decision
    * of pathbias_should_count(). This variable is informational

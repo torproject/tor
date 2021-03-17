@@ -881,14 +881,22 @@ circuit_pick_extend_handshake(uint8_t *cell_type_out,
 }
 
 /**
- * Return true iff <b>purpose</b> is a purpose for a circuit which is
- * allowed to have no guard configured, even if the circuit is multihop
+ * Return true iff <b>circ</b> is allowed
+ * to have no guard configured, even if the circuit is multihop
  * and guards are enabled.
  */
 static int
-circuit_purpose_may_omit_guard(int purpose)
+circuit_may_omit_guard(const origin_circuit_t *circ)
 {
-  switch (purpose) {
+  if (BUG(!circ))
+    return 0;
+
+  if (circ->first_hop_from_controller) {
+    /* The controller picked the first hop: that bypasses the guard system. */
+    return 1;
+  }
+
+  switch (circ->base_.purpose) {
     case CIRCUIT_PURPOSE_TESTING:
     case CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT:
       /* Testing circuits may omit guards because they're measuring
@@ -1019,7 +1027,7 @@ circuit_build_no_more_hops(origin_circuit_t *circ)
   guard_usable_t r;
   if (! circ->guard_state) {
     if (circuit_get_cpath_len(circ) != 1 &&
-        ! circuit_purpose_may_omit_guard(circ->base_.purpose) &&
+        ! circuit_may_omit_guard(circ) &&
         get_options()->UseEntryGuards) {
       log_warn(LD_BUG, "%d-hop circuit %p with purpose %d has no "
                "guard state",

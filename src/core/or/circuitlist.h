@@ -118,7 +118,8 @@
  * bandwidth measurement, reachability test and address discovery from an
  * authority using the NETINFO cell. */
 #define CIRCUIT_PURPOSE_TESTING 21
-/** A controller made this circuit and Tor should not use it. */
+/** A controller made this circuit and Tor should not cannibalize it or attach
+ * streams to it without explicitly being told. */
 #define CIRCUIT_PURPOSE_CONTROLLER 22
 /** This circuit is used for path bias probing only */
 #define CIRCUIT_PURPOSE_PATH_BIAS_TESTING 23
