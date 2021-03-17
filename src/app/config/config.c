@@ -563,6 +563,7 @@ static const config_var_t option_vars_[] = {
   V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
   VPORT(MetricsPort),
   V(MetricsPortPolicy,           LINELIST, NULL),
+  V(MinTimeToReportBandwidth,    INTERVAL, "1 day"),
   VAR("MyFamily",                LINELIST, MyFamily_lines,       NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   OBSOLETE("NamingAuthoritativeDirectory"),
@@ -3709,6 +3710,13 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     log_warn(LD_CONFIG, "HeartbeatPeriod option is too short; "
              "raising to %d seconds.", MIN_HEARTBEAT_PERIOD);
     options->HeartbeatPeriod = MIN_HEARTBEAT_PERIOD;
+  }
+
+  if (options->MinTimeToReportBandwidth < MIN_MIN_TIME_TO_REPORT_BW &&
+      !options->TestingTorNetwork) {
+    log_warn(LD_CONFIG, "MinTimeToReportBandwidth is too short; "
+             "raising to %d seconds.", MIN_MIN_TIME_TO_REPORT_BW);
+    options->MinTimeToReportBandwidth = MIN_MIN_TIME_TO_REPORT_BW;
   }
 
   if (options->KeepalivePeriod < 1)

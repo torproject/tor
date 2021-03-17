@@ -2448,6 +2448,13 @@ is non-zero):
     If we have more onionskins queued for processing than we can process in
     this amount of time, reject new ones. (Default: 1750 msec)
 
+[[MinTimeToReportBandwidth]] **MinTimeToReportBandwidth** __N__ **seconds**|**minutes**|**hours**::
+    Do not report our measurements for our maximum observed bandwidth for any
+    time period that has lasted for less than this amount of time.
+    Setting this option too low can enable traffic analysis, and is
+    not permitted except on testing networks.  Values over 1 day have
+    no effect. (Default: 1 day)
+
 [[MyFamily]] **MyFamily** __fingerprint__,__fingerprint__,...::
     Declare that this Tor relay is controlled or administered by a group or
     organization identical or similar to that of the other relays, defined by
