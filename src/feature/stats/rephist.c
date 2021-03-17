@@ -209,7 +209,7 @@ static overload_stats_t overload_stats;
 
 /** Return true if this overload happened within the last `n_hours`. */
 static bool
-overload_happened_recently(time_t overload_time, unsigned n_hours)
+overload_happened_recently(time_t overload_time, int n_hours)
 {
   /* An overload is relevant if it happened in the last 72 hours */
   if (overload_time > approx_time() - 3600 * n_hours) {
