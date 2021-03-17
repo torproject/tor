@@ -33,6 +33,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/onion.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/stats/rephist.h"
 
 #include "core/or/or_circuit_st.h"
 
@@ -163,15 +164,19 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
 #define WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL (60)
     static ratelim_t last_warned =
       RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
-    char *m;
-    if (onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR &&
-        (m = rate_limit_log(&last_warned, approx_time()))) {
-      log_warn(LD_GENERAL,
-               "Your computer is too slow to handle this many circuit "
-               "creation requests! Please consider using the "
-               "MaxAdvertisedBandwidth config option or choosing a more "
-               "restricted exit policy.%s",m);
-      tor_free(m);
+    if (onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
+      char *m;
+      /* Note this ntor onionskin drop as an overload */
+      rep_hist_note_overload(OVERLOAD_GENERAL);
+      if ((m = rate_limit_log(&last_warned, approx_time()))) {
+        log_warn(LD_GENERAL,
+                 "Your computer is too slow to handle this many circuit "
+                 "creation requests! Please consider using the "
+                 "MaxAdvertisedBandwidth config option or choosing a more "
+                 "restricted exit policy.%s",
+                 m);
+        tor_free(m);
+      }
     }
     tor_free(tmp);
     return -1;

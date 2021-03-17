@@ -1239,12 +1239,34 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
 }
 #endif /* defined(HAVE_SYS_UN_H) || defined(RUNNING_DOXYGEN) */
 
-/** Warn that an accept or a connect has failed because we're running out of
- * TCP sockets we can use on current system.  Rate-limit these warnings so
- * that we don't spam the log. */
+/**
+ * A socket failed from resource exhaustion.
+ *
+ * AMong other actions, warn that an accept or a connect has failed because
+ * we're running out of TCP sockets we can use on current system.  Rate-limit
+ * these warnings so that we don't spam the log. */
 static void
-warn_too_many_conns(void)
+socket_failed_from_resource_exhaustion(void)
 {
+  /* When we get to this point we know that a socket could not be
+   * established. However the kernel does not let us know whether the reason is
+   * because we ran out of TCP source ports, or because we exhausted all the
+   * FDs on this system, or for any other reason.
+   *
+   * For this reason, we are going to use the following heuristic: If our
+   * system supports a lot of sockets, we will assume that it's a problem of
+   * TCP port exhaustion. Otherwise, if our system does not support many
+   * sockets, we will assume that this is because of file descriptor
+   * exhaustion.
+   */
+  if (get_max_sockets() > 65535) {
+    /* TCP port exhaustion */
+    rep_hist_note_overload(OVERLOAD_GENERAL);
+  } else {
+    /* File descriptor exhaustion */
+    rep_hist_note_overload(OVERLOAD_FD_EXHAUSTED);
+  }
+
 #define WARN_TOO_MANY_CONNS_INTERVAL (6*60*60)
   static ratelim_t last_warned = RATELIM_INIT(WARN_TOO_MANY_CONNS_INTERVAL);
   char *m;
@@ -1473,7 +1495,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (!SOCKET_OK(s)) {
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
-        warn_too_many_conns();
+        socket_failed_from_resource_exhaustion();
         /*
          * We'll call the OOS handler at the error exit, so set the
          * exhaustion flag for it.
@@ -1599,7 +1621,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (! SOCKET_OK(s)) {
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
-        warn_too_many_conns();
+        socket_failed_from_resource_exhaustion();
         /*
          * We'll call the OOS handler at the error exit, so set the
          * exhaustion flag for it.
@@ -1912,7 +1934,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       connection_check_oos(get_n_open_sockets(), 0);
       return 0;
     } else if (ERRNO_IS_RESOURCE_LIMIT(e)) {
-      warn_too_many_conns();
+      socket_failed_from_resource_exhaustion();
       /* Exhaustion; tell the OOS handler */
       connection_check_oos(get_n_open_sockets(), 1);
       return 0;
@@ -2175,7 +2197,7 @@ connection_connect_sockaddr,(connection_t *conn,
      */
     *socket_error = tor_socket_errno(s);
     if (ERRNO_IS_RESOURCE_LIMIT(*socket_error)) {
-      warn_too_many_conns();
+      socket_failed_from_resource_exhaustion();
       connection_check_oos(get_n_open_sockets(), 1);
     } else {
       log_warn(LD_NET,"Error creating network socket: %s",
@@ -3417,6 +3439,16 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
   int priority = conn->type != CONN_TYPE_DIR;
   ssize_t conn_bucket = -1;
   size_t global_bucket_val = token_bucket_rw_get_read(&global_bucket);
+  if (global_bucket_val == 0) {
+    /* We reached our global read limit: count this as an overload.
+     *
+     * The token bucket is always initialized (see connection_bucket_init() and
+     * options_validate_relay_bandwidth()) and hence we can assume that if the
+     * token ever hits zero, it's a limit that got popped and not the bucket
+     * being uninitialized.
+     */
+    rep_hist_note_overload(OVERLOAD_READ);
+  }
 
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
@@ -3447,6 +3479,11 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   int priority = conn->type != CONN_TYPE_DIR;
   size_t conn_bucket = buf_datalen(conn->outbuf);
   size_t global_bucket_val = token_bucket_rw_get_write(&global_bucket);
+  if (global_bucket_val == 0) {
+    /* We reached our global write limit: We should count this as an overload.
+     * See above function for more information */
+    rep_hist_note_overload(OVERLOAD_WRITE);
+  }
 
   if (!connection_is_rate_limited(conn)) {
     /* be willing to write to local conns even if our buckets are empty */

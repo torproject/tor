@@ -140,6 +140,24 @@ void rep_hist_reset_padding_counts(void);
 void rep_hist_prep_published_padding_counts(time_t now);
 void rep_hist_padding_count_timers(uint64_t num_timers);
 
+/**
+ * Represents the various types of overload we keep track of and expose in our
+ * extra-info descriptor.
+*/
+typedef enum {
+  /* A general overload -- can have many different causes. */
+  OVERLOAD_GENERAL,
+  /* We went over our configured read rate/burst bandwidth limit */
+  OVERLOAD_READ,
+  /* We went over our configured write rate/burst bandwidth limit */
+  OVERLOAD_WRITE,
+  /* We exhausted the file descriptors in this system */
+  OVERLOAD_FD_EXHAUSTED,
+} overload_type_t;
+
+void rep_hist_note_overload(overload_type_t overload);
+char *rep_hist_get_overload_stats_lines(void);
+
 #ifdef TOR_UNIT_TESTS
 struct hs_v2_stats_t;
 const struct hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);

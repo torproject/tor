@@ -674,6 +674,9 @@ struct or_options_t {
   /** If true, include statistics file contents in extra-info documents. */
   int ExtraInfoStatistics;
 
+  /** If true, include overload statistics in extra-info documents. */
+  int OverloadStatistics;
+
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
    * Helps avoid some cross-site attacks. */
