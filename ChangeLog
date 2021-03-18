@@ -19,6 +19,13 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       operator know why their relay hasn't been voted on. Closes ticket
       40255. Patch by Neel Chauhan.
 
+  o Major features (metrics):
+    - Relays now report how overloaded they are in their extra-info
+      documents. This information is controlled with the
+      OverloadStatistics torrc option, and it will be used to improve
+      decisions about the network's load balancing. Implements proposal
+      328; closes ticket 40222.
+
   o Major features (relay, denial of service):
     - Add a new DoS subsystem feature to control the rate of client
       connections for relays. Closes ticket 40253.
@@ -81,6 +88,11 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
     - Add the stream ID argument to the event line in the ADDRMAP
       control event. Closes ticket 40249. Patch by Neel Chauhan.
 
+  o Minor features (dormant mode):
+    - Add a new 'DormantTimeoutEnabled' option to allow coarse-grained
+      control over whether the client ever becomes dormant from
+      inactivity. Most people won't need this. Closes ticket 40228.
+
   o Minor features (logging):
     - Change the DoS subsystem heartbeat line format so be more clear on
       what has been detected/rejected and which option is disabled if
@@ -119,6 +131,11 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       architecture, along with a related test that might fail on other
       architectures in the future. Fixes bug 40274; bugfix
       on 0.2.5.1-alpha.
+
+  o Minor bugfixes (controller):
+    - Fix a "BUG" warning that would appear when a controller chooses
+      the first hop for a circuit, and that circuit completes. Fixes bug
+      40285; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (directory authorities, voting):
     - Add a new consensus method (31) to support any future changes that

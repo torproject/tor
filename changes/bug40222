@@ -1,6 +1,0 @@
-  o Major features (metrics):
-    - Introduce a new class of extra-info statistics that allows relays to
-      expose details of how overloaded they are. This information is controlled
-      using the OverloadStatistics torrc option, and it will be used to make
-      more informed decisions about the network's load balancing. Implements
-      proposal 328; closes ticket 40222.
