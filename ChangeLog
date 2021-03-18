@@ -14,13 +14,13 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       Neel Chauhan.
 
   o Major features (directory authorityl):
-    - When voting for a relay with a Sybil-like appearance, add the
-      Sybil flag when clearing out the other flags. This lets a relay
-      operator know why their relay hasn't been voted on. Closes ticket
-      40255. Patch by Neel Chauhan.
+    - When voting on a relay with a Sybil-like appearance, add the Sybil
+      flag when clearing out the other flags. This lets a relay operator
+      know why their relay hasn't been included in the consensus. Closes
+      ticket 40255. Patch by Neel Chauhan.
 
   o Major features (metrics):
-    - Relays now report how overloaded they are in their extra-info
+    - Relays now report how overloaded they are in their extrainfo
       documents. This information is controlled with the
       OverloadStatistics torrc option, and it will be used to improve
       decisions about the network's load balancing. Implements proposal
@@ -31,7 +31,7 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       connections for relays. Closes ticket 40253.
 
   o Major features (statistics):
-    - Relays now also publish statistics about the number of v3 onion
+    - Relays now publish statistics about the number of v3 onion
       services and volume of v3 onion service traffic, in the same
       manner they already do for v2 onions. Closes ticket 23126.
 
@@ -52,9 +52,9 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       we alter our estimate Xm by taking the maximum of the top 10 most
       common build time values of the 10ms histogram, and compute Xm as
       the average of these. Fixes bug 40168; bugfix on 0.2.2.14-alpha.
-    - Remove max_time calculation and associated warn from circuit build
-      timeout 'alpha' parameter estimation, as this is no longer needed
-      by our new estimator from 40168. Fixes bug 34088; bugfix
+    - Remove max_time calculation and associated warning from circuit
+      build timeout 'alpha' parameter estimation, as this is no longer
+      needed by our new estimator from 40168. Fixes bug 34088; bugfix
       on 0.2.2.9-alpha.
 
   o Major bugfixes (signing key):
@@ -85,27 +85,27 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       relay fingerprint. Closes ticket 33632. Patch by Neel Chauhan.
 
   o Minor features (control port, stream handling):
-    - Add the stream ID argument to the event line in the ADDRMAP
-      control event. Closes ticket 40249. Patch by Neel Chauhan.
+    - Add the stream ID to the event line in the ADDRMAP control event.
+      Closes ticket 40249. Patch by Neel Chauhan.
 
   o Minor features (dormant mode):
-    - Add a new 'DormantTimeoutEnabled' option to allow coarse-grained
-      control over whether the client ever becomes dormant from
+    - Add a new 'DormantTimeoutEnabled' option for coarse-grained
+      control over whether the client can become dormant from
       inactivity. Most people won't need this. Closes ticket 40228.
 
   o Minor features (logging):
-    - Change the DoS subsystem heartbeat line format so be more clear on
-      what has been detected/rejected and which option is disabled if
-      any. Closes ticket 40308.
+    - Change the DoS subsystem heartbeat line format to be more clear on
+      what has been detected/rejected, and which option is disabled (if
+      any). Closes ticket 40308.
     - In src/core/mainloop/mainloop.c and src/core/mainloop/connection.c,
       put brackets around IPv6 addresses in log messages. Closes ticket
       40232. Patch by Neel Chauhan.
 
   o Minor features (performance, windows):
     - Use SRWLocks to implement locking on Windows. Replaces the
-      critical section locking implementation with the faster SRWLocks
-      available since Windows Vista. Closes ticket 17927. Patch by
-      Daniel Pinto.
+      "critical section" locking implementation with the faster
+      SRWLocks, available since Windows Vista. Closes ticket 17927.
+      Patch by Daniel Pinto.
 
   o Minor features (protocol, proxy support, defense in depth):
     - Close HAProxy connections if they somehow manage to send us data
@@ -118,16 +118,16 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
 
   o Minor features (vote document):
     - Add a "stats" line to directory authority votes, to report various
-      statistics that authorities computed about the relays. This will
+      statistics that authorities compute about the relays. This will
       help us diagnose the network better. Closes ticket 40314.
 
   o Minor bugfixes (build):
-    - Mini-report in the configure script now shows whether or not lzma
-      and zstd have been used, not just if enable flag passed in. Fixes
-      bug 40236; bugfix on 0.4.3.1-alpha.
+    - The configure script now shows whether or not lzma and zstd have
+      been used, not just if the enable flag was passed in. Fixes bug
+      40236; bugfix on 0.4.3.1-alpha.
 
   o Minor bugfixes (compatibility):
-    - Fix a failure in the test cases when running on the hppa
+    - Fix a failure in the test cases when running on the "hppa"
       architecture, along with a related test that might fail on other
       architectures in the future. Fixes bug 40274; bugfix
       on 0.2.5.1-alpha.
@@ -145,8 +145,8 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       most circumstances. Fixes bug 19011; bugfix on 0.2.2.10-alpha.
 
   o Minor bugfixes (ipv6):
-    - Allow non-SOCKSPorts to disable IPv4, IPv6, and Prefer IPv4. Some
-      rare configs might break, but in this case you can disable
+    - Allow non-SOCKSPorts to disable IPv4, IPv6, and PreferIPv4. Some
+      rare configurations might break, but in this case you can disable
       NoIPv4Traffic and NoIPv6Traffic as needed. Fixes bug 33607; bugfix
       on 0.4.1.1-alpha. Patch by Neel Chauhan.
 
@@ -163,15 +163,16 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
 
   o Minor bugfixes (relay):
     - Reduce the compression level for data streaming from HIGH to LOW.
+      This should reduce the CPU and memory burden for directory caches.
       Fixes bug 40301; bugfix on 0.3.5.1-alpha.
 
   o Code simplification and refactoring:
     - Remove the orconn_ext_or_id_map structure and related functions.
-      Nothing outside of unit tests looks up anything in this structure.
-      Closes ticket 33383. Patch by Neel Chauhan.
+      (Nothing outside of unit tests used them.) Closes ticket 33383.
+      Patch by Neel Chauhan.
 
   o Code simplification and refactoring (metrics, DoS):
-    - Move the DoS subsystem into the subsys manager including its
+    - Move the DoS subsystem into the subsys manager, including its
       configuration options. Closes ticket 40261.
 
   o Removed features (relay):
