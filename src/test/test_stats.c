@@ -728,7 +728,7 @@ test_overload_stats(void *arg)
 
   /* Now check the string */
   stats_str = rep_hist_get_overload_stats_lines();
-  tt_str_op("overload-general 1 2002-01-03 23:00:00", OP_EQ, stats_str);
+  tt_str_op("overload-general 1 2002-01-03 23:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
   /* Move the time forward 72 hours: see that the line has disappeared. */
@@ -744,7 +744,7 @@ test_overload_stats(void *arg)
   rep_hist_note_overload(OVERLOAD_GENERAL);
 
   stats_str = rep_hist_get_overload_stats_lines();
-  tt_str_op("overload-general 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+  tt_str_op("overload-general 1 2002-01-07 00:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
   /* Also note an fd exhaustion event */
@@ -752,7 +752,7 @@ test_overload_stats(void *arg)
 
   stats_str = rep_hist_get_overload_stats_lines();
   tt_str_op("overload-general 1 2002-01-07 00:00:00\n"
-            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+            "overload-fd-exhausted 1 2002-01-07 00:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
   /* Move the time forward. Register DNS overload. See that the time changed */
@@ -763,7 +763,7 @@ test_overload_stats(void *arg)
 
   stats_str = rep_hist_get_overload_stats_lines();
   tt_str_op("overload-general 1 2002-01-07 02:00:00\n"
-            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+            "overload-fd-exhausted 1 2002-01-07 00:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
   /* Move the time forward. Register a bandwidth ratelimit event. See that the
@@ -780,7 +780,7 @@ test_overload_stats(void *arg)
   stats_str = rep_hist_get_overload_stats_lines();
   tt_str_op("overload-general 1 2002-01-07 02:00:00\n"
             "overload-ratelimits 1 2002-01-07 04:00:00 1000 2000 1 0\n"
-            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+            "overload-fd-exhausted 1 2002-01-07 00:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
   /* Move the time forward 24 hours: no rate limit line anymore. */
@@ -789,7 +789,7 @@ test_overload_stats(void *arg)
 
   stats_str = rep_hist_get_overload_stats_lines();
   tt_str_op("overload-general 1 2002-01-07 02:00:00\n"
-            "overload-fd-exhausted 1 2002-01-07 00:00:00", OP_EQ, stats_str);
+            "overload-fd-exhausted 1 2002-01-07 00:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
   /* Move the time forward 44 hours: no fd exhausted line anymore. */
@@ -797,7 +797,7 @@ test_overload_stats(void *arg)
   update_approx_time(current_time);
 
   stats_str = rep_hist_get_overload_stats_lines();
-  tt_str_op("overload-general 1 2002-01-07 02:00:00", OP_EQ, stats_str);
+  tt_str_op("overload-general 1 2002-01-07 02:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
   /* Move the time forward 2 hours: there is nothing left. */
@@ -815,7 +815,7 @@ test_overload_stats(void *arg)
    * registered ten more overload events, but only one should have been counted
    * because of the rate limiter */
   stats_str = rep_hist_get_overload_stats_lines();
-  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 2 0",
+  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 2 0\n",
             OP_EQ, stats_str);
   tor_free(stats_str);
 
@@ -828,7 +828,7 @@ test_overload_stats(void *arg)
     rep_hist_note_overload(OVERLOAD_READ);
   }
   stats_str = rep_hist_get_overload_stats_lines();
-  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 2 0",
+  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 2 0\n",
             OP_EQ, stats_str);
   tor_free(stats_str);
 
@@ -842,7 +842,7 @@ test_overload_stats(void *arg)
     rep_hist_note_overload(OVERLOAD_WRITE);
   }
   stats_str = rep_hist_get_overload_stats_lines();
-  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 3 1",
+  tt_str_op("overload-ratelimits 1 2002-01-10 02:00:00 1000 2000 3 1\n",
             OP_EQ, stats_str);
   tor_free(stats_str);
 

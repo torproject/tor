@@ -233,7 +233,7 @@ rep_hist_get_overload_stats_lines(void)
   /* First encode the general overload */
   if (overload_happened_recently(overload_stats.overload_general_time, 72)) {
     format_iso_time(tbuf, overload_stats.overload_general_time);
-    smartlist_add_asprintf(chunks, "overload-general %d %s",
+    smartlist_add_asprintf(chunks, "overload-general %d %s\n",
                            OVERLOAD_STATS_VERSION, tbuf);
   }
 
@@ -243,7 +243,7 @@ rep_hist_get_overload_stats_lines(void)
     format_iso_time(tbuf, overload_stats.overload_ratelimits_time);
     smartlist_add_asprintf(chunks,
                            "overload-ratelimits %d %s %" PRIu64 " %" PRIu64
-                           " %" PRIu64 " %" PRIu64,
+                           " %" PRIu64 " %" PRIu64 "\n",
                            OVERLOAD_STATS_VERSION, tbuf,
                            options->BandwidthRate, options->BandwidthBurst,
                            overload_stats.overload_read_count,
@@ -254,7 +254,7 @@ rep_hist_get_overload_stats_lines(void)
   if (overload_happened_recently(
                               overload_stats.overload_fd_exhausted_time, 72)) {
     format_iso_time(tbuf, overload_stats.overload_fd_exhausted_time);
-    smartlist_add_asprintf(chunks, "overload-fd-exhausted %d %s",
+    smartlist_add_asprintf(chunks, "overload-fd-exhausted %d %s\n",
                            OVERLOAD_STATS_VERSION, tbuf);
   }
 
@@ -263,7 +263,7 @@ rep_hist_get_overload_stats_lines(void)
     goto done;
   }
 
-  result = smartlist_join_strings(chunks, "\n", 0, NULL);
+  result = smartlist_join_strings(chunks, "", 0, NULL);
 
  done:
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
