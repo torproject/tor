@@ -2252,7 +2252,8 @@ is non-zero):
     bridge descriptor which indicates to the BridgeDB service how it
     would like its bridge address to be given out. Set it to "none" if
     you want BridgeDB to avoid distributing your bridge address, or "any" to
-    let BridgeDB decide. (Default: any)
+    let BridgeDB decide.  See https://bridges.torproject.org/info for a more
+    up-to-date list of options. (Default: any)
 
 [[ContactInfo]] **ContactInfo** __email_address__::
     Administrative contact information for this relay or bridge. This line
