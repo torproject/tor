@@ -359,8 +359,8 @@ test_status_hb_not_in_consensus(void *arg)
                  "initiated 0 and received 0 v3 connections; "
                  "initiated 0 and received 0 v4 connections; "
                  "initiated 0 and received 0 v5 connections.\n");
-  expect_log_msg("DoS mitigation since startup: 0 circuits killed with "
-                 "too many cells, [DoSCircuitCreationEnabled disabled], "
+  expect_log_msg("Heartbeat: DoS mitigation since startup: 0 circuits killed "
+                 "with too many cells, [DoSCircuitCreationEnabled disabled], "
                  "[DoSConnectionEnabled disabled], "
                  "[DoSRefuseSingleHopClientRendezvous disabled], "
                  "0 INTRODUCE2 rejected.\n");

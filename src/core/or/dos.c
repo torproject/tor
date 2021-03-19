@@ -819,7 +819,8 @@ dos_log_heartbeat(void)
 
   char *msg = smartlist_join_strings(elems, ", ", 0, NULL);
 
-  log_notice(LD_HEARTBEAT, "DoS mitigation since startup: %s.", msg);
+  log_notice(LD_HEARTBEAT,
+             "Heartbeat: DoS mitigation since startup: %s.", msg);
 
   tor_free(msg);
   SMARTLIST_FOREACH(elems, char *, e, tor_free(e));

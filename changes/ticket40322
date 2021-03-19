@@ -1,0 +1,3 @@
+  o Minor features (logging):
+    - Edit heartbeat log messages so that more of them begin with the string
+      "Heartbeat: ".  Closes ticket 40322; patch from 'cypherpunks'.

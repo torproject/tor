@@ -105,7 +105,7 @@ log_onion_service_stats(void)
   }
 
   log_notice(LD_HEARTBEAT,
-             "Our onion service%s received %u v3 INTRODUCE2 cells "
+             "Heartbeat: Our onion service%s received %u v3 INTRODUCE2 cells "
              "and attempted to launch %d rendezvous circuits.",
              num_services == 1 ? "" : "s",
              hs_stats_get_n_introduce2_v3_cells(),
