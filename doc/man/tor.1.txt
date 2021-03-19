@@ -966,23 +966,6 @@ forward slash (/) in the configuration file and on the command line.
     If KIST is used in Schedulers, this is a multiplier of the per-socket
     limit calculation of the KIST algorithm. (Default: 1.0)
 
-
-[[ServerTransportListenAddr]] **ServerTransportListenAddr** __transport__ __IP__:__PORT__::
-    When this option is set, Tor will suggest __IP__:__PORT__ as the
-    listening address of any pluggable transport proxy that tries to
-    launch __transport__. (IPv4 addresses should written as-is; IPv6
-    addresses should be wrapped in square brackets.) (Default: none)
-
-[[ServerTransportOptions]] **ServerTransportOptions** __transport__ __k=v__ __k=v__ ...::
-    When this option is set, Tor will pass the __k=v__ parameters to
-    any pluggable transport proxy that tries to launch __transport__. +
-    (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache) (Default: none)
-
-[[ServerTransportPlugin]] **ServerTransportPlugin** __transport__ exec __path-to-binary__ [options]::
-    The Tor relay launches the pluggable transport proxy in __path-to-binary__
-    using __options__ as its command-line options, and expects to receive
-    proxied client traffic from it. (Default: none)
-
 [[Socks4Proxy]] **Socks4Proxy** __host__[:__port__]::
     Tor will make all OR connections through the SOCKS 4 proxy at host:port
     (or host:1080 if port is not specified).
@@ -2675,6 +2658,22 @@ is non-zero):
     and we'll reset our exit policy to "reject \*:*". This option only affects
     name lookups that your server does on behalf of clients. (Default:
     "www.google.com, www.mit.edu, www.yahoo.com, www.slashdot.org")
+
+[[ServerTransportListenAddr]] **ServerTransportListenAddr** __transport__ __IP__:__PORT__::
+    When this option is set, Tor will suggest __IP__:__PORT__ as the
+    listening address of any pluggable transport proxy that tries to
+    launch __transport__. (IPv4 addresses should written as-is; IPv6
+    addresses should be wrapped in square brackets.) (Default: none)
+
+[[ServerTransportOptions]] **ServerTransportOptions** __transport__ __k=v__ __k=v__ ...::
+    When this option is set, Tor will pass the __k=v__ parameters to
+    any pluggable transport proxy that tries to launch __transport__. +
+    (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache) (Default: none)
+
+[[ServerTransportPlugin]] **ServerTransportPlugin** __transport__ exec __path-to-binary__ [options]::
+    The Tor relay launches the pluggable transport proxy in __path-to-binary__
+    using __options__ as its command-line options, and expects to receive
+    proxied client traffic from it. (Default: none)
 
 [[ShutdownWaitLength]] **ShutdownWaitLength** __NUM__::
     When we get a SIGINT and we're a server, we begin shutting down:

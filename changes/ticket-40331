@@ -1,0 +1,3 @@
+  o Documentation (doc/man/tor.1.txt) :
+     - Move the ServerTransport* options options to the SERVER OPTIONS` section .  
+        Closes issue 40331.
