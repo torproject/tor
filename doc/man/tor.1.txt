@@ -2758,7 +2758,7 @@ types of statistics that Tor relays collect and publish:
     (Default: 1)
 
 [[HiddenServiceStatistics]] **HiddenServiceStatistics** **0**|**1**::
-    Relays only.
+    Relays and bridges only.
     When this option is enabled, a Tor relay writes obfuscated
     statistics on its role as hidden-service directory, introduction
     point, or rendezvous point to disk every 24 hours.  If ExtraInfoStatistics
