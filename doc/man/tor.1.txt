@@ -2186,13 +2186,14 @@ is non-zero):
     (Default: "month 1 0:00")
 
 [[Address]] **Address** __address__::
-    The IPv4 address of this server, or a fully qualified domain name of
-    this server that resolves to an IPv4 address.  You can leave this
-    unset, and Tor will try to guess your IPv4 address.  This IPv4
-    address is the one used to tell clients and other servers where to
-    find your Tor server; it doesn't affect the address that your server
-    binds to.  To bind to a different address, use the ORPort and
-    OutboundBindAddress options.
+    The address of this server, or a fully qualified domain name of this server
+    that resolves to an address.  You can leave this unset, and Tor will try to
+    guess your address.  If a domain name is provided, Tor will attempt to
+    resolve it and use the underlying IPv4/IPv6 address as its publish address
+    (taking precedence over the ORPort configuration). The publish address is
+    the one used to tell clients and other servers where to find your Tor
+    server; it doesn't affect the address that your server binds to.  To bind
+    to a different address, use the ORPort and OutboundBindAddress options.
 
 [[AddressDisableIPv6]] **AddressDisableIPv6** **0**|**1**::
    By default, Tor will attempt to find the IPv6 of the relay if there is no
