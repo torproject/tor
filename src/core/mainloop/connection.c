@@ -1242,7 +1242,7 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
 /**
  * A socket failed from resource exhaustion.
  *
- * AMong other actions, warn that an accept or a connect has failed because
+ * Among other actions, warn that an accept or a connect has failed because
  * we're running out of TCP sockets we can use on current system.  Rate-limit
  * these warnings so that we don't spam the log. */
 static void

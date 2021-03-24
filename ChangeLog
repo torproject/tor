@@ -13,7 +13,7 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       created with client authorization. Closes ticket 40084. Patch by
       Neel Chauhan.
 
-  o Major features (directory authorityl):
+  o Major features (directory authority):
     - When voting on a relay with a Sybil-like appearance, add the Sybil
       flag when clearing out the other flags. This lets a relay operator
       know why their relay hasn't been included in the consensus. Closes

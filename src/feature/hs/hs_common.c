@@ -55,7 +55,7 @@ static const char *str_ed25519_basepoint =
 
 #ifdef HAVE_SYS_UN_H
 
-/** Given <b>ports</b>, a smarlist containing hs_port_config_t,
+/** Given <b>ports</b>, a smartlist containing hs_port_config_t,
  * add the given <b>p</b>, a AF_UNIX port to the list. Return 0 on success
  * else return -ENOSYS if AF_UNIX is not supported (see function in the
  * #else statement below). */
