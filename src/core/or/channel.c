@@ -1882,11 +1882,11 @@ channel_do_open_actions(channel_t *chan)
         geoip_note_client_seen(GEOIP_CLIENT_CONNECT,
                                &remote_addr, transport_name,
                                now);
-        tor_free(transport_name);
         /* Notify the DoS subsystem of a new client. */
         if (tlschan && tlschan->conn) {
           dos_new_client_conn(tlschan->conn, transport_name);
         }
+        tor_free(transport_name);
       }
       /* Otherwise the underlying transport can't tell us this, so skip it */
     }
