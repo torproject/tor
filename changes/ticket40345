@@ -1,0 +1,5 @@
+  o Minor bugfixes (channel, DoS):
+    - Fix a possible non fatal assertion BUG() due to a too early free of a
+      string when noting down the client connection for the DoS defenses
+      subsystem. Fixes bug 40345; bugfix on 0.4.3.4-rc
+
