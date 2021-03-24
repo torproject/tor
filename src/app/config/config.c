@@ -5500,6 +5500,8 @@ parse_dirauth_dirport(dir_server_t *ds, const char *flag)
                                &dirport.addr, &dirport.port, -1);
   if (ds != NULL && rv == 0) {
     trusted_dir_server_add_dirport(ds, usage, &dirport);
+  } else if (rv == -1) {
+    log_warn(LD_CONFIG, "Unable to parse address in authority flag %s",flag);
   }
 
   tor_free(addr_string);

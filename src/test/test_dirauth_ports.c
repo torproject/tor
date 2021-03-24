@@ -44,7 +44,7 @@ test_dirauth_port_parsing(void *arg)
   rv = parse_dir_authority_line(
     "moria1 orport=9101 "
     "v3ident=D586D18309DED4CD6D57C18FDB97EFA96D330566 "
-    "upload=https://128.31.0.39:9131/ " // not recognized
+    "upload=https://128.31.0.39:9131/ " // https is not recognized
     "128.31.0.39:9131 9695 DFC3 5FFE B861 329B 9F1A B04C 4639 7020 CE31",
     NO_DIRINFO, 1);
   tt_int_op(rv,OP_EQ,-1);
@@ -54,11 +54,30 @@ test_dirauth_port_parsing(void *arg)
   rv = parse_dir_authority_line(
     "moria1 orport=9101 "
     "v3ident=D586D18309DED4CD6D57C18FDB97EFA96D330566 "
-    "upload=http://128.31.0.39:9131/tor " // not supported
+    "upload=http://128.31.0.39:9131/tor " // suffix is not supported
     "128.31.0.39:9131 9695 DFC3 5FFE B861 329B 9F1A B04C 4639 7020 CE31",
     NO_DIRINFO, 1);
   tt_int_op(rv,OP_EQ,-1);
   expect_log_msg_containing("Unsupported URL prefix");
+  mock_clean_saved_logs();
+
+  rv = parse_dir_authority_line(
+    "moria1 orport=9101 "
+    "v3ident=D586D18309DED4CD6D57C18FDB97EFA96D330566 "
+    "upload=http://128.31.0.256:9131/ " // "256" is not ipv4.
+    "128.31.0.39:9131 9695 DFC3 5FFE B861 329B 9F1A B04C 4639 7020 CE31",
+    NO_DIRINFO, 1);
+  tt_int_op(rv,OP_EQ,-1);
+  expect_log_msg_containing("Unable to parse address");
+
+  rv = parse_dir_authority_line(
+    "moria1 orport=9101 "
+    "v3ident=D586D18309DED4CD6D57C18FDB97EFA96D330566 "
+    "upload=http://xyz.example.com/ " // hostnames not supported.
+    "128.31.0.39:9131 9695 DFC3 5FFE B861 329B 9F1A B04C 4639 7020 CE31",
+    NO_DIRINFO, 1);
+  tt_int_op(rv,OP_EQ,-1);
+  expect_log_msg_containing("Unable to parse address");
 
  done:
   teardown_capture_of_logs();
