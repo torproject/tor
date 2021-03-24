@@ -533,6 +533,7 @@ unglob_win32(const char *pattern, int prev_sep, int next_sep)
   return result;
 }
 #elif HAVE_GLOB
+#ifdef GLOB_ALTDIRFUNC  // prevent warning about unused functions
 /** Same as opendir but calls sandbox_intern_string before */
 static DIR *
 prot_opendir(const char *name)
@@ -571,6 +572,7 @@ wrap_closedir(void *arg)
 {
   closedir(arg);
 }
+#endif /* defined(GLOB_ALTDIRFUNC) */
 #endif /* defined(HAVE_GLOB) */
 
 /** Return a new list containing the paths that match the pattern
