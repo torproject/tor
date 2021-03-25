@@ -1,0 +1,4 @@
+  o Minor bugfixes (configuration tests bsd):
+    - Fix glob processing errors when globs expand to invalid paths on
+      BSD systems. Fixes bug 40318; bugfix on 0.4.5.1-alpha. Patch by
+      Daniel Pinto.
