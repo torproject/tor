@@ -67,7 +67,7 @@ The following options in this section are only recognized on the
 [[opt-h]] **`-h`**, **`--help`**::
     Display a short help message and exit.
 
-[[opt-f]] **`-f`** __FILE__::
+[[opt-f]] **`-f`**, **`--torrc-file`** __FILE__::
     Specify a new configuration file to contain further Tor configuration
     options, or pass *-* to make Tor read its configuration from standard
     input. (Default: **`@CONFDIR@/torrc`**, or **`$HOME/.torrc`** if

@@ -2432,6 +2432,8 @@ typedef enum {
 static const struct {
   /** The string that the user has to provide. */
   const char *name;
+  /** Optional short name. */
+  const char *short_name;
   /** Does this option accept an argument? */
   takes_argument_t takes_argument;
   /** If not CMD_RUN_TOR, what should Tor do when it starts? */
@@ -2439,7 +2441,8 @@ static const struct {
   /** If nonzero, set the quiet level to this. 1 is "hush", 2 is "quiet" */
   int quiet;
 } CMDLINE_ONLY_OPTIONS[] = {
-  { .name="-f",
+  { .name="--torrc-file",
+    .short_name="-f",
     .takes_argument=ARGUMENT_NECESSARY },
   { .name="--allow-missing-torrc" },
   { .name="--defaults-torrc",
@@ -2482,10 +2485,8 @@ static const struct {
   { .name="--library-versions",
     .command=CMD_IMMEDIATE,
     .quiet=QUIET_HUSH },
-  { .name="-h",
-    .command=CMD_IMMEDIATE,
-    .quiet=QUIET_HUSH },
   { .name="--help",
+    .short_name="-h",
     .command=CMD_IMMEDIATE,
     .quiet=QUIET_HUSH  },
   { .name="--list-torrc-options",
@@ -2529,7 +2530,9 @@ config_parse_commandline(int argc, char **argv, int ignore_errors)
     bool is_a_command = false;
 
     for (j = 0; CMDLINE_ONLY_OPTIONS[j].name != NULL; ++j) {
-      if (!strcmp(argv[i], CMDLINE_ONLY_OPTIONS[j].name)) {
+      if (!strcmp(argv[i], CMDLINE_ONLY_OPTIONS[j].name) ||
+          (CMDLINE_ONLY_OPTIONS[j].short_name &&
+           !strcmp(argv[i], CMDLINE_ONLY_OPTIONS[j].short_name))) {
         is_cmdline = 1;
         want_arg = CMDLINE_ONLY_OPTIONS[j].takes_argument;
         if (CMDLINE_ONLY_OPTIONS[j].command != CMD_RUN_TOR) {
@@ -4307,6 +4310,8 @@ find_torrc_filename(const config_line_t *cmd_arg,
   char *fname=NULL;
   const config_line_t *p_index;
   const char *fname_opt = defaults_file ? "--defaults-torrc" : "-f";
+  const char *fname_long_opt = defaults_file ? "--defaults-torrc" :
+                                               "--torrc-file";
   const char *ignore_opt = defaults_file ? NULL : "--ignore-missing-torrc";
   const char *keygen_opt = "--keygen";
 
@@ -4314,10 +4319,12 @@ find_torrc_filename(const config_line_t *cmd_arg,
     *ignore_missing_torrc = 1;
 
   for (p_index = cmd_arg; p_index; p_index = p_index->next) {
-    if (!strcmp(p_index->key, fname_opt)) {
+    // options_init_from_torrc ensures only the short or long name is present
+    if (!strcmp(p_index->key, fname_opt) ||
+        !strcmp(p_index->key, fname_long_opt)) {
       if (fname) {
         log_warn(LD_CONFIG, "Duplicate %s options on command line.",
-            fname_opt);
+            p_index->key);
         tor_free(fname);
       }
       fname = expand_filename(p_index->value);
@@ -4521,6 +4528,16 @@ options_init_from_torrc(int argc, char **argv)
   } else {
     cf_defaults = load_torrc_from_disk(cmdline_only_options, 1);
     const config_line_t *f_line = config_line_find(cmdline_only_options, "-f");
+    const config_line_t *f_line_long = config_line_find(cmdline_only_options,
+                                                        "--torrc-file");
+    if (f_line && f_line_long) {
+      log_err(LD_CONFIG, "-f and --torrc-file cannot be used together.");
+      retval = -1;
+      goto err;
+    } else if (f_line_long) {
+      f_line = f_line_long;
+    }
+
     const int read_torrc_from_stdin =
     (f_line != NULL && strcmp(f_line->value, "-") == 0);
 

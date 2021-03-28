@@ -500,7 +500,8 @@ nt_service_command_line(int *using_default_torrc)
     if (!strcmp(backup_argv[i], "--options") ||
         !strcmp(backup_argv[i], "-options")) {
       while (++i < backup_argc) {
-        if (!strcmp(backup_argv[i], "-f"))
+        if (!strcmp(backup_argv[i], "-f") ||
+            !strcmp(backup_argv[i], "--torrc-file"))
           *using_default_torrc = 0;
         smartlist_add(sl, backup_argv[i]);
       }
