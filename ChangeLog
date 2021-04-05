@@ -171,6 +171,16 @@ Changes in version 0.4.6.1-alpha - 2021-03-18
       (Nothing outside of unit tests used them.) Closes ticket 33383.
       Patch by Neel Chauhan.
 
+  o Removed features:
+    - As of this release, Tor no longer supports the old v2 onion
+      services. They were deprecated last July for security, and support
+      will be removed entirely later this year. We strongly encourage
+      everybody to migrate to v3 onion services. For more information,
+      see https://blog.torproject.org/v2-deprecation-timeline . Closes
+      ticket 40266. (NOTE: We accidentally released an earlier version
+      of the 0.4.6.1-alpha changelog without this entry. Sorry for
+      the confusion!)
+
   o Code simplification and refactoring (metrics, DoS):
     - Move the DoS subsystem into the subsys manager, including its
       configuration options. Closes ticket 40261.
