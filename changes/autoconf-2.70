@@ -1,0 +1,3 @@
+  o Minor features (compilation):
+    - Make the autoconf script build correctly with autoconf versions 2.70
+      and later. Closes part of ticket 40335.

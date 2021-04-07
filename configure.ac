@@ -292,7 +292,11 @@ AC_PATH_PROGS([A2X], [a2x a2x.py], none)
 AM_CONDITIONAL(USE_ASCIIDOC, test "x$asciidoc" = "xtrue")
 
 AM_PROG_CC_C_O
-AC_PROG_CC_C99
+
+dnl Before autoconf 2.70, AC_PROG_CC_C99 is supposedly necessary for some
+dnl compilers if you wan't C99 support. Starting with 2.70, it is obsolete and
+dnl forbidden.
+m4_version_prereq([2.70], [:], [AC_PROG_CC_C99])
 
 AC_ARG_VAR([PYTHON], [path to Python binary])
 AC_CHECK_PROGS(PYTHON, [ \
