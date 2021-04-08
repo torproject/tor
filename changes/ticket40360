@@ -1,0 +1,5 @@
+  o Minor bugfixes (bridge, pluggable transport):
+    - Fix a regression that prevented to configure a Bridge line without a
+      fingerprint (which is a normal use case). Fixes bug 40360; bugfix on
+      0.4.5.4-rc.
+

@@ -804,9 +804,6 @@ get_sampled_guard_for_bridge(guard_selection_t *gs,
   entry_guard_t *guard;
   if (BUG(!addrport))
     return NULL; // LCOV_EXCL_LINE
-  if (bridge_has_invalid_transport(bridge)) {
-    return NULL;
-  }
   guard = get_sampled_guard_by_bridge_addr(gs, addrport);
   if (! guard || (id && tor_memneq(id, guard->identity, DIGEST_LEN)))
     return NULL;
