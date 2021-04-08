@@ -4562,15 +4562,8 @@ test_util_glob(void *ptr)
   TEST("file1");
   EXPECT(results_test9);
 
-#if defined(__APPLE__) || defined(__darwin__) || \
-  defined(__FreeBSD__) || defined(__NetBSD__) || defined(OpenBSD)
   TEST("file1"PATH_SEPARATOR);
   EXPECT_EMPTY();
-#else
-  const char *results_test10[] = {"file1"};
-  TEST("file1"PATH_SEPARATOR);
-  EXPECT(results_test10);
-#endif /* defined(__APPLE__) || defined(__darwin__) || ... */
 
   // test path separator at end - with wildcards and linux path separator
   const char *results_test11[] = {"dir1", "dir2", "forbidden"};
