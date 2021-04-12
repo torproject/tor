@@ -3059,6 +3059,15 @@ router_dump_router_to_string(routerinfo_t *router,
     smartlist_add_strdup(chunks, "tunnelled-dir-server\n");
   }
 
+  /* Overload general information. */
+  if (options->OverloadStatistics) {
+    char *overload_general = rep_hist_get_overload_general_line();
+
+    if (overload_general) {
+      smartlist_add(chunks, overload_general);
+    }
+  }
+
   /* Sign the descriptor with Ed25519 */
   if (emit_ed_sigs)  {
     smartlist_add_strdup(chunks, "router-sig-ed25519 ");

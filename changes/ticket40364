@@ -1,0 +1,3 @@
+  o Minor bugfixes (relay):
+    - Move the "overload-general" line from extrainfo to the server descriptor.
+      Fixes bug 40364; bugfix on 0.4.6.1-alpha.

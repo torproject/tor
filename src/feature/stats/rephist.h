@@ -156,6 +156,7 @@ typedef enum {
 } overload_type_t;
 
 void rep_hist_note_overload(overload_type_t overload);
+char *rep_hist_get_overload_general_line(void);
 char *rep_hist_get_overload_stats_lines(void);
 
 #ifdef TOR_UNIT_TESTS

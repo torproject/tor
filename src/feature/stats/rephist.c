@@ -221,6 +221,24 @@ overload_happened_recently(time_t overload_time, int n_hours)
 /* The current version of the overload stats version */
 #define OVERLOAD_STATS_VERSION 1
 
+/** Returns an allocated string for server descriptor for publising information
+ * on whether we are overloaded or not. */
+char *
+rep_hist_get_overload_general_line(void)
+{
+  char *result = NULL;
+  char tbuf[ISO_TIME_LEN+1];
+
+  /* Encode the general overload */
+  if (overload_happened_recently(overload_stats.overload_general_time, 72)) {
+    format_iso_time(tbuf, overload_stats.overload_general_time);
+    tor_asprintf(&result, "overload-general %d %s\n",
+                 OVERLOAD_STATS_VERSION, tbuf);
+  }
+
+  return result;
+}
+
 /** Returns an allocated string for extra-info documents for publishing
  *  overload statistics. */
 char *
@@ -230,14 +248,7 @@ rep_hist_get_overload_stats_lines(void)
   smartlist_t *chunks = smartlist_new();
   char tbuf[ISO_TIME_LEN+1];
 
-  /* First encode the general overload */
-  if (overload_happened_recently(overload_stats.overload_general_time, 72)) {
-    format_iso_time(tbuf, overload_stats.overload_general_time);
-    smartlist_add_asprintf(chunks, "overload-general %d %s\n",
-                           OVERLOAD_STATS_VERSION, tbuf);
-  }
-
-  /* Now do bandwidth-related overloads */
+  /* Add bandwidth-related overloads */
   if (overload_happened_recently(overload_stats.overload_ratelimits_time,24)) {
     const or_options_t *options = get_options();
     format_iso_time(tbuf, overload_stats.overload_ratelimits_time);
