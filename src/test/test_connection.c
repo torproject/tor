@@ -970,12 +970,12 @@ test_failed_orconn_tracker(void *arg)
 
 #define STR(x) #x
 /* where arg is an expression (constant, variable, compound expression) */
-#define CONNECTION_TESTCASE_ARG(name, fork, setup, arg)                 \
-  { #name "_" STR(x),                                                   \
+#define CONNECTION_TESTCASE_ARG(name, extra, fork, setup, arg)          \
+  { STR(name)"/"extra,                                                  \
       test_conn_##name,                                                 \
-      fork,                                                             \
-      &setup,                                                           \
-      (void *)arg }
+      (fork),                                                           \
+      &(setup),                                                         \
+      (void *)(arg) }
 #endif /* !defined(COCCI) */
 
 static const unsigned int PROXY_CONNECT_ARG = PROXY_CONNECT;
@@ -986,14 +986,14 @@ struct testcase_t connection_tests[] = {
   CONNECTION_TESTCASE(get_rend,  TT_FORK, test_conn_get_rend_st),
   CONNECTION_TESTCASE(get_rsrc,  TT_FORK, test_conn_get_rsrc_st),
 
-  CONNECTION_TESTCASE_ARG(download_status,  TT_FORK,
+  CONNECTION_TESTCASE_ARG(download_status, "microdesc", TT_FORK,
                           test_conn_download_status_st, "microdesc"),
-  CONNECTION_TESTCASE_ARG(download_status,  TT_FORK,
+  CONNECTION_TESTCASE_ARG(download_status, "ns", TT_FORK,
                           test_conn_download_status_st, "ns"),
 
-  CONNECTION_TESTCASE_ARG(https_proxy_connect,   TT_FORK,
+  CONNECTION_TESTCASE_ARG(https_proxy_connect, "https", TT_FORK,
                           test_conn_proxy_connect_st, &PROXY_CONNECT_ARG),
-  CONNECTION_TESTCASE_ARG(haproxy_proxy_connect, TT_FORK,
+  CONNECTION_TESTCASE_ARG(haproxy_proxy_connect, "haproxy", TT_FORK,
                           test_conn_proxy_connect_st, &PROXY_HAPROXY_ARG),
 
   //CONNECTION_TESTCASE(func_suffix, TT_FORK, setup_func_pair),
