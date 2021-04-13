@@ -1,0 +1,3 @@
+  o Minor feature (fallback directory):
+    - Renegerate the list to a new set of 200 relays acting as fallback
+      directories. Closes ticket 40265.
