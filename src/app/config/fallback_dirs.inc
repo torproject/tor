@@ -2,8 +2,6 @@
 /* version=4.0.0 */
 /* timestamp=20210412000000 */
 /* source=offer-list */
-//
-// Generated on: Mon, 12 Apr 2021 13:57:46 +0000
 
 "62.78.194.4 orport=9001 id=BD5609383472735292627DB86D92A29F3CFEE52A"
 /* nickname=Unnamed */
