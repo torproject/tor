@@ -8,7 +8,7 @@ Changes in version 0.4.6.2-alpha - 2021-04-15
     - Clients now check whether their streams are attempting to re-enter
       the Tor network (i.e. to send Tor traffic over Tor), and close
       them preemptively if they think exit relays will refuse them for
-      this reason. See ticket 2667 for details. Close ticket 40271.
+      this reason. See ticket 2667 for details. Closes ticket 40271.
 
   o Minor features (command line):
     - Add long format name "--torrc-file" equivalent to the existing
@@ -34,14 +34,14 @@ Changes in version 0.4.6.2-alpha - 2021-04-15
       from 'cypherpunks'.
 
   o Minor bugfixes (bridge, pluggable transport):
-    - Fix a regression that prevented to configure a Bridge line without
-      a fingerprint (which is a normal use case). Fixes bug 40360;
+    - Fix a regression that made it impossible start Tor using a bridge
+      line with a transport name and no a fingerprint. Fixes bug 40360;
       bugfix on 0.4.5.4-rc.
 
   o Minor bugfixes (channel, DoS):
     - Fix a non-fatal BUG() message due to a too-early free of a string,
       when listing a client connection from the DoS defenses subsystem.
-      Fixes bug 40345; bugfix on 0.4.3.4-rc
+      Fixes bug 40345; bugfix on 0.4.3.4-rc.
 
   o Minor bugfixes (compilation):
     - Fix a compilation warning about unused functions when building
