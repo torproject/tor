@@ -1,4 +1,0 @@
-  o Documentation (man, onion service):
-    - The HiddenServiceStatistics option also applies to bridges so properly
-      indicate that in the tor.1 man page. Closes ticket 40346.
-

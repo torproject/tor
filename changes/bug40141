@@ -1,4 +1,0 @@
-  o Minor bugfixes (configuration):
-    - Fix globbing directories on all platforms when using %include options in
-      configuration files. This patch also fixes compilation on musl libc based
-      systems. Fixes bug 40141; bugfix on 0.4.5.1-alpha.

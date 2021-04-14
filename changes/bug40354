@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix a compilation warning about unused functions when building with
-      a libc that lacks the GLOB_ALTDIRFUNC constant. Fixes bug 40354;
-      bugfix on 0.4.5.1-alpha. Patch by Daniel Pinto.

@@ -1,3 +1,0 @@
-  o Minor features (cmdline):
-    - Add long format name --torrc-file for command line option -f. Closes
-      ticket 40324. Patch by Daniel Pinto.
