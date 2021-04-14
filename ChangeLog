@@ -21,7 +21,7 @@ Changes in version 0.4.6.2-alpha - 2021-04-15
       inactivity. Most people won't need this. Closes ticket 40228.
 
   o Minor features (fallback directory list):
-    - Renegerate the list of fallback directories to contain a new set
+    - Regenerate the list of fallback directories to contain a new set
       of 200 relays. Closes ticket 40265.
 
   o Minor features (geoip data):
@@ -35,7 +35,7 @@ Changes in version 0.4.6.2-alpha - 2021-04-15
 
   o Minor bugfixes (bridge, pluggable transport):
     - Fix a regression that made it impossible start Tor using a bridge
-      line with a transport name and no a fingerprint. Fixes bug 40360;
+      line with a transport name and no fingerprint. Fixes bug 40360;
       bugfix on 0.4.5.4-rc.
 
   o Minor bugfixes (channel, DoS):
