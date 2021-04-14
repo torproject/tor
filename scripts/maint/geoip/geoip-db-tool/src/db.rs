@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::iter::Peekable;
 
-use super::NetBlock;
+use super::{AsBlock, NetBlock};
 
 pub struct BlockReader<I>
 where
@@ -12,9 +12,10 @@ where
     iter: Peekable<I>,
 }
 
-enum AnyBlock {
-    NotNet,
+pub enum AnyBlock {
     NetBlock(NetBlock),
+    AsBlock(AsBlock),
+    OtherBlock,
 }
 
 impl<I> BlockReader<I>
@@ -74,17 +75,31 @@ where
             return None;
         }
 
+        if let Some(name) = kv.remove("name") {
+            // This is an AS block.
+            let asn = kv.get("aut-num").unwrap(); // XXXX handle error better
+            assert!(asn.starts_with("AS"));
+            let asn = asn[2..].parse().unwrap();
+            return Some(Ok(AnyBlock::AsBlock(AsBlock { name, asn })));
+        }
+
         let net = if let Some(net) = kv.get("net") {
             net.parse().unwrap() //XXXX handle the error better.
         } else {
-            return Some(Ok(AnyBlock::NotNet));
+            return Some(Ok(AnyBlock::OtherBlock));
+        };
+
+        let asn = if let Some(asn) = kv.get("aut-num") {
+            asn.parse().ok()
+        } else {
+            None
         };
 
         let cc = if let Some(country) = kv.get("country") {
             assert!(country.as_bytes().len() == 2);
             country.as_bytes()[0..2].try_into().unwrap()
         } else {
-            return Some(Ok(AnyBlock::NotNet));
+            *b"??"
         };
 
         fn is_true(v: Option<&String>) -> bool {
@@ -100,6 +115,7 @@ where
 
         Some(Ok(AnyBlock::NetBlock(NetBlock {
             net,
+            asn,
             cc,
             is_anon_proxy,
             is_anycast,
@@ -112,15 +128,11 @@ impl<I> Iterator for BlockReader<I>
 where
     I: Iterator<Item = std::io::Result<String>>,
 {
-    type Item = NetBlock;
+    type Item = AnyBlock;
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.get_block() {
-                None => return None,
-                Some(Err(_)) => return None,
-                Some(Ok(AnyBlock::NotNet)) => continue,
-                Some(Ok(AnyBlock::NetBlock(n))) => return Some(n),
-            }
+        match self.get_block() {
+            Some(Ok(b)) => Some(b),
+            _ => None,
         }
     }
 }
