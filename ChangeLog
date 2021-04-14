@@ -1,24 +1,28 @@
 Changes in version 0.4.6.2-alpha - 2021-04-15
-  BLURB HERE
+  Tor 0.4.6.2-alpha is the second alpha in its series. It fixes several
+  small bugs in previous releases, and solves other issues that had
+  enabled denial-of-service attacks and affected integration with
+  other tools.
 
   o Minor features (client):
     - Clients now check whether their streams are attempting to re-enter
-      the Tor network (i.e. to send Tor traffic over Tor), and they
-      close them preemptively if they think exit relays will refuse
-      them. See ticket 2667 for details. Close ticket 40271.
+      the Tor network (i.e. to send Tor traffic over Tor), and close
+      them preemptively if they think exit relays will refuse them for
+      this reason. See ticket 2667 for details. Close ticket 40271.
 
   o Minor features (command line):
-    - Add long format name --torrc-file for command line option -f.
-      Closes ticket 40324. Patch by Daniel Pinto.
+    - Add long format name "--torrc-file" equivalent to the existing
+      command-line option "-f". Closes ticket 40324. Patch by
+      Daniel Pinto.
 
   o Minor features (dormant mode):
     - Add a new 'DormantTimeoutEnabled' option to allow coarse-grained
       control over whether the client ever becomes dormant from
       inactivity. Most people won't need this. Closes ticket 40228.
 
-  o Minor features (fallback directory):
-    - Renegerate the list to a new set of 200 relays acting as fallback
-      directories. Closes ticket 40265.
+  o Minor features (fallback directory list):
+    - Renegerate the list of fallback directories to contain a new set
+      of 200 relays. Closes ticket 40265.
 
   o Minor features (geoip data):
     - Update the geoip files to match the IPFire Location Database, as
@@ -35,9 +39,9 @@ Changes in version 0.4.6.2-alpha - 2021-04-15
       bugfix on 0.4.5.4-rc.
 
   o Minor bugfixes (channel, DoS):
-    - Fix a possible non fatal assertion BUG() due to a too early free
-      of a string when noting down the client connection for the DoS
-      defenses subsystem. Fixes bug 40345; bugfix on 0.4.3.4-rc
+    - Fix a non-fatal BUG() message due to a too-early free of a string,
+      when listing a client connection from the DoS defenses subsystem.
+      Fixes bug 40345; bugfix on 0.4.3.4-rc
 
   o Minor bugfixes (compilation):
     - Fix a compilation warning about unused functions when building
@@ -45,9 +49,9 @@ Changes in version 0.4.6.2-alpha - 2021-04-15
       40354; bugfix on 0.4.5.1-alpha. Patch by Daniel Pinto.
 
   o Minor bugfixes (configuration):
-    - Fix globbing directories on all platforms when using %include
-      options in configuration files. This patch also fixes compilation
-      on musl libc based systems. Fixes bug 40141; bugfix
+    - Fix pattern-matching for directories on all platforms when using
+      %include options in configuration files. This patch also fixes
+      compilation on musl libc based systems. Fixes bug 40141; bugfix
       on 0.4.5.1-alpha.
 
   o Minor bugfixes (relay):
@@ -55,17 +59,17 @@ Changes in version 0.4.6.2-alpha - 2021-04-15
       descriptor. Fixes bug 40364; bugfix on 0.4.6.1-alpha.
 
   o Minor bugfixes (testing, BSD):
-    - Fix glob processing errors when globs expand to invalid paths on
-      BSD systems. Fixes bug 40318; bugfix on 0.4.5.1-alpha. Patch by
+    - Fix pattern-matching errors when patterns expand to invalid paths
+      on BSD systems. Fixes bug 40318; bugfix on 0.4.5.1-alpha. Patch by
       Daniel Pinto.
 
   o Documentation (manual):
-    - Move the ServerTransport* options to the SERVER OPTIONS` section.
+    - Move the ServerTransport* options to the "SERVER OPTIONS" section.
       Closes issue 40331.
-    - The HiddenServiceStatistics option also applies to bridges so
-      properly indicate that in the tor.1 man page. Closes ticket 40346.
-    - Move the description of "BridgeRecordUsageByCountry" to the
-      section "STATISTICS OPTIONS". Closes ticket 40323.
+    - Indicate that the HiddenServiceStatistics option also applies to
+      bridges. Closes ticket 40346.
+    - Move the description of BridgeRecordUsageByCountry to the section
+      "STATISTICS OPTIONS". Closes ticket 40323.
 
 
 Changes in version 0.4.6.1-alpha - 2021-03-18
