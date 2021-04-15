@@ -2701,11 +2701,18 @@ cell_queues_get_total_allocation(void)
 /** The time at which we were last low on memory. */
 static time_t last_time_under_memory_pressure = 0;
 
+/** Statistics on how many bytes were removed by the OOM per type. */
+uint64_t oom_stats_n_bytes_removed_dns = 0;
+uint64_t oom_stats_n_bytes_removed_cell = 0;
+uint64_t oom_stats_n_bytes_removed_geoip = 0;
+uint64_t oom_stats_n_bytes_removed_hsdir = 0;
+
 /** Check whether we've got too much space used for cells.  If so,
  * call the OOM handler and return 1.  Otherwise, return 0. */
 STATIC int
 cell_queues_check_size(void)
 {
+  size_t removed = 0;
   time_t now = time(NULL);
   size_t alloc = cell_queues_get_total_allocation();
   alloc += half_streams_get_total_allocation();
@@ -2730,20 +2737,27 @@ cell_queues_check_size(void)
       if (hs_cache_total > get_options()->MaxMemInQueues / 5) {
         const size_t bytes_to_remove =
           hs_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
-        alloc -= hs_cache_handle_oom(now, bytes_to_remove);
+        removed = hs_cache_handle_oom(now, bytes_to_remove);
+        oom_stats_n_bytes_removed_hsdir += removed;
+        alloc -= removed;
       }
       if (geoip_client_cache_total > get_options()->MaxMemInQueues / 5) {
         const size_t bytes_to_remove =
           geoip_client_cache_total -
           (size_t)(get_options()->MaxMemInQueues / 10);
-        alloc -= geoip_client_cache_handle_oom(now, bytes_to_remove);
+        removed = geoip_client_cache_handle_oom(now, bytes_to_remove);
+        oom_stats_n_bytes_removed_geoip += removed;
+        alloc -= removed;
       }
       if (dns_cache_total > get_options()->MaxMemInQueues / 5) {
         const size_t bytes_to_remove =
           dns_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
-        alloc -= dns_cache_handle_oom(now, bytes_to_remove);
+        removed = dns_cache_handle_oom(now, bytes_to_remove);
+        oom_stats_n_bytes_removed_dns += removed;
+        alloc -= removed;
       }
-      circuits_handle_oom(alloc);
+      removed = circuits_handle_oom(alloc);
+      oom_stats_n_bytes_removed_cell += removed;
       return 1;
     }
   }

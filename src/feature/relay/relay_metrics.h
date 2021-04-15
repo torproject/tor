@@ -12,13 +12,11 @@
 #include "lib/container/smartlist.h"
 #include "lib/metrics/metrics_common.h"
 
-#ifdef RELAY_METRICS_ENTRY_PRIVATE
-
 /** Metrics key for each reported metrics. This key is also used as an index in
  * the base_metrics array. */
 typedef enum {
-  /* XXX So code compiles. */
-  PLACEHOLDER = 0,
+  /** Number of OOM invocation. */
+  RELAY_METRICS_NUM_OOM_BYTES = 0,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
@@ -31,9 +29,9 @@ typedef struct relay_metrics_entry_t {
   const char *name;
   /* Metrics output help comment. */
   const char *help;
+  /* Update value function. */
+  void (*fill_fn)(void);
 } relay_metrics_entry_t;
-
-#endif /* RELAY_METRICS_ENTRY_PRIVATE */
 
 /* Init. */
 void relay_metrics_init(void);

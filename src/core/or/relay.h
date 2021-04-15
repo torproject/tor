@@ -49,6 +49,11 @@ extern uint64_t stats_n_data_bytes_packaged;
 extern uint64_t stats_n_data_cells_received;
 extern uint64_t stats_n_data_bytes_received;
 
+extern uint64_t oom_stats_n_bytes_removed_dns;
+extern uint64_t oom_stats_n_bytes_removed_cell;
+extern uint64_t oom_stats_n_bytes_removed_geoip;
+extern uint64_t oom_stats_n_bytes_removed_hsdir;
+
 void dump_cell_pool_usage(int severity);
 size_t packed_cell_mem_cost(void);
 

@@ -232,7 +232,7 @@ int circuit_count_pending_on_channel(channel_t *chan);
 
 MOCK_DECL(void, assert_circuit_ok,(const circuit_t *c));
 void circuit_free_all(void);
-void circuits_handle_oom(size_t current_allocation);
+size_t circuits_handle_oom(size_t current_allocation);
 
 void circuit_clear_testing_cell_stats(circuit_t *circ);
 

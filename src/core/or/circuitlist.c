@@ -2586,8 +2586,10 @@ conns_compare_by_buffer_age_(const void **a_, const void **b_)
 
 /** We're out of memory for cells, having allocated <b>current_allocation</b>
  * bytes' worth.  Kill the 'worst' circuits until we're under
- * FRACTION_OF_DATA_TO_RETAIN_ON_OOM of our maximum usage. */
-void
+ * FRACTION_OF_DATA_TO_RETAIN_ON_OOM of our maximum usage.
+ *
+ * Return the number of bytes removed. */
+size_t
 circuits_handle_oom(size_t current_allocation)
 {
   smartlist_t *circlist;
@@ -2613,12 +2615,11 @@ circuits_handle_oom(size_t current_allocation)
              tor_zstd_get_total_allocation(),
              tor_lzma_get_total_allocation(),
              hs_cache_get_total_allocation());
-
   {
     size_t mem_target = (size_t)(get_options()->MaxMemInQueues *
                                  FRACTION_OF_DATA_TO_RETAIN_ON_OOM);
     if (current_allocation <= mem_target)
-      return;
+      return 0;
     mem_to_recover = current_allocation - mem_target;
   }
 
@@ -2697,7 +2698,6 @@ circuits_handle_oom(size_t current_allocation)
   } SMARTLIST_FOREACH_END(circ);
 
  done_recovering_mem:
-
   log_notice(LD_GENERAL, "Removed %"TOR_PRIuSZ" bytes by killing %d circuits; "
              "%d circuits remain alive. Also killed %d non-linked directory "
              "connections.",
@@ -2705,6 +2705,8 @@ circuits_handle_oom(size_t current_allocation)
              n_circuits_killed,
              smartlist_len(circlist) - n_circuits_killed,
              n_dirconns_killed);
+
+  return mem_recovered;
 }
 
 /** Verify that circuit <b>c</b> has all of its invariants
