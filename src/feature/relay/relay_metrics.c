@@ -17,6 +17,13 @@
 
 #include "feature/relay/relay_metrics.h"
 
+/** The base metrics that is a static array of metrics added to the metrics
+ * store.
+ *
+ * The key member MUST be also the index of the entry in the array. */
+static const relay_metrics_entry_t base_metrics[] = {};
+static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
+
 /** The only and single store of all the relay metrics. */
 static metrics_store_t *the_store;
 

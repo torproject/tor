@@ -10,6 +10,30 @@
 #define TOR_FEATURE_RELAY_RELAY_METRICS_H
 
 #include "lib/container/smartlist.h"
+#include "lib/metrics/metrics_common.h"
+
+#ifdef RELAY_METRICS_ENTRY_PRIVATE
+
+/** Metrics key for each reported metrics. This key is also used as an index in
+ * the base_metrics array. */
+typedef enum {
+  /* XXX So code compiles. */
+  PLACEHOLDER = 0,
+} relay_metrics_key_t;
+
+/** The metadata of a relay metric. */
+typedef struct relay_metrics_entry_t {
+  /* Metric key used as a static array index. */
+  relay_metrics_key_t key;
+  /* Metric type. */
+  metrics_type_t type;
+  /* Metrics output name. */
+  const char *name;
+  /* Metrics output help comment. */
+  const char *help;
+} relay_metrics_entry_t;
+
+#endif /* RELAY_METRICS_ENTRY_PRIVATE */
 
 /* Init. */
 void relay_metrics_init(void);
