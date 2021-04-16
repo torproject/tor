@@ -224,7 +224,6 @@ int
 dns_init(void)
 {
   init_cache_map();
-  evdns_set_random_bytes_fn(dns_randfn_);
   if (server_mode(get_options())) {
     int r = configure_nameservers(1);
     return r;
