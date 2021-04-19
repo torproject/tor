@@ -1,0 +1,3 @@
+  o Minor bugfixes (tests):
+    - Fix a bug that prevented some tests from running with the correct names.
+      Fixes bug 40365; bugfix on 0.4.3.1-alpha.
