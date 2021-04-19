@@ -25,7 +25,7 @@ for input in "$@"; do
     dir="$TMPDIR"/$(basename "$input" .a)
     mkdir "$dir"
     cd "$dir">/dev/null
-    ar x "$abs"
+    "${AR:-ar}" x "$abs"
 done
 
 cd "$TMPDIR" >/dev/null
