@@ -353,6 +353,31 @@ static digest256map_t *hs_cache_v3_client;
  * objects all related to a specific service. */
 static digest256map_t *hs_cache_client_intro_state;
 
+#define cache_client_desc_free(val) \
+  FREE_AND_NULL(hs_cache_client_descriptor_t, cache_client_desc_free_, (val))
+
+/** Free memory allocated by <b>desc</b>. */
+static void
+cache_client_desc_free_(hs_cache_client_descriptor_t *desc)
+{
+  if (desc == NULL) {
+    return;
+  }
+  hs_descriptor_free(desc->desc);
+  memwipe(&desc->key, 0, sizeof(desc->key));
+  memwipe(desc->encoded_desc, 0, strlen(desc->encoded_desc));
+  tor_free(desc->encoded_desc);
+  tor_free(desc);
+}
+
+/** Helper function: Use by the free all function to clear the client cache */
+static void
+cache_client_desc_free_void(void *ptr)
+{
+  hs_cache_client_descriptor_t *desc = ptr;
+  cache_client_desc_free(desc);
+}
+
 /** Return the size of a client cache entry in bytes. */
 static size_t
 cache_get_client_entry_size(const hs_cache_client_descriptor_t *entry)
@@ -390,7 +415,18 @@ remove_v3_desc_as_client(const hs_cache_client_descriptor_t *desc)
 static void
 store_v3_desc_as_client(hs_cache_client_descriptor_t *desc)
 {
+  hs_cache_client_descriptor_t *cached_desc;
+
   tor_assert(desc);
+
+  /* Because the lookup function doesn't return an expired entry, it can linger
+   * in the cache until we clean it up or a new descriptor is stored. So,
+   * before adding, we'll make sure we are not overwriting an old descriptor
+   * (which is OK in terms of semantic) but leads to memory leak. */
+  cached_desc = digest256map_get(hs_cache_v3_client, desc->key.pubkey);
+  if (cached_desc) {
+    cache_client_desc_free(cached_desc);
+  }
   digest256map_set(hs_cache_v3_client, desc->key.pubkey, desc);
   /* Update cache size with this entry for the OOM handler. */
   rend_cache_increment_allocation(cache_get_client_entry_size(desc));
@@ -471,31 +507,6 @@ cache_client_desc_new(const char *desc_str,
     *decode_status_out = ret;
   }
   return client_desc;
-}
-
-#define cache_client_desc_free(val) \
-  FREE_AND_NULL(hs_cache_client_descriptor_t, cache_client_desc_free_, (val))
-
-/** Free memory allocated by <b>desc</b>. */
-static void
-cache_client_desc_free_(hs_cache_client_descriptor_t *desc)
-{
-  if (desc == NULL) {
-    return;
-  }
-  hs_descriptor_free(desc->desc);
-  memwipe(&desc->key, 0, sizeof(desc->key));
-  memwipe(desc->encoded_desc, 0, strlen(desc->encoded_desc));
-  tor_free(desc->encoded_desc);
-  tor_free(desc);
-}
-
-/** Helper function: Use by the free all function to clear the client cache */
-static void
-cache_client_desc_free_void(void *ptr)
-{
-  hs_cache_client_descriptor_t *desc = ptr;
-  cache_client_desc_free(desc);
 }
 
 /** Return a newly allocated and initialized hs_cache_intro_state_t object. */
