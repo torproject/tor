@@ -1,5 +1,4 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
-->a * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2021, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
@@ -673,6 +672,7 @@ struct testgroup_t testgroups[] = {
   { "crypto/pem/", pem_tests },
   { "crypto/rng/", crypto_rng_tests },
   { "dir/", dir_tests },
+  { "dir/auth/ports/", dirauth_port_tests },
   { "dir/auth/process_descs/", process_descs_tests },
   { "dir/md/", microdesc_tests },
   { "dirauth/dirvote/", dirvote_tests},

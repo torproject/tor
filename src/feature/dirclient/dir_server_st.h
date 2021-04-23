@@ -16,6 +16,8 @@
 #include "core/or/or.h"
 #include "feature/nodelist/routerstatus_st.h"
 
+struct smartlist_t;
+
 /** Represents information about a single trusted or fallback directory
  * server. */
 struct dir_server_t {
@@ -47,6 +49,10 @@ struct dir_server_t {
 
   time_t addr_current_at; /**< When was the document that we derived the
                            * address information from published? */
+
+  /** Authority only.  Can be null. If present, a list of auth_dirport_t
+   * representing HTTP dirports for this authority. */
+  struct smartlist_t *auth_dirports;
 
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
                                * dir_server_t to
