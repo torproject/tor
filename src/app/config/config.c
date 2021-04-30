@@ -3494,23 +3494,23 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     REJECT("Servers must be able to freely connect to the rest "
            "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall or FirewallPorts or ClientUseIPv4 0.");
-
-  if (options->UseBridges &&
-      server_mode(options))
+if (options->UseBridges)
+{
+  if (server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
            "of the Internet, so they must not set UseBridges.");
 
   /* If both of these are set, we'll end up with funny behavior where we
    * demand enough entrynodes be up and running else we won't build
    * circuits, yet we never actually use them. */
-  if (options->UseBridges && options->EntryNodes)
+  if (options->EntryNodes)
     REJECT("You cannot set both UseBridges and EntryNodes.");
 
   /* If we have UseBridges as 1 and UseEntryGuards as 0, we end up bypassing
    * the use of bridges */
-  if (options->UseBridges && !options->UseEntryGuards)
+  if (!options->UseEntryGuards)
     REJECT("Setting UseBridges requires also setting UseEntryGuards.");
-
+}
   options->MaxMemInQueues =
     compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
                                    server_mode(options));
