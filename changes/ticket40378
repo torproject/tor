@@ -1,0 +1,4 @@
+  o Major bugfixes (onion service, control port):
+    - Make the ADD_ONION command properly configure client authorization. Before
+      this fix, the created onion failed to add the client(s). Fixes bug 40378;
+      bugfix on 0.4.6.1-alpha.

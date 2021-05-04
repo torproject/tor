@@ -230,9 +230,6 @@ typedef struct hs_service_config_t {
    * HiddenServiceNumIntroductionPoints option. */
   unsigned int num_intro_points;
 
-  /** True iff the client auth is enabled. */
-  unsigned int is_client_auth_enabled : 1;
-
   /** List of hs_service_authorized_client_t's of clients that may access this
    * service. Specified by HiddenServiceAuthorizeClient option. */
   smartlist_t *clients;
