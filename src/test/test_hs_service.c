@@ -341,7 +341,6 @@ helper_create_service_with_clients(int num_clients)
   int i;
   hs_service_t *service = helper_create_service();
   tt_assert(service);
-  service->config.is_client_auth_enabled = 1;
   service->config.clients = smartlist_new();
 
   for (i = 0; i < num_clients; i++) {
@@ -424,9 +423,6 @@ test_load_keys(void *arg)
   hs_build_address(&s->keys.identity_pk, s->config.version, addr);
   tt_int_op(hs_address_is_valid(addr), OP_EQ, 1);
   tt_str_op(addr, OP_EQ, s->onion_address);
-
-  /* Check that the is_client_auth_enabled is not set. */
-  tt_assert(!s->config.is_client_auth_enabled);
 
  done:
   tor_free(hsdir_v3);
@@ -576,9 +572,6 @@ test_load_keys_with_client_auth(void *arg)
   tt_assert(service->config.clients);
   tt_int_op(smartlist_len(service->config.clients), OP_EQ,
             smartlist_len(pubkey_b32_list));
-
-  /* Test that the is_client_auth_enabled flag is set. */
-  tt_assert(service->config.is_client_auth_enabled);
 
   /* Test that the keys in clients are correct. */
   SMARTLIST_FOREACH_BEGIN(pubkey_b32_list, char *, pubkey_b32) {

@@ -160,6 +160,15 @@ HT_GENERATE2(hs_service_ht, hs_service_t, hs_service_node,
              hs_service_ht_hash, hs_service_ht_eq,
              0.6, tor_reallocarray, tor_free_);
 
+/** Return true iff the given service has client authorization configured that
+ * is the client list is non empty. */
+static inline bool
+is_client_auth_enabled(const hs_service_t *service)
+{
+  return (service->config.clients != NULL &&
+          smartlist_len(service->config.clients) > 0);
+}
+
 /** Query the given service map with a public key and return a service object
  * if found else NULL. It is also possible to set a directory path in the
  * search query. If pk is NULL, then it will be set to zero indicating the
@@ -1302,11 +1311,6 @@ load_client_keys(hs_service_t *service)
 
   } SMARTLIST_FOREACH_END(filename);
 
-  /* If the number of clients is greater than zero, set the flag to be true. */
-  if (smartlist_len(config->clients) > 0) {
-    config->is_client_auth_enabled = 1;
-  }
-
   /* Success. */
   ret = 0;
  end:
@@ -1816,7 +1820,7 @@ build_service_desc_superencrypted(const hs_service_t *service,
 
   /* We do not need to build the desc authorized client if the client
    * authorization is disabled */
-  if (config->is_client_auth_enabled) {
+  if (is_client_auth_enabled(service)) {
     SMARTLIST_FOREACH_BEGIN(config->clients,
                             hs_service_authorized_client_t *, client) {
       hs_desc_authorized_client_t *desc_client;
@@ -3588,7 +3592,7 @@ service_encode_descriptor(const hs_service_t *service,
 
   /* If the client authorization is enabled, send the descriptor cookie to
    * hs_desc_encode_descriptor. Otherwise, send NULL */
-  if (service->config.is_client_auth_enabled) {
+  if (is_client_auth_enabled(service)) {
     descriptor_cookie = desc->descriptor_cookie;
   }
 
