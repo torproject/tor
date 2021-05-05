@@ -1790,6 +1790,7 @@ rep_hist_note_desc_served(const char * desc)
  * @{ */
 STATIC int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
 STATIC int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+STATIC uint64_t onion_handshakes_dropped[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
 /**@}*/
 
 /** A new onionskin (using the <b>type</b> handshake) has arrived. */
@@ -1807,6 +1808,15 @@ rep_hist_note_circuit_handshake_assigned(uint16_t type)
 {
   if (type <= MAX_ONION_HANDSHAKE_TYPE)
     onion_handshakes_assigned[type]++;
+}
+
+/** We've just drop an onionskin (using the <b>type</b> handshake) due to being
+ * overloaded. */
+void
+rep_hist_note_circuit_handshake_dropped(uint16_t type)
+{
+  if (type <= MAX_ONION_HANDSHAKE_TYPE)
+    onion_handshakes_dropped[type]++;
 }
 
 /** Get the circuit handshake value that is requested. */
@@ -1827,6 +1837,16 @@ rep_hist_get_circuit_handshake_assigned, (uint16_t type))
     return 0;
   }
   return onion_handshakes_assigned[type];
+}
+
+/** Get the circuit handshake value that is dropped. */
+MOCK_IMPL(uint64_t,
+rep_hist_get_circuit_handshake_dropped, (uint16_t type))
+{
+  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
+    return 0;
+  }
+  return onion_handshakes_dropped[type];
 }
 
 /** Log our onionskin statistics since the last time we were called. */

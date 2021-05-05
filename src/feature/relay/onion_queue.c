@@ -164,6 +164,7 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
 #define WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL (60)
     static ratelim_t last_warned =
       RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
+    rep_hist_note_circuit_handshake_dropped(onionskin->handshake_type);
     if (onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
       char *m;
       /* Note this ntor onionskin drop as an overload */

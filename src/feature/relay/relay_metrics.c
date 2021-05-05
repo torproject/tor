@@ -19,9 +19,11 @@
 #include "lib/log/util_bug.h"
 
 #include "feature/relay/relay_metrics.h"
+#include "feature/stats/rephist.h"
 
 /** Declarations of each fill function for metrics defined in base_metrics. */
 static void fill_oom_values(void);
+static void fill_onionskins_values(void);
 
 /** The base metrics that is a static array of metrics added to the metrics
  * store.
@@ -36,11 +38,68 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Total number of bytes the OOM has freed by subsystem",
     .fill_fn = fill_oom_values,
   },
+  {
+    .key = RELAY_METRICS_NUM_ONIONSKINS,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_load_onionskins_total),
+    .help = "Total number of onionskins handled",
+    .fill_fn = fill_onionskins_values,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
 /** The only and single store of all the relay metrics. */
 static metrics_store_t *the_store;
+
+/** Helper function to convert an handshake type into a string. */
+static inline const char *
+handshake_type_to_str(const uint16_t type)
+{
+  switch (type) {
+    case ONION_HANDSHAKE_TYPE_TAP:
+      return "tap";
+    case ONION_HANDSHAKE_TYPE_FAST:
+      return "fast";
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      return "ntor";
+    default:
+      // LCOV_EXCL_START
+      tor_assert_unreached();
+      // LCOV_EXCL_STOP
+  }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_ONIONSKINS metrics. */
+static void
+fill_onionskins_values(void)
+{
+  metrics_store_entry_t *sentry;
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_ONIONSKINS];
+
+  for (uint16_t t = 0; t <= MAX_ONION_HANDSHAKE_TYPE; t++) {
+    /* Dup the label because metrics_format_label() returns a pointer to a
+     * string on the stack and we need that label for all metrics. */
+    char *type_label =
+      tor_strdup(metrics_format_label("type", handshake_type_to_str(t)));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    metrics_store_entry_add_label(sentry, type_label);
+    metrics_store_entry_add_label(sentry,
+                        metrics_format_label("action", "processed"));
+    metrics_store_entry_update(sentry,
+                               rep_hist_get_circuit_handshake_assigned(t));
+
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    metrics_store_entry_add_label(sentry, type_label);
+    metrics_store_entry_add_label(sentry,
+                        metrics_format_label("action", "dropped"));
+    metrics_store_entry_update(sentry,
+                               rep_hist_get_circuit_handshake_dropped(t));
+    tor_free(type_label);
+  }
+}
 
 /** Fill function for the RELAY_METRICS_NUM_OOM_BYTES metrics. */
 static void

@@ -16,7 +16,9 @@
  * the base_metrics array. */
 typedef enum {
   /** Number of OOM invocation. */
-  RELAY_METRICS_NUM_OOM_BYTES = 0,
+  RELAY_METRICS_NUM_OOM_BYTES  = 0,
+  /** Number of onionskines handled. */
+  RELAY_METRICS_NUM_ONIONSKINS = 1,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
