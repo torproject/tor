@@ -22,8 +22,9 @@
 #include "feature/stats/rephist.h"
 
 /** Declarations of each fill function for metrics defined in base_metrics. */
-static void fill_oom_values(void);
+static void fill_socket_values(void);
 static void fill_onionskins_values(void);
+static void fill_oom_values(void);
 
 /** The base metrics that is a static array of metrics added to the metrics
  * store.
@@ -44,6 +45,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .name = METRICS_NAME(relay_load_onionskins_total),
     .help = "Total number of onionskins handled",
     .fill_fn = fill_onionskins_values,
+  },
+  {
+    .key = RELAY_METRICS_NUM_SOCKETS,
+    .type = METRICS_TYPE_GAUGE,
+    .name = METRICS_NAME(relay_load_socket_total),
+    .help = "Total number of sockets",
+    .fill_fn = fill_socket_values,
   },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
@@ -67,6 +75,25 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_SOCKETS metrics. */
+static void
+fill_socket_values(void)
+{
+  metrics_store_entry_t *sentry;
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_SOCKETS];
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+                                metrics_format_label("state", "opened"));
+  metrics_store_entry_update(sentry, get_n_open_sockets());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_update(sentry, get_max_sockets());
 }
 
 /** Fill function for the RELAY_METRICS_NUM_ONIONSKINS metrics. */

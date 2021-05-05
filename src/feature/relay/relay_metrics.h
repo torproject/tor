@@ -19,6 +19,8 @@ typedef enum {
   RELAY_METRICS_NUM_OOM_BYTES  = 0,
   /** Number of onionskines handled. */
   RELAY_METRICS_NUM_ONIONSKINS = 1,
+  /** Number of sockets. */
+  RELAY_METRICS_NUM_SOCKETS    = 2,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
