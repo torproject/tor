@@ -144,3 +144,14 @@ metrics_store_get_output(const metrics_format_t fmt,
     // LCOV_EXCL_STOP
   }
 }
+
+/** Reset a store as in free its content. */
+void
+metrics_store_reset(metrics_store_t *store)
+{
+  if (store == NULL) {
+    return;
+  }
+  strmap_free(store->entries, metrics_store_free_void);
+  store->entries = strmap_new();
+}
