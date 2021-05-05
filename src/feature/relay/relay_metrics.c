@@ -22,6 +22,7 @@
 #include "feature/stats/rephist.h"
 
 /** Declarations of each fill function for metrics defined in base_metrics. */
+static void fill_global_bw_limit_values(void);
 static void fill_socket_values(void);
 static void fill_onionskins_values(void);
 static void fill_oom_values(void);
@@ -53,6 +54,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Total number of sockets",
     .fill_fn = fill_socket_values,
   },
+  {
+    .key = RELAY_METRICS_NUM_GLOBAL_RW_LIMIT,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_load_global_rate_limit_reached_total),
+    .help = "Total number of global connection bucket limit reached",
+    .fill_fn = fill_global_bw_limit_values,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
@@ -75,6 +83,27 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_GLOBAL_RW_LIMIT metrics. */
+static void
+fill_global_bw_limit_values(void)
+{
+  metrics_store_entry_t *sentry;
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_GLOBAL_RW_LIMIT];
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+                                metrics_format_label("side", "read"));
+  metrics_store_entry_update(sentry, rep_hist_get_n_read_limit_reached());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+                                metrics_format_label("side", "write"));
+  metrics_store_entry_update(sentry, rep_hist_get_n_write_limit_reached());
 }
 
 /** Fill function for the RELAY_METRICS_NUM_SOCKETS metrics. */

@@ -162,6 +162,9 @@ void rep_hist_note_overload(overload_type_t overload);
 char *rep_hist_get_overload_general_line(void);
 char *rep_hist_get_overload_stats_lines(void);
 
+uint64_t rep_hist_get_n_read_limit_reached(void);
+uint64_t rep_hist_get_n_write_limit_reached(void);
+
 #ifdef TOR_UNIT_TESTS
 struct hs_v2_stats_t;
 const struct hs_v2_stats_t *rep_hist_get_hs_v2_stats(void);

@@ -207,6 +207,11 @@ typedef struct {
 /** Current state of overload stats */
 static overload_stats_t overload_stats;
 
+/** Counters to count the number of times we've reached an overload for the
+ * global connection read/write limit. Reported on the MetricsPort. */
+static uint64_t stats_n_read_limit_reached = 0;
+static uint64_t stats_n_write_limit_reached = 0;
+
 /** Return true if this overload happened within the last `n_hours`. */
 static bool
 overload_happened_recently(time_t overload_time, int n_hours)
@@ -220,6 +225,20 @@ overload_happened_recently(time_t overload_time, int n_hours)
 
 /* The current version of the overload stats version */
 #define OVERLOAD_STATS_VERSION 1
+
+/** Return the stats_n_read_limit_reached counter. */
+uint64_t
+rep_hist_get_n_read_limit_reached(void)
+{
+  return stats_n_read_limit_reached;
+}
+
+/** Return the stats_n_write_limit_reached counter. */
+uint64_t
+rep_hist_get_n_write_limit_reached(void)
+{
+  return stats_n_write_limit_reached;
+}
 
 /** Returns an allocated string for server descriptor for publising information
  * on whether we are overloaded or not. */
@@ -299,6 +318,7 @@ rep_hist_note_overload(overload_type_t overload)
     SET_TO_START_OF_HOUR(overload_stats.overload_general_time);
     break;
   case OVERLOAD_READ: {
+    stats_n_read_limit_reached++;
     SET_TO_START_OF_HOUR(overload_stats.overload_ratelimits_time);
     if (approx_time() >= last_read_counted + 60) { /* Count once a minute */
         overload_stats.overload_read_count++;
@@ -307,6 +327,7 @@ rep_hist_note_overload(overload_type_t overload)
     break;
   }
   case OVERLOAD_WRITE: {
+    stats_n_write_limit_reached++;
     SET_TO_START_OF_HOUR(overload_stats.overload_ratelimits_time);
     if (approx_time() >= last_write_counted + 60) { /* Count once a minute */
       overload_stats.overload_write_count++;
