@@ -13,6 +13,6 @@
 #include "lib/metrics/metrics_store_entry.h"
 
 void prometheus_format_store_entry(const metrics_store_entry_t *entry,
-                                   buf_t *data);
+                                   buf_t *data, bool no_comment);
 
 #endif /* !defined(TOR_LIB_METRICS_PROMETHEUS_H) */
