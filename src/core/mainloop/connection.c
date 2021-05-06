@@ -1261,7 +1261,7 @@ socket_failed_from_resource_exhaustion(void)
    */
   if (get_max_sockets() > 65535) {
     /* TCP port exhaustion */
-    rep_hist_note_overload(OVERLOAD_GENERAL);
+    rep_hist_note_tcp_exhaustion();
   } else {
     /* File descriptor exhaustion */
     rep_hist_note_overload(OVERLOAD_FD_EXHAUSTED);

@@ -30,6 +30,7 @@ static void fill_global_bw_limit_values(void);
 static void fill_socket_values(void);
 static void fill_onionskins_values(void);
 static void fill_oom_values(void);
+static void fill_tcp_exhaustion_values(void);
 
 /** The base metrics that is a static array of metrics added to the metrics
  * store.
@@ -79,6 +80,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Total number of DNS errors encountered by this relay",
     .fill_fn = fill_dns_error_values,
   },
+  {
+    .key = RELAY_METRICS_NUM_TCP_EXHAUSTION,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_load_tcp_exhaustion_total),
+    .help = "Total number of times we ran out of TCP ports",
+    .fill_fn = fill_tcp_exhaustion_values,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
@@ -101,6 +109,19 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_DNS metrics. */
+static void
+fill_tcp_exhaustion_values(void)
+{
+  metrics_store_entry_t *sentry;
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_TCP_EXHAUSTION];
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_update(sentry, rep_hist_get_n_tcp_exhaustion());
 }
 
 /** Helper array containing mapping for the name of the different DNS records

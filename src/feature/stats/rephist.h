@@ -167,6 +167,9 @@ void rep_hist_note_overload(overload_type_t overload);
 char *rep_hist_get_overload_general_line(void);
 char *rep_hist_get_overload_stats_lines(void);
 
+void rep_hist_note_tcp_exhaustion(void);
+uint64_t rep_hist_get_n_tcp_exhaustion(void);
+
 uint64_t rep_hist_get_n_read_limit_reached(void);
 uint64_t rep_hist_get_n_write_limit_reached(void);
 

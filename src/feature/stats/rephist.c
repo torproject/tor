@@ -214,6 +214,9 @@ static overload_stats_t overload_stats;
 static uint64_t stats_n_read_limit_reached = 0;
 static uint64_t stats_n_write_limit_reached = 0;
 
+/** Total number of times we've reached TCP port exhaustion. */
+static uint64_t stats_n_tcp_exhaustion = 0;
+
 /***** DNS statistics *****/
 
 /** Represents the statistics of DNS queries seen if it is an Exit. */
@@ -510,6 +513,22 @@ rep_hist_note_overload(overload_type_t overload)
     overload_stats.overload_fd_exhausted++;
     break;
   }
+}
+
+/** Note down that we've reached a TCP port exhaustion. This triggers an
+ * overload general event. */
+void
+rep_hist_note_tcp_exhaustion(void)
+{
+  stats_n_tcp_exhaustion++;
+  rep_hist_note_overload(OVERLOAD_GENERAL);
+}
+
+/** Return the total number of TCP exhaustion times we've reached. */
+uint64_t
+rep_hist_get_n_tcp_exhaustion(void)
+{
+  return stats_n_tcp_exhaustion;
 }
 
 /** Return the or_history_t for the OR with identity digest <b>id</b>,
