@@ -1650,6 +1650,10 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
     dns_found_answer(string_address, orig_query_type,
                      result, &addr, hostname, ttl);
 
+  /* The result can be changed within this function thus why we note the result
+   * at the end. */
+  rep_hist_note_dns_error(type, result);
+
   tor_free(arg_);
 }
 
@@ -1667,6 +1671,9 @@ launch_one_resolve(const char *address, uint8_t query_type,
   char *addr = tor_malloc(addr_len + 2);
   addr[0] = (char) query_type;
   memcpy(addr+1, address, addr_len + 1);
+
+  /* Note the query for our statistics. */
+  rep_hist_note_dns_request(query_type);
 
   switch (query_type) {
   case DNS_IPv4_A:

@@ -80,6 +80,11 @@ void rep_hist_note_negotiated_link_proto(unsigned link_proto,
                                          int started_here);
 void rep_hist_log_link_protocol_counts(void);
 
+uint64_t rep_hist_get_n_dns_error(int type, uint8_t error);
+uint64_t rep_hist_get_n_dns_request(int type);
+void rep_hist_note_dns_request(int type);
+void rep_hist_note_dns_error(int type, uint8_t error);
+
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS

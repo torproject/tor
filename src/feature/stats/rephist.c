@@ -84,6 +84,8 @@
 #include "feature/nodelist/networkstatus_st.h"
 #include "core/or/or_circuit_st.h"
 
+#include <event2/dns.h>
+
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -211,6 +213,174 @@ static overload_stats_t overload_stats;
  * global connection read/write limit. Reported on the MetricsPort. */
 static uint64_t stats_n_read_limit_reached = 0;
 static uint64_t stats_n_write_limit_reached = 0;
+
+/***** DNS statistics *****/
+
+/** Represents the statistics of DNS queries seen if it is an Exit. */
+typedef struct {
+  /* Total number of DNS errors found in RFC 1035 (from 0 to 5 code). */
+  uint64_t stats_n_error_none;          /* 0 */
+  uint64_t stats_n_error_format;        /* 1 */
+  uint64_t stats_n_error_serverfailed;  /* 2 */
+  uint64_t stats_n_error_notexist;      /* 3 */
+  uint64_t stats_n_error_notimpl;       /* 4 */
+  uint64_t stats_n_error_refused;       /* 5 */
+
+  /* Total number of DNS errors specific to libevent. */
+  uint64_t stats_n_error_truncated; /* 65 */
+  uint64_t stats_n_error_unknown;   /* 66 */
+  uint64_t stats_n_error_timeout;   /* 67 */
+  uint64_t stats_n_error_shutdown;  /* 68 */
+  uint64_t stats_n_error_cancel;    /* 69 */
+  uint64_t stats_n_error_nodata;    /* 70 */
+
+  /* Total number of DNS request seen at an Exit. They might not all end
+   * successfully or might even be lost by tor. This counter is incremented
+   * right before the DNS request is initiated. */
+  uint64_t stats_n_request;
+} dns_stats_t;
+
+/** DNS statistics store for each DNS record type for which tor supports only
+ * three at the moment: A, PTR and AAAA. */
+static dns_stats_t dns_A_stats;
+static dns_stats_t dns_PTR_stats;
+static dns_stats_t dns_AAAA_stats;
+
+/** From a libevent record type, return a pointer to the corresponding DNS
+ * statistics store. NULL is returned if the type is unhandled. */
+static inline dns_stats_t *
+get_dns_stats_by_type(const int type)
+{
+  switch (type) {
+  case DNS_IPv4_A:
+    return &dns_A_stats;
+  case DNS_PTR:
+    return &dns_PTR_stats;
+  case DNS_IPv6_AAAA:
+    return &dns_AAAA_stats;
+  default:
+    return NULL;
+  }
+}
+
+/** Return the DNS error count for the given libevent DNS type and error code.
+ * The possible types are: DNS_IPv4_A, DNS_PTR, DNS_IPv6_AAAA. */
+uint64_t
+rep_hist_get_n_dns_error(int type, uint8_t error)
+{
+  dns_stats_t *dns_stats = get_dns_stats_by_type(type);
+  if (BUG(!dns_stats)) {
+    return 0;
+  }
+
+  switch (error) {
+  case DNS_ERR_NONE:
+    return dns_stats->stats_n_error_none;
+  case DNS_ERR_FORMAT:
+    return dns_stats->stats_n_error_format;
+  case DNS_ERR_SERVERFAILED:
+    return dns_stats->stats_n_error_serverfailed;
+  case DNS_ERR_NOTEXIST:
+    return dns_stats->stats_n_error_notexist;
+  case DNS_ERR_NOTIMPL:
+    return dns_stats->stats_n_error_notimpl;
+  case DNS_ERR_REFUSED:
+    return dns_stats->stats_n_error_refused;
+  case DNS_ERR_TRUNCATED:
+    return dns_stats->stats_n_error_truncated;
+  case DNS_ERR_UNKNOWN:
+    return dns_stats->stats_n_error_unknown;
+  case DNS_ERR_TIMEOUT:
+    return dns_stats->stats_n_error_timeout;
+  case DNS_ERR_SHUTDOWN:
+    return dns_stats->stats_n_error_shutdown;
+  case DNS_ERR_CANCEL:
+    return dns_stats->stats_n_error_cancel;
+  case DNS_ERR_NODATA:
+    return dns_stats->stats_n_error_nodata;
+  default:
+    /* Unhandled code sent back by libevent. */
+    return 0;
+  }
+}
+
+/** Return the total number of DNS request seen for the given libevent DNS
+ * record type. Possible types are: DNS_IPv4_A, DNS_PTR, DNS_IPv6_AAAA. */
+uint64_t
+rep_hist_get_n_dns_request(int type)
+{
+  dns_stats_t *dns_stats = get_dns_stats_by_type(type);
+  if (BUG(!dns_stats)) {
+    return 0;
+  }
+  return dns_stats->stats_n_request;
+}
+
+/** Note a DNS error for the given given libevent DNS record type and error
+ * code. Possible types are: DNS_IPv4_A, DNS_PTR, DNS_IPv6_AAAA. */
+void
+rep_hist_note_dns_error(int type, uint8_t error)
+{
+  dns_stats_t *dns_stats = get_dns_stats_by_type(type);
+  if (BUG(!dns_stats)) {
+    return;
+  }
+
+  switch (error) {
+  case DNS_ERR_NONE:
+    dns_stats->stats_n_error_none++;
+    break;
+  case DNS_ERR_FORMAT:
+    dns_stats->stats_n_error_format++;
+    break;
+  case DNS_ERR_SERVERFAILED:
+    dns_stats->stats_n_error_serverfailed++;
+    break;
+  case DNS_ERR_NOTEXIST:
+    dns_stats->stats_n_error_notexist++;
+    break;
+  case DNS_ERR_NOTIMPL:
+    dns_stats->stats_n_error_notimpl++;
+    break;
+  case DNS_ERR_REFUSED:
+    dns_stats->stats_n_error_refused++;
+    break;
+  case DNS_ERR_TRUNCATED:
+    dns_stats->stats_n_error_truncated++;
+    break;
+  case DNS_ERR_UNKNOWN:
+    dns_stats->stats_n_error_unknown++;
+    break;
+  case DNS_ERR_TIMEOUT:
+    dns_stats->stats_n_error_timeout++;
+    break;
+  case DNS_ERR_SHUTDOWN:
+    dns_stats->stats_n_error_shutdown++;
+    break;
+  case DNS_ERR_CANCEL:
+    dns_stats->stats_n_error_cancel++;
+    break;
+  case DNS_ERR_NODATA:
+    dns_stats->stats_n_error_nodata++;
+    break;
+  default:
+    /* Unhandled code sent back by libevent. */
+    break;
+  }
+}
+
+/** Note a DNS request for the given given libevent DNS record type. */
+void
+rep_hist_note_dns_request(int type)
+{
+  dns_stats_t *dns_stats = get_dns_stats_by_type(type);
+  if (BUG(!dns_stats)) {
+    return;
+  }
+  dns_stats->stats_n_request++;
+}
+
+/***** END of DNS statistics *****/
 
 /** Return true if this overload happened within the last `n_hours`. */
 static bool
