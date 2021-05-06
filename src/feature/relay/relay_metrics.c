@@ -21,7 +21,11 @@
 #include "feature/relay/relay_metrics.h"
 #include "feature/stats/rephist.h"
 
+#include <event2/dns.h>
+
 /** Declarations of each fill function for metrics defined in base_metrics. */
+static void fill_dns_error_values(void);
+static void fill_dns_query_values(void);
 static void fill_global_bw_limit_values(void);
 static void fill_socket_values(void);
 static void fill_onionskins_values(void);
@@ -61,6 +65,20 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Total number of global connection bucket limit reached",
     .fill_fn = fill_global_bw_limit_values,
   },
+  {
+    .key = RELAY_METRICS_NUM_DNS,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_exit_dns_query_total),
+    .help = "Total number of DNS queries done by this relay",
+    .fill_fn = fill_dns_query_values,
+  },
+  {
+    .key = RELAY_METRICS_NUM_DNS_ERRORS,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_exit_dns_error_total),
+    .help = "Total number of DNS errors encountered by this relay",
+    .fill_fn = fill_dns_error_values,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
@@ -82,6 +100,88 @@ handshake_type_to_str(const uint16_t type)
       // LCOV_EXCL_START
       tor_assert_unreached();
       // LCOV_EXCL_STOP
+  }
+}
+
+/** Helper array containing mapping for the name of the different DNS records
+ * and their corresponding libevent values. */
+static struct dns_type {
+  const char *name;
+  uint8_t type;
+} dns_types[] = {
+  { .name = "A",    .type = DNS_IPv4_A     },
+  { .name = "PTR",  .type = DNS_PTR        },
+  { .name = "AAAA", .type = DNS_IPv6_AAAA  },
+};
+static const size_t num_dns_types = ARRAY_LENGTH(dns_types);
+
+/** Fill function for the RELAY_METRICS_NUM_DNS_ERRORS metrics. */
+static void
+fill_dns_error_values(void)
+{
+  metrics_store_entry_t *sentry;
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_DNS_ERRORS];
+
+  /* Helper array to map libeven DNS errors to their names and so we can
+   * iterate over this array to add all metrics. */
+  static struct dns_error {
+    const char *name;
+    uint8_t key;
+  } errors[] = {
+    { .name = "success",      .key = DNS_ERR_NONE         },
+    { .name = "format",       .key = DNS_ERR_FORMAT       },
+    { .name = "serverfailed", .key = DNS_ERR_SERVERFAILED },
+    { .name = "notexist",     .key = DNS_ERR_NOTEXIST     },
+    { .name = "notimpl",      .key = DNS_ERR_NOTIMPL      },
+    { .name = "refused",      .key = DNS_ERR_REFUSED      },
+    { .name = "truncated",    .key = DNS_ERR_TRUNCATED    },
+    { .name = "unknown",      .key = DNS_ERR_UNKNOWN      },
+    { .name = "timeout",      .key = DNS_ERR_TIMEOUT      },
+    { .name = "shutdown",     .key = DNS_ERR_SHUTDOWN     },
+    { .name = "cancel",       .key = DNS_ERR_CANCEL       },
+    { .name = "nodata",       .key = DNS_ERR_NODATA       },
+  };
+  static const size_t num_errors = ARRAY_LENGTH(errors);
+
+  for (size_t i = 0; i < num_dns_types; i++) {
+    /* Dup the label because metrics_format_label() returns a pointer to a
+     * string on the stack and we need that label for all metrics. */
+    char *record_label =
+      tor_strdup(metrics_format_label("record", dns_types[i].name));
+
+    for (size_t j = 0; j < num_errors; j++) {
+      sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                                 rentry->help);
+      metrics_store_entry_add_label(sentry, record_label);
+      metrics_store_entry_add_label(sentry,
+              metrics_format_label("reason", errors[j].name));
+      metrics_store_entry_update(sentry,
+              rep_hist_get_n_dns_error(dns_types[i].type, errors[j].key));
+    }
+    tor_free(record_label);
+  }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_DNS metrics. */
+static void
+fill_dns_query_values(void)
+{
+  metrics_store_entry_t *sentry;
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_DNS];
+
+  for (size_t i = 0; i < num_dns_types; i++) {
+    /* Dup the label because metrics_format_label() returns a pointer to a
+     * string on the stack and we need that label for all metrics. */
+    char *record_label =
+      tor_strdup(metrics_format_label("record", dns_types[i].name));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    metrics_store_entry_add_label(sentry, record_label);
+    metrics_store_entry_update(sentry,
+                               rep_hist_get_n_dns_request(dns_types[i].type));
+    tor_free(record_label);
   }
 }
 

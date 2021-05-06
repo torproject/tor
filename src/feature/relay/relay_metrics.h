@@ -23,6 +23,10 @@ typedef enum {
   RELAY_METRICS_NUM_SOCKETS    = 2,
   /** Number of global connection rate limit. */
   RELAY_METRICS_NUM_GLOBAL_RW_LIMIT = 3,
+  /** Number of DNS queries. */
+  RELAY_METRICS_NUM_DNS        = 4,
+  /** Number of DNS query errors. */
+  RELAY_METRICS_NUM_DNS_ERRORS = 5,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
