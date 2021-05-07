@@ -17,6 +17,10 @@ Changes in version 0.4.6.3-rc - 2021-05-10
     - Make the autoconf script build correctly with autoconf versions
       2.70 and later. Closes part of ticket 40335.
 
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2021/05/07.
+
   o Minor features (onion services):
     - Add a warning message when trying to connect to (no longer
       supported) v2 onion services. Closes ticket 40373.
