@@ -1,3 +1,0 @@
-  o Minor features (onion services):
-    - Add warning message when connecting to soon-to-be-deprecated v2 onions.
-      Closes ticket 40373.
