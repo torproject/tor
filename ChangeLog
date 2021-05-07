@@ -2,6 +2,12 @@ Changes in version 0.4.5.8 - 2021-05-10
   Tor 0.4.5.8 fixes several bugs in earlier version, backporting fixes
   from the 0.4.6.x series.
 
+  o Minor features (compatibility, Linux seccomp sandbox, backport from 0.4.6.3-rc):
+    - Add a workaround to enable the Linux sandbox to work correctly
+      with Glibc 2.33. This version of Glibc has started using the
+      fstatat() system call, which previously our sandbox did not allow.
+      Closes ticket 40382; see the ticket for a discussion of trade-offs.
+
   o Minor features (compilation, backport from 0.4.6.3-rc):
     - Make the autoconf script build correctly with autoconf versions
       2.70 and later. Closes part of ticket 40335.
@@ -33,6 +39,10 @@ Changes in version 0.4.5.8 - 2021-05-10
     - Fix a non-fatal BUG() message due to a too-early free of a string,
       when listing a client connection from the DoS defenses subsystem.
       Fixes bug 40345; bugfix on 0.4.3.4-rc.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.6.3-rc):
+    - Fix an indentation problem that led to a warning from GCC 11.1.1.
+      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (controller, backport from 0.4.6.1-alpha):
     - Fix a "BUG" warning that would appear when a controller chooses
