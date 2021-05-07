@@ -13,6 +13,12 @@ Changes in version 0.4.6.3-rc - 2021-05-10
       Before this fix, the created onion failed to add the client(s).
       Fixes bug 40378; bugfix on 0.4.6.1-alpha.
 
+  o Minor features (compatibility, Linux seccomp sandbox):
+    - Add a workaround to enable the Linux sandbox to work correctly
+      with Glibc 2.33. This version of Glibc has started using the
+      fstatat() system call, which previously our sandbox did not allow.
+      Closes ticket 40382; see the ticket for a discussion of trade-offs.
+
   o Minor features (compilation):
     - Make the autoconf script build correctly with autoconf versions
       2.70 and later. Closes part of ticket 40335.
@@ -29,6 +35,10 @@ Changes in version 0.4.6.3-rc - 2021-05-10
     - Allow a custom "ar" for cross-compilation. Our previous build
       script had used the $AR environment variable in most places, but
       it missed one. Fixes bug 40369; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (compiler warnings):
+    - Fix an indentation problem that led to a warning from GCC 11.1.1.
+      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
 
   o Minor bugfixes (logging, relay):
     - Emit a warning if an Address is found to be internal and tor can't
