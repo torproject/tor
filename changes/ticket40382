@@ -1,0 +1,6 @@
+  o Minor features (compatibility, Linux seccomp sandbox):
+    - Add a workaround to enable the Linux sandbox to work correctly
+      on systems running Glibc 2.33.  These versions have started
+      using the fstatat() system call, which previously our sandbox did not
+      allow.
+      Closes ticket 40382; see the ticket for a discussion of tradeoffs.
