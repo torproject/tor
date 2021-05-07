@@ -1608,6 +1608,28 @@ add_noparam_filter(scmp_filter_ctx ctx)
     }
   }
 
+  if (is_libc_at_least(2, 33)) {
+#ifdef __NR_newfstatat
+    // Libc 2.33 uses this syscall to implement both fstat() and stat().
+    //
+    // The trouble is that to implement fstat(fd, &st), it calls:
+    //     newfstatat(fs, "", &st, AT_EMPTY_PATH)
+    // We can't detect this usage in particular, because "" is a pointer
+    // we don't control.  And we can't just look for AT_EMPTY_PATH, since
+    // AT_EMPTY_PATH only has effect when the path string is empty.
+    //
+    // So our only solution seems to be allowing all fstatat calls, which
+    // means that an attacker can stat() anything on the filesystem. That's
+    // not a great solution, but I can't find a better one.
+    rc = seccomp_rule_add_0(ctx, SCMP_ACT_ALLOW, SCMP_SYS(newfstatat));
+    if (rc != 0) {
+      log_err(LD_BUG,"(Sandbox) failed to add newfstatat() syscall; "
+          "received libseccomp error %d", rc);
+      return rc;
+    }
+#endif
+  }
+
   return 0;
 }
 
