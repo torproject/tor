@@ -1320,10 +1320,10 @@ circuit_predict_and_launch_new(void)
     if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL)
       flags |= CIRCLAUNCH_IS_INTERNAL;
 
-      log_info(LD_CIRC,
-               "Have %d clean circs need another buildtime test circ.", num);
-      circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
-      return;
+    log_info(LD_CIRC,
+             "Have %d clean circs need another buildtime test circ.", num);
+    circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
+    return;
   }
 }
 
