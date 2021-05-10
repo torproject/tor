@@ -218,7 +218,6 @@ typedef struct directory_token_t {
 typedef enum {
   NO_OBJ,        /**< No object, ever. */
   NEED_OBJ,      /**< Object is required. */
-  NEED_SKEY_1024,/**< Object is required, and must be a 1024 bit private key */
   NEED_KEY_1024, /**< Object is required, and must be a 1024 bit public key */
   NEED_KEY,      /**< Object is required, and must be a public key. */
   OBJ_OK,        /**< Object is optional. */
