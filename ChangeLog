@@ -1,3 +1,55 @@
+Changes in version 0.4.6.3-rc - 2021-05-10
+  Tor 0.4.6.3-rc is the first release candidate in its series. It fixes
+  a few small bugs from previous versions, and adds a better error
+  message when trying to use (no longer supported) v2 onion services.
+
+  Though we anticipate that we'll be doing a bit more clean-up between
+  now and the stable release, we expect that our remaining changes will
+  be fairly simple. There will likely be at least one more release
+  candidate before 0.4.6.x is stable.
+
+  o Major bugfixes (onion service, control port):
+    - Make the ADD_ONION command properly configure client authorization.
+      Before this fix, the created onion failed to add the client(s).
+      Fixes bug 40378; bugfix on 0.4.6.1-alpha.
+
+  o Minor features (compatibility, Linux seccomp sandbox):
+    - Add a workaround to enable the Linux sandbox to work correctly
+      with Glibc 2.33. This version of Glibc has started using the
+      fstatat() system call, which previously our sandbox did not allow.
+      Closes ticket 40382; see the ticket for a discussion of trade-offs.
+
+  o Minor features (compilation):
+    - Make the autoconf script build correctly with autoconf versions
+      2.70 and later. Closes part of ticket 40335.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2021/05/07.
+
+  o Minor features (onion services):
+    - Add a warning message when trying to connect to (no longer
+      supported) v2 onion services. Closes ticket 40373.
+
+  o Minor bugfixes (build, cross-compilation):
+    - Allow a custom "ar" for cross-compilation. Our previous build
+      script had used the $AR environment variable in most places, but
+      it missed one. Fixes bug 40369; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (compiler warnings):
+    - Fix an indentation problem that led to a warning from GCC 11.1.1.
+      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (logging, relay):
+    - Emit a warning if an Address is found to be internal and tor can't
+      use it. Fixes bug 40290; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (onion service, client, memory leak):
+    - Fix a bug where an expired cached descriptor could get overwritten
+      with a new one without freeing it, leading to a memory leak. Fixes
+      bug 40356; bugfix on 0.3.5.1-alpha.
+
+
 Changes in version 0.4.6.2-alpha - 2021-04-15
   Tor 0.4.6.2-alpha is the second alpha in its series. It fixes several
   small bugs in previous releases, and solves other issues that had
