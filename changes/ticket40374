@@ -1,0 +1,4 @@
+  o Removed features:
+    - Remove unneeded code for parsing private keys in directory documents.
+      This code was only used for client authentication in v2 onion
+      services, which are now unsupported.  Closes ticket 40374.
