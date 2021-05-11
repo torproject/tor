@@ -1206,11 +1206,11 @@ format_bridge_stats_controller(time_t now)
 char *
 format_client_stats_heartbeat(time_t now)
 {
-  const int n_hours = 6;
+  const int n_seconds = get_options()->HeartbeatPeriod;
   char *out = NULL;
   int n_clients = 0;
   clientmap_entry_t **ent;
-  unsigned cutoff = (unsigned)( (now-n_hours*3600)/60 );
+  unsigned cutoff = (unsigned)( (now-n_seconds)/60 );
 
   if (!start_of_bridge_stats_interval)
     return NULL; /* Not initialized. */
@@ -1226,8 +1226,7 @@ format_client_stats_heartbeat(time_t now)
   }
 
   tor_asprintf(&out, "Heartbeat: "
-               "In the last %d hours, I have seen %d unique clients.",
-               n_hours,
+               "Since last heartbeat message, I have seen %d unique clients.",
                n_clients);
 
   return out;
