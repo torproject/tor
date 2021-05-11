@@ -1084,7 +1084,7 @@ struct or_options_t {
 
   /** How far must we be into the current bandwidth-measurement period to
    * report bandwidth observations from this period? */
-  int MinTimeToReportBandwidth;
+  int TestingMinTimeToReportBandwidth;
 
   /**
    * Configuration objects for individual modules.

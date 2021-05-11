@@ -241,7 +241,7 @@ MOCK_IMPL(int,
 bwhist_bandwidth_assess,(void))
 {
   uint64_t w,r;
-  int min_obs_time = get_options()->MinTimeToReportBandwidth;
+  int min_obs_time = get_options()->TestingMinTimeToReportBandwidth;
   r = find_largest_max(read_array, min_obs_time);
   w = find_largest_max(write_array, min_obs_time);
   if (r>w)

@@ -1,5 +1,6 @@
-  o Minor features (bandwidth reporting):
-    - Relays can now use the MinTimeToReportBandwidth option to change
+  o Minor features (testing):
+    - On a testing network, relays can now use the
+      TestingMinTimeToReportBandwidth option to change
       the smallest amount of time over which they're willing to report
       their observed maximum bandwidth.  Previously, this was fixed
       at 1 day.  For safety, values under 2 hours are only supported on

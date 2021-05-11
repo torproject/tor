@@ -24,13 +24,6 @@
  * expose more information than we're comfortable with. */
 #define MIN_HEARTBEAT_PERIOD (30*60)
 
-/**
- * Lowest allowable value for MinTimeToReportBandwidth on a non-testing
- * network; if this is too low we might report detail that is too
- * fine-grained.
- **/
-#define MIN_MIN_TIME_TO_REPORT_BW (2*60*60)
-
 /** Maximum default value for MaxMemInQueues, in bytes. */
 #if SIZEOF_VOID_P >= 8
 #define MAX_DEFAULT_MEMORY_QUEUE_SIZE (UINT64_C(8) << 30)
