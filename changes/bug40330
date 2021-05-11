@@ -1,0 +1,4 @@
+  o Minor bugfixes (heartbeat):
+    - Adjust the heartbeat log message about distinct clients to consider
+      the HeartbeatPeriod rather than a flat 6-hour delay.
+      Fixes bug 40330; bugfix on 0.2.6.3-alpha.
