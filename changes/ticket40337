@@ -11,3 +11,6 @@
       immediately from startup.  Previously, they waited
       until they had been running for a full day.   Closes ticket
       40337.
+    - Relays on testing networks no longer rate-limit how frequently
+      they are willing to report new bandwidth measurements. Part of a fix
+      for ticket 40337.
