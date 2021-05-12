@@ -63,7 +63,11 @@ void rep_hist_log_circuit_handshake_stats(time_t now);
 
 MOCK_DECL(int, rep_hist_get_circuit_handshake_requested, (uint16_t type));
 MOCK_DECL(int, rep_hist_get_circuit_handshake_assigned, (uint16_t type));
-MOCK_DECL(uint64_t, rep_hist_get_circuit_handshake_dropped, (uint16_t type));
+
+MOCK_DECL(uint64_t, rep_hist_get_circuit_n_handshake_assigned,
+          (uint16_t type));
+MOCK_DECL(uint64_t, rep_hist_get_circuit_n_handshake_dropped,
+          (uint16_t type));
 
 void rep_hist_hs_stats_init(time_t now);
 void rep_hist_hs_stats_term(void);
@@ -90,7 +94,6 @@ extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
 extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
-extern uint64_t onion_handshakes_dropped[MAX_ONION_HANDSHAKE_TYPE+1];
 #endif
 
 #ifdef REPHIST_PRIVATE

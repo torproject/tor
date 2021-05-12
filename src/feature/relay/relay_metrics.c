@@ -265,7 +265,7 @@ fill_onionskins_values(void)
     metrics_store_entry_add_label(sentry,
                         metrics_format_label("action", "processed"));
     metrics_store_entry_update(sentry,
-                               rep_hist_get_circuit_handshake_assigned(t));
+                               rep_hist_get_circuit_n_handshake_assigned(t));
 
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                rentry->help);
@@ -273,7 +273,7 @@ fill_onionskins_values(void)
     metrics_store_entry_add_label(sentry,
                         metrics_format_label("action", "dropped"));
     metrics_store_entry_update(sentry,
-                               rep_hist_get_circuit_handshake_dropped(t));
+                               rep_hist_get_circuit_n_handshake_dropped(t));
     tor_free(type_label);
   }
 }
