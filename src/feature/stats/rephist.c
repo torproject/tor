@@ -325,7 +325,8 @@ void
 rep_hist_note_dns_error(int type, uint8_t error)
 {
   dns_stats_t *dns_stats = get_dns_stats_by_type(type);
-  if (BUG(!dns_stats)) {
+  /* Unsupported DNS query type. */
+  if (!dns_stats) {
     return;
   }
 
