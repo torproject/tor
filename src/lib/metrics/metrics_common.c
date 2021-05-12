@@ -37,6 +37,6 @@ const char *
 metrics_format_label(const char *key, const char *value)
 {
   static char buf[128];
-  tor_snprintf(buf, sizeof(buf), "%s=%s", key, value);
+  tor_snprintf(buf, sizeof(buf), "%s=\"%s\"", key, value);
   return buf;
 }
