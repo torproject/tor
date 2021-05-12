@@ -288,22 +288,26 @@ fill_oom_values(void)
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
-  metrics_store_entry_add_label(sentry, "subsys=cell");
+  metrics_store_entry_add_label(sentry,
+                                metrics_format_label("subsys", "cell"));
   metrics_store_entry_update(sentry, oom_stats_n_bytes_removed_cell);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
-  metrics_store_entry_add_label(sentry, "subsys=dns");
+  metrics_store_entry_add_label(sentry,
+                                metrics_format_label("subsys", "dns"));
   metrics_store_entry_update(sentry, oom_stats_n_bytes_removed_dns);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
-  metrics_store_entry_add_label(sentry, "subsys=geoip");
+  metrics_store_entry_add_label(sentry,
+                                metrics_format_label("subsys", "geoip"));
   metrics_store_entry_update(sentry, oom_stats_n_bytes_removed_geoip);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
-  metrics_store_entry_add_label(sentry, "subsys=hsdir");
+  metrics_store_entry_add_label(sentry,
+                                metrics_format_label("subsys", "hsdir"));
   metrics_store_entry_update(sentry, oom_stats_n_bytes_removed_hsdir);
 }
 
