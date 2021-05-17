@@ -1,0 +1,5 @@
+  o Minor bugfixes (control, sandbox):
+    - Allows the control command SAVECONF to succeed when the seccomp
+      sandbox is enabled. Makes SAVECONF keep only one backup file to
+      simplify implementation. Fixes bug 40317; bugfix on 0.2.5.4-alpha.
+      Patch by Daniel Pinto.
