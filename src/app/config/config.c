@@ -6827,7 +6827,7 @@ validate_data_directories(or_options_t *options)
 /** This string can change; it tries to give the reader an idea
  * that editing this file by hand is not a good plan. */
 #define GENERATED_FILE_COMMENT "# The old torrc file was renamed " \
-  "to torrc.orig.1 or similar, and Tor will ignore it"
+  "to torrc.orig.1, and Tor will ignore it"
 
 /** Save a configuration file for the configuration in <b>options</b>
  * into the file <b>fname</b>.  If the file already exists, and
@@ -6871,17 +6871,18 @@ write_configuration_file(const char *fname, const or_options_t *options)
                GENERATED_FILE_PREFIX, GENERATED_FILE_COMMENT, new_conf);
 
   if (rename_old) {
-    int i = 1;
     char *fn_tmp = NULL;
-    while (1) {
-      tor_asprintf(&fn_tmp, "%s.orig.%d", fname, i);
-      if (file_status(fn_tmp) == FN_NOENT)
-        break;
+    tor_asprintf(&fn_tmp, CONFIG_BACKUP_PATTERN, fname);
+    file_status_t fn_tmp_status = file_status(fn_tmp);
+    if (fn_tmp_status == FN_DIR || fn_tmp_status == FN_ERROR) {
+      log_warn(LD_CONFIG,
+               "Config backup file \"%s\" is not a file? Failing.", fn_tmp);
       tor_free(fn_tmp);
-      ++i;
+      goto err;
     }
+
     log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
-    if (tor_rename(fname, fn_tmp) < 0) {//XXXX sandbox doesn't allow
+    if (replace_file(fname, fn_tmp) < 0) {
       log_warn(LD_FS,
                "Couldn't rename configuration file \"%s\" to \"%s\": %s",
                fname, fn_tmp, strerror(errno));
