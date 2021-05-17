@@ -4943,6 +4943,7 @@ connection_is_listener(connection_t *conn)
       conn->type == CONN_TYPE_AP_NATD_LISTENER ||
       conn->type == CONN_TYPE_AP_HTTP_CONNECT_LISTENER ||
       conn->type == CONN_TYPE_DIR_LISTENER ||
+      conn->type == CONN_TYPE_METRICS_LISTENER ||
       conn->type == CONN_TYPE_CONTROL_LISTENER)
     return 1;
   return 0;
