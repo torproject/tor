@@ -1,0 +1,4 @@
+  o Minor bugfix (metrics port):
+    - Fix a bug that made tor try to re-bind() every 60 seconds on an already
+      open MetricsPort. Fixes bug 40370; bugfix on 0.4.5.1-alpha.
+
