@@ -731,7 +731,7 @@ rep_hist_downrate_old_runs(time_t now)
     return stability_last_downrated + STABILITY_INTERVAL;
 
   /* Okay, we should downrate the data.  By how much? */
-  while (stability_last_downrated + STABILITY_INTERVAL < now) {
+  while (stability_last_downrated + STABILITY_INTERVAL <= now) {
     stability_last_downrated += STABILITY_INTERVAL;
     alpha *= STABILITY_ALPHA;
   }
