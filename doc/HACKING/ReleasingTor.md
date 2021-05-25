@@ -110,7 +110,7 @@ new Tor release:
    note added to each section.  So in this case, once you have the items
    from the changes files copied together, don't use them to build a new
    changelog: instead, look up the corrected versions that were merged
-   into ChangeLog in the master branch, and use those.
+   into ChangeLog in the main branch, and use those.
 
    Add "backport from X.Y.Z" in the section header for these entries.
 
@@ -142,7 +142,7 @@ new Tor release:
    places, and commit.  Then merge `maint-0.?.x` into `release-0.?.x`.
 
    When you merge the maint branch forward to the next maint branch, or into
-   master, merge it with "-s ours" to avoid conflict with the version
+   main, merge it with "-s ours" to avoid conflict with the version
    bump.
 
 2. Make distcheck, put the tarball up in somewhere (how about your
@@ -222,13 +222,13 @@ $ git push origin tag tor-0.4.x.y-<status>
 
 1. If it's a stable release, bump the version number in the
    `maint-x.y.z` branch to "newversion-dev", and do a `merge -s ours`
-   merge to avoid taking that change into master.
+   merge to avoid taking that change into main.
 
 2. If there is a new `maint-x.y.z` branch, create a Travis CI cron job that
    builds the release every week. (It's ok to skip the weekly build if the
    branch was updated in the last 24 hours.)
 
 3. Forward-port the ChangeLog (and ReleaseNotes if appropriate) to the
-   master branch.
+   main branch.
 
 4. Keep an eye on the blog post, to moderate comments and answer questions.

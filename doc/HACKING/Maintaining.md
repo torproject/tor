@@ -7,7 +7,7 @@ The first section describes who is the current Tor maintainer and what are the
 responsibilities. Tor has one main single maintainer but does have many
 committers and subsystem maintainers.
 
-The second third section describes how the **alpha and master** branches are
+The second third section describes how the **alpha and main** branches are
 maintained and by whom.
 
 Finally, the last section describes how the **stable** branches are maintained
@@ -25,7 +25,7 @@ protocol design. Releasing Tor falls under their responsibility.
 
 ## Alpha and Master Branches
 
-The Tor repository always has at all times a **master** branch which contains
+The Tor repository always has at all times a **main** branch which contains
 the upstream ongoing development.
 
 It may also contain a branch for a released feature freezed version which is
@@ -37,7 +37,7 @@ Tor is separated into subsystems and some of those are maintained by other
 developers than the main maintainer. Those people have commit access to the
 code base but only commit (in most cases) into the subsystem they maintain.
 
-Upstream merges are restricted to the alpha and master branches. Subsystem
+Upstream merges are restricted to the alpha and main branches. Subsystem
 maintainers should never push a patch into a stable branch which is the
 responsibility of the [stable branch maintainer](#stable-branches).
 
@@ -69,7 +69,7 @@ maintain the following subsystems:
 These are the tasks of a subsystem maintainer:
 
 1. Regularly go over `merge_ready` tickets relevant to the related subsystem
-   and for the current alpha or development (master branch) Milestone.
+   and for the current alpha or development (main branch) Milestone.
 
 2. A subsystem maintainer is expected to contribute to any design changes
    (including proposals) or large patch set about the subsystem.
@@ -102,7 +102,7 @@ These are few important items to follow when merging code upstream:
 
 4. Tor uses the "merge forward" method, that is, if a patch applies to the
    alpha branch, it has to be merged there first and then merged forward
-   into master.
+   into main.
 
 5. Maintainer should always consult with the network team about any doubts,
    mis-understandings or unknowns of a patch. Final word will always go to the

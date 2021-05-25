@@ -87,17 +87,17 @@ they do not apply to security-related patch release versions.
 
 (Ideally, do this immediately after a release.)
 
-1. Start a new maint-x.y.z branch based on master, and a new
-   release-x.y.z branch based on master. They should have the same
+1. Start a new maint-x.y.z branch based on main, and a new
+   release-x.y.z branch based on main. They should have the same
    starting point.
 
-   Push both of these branches to the master git repository.
+   Push both of these branches to the canonical git repository.
 
-2. In master, change the version to "0.x.y.0-alpha-dev". Run the
+2. In the main branch, change the version to "0.x.y.0-alpha-dev". Run the
    update_versions.py script, and commit this version bump.
 
 3. Tag the version bump with "tor-0.x.y.0-alpha-dev". Push the tag
-   and master.
+   and main branch.
 
 4. Open tickets for connecting the new branches to various other
    places.  See section 2 above for a list of affected locations.
@@ -107,7 +107,7 @@ they do not apply to security-related patch release versions.
      target in the maint-x.y.z branch only.
    * Delete the file scripts/maint/practracker/.enable_practracker_in_hooks
      in the maint-x.y.z branch only.
-   * Merge to release-x.y.z, but do not forward-port to master.
+   * Merge to release-x.y.z, but do not forward-port to the main branch.
 
 6. Finally, make sure this document is up to date with our latest
    process.
