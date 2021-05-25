@@ -36,8 +36,8 @@ check_for_script_update() {
 }
 
 cur_branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$cur_branch" != "master" ]; then
-  echo "post-merge: Not a master branch. Skipping."
+if [ "$cur_branch" != "main" ]; then
+  echo "post-merge: Not a main branch. Skipping."
   exit 0
 fi
 

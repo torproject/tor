@@ -12,8 +12,8 @@ function usage()
   echo "       (default: run commands)"
   echo "   -t: test branch mode: create new branches from the commits checked"
   echo "       out in each maint directory. Call these branches prefix_035,"
-  echo "       prefix_040, ... , prefix_master."
-  echo "       (default: merge forward maint-*, release-*, and master)"
+  echo "       prefix_040, ... , prefix_main."
+  echo "       (default: merge forward maint-*, release-*, and main)"
   echo "   -u: in test branch mode, if a prefix_* branch already exists,"
   echo "       skip creating that branch. Use after a merge error, to"
   echo "       restart the merge forward at the first unmerged branch."
@@ -28,7 +28,7 @@ function usage()
   echo
   echo "   optional:"
   echo "   TOR_MASTER: the name of the directory containing the tor.git clone"
-  echo "       The tor master git directory is \$GIT_PATH/\$TOR_MASTER"
+  echo "       The primary tor git directory is \$GIT_PATH/\$TOR_MASTER"
   echo "       (default: tor; current: $TOR_MASTER_NAME)"
   echo "   TOR_WKT_NAME: the name of the directory containing the tor"
   echo "       worktrees. The tor worktrees are:"
@@ -45,7 +45,7 @@ function usage()
 
 # Where are all those git repositories?
 GIT_PATH=${TOR_FULL_GIT_PATH:-"FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"}
-# The tor master git repository directory from which all the worktree have
+# The main branch git repository directory from which all the worktree have
 # been created.
 TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 # The worktrees location (directory).
@@ -106,7 +106,7 @@ DRY_RUN=0
 
 # Controlled by the -t <test-branch-prefix> option. The test branch base
 # name option makes git-merge-forward.sh create new test branches:
-# <tbbn>_035, <tbbn>_040, ... , <tbbn>_master, and merge forward.
+# <tbbn>_035, <tbbn>_040, ... , <tbbn>_main, and merge forward.
 TEST_BRANCH_PREFIX=
 
 # Controlled by the -u option. The use existing option checks for existing

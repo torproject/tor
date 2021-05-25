@@ -2,9 +2,9 @@
 
 # git pre-push hook script to:
 # 0) Call the pre-commit hook, if it is available
-# 1) prevent "fixup!" and "squash!" commit from ending up in master, release-*
+# 1) prevent "fixup!" and "squash!" commit from ending up in main, release-*
 #    or maint-*
-# 2) Disallow pushing branches other than master, release-*
+# 2) Disallow pushing branches other than main, release-*
 #    and maint-* to origin (e.g. gitweb.torproject.org)
 #
 # To install this script, copy it into .git/hooks/pre-push path in your
@@ -39,7 +39,7 @@ remote_name=$(git remote --verbose | grep "$2" | awk '{print $1}' | head -n 1)
 
 
 ref_is_upstream_branch() {
-    if [ "$1" == "refs/heads/master" ] ||
+    if [ "$1" == "refs/heads/main" ] ||
         [[ "$1" == refs/heads/release-* ]] ||
         [[ "$1" == refs/heads/maint-* ]]; then
         return 1
@@ -54,8 +54,8 @@ do
         :
     else
         if [ "$remote_sha" = $z40 ]; then
-            # New branch, examine commits not in master
-            range="master...$local_sha"
+            # New branch, examine commits not in main
+            range="main...$local_sha"
         else
             # Update to existing branch, examine new commits
             range="$remote_sha..$local_sha"

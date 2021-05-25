@@ -21,10 +21,10 @@ function usage()
   echo "   -r: push to remote-name, rather than the default upstream remote."
   echo "       (default: $DEFAULT_UPSTREAM_REMOTE, current: $UPSTREAM_REMOTE)"
   echo "   -t: test branch mode: push test branches to remote-name. Pushes"
-  echo "       branches prefix_035, prefix_040,  ... , prefix_master."
-  echo "       (default: push maint-*, release-*, and master)"
+  echo "       branches prefix_035, prefix_040,  ... , prefix_main."
+  echo "       (default: push maint-*, release-*, and main)"
   echo "   -s: push branches whose tips match upstream maint, release, or"
-  echo "       master branches. The default is to skip these branches,"
+  echo "       main branches. The default is to skip these branches,"
   echo "       because they do not contain any new code. Use -s to test for"
   echo "       CI environment failures, using code that previously passed CI."
   echo "       (default: skip; current: $CURRENT_PUSH_SAME matching branches)"
@@ -45,7 +45,7 @@ function usage()
   echo "       (default: use the current directory for pushes;"
   echo "       current: $TOR_FULL_GIT_PATH)"
   echo "   TOR_MASTER: the name of the directory containing the tor.git clone"
-  echo "       The tor master git directory is \$GIT_PATH/\$TOR_MASTER"
+  echo "       The primary tor git directory is \$GIT_PATH/\$TOR_MASTER"
   echo "       (default: tor; current: $TOR_MASTER_NAME)"
   echo
   echo "   TOR_UPSTREAM_REMOTE_NAME: the default upstream remote."
@@ -55,9 +55,9 @@ function usage()
   echo "       Overridden by <git push options> after --."
   echo "       (default: git push --atomic; current: $GIT_PUSH)"
   echo "   TOR_PUSH_SAME: push branches whose tips match upstream maint,"
-  echo "       release, or master branches. Inverted by -s."
+  echo "       release, or main branches. Inverted by -s."
   echo "       (default: skip; current: $CURRENT_PUSH_SAME matching branches)"
-  echo "   TOR_PUSH_DELAY: pushes the master and maint branches separately,"
+  echo "   TOR_PUSH_DELAY: pushes the main and maint branches separately,"
   echo "       so that CI runs in a sensible order."
   echo "       (default: push all branches immediately; current: $PUSH_DELAY)"
   echo "   we recommend that you set these env vars in your ~/.profile"
@@ -71,7 +71,7 @@ set -e
 
 # Don't change this configuration - set the env vars in your .profile
 #
-# The tor master git repository directory from which all the worktree have
+# The primary tor git repository directory from which all the worktree have
 # been created.
 TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 # Which directory do we push from?
@@ -87,7 +87,7 @@ UPSTREAM_REMOTE=${DEFAULT_UPSTREAM_REMOTE}
 # Add a delay between pushes, so CI runs on the most important branches first
 PUSH_DELAY=${TOR_PUSH_DELAY:-0}
 # Push (1) or skip (0) test branches that are the same as an upstream
-# maint/master branch. Push if you are testing that the CI environment still
+# maint/main branch. Push if you are testing that the CI environment still
 # works on old code, skip if you are testing new code in the branch.
 # Default: skip unchanged branches.
 # Inverted by the -s option.
@@ -99,7 +99,7 @@ PUSH_SAME=${TOR_PUSH_SAME:-0}
 
 # Controlled by the -t <test-branch-prefix> option. The test branch prefix
 # option makes git-merge-forward.sh create new test branches:
-# <tbp>_035, <tbp>_040, ... , <tbp>_master, and merge each branch forward into
+# <tbp>_035, <tbp>_040, ... , <tbp>_main, and merge each branch forward into
 # the next one.
 TEST_BRANCH_PREFIX=
 
@@ -213,7 +213,7 @@ if [ "$TEST_BRANCH_PREFIX" ]; then
   # upstream branches (they have already been tested)
   UPSTREAM_SKIP_SAME_AS="$UPSTREAM_BRANCHES $DEFAULT_UPSTREAM_BRANCHES"
 else
-  # Skip the local maint-*, release-*, master branches that are the same as the
+  # Skip the local maint-*, release-*, main branches that are the same as the
   # current upstream branches, but ignore the default upstream
   # (we want to update a non-default remote, even if it matches the default)
   UPSTREAM_SKIP_SAME_AS="$UPSTREAM_BRANCHES"
@@ -264,8 +264,8 @@ if [ "$PUSH_DELAY" -le 0 ]; then
 else
   # Push the branches in optimal CI order, with a delay between each push
   PUSH_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | sort -V)
-  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep master) \
-      || true # Skipped master branch
+  MASTER_BRANCH=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep main$) \
+      || true # Skipped main branch
   if [ -z "$TEST_BRANCH_PREFIX" ]; then
     MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep maint) \
         || true # Skipped all maint branches
@@ -273,7 +273,7 @@ else
       tr "\\n" " ") || true # Skipped all release branches
   else
     # Actually test branches based on maint branches
-    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep -v master) \
+    MAINT_BRANCHES=$(echo "$PUSH_BRANCHES" | tr " " "\\n" | grep -v main$) \
         || true # Skipped all maint test branches
     # No release branches
     RELEASE_BRANCHES=
@@ -295,9 +295,9 @@ else
   # shellcheck disable=SC2086
   for b in $MASTER_BRANCH $MAINT_BRANCHES; do
     $GIT_PUSH "$@" "$UPSTREAM_REMOTE" "$b"
-    # If we are pushing more than one branch, delay.
-    # In the unlikely scenario where we are pushing maint without master,
-    # or maint without release, there may be an extra delay
+    # If we are pushing more than one branch, delay.  In the unlikely scenario
+    # where we are pushing maint branches without the main branch, or maint
+    # without release, there may be an extra delay
     if [ "$MAINT_BRANCHES" ] || [ "$RELEASE_BRANCHES" ]; then
       sleep "$PUSH_DELAY"
     fi

@@ -22,7 +22,7 @@ function usage()
   echo
   echo "   optional:"
   echo "   TOR_MASTER: the name of the directory containing the tor.git clone"
-  echo "       The tor master git directory is \$GIT_PATH/\$TOR_MASTER"
+  echo "       The primary tor git directory is \$GIT_PATH/\$TOR_MASTER"
   echo "       (default: tor; current: $TOR_MASTER_NAME)"
   echo "   TOR_WKT_NAME: the name of the directory containing the tor"
   echo "       worktrees. The tor worktrees are:"
@@ -65,7 +65,7 @@ function usage()
 
 # Where are all those git repositories?
 GIT_PATH=${TOR_FULL_GIT_PATH:-"FULL_PATH_TO_GIT_REPOSITORY_DIRECTORY"}
-# The tor master git repository directory from which all the worktree have
+# The primary tor git repository directory from which all the worktree have
 # been created.
 TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 # The worktrees location (directory).
@@ -102,7 +102,7 @@ set -e
 eval "$(git-list-tor-branches.sh -b)"
 set +e
 
-# The master branch path has to be the main repository thus contains the
+# The main branch path has to be the main repository thus contains the
 # origin that will be used to fetch the updates. All the worktrees are created
 # from that repository.
 ORIGIN_PATH="$GIT_PATH/$TOR_MASTER_NAME"
@@ -519,11 +519,11 @@ for ((i=0; i<COUNT; i++)); do
   repo_path=${!WORKTREE[$i]:1:1}
 
   printf "%s Handling branch %s\\n" "$MARKER" "${BYEL}$branch${CNRM}"
-  # We cloned the repository, and master is the default branch
-  if [ "$branch" = "master" ]; then
-    if [ "$TOR_MASTER_NAME" != "master" ]; then
-      # Set up a master link in the worktree directory
-      make_symlink "$repo_path" "$GIT_PATH/$TOR_WKT_NAME/master"
+  # We cloned the repository, and main is the default branch
+  if [ "$branch" = "main" ]; then
+    if [ "$TOR_MASTER_NAME" != "main" ]; then
+      # Set up a main branch link in the worktree directory
+      make_symlink "$repo_path" "$GIT_PATH/$TOR_WKT_NAME/main"
     fi
   else
     # git makes worktree directories if they don't exist

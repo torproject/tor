@@ -73,8 +73,8 @@ branch() {
 
     # location: where the branch can be found.
 
-    if [[ "$brname" == "master" ]]; then
-        suffix="_master"
+    if [[ "$brname" == "main" ]]; then
+        suffix="_main"
         location="\$GIT_PATH/\$TOR_MASTER_NAME"
     elif [[ "$brname" =~ ^maint- ]]; then
         suffix="_${brname_nodots#maint-}"
@@ -148,6 +148,6 @@ branch release-0.4.5
 branch maint-0.4.6
 branch release-0.4.6
 
-branch master
+branch main
 
 finish
