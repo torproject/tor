@@ -1075,7 +1075,7 @@ static const control_cmd_syntax_t redirectstream_syntax = {
   .max_args = UINT_MAX, // XXX should be 3.
 };
 
-/** Called when we receive a REDIRECTSTERAM command.  Try to change the target
+/** Called when we receive a REDIRECTSTREAM command.  Try to change the target
  * address of the named AP stream, and report success or failure. */
 static int
 handle_control_redirectstream(control_connection_t *conn,
