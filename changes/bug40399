@@ -1,0 +1,5 @@
+  o Minor features (compatibility):
+    - Remove an assertion function related to TLS renegotiation.
+      It was used nowhere outside the unit tests, and it was breaking
+      compilation with recent alpha releases of OpenSSL 3.0.0.
+      Closes ticket 40399.
