@@ -2263,18 +2263,23 @@ handle_response_fetch_consensus(dir_connection_t *conn,
 
   if (looks_like_a_consensus_diff(body, body_len)) {
     /* First find our previous consensus. Maybe it's in ram, maybe not. */
-    cached_dir_t *cd = dirserv_get_consensus(flavname);
+    cached_dir_t *cd = NULL;
     const char *consensus_body = NULL;
     size_t consensus_body_len;
     tor_mmap_t *mapped_consensus = NULL;
-    if (cd) {
-      consensus_body = cd->dir;
-      consensus_body_len = cd->dir_len;
+
+    /* We prefer the mmap'd version over the cached_dir_t version,
+     * since that matches the logic we used when we picked a consensus
+     * back in dir_consensus_request_set_additional_headers. */
+    mapped_consensus = networkstatus_map_cached_consensus(flavname);
+    if (mapped_consensus) {
+      consensus_body = mapped_consensus->data;
+      consensus_body_len = mapped_consensus->size;
     } else {
-      mapped_consensus = networkstatus_map_cached_consensus(flavname);
-      if (mapped_consensus) {
-        consensus_body = mapped_consensus->data;
-        consensus_body_len = mapped_consensus->size;
+      cd = dirserv_get_consensus(flavname);
+      if (cd) {
+        consensus_body = cd->dir;
+        consensus_body_len = cd->dir_len;
       }
     }
     if (!consensus_body) {
