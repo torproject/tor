@@ -2019,7 +2019,7 @@ cpath_build_state_to_crn_ipv6_extend_flag(const cpath_build_state_t *state,
 }
 
 /** Decide a suitable length for circ's cpath, and pick an exit
- * router (or use <b>exit</b> if provided). Store these in the
+ * router (or use <b>exit_ei</b> if provided). Store these in the
  * cpath.
  *
  * If <b>is_hs_v3_rp_circuit</b> is set, then this exit should be suitable to
@@ -2072,7 +2072,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
   return 0;
 }
 
-/** Give <b>circ</b> a new exit destination to <b>exit</b>, and add a
+/** Give <b>circ</b> a new exit destination to <b>exit_ei</b>, and add a
  * hop to the cpath reflecting this. Don't send the next extend cell --
  * the caller will do this if it wants to.
  */
@@ -2113,8 +2113,6 @@ circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
     circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
     return -1;
   }
-
-  // XXX: Should cannibalized circuits be dirty or not? Not easy to say..
 
   return 0;
 }
