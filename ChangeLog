@@ -1,4 +1,4 @@
-Changes in version 0.4.6.4-rc - 2021-05-??
+Changes in version 0.4.6.4-rc - 2021-05-28
   Tor 0.4.6.4-rc fixes a few bugs from previous releases. This, we hope,
   the final release candidate in its series: unless major new issues are
   found, the next release will be stable.
