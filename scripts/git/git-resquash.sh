@@ -7,7 +7,7 @@ set -e
 
 PARENT="$1"
 
-if test "x$PARENT" = "x"; then
+if test "$PARENT" = ""; then
     echo "You must specify the parent branch."
     exit 1
 fi
@@ -32,12 +32,12 @@ else
     USE_KEEP_BASE=1
 fi
 
-if test "x$USE_KEEP_BASE" = "x1" ; then
+if test "$USE_KEEP_BASE" = "1" ; then
     exec git rebase -i --autosquash --keep-base "${PARENT}"
 else
     REV=$(git log --reverse --format='%H' "${PARENT}..HEAD" | head -1)
 
-    if test "x${REV}" = "x"; then
+    if test "${REV}" = ""; then
         echo "No changes here since ${PARENT}"
         exit 1
     fi
