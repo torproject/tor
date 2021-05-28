@@ -1,3 +1,39 @@
+Changes in version 0.4.6.4-rc - 2021-05-28
+  Tor 0.4.6.4-rc fixes a few bugs from previous releases. This, we hope,
+  the final release candidate in its series: unless major new issues are
+  found, the next release will be stable.
+
+  o Minor features (compatibility):
+    - Remove an assertion function related to TLS renegotiation. It was
+      used nowhere outside the unit tests, and it was breaking
+      compilation with recent alpha releases of OpenSSL 3.0.0. Closes
+      ticket 40399.
+
+  o Minor bugfixes (consensus handling):
+    - Avoid a set of bugs that could be caused by inconsistently
+      preferring an out-of-date consensus stored in a stale directory
+      cache over a more recent one stored on disk as the latest
+      consensus. Fixes bug 40375; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (control, sandbox):
+    - Allow the control command SAVECONF to succeed when the seccomp
+      sandbox is enabled, and make SAVECONF keep only one backup file to
+      simplify implementation. Previously SAVECONF allowed a large
+      number of backup files, which made it incompatible with the
+      sandbox. Fixes bug 40317; bugfix on 0.2.5.4-alpha. Patch by
+      Daniel Pinto.
+
+  o Minor bugfixes (metrics port):
+    - Fix a bug that made tor try to re-bind() on an already open
+      MetricsPort every 60 seconds. Fixes bug 40370; bugfix
+      on 0.4.5.1-alpha.
+
+  o Removed features:
+    - Remove unneeded code for parsing private keys in directory
+      documents. This code was only used for client authentication in v2
+      onion services, which are now unsupported. Closes ticket 40374.
+
+
 Changes in version 0.4.6.3-rc - 2021-05-10
   Tor 0.4.6.3-rc is the first release candidate in its series. It fixes
   a few small bugs from previous versions, and adds a better error
