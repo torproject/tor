@@ -1,0 +1,3 @@
+  o Minor bugfix (hidden service v3):
+    - Remove intro points from service descriptor list after building circuit
+      times out. Fixes bug 31561; bugfix on 0.3.2.1-alpha.
