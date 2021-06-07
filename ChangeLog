@@ -1,3 +1,21 @@
+Changes in versoin 0.3.5.15 - 2021-06-1?
+  BLURB HERE
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.6.3-rc):
+    - Fix an indentation problem that led to a warning from GCC 11.1.1.
+      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
+
+  o Minor features (compatibility, backport from 0.4.6.4-rc):
+    - Remove an assertion function related to TLS renegotiation. It was
+      used nowhere outside the unit tests, and it was breaking
+      compilation with recent alpha releases of OpenSSL 3.0.0. Closes
+      ticket 40399.
+
+  o Minor features (fallback directory list, backport from 0.4.6.2-alpha):
+    - Regenerate the list of fallback directories to contain a new set
+      of 200 relays. Closes ticket 40265.
+
+
 Changes in version 0.3.5.14 - 2021-03-16
   Tor 0.3.5.14 backports fixes for two important denial-of-service bugs
   in earlier versions of Tor.
