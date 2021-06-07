@@ -1,3 +1,26 @@
+Changes in version 0.4.5.9 - 2021-06-1?
+  BLURB HERE
+
+  o Minor features (compatibility, backport from 0.4.6.4-rc):
+    - Remove an assertion function related to TLS renegotiation. It was
+      used nowhere outside the unit tests, and it was breaking
+      compilation with recent alpha releases of OpenSSL 3.0.0. Closes
+      ticket 40399.
+
+  o Minor bugfixes (control, sandbox, backport from 0.4.6.4-rc):
+    - Allow the control command SAVECONF to succeed when the seccomp
+      sandbox is enabled, and make SAVECONF keep only one backup file to
+      simplify implementation. Previously SAVECONF allowed a large
+      number of backup files, which made it incompatible with the
+      sandbox. Fixes bug 40317; bugfix on 0.2.5.4-alpha. Patch by
+      Daniel Pinto.
+
+  o Minor bugfixes (metrics port, backport from 0.4.6.4-rc):
+    - Fix a bug that made tor try to re-bind() on an already open
+      MetricsPort every 60 seconds. Fixes bug 40370; bugfix
+      on 0.4.5.1-alpha.
+
+
 Changes in version 0.4.5.8 - 2021-05-10
   Tor 0.4.5.8 fixes several bugs in earlier version, backporting fixes
   from the 0.4.6.x series.
