@@ -1,3 +1,14 @@
+# CHECKLIST
+
+Here's a summary checklist, with the things that Nick messes up most often.
+
+Did you:
+
+ * [ ] Copy the ChangeLog to the ReleaseNotes?
+ * [ ] Check that the new versions got approved?
+ * [ ] Check the release date in the ChangeLog?
+ * [ ] Update the GeoIP file?
+
 # Putting out a new release
 
 Here are the steps that the maintainer should take when putting out a
