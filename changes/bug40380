@@ -1,3 +1,0 @@
-  o Minor bugfixes (compiler warnings):
-    - Fix an indentation problem that led to a warning from  GCC 11.1.1.
-      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
