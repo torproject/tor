@@ -2,6 +2,68 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.5.8 - 2021-05-10
+  Tor 0.4.5.8 fixes several bugs in earlier version, backporting fixes
+  from the 0.4.6.x series.
+
+  o Minor features (compatibility, Linux seccomp sandbox, backport from 0.4.6.3-rc):
+    - Add a workaround to enable the Linux sandbox to work correctly
+      with Glibc 2.33. This version of Glibc has started using the
+      fstatat() system call, which previously our sandbox did not allow.
+      Closes ticket 40382; see the ticket for a discussion of trade-offs.
+
+  o Minor features (compilation, backport from 0.4.6.3-rc):
+    - Make the autoconf script build correctly with autoconf versions
+      2.70 and later. Closes part of ticket 40335.
+
+  o Minor features (fallback directory list, backport from 0.4.6.2-alpha):
+    - Regenerate the list of fallback directories to contain a new set
+      of 200 relays. Closes ticket 40265.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2021/05/07.
+
+  o Minor features (onion services):
+    - Add warning message when connecting to now deprecated v2 onion
+      services. As announced, Tor 0.4.5.x is the last series that will
+      support v2 onions. Closes ticket 40373.
+
+  o Minor bugfixes (bridge, pluggable transport, backport from 0.4.6.2-alpha):
+    - Fix a regression that made it impossible start Tor using a bridge
+      line with a transport name and no fingerprint. Fixes bug 40360;
+      bugfix on 0.4.5.4-rc.
+
+  o Minor bugfixes (build, cross-compilation, backport from 0.4.6.3-rc):
+    - Allow a custom "ar" for cross-compilation. Our previous build
+      script had used the $AR environment variable in most places, but
+      it missed one. Fixes bug 40369; bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (channel, DoS, backport from 0.4.6.2-alpha):
+    - Fix a non-fatal BUG() message due to a too-early free of a string,
+      when listing a client connection from the DoS defenses subsystem.
+      Fixes bug 40345; bugfix on 0.4.3.4-rc.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.6.3-rc):
+    - Fix an indentation problem that led to a warning from GCC 11.1.1.
+      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
+
+  o Minor bugfixes (controller, backport from 0.4.6.1-alpha):
+    - Fix a "BUG" warning that would appear when a controller chooses
+      the first hop for a circuit, and that circuit completes. Fixes bug
+      40285; bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (onion service, client, memory leak, backport from 0.4.6.3-rc):
+    - Fix a bug where an expired cached descriptor could get overwritten
+      with a new one without freeing it, leading to a memory leak. Fixes
+      bug 40356; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (testing, BSD, backport from 0.4.6.2-alpha):
+    - Fix pattern-matching errors when patterns expand to invalid paths
+      on BSD systems. Fixes bug 40318; bugfix on 0.4.5.1-alpha. Patch by
+      Daniel Pinto.
+
+
 Changes in version 0.3.5.14 - 2021-03-16
   Tor 0.3.5.14 backports fixes for two important denial-of-service bugs
   in earlier versions of Tor.
