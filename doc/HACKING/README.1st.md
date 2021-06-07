@@ -36,6 +36,13 @@ For the latest version of the code, get a copy of git, and
 $ git clone https://git.torproject.org/git/tor
 ```
 
+For a copy of Tor's original design paper, see
+[here](https://spec.torproject.org/tor-design). Note that Tor has changed in
+many ways since 2004.
+
+For a large collection of security papers, many of which are related to Tor,
+see [Anonbib's Selected Papers in Anonymity](https://www.freehaven.net/anonbib/).
+
 ## Stay in touch
 
 We talk about Tor on the `tor-talk` mailing list.  Design proposals and
