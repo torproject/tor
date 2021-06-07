@@ -1,3 +1,22 @@
+Changes in version 0.4.6.5 - 2021-06-1?
+  Tor 0.4.6.5 is the first stable release in its series. The 0.4.6.x
+  series includes BLAH BLAH BLAH WRITEME.
+
+  This release also includes security fixes for several security issues,
+  including a denial-of-service attack against onion service clients,
+  and another denial-of-service attack against relays. Everybody should
+  upgrade to one of 0.3.5.15, 0.4.4.9, 0.4.5.9, or 0.4.6.5.
+
+  Below are the changes since 0.4.6.4-rc. For a complete list of changes
+  since 0.4.5.8, see the ReleaseNotes file.
+
+  o Minor features (logging, diagnostic):
+    - Log decompression failures at a higher severity level, since they
+      can help provide missing context for other warning messages. We
+      rate-limit these messages, to avoid flooding the logs if they
+      begin to occur frequently. Closes ticket 40175.
+
+
 Changes in version 0.4.6.4-rc - 2021-05-28
   Tor 0.4.6.4-rc fixes a few bugs from previous releases. This, we hope,
   the final release candidate in its series: unless major new issues are
