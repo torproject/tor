@@ -1,5 +1,0 @@
-  o Minor features (logging, diagnostic):
-    - Log decompression failures at a higher severity level, since they
-      can help provide missing context for other warning messages.
-      We rate-limit these messages, to avoid flooding the logs if they
-      begin to occur frequently. Closes ticket 40175.
