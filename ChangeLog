@@ -1,3 +1,30 @@
+Changes in version 0.4.4.9 - 2021-06-1?
+  BLURB HERE.
+
+  Note that the scheduled end-of-life date for the Tor 0.4.4.x series is
+  June 15. This is therefore the last release in its series. Everybody
+  still running 0.4.4.x should plan to upgrade to 0.4.5.x or later.
+
+  o Minor features (compatibility, backport from 0.4.6.4-rc):
+    - Remove an assertion function related to TLS renegotiation. It was
+      used nowhere outside the unit tests, and it was breaking
+      compilation with recent alpha releases of OpenSSL 3.0.0. Closes
+      ticket 40399.
+
+  o Minor features (fallback directory list, backport from 0.4.6.2-alpha):
+    - Regenerate the list of fallback directories to contain a new set
+      of 200 relays. Closes ticket 40265.
+
+  o Minor bugfixes (channel, DoS, backport from 0.4.6.2-alpha):
+    - Fix a non-fatal BUG() message due to a too-early free of a string,
+      when listing a client connection from the DoS defenses subsystem.
+      Fixes bug 40345; bugfix on 0.4.3.4-rc.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.6.3-rc):
+    - Fix an indentation problem that led to a warning from GCC 11.1.1.
+      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
+
+
 Changes in version 0.4.4.8 - 2021-03-16
   Tor 0.4.4.8 backports fixes for two important denial-of-service bugs
   in earlier versions of Tor.
