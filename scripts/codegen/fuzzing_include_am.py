@@ -11,11 +11,10 @@ FUZZERS = """
 	diff
 	diff-apply
 	extrainfo
-	hsdescv2
 	hsdescv3
+	hsdescv3-inner
 	http
 	http-connect
-	iptsv2
 	microdesc
 	socks
 	strops

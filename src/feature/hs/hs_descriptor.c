@@ -1639,10 +1639,10 @@ desc_decrypt_superencrypted(const hs_descriptor_t *desc, char **decrypted_out)
  * decrypted_out which contains the encrypted layer of the descriptor.
  * Return the length of decrypted_out on success else 0 is returned and
  * decrypted_out is set to NULL. */
-static size_t
-desc_decrypt_encrypted(const hs_descriptor_t *desc,
-                       const curve25519_secret_key_t *client_auth_sk,
-                       char **decrypted_out)
+MOCK_IMPL(STATIC size_t,
+desc_decrypt_encrypted,(const hs_descriptor_t *desc,
+                        const curve25519_secret_key_t *client_auth_sk,
+                        char **decrypted_out))
 {
   size_t encrypted_len = 0;
   char *encrypted_plaintext = NULL;
@@ -2259,7 +2259,7 @@ desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
 
 /** Decode the version 3 encrypted section of the given descriptor desc. The
  * desc_encrypted_out will be populated with the decoded data. */
-static hs_desc_decode_status_t
+STATIC hs_desc_decode_status_t
 desc_decode_encrypted_v3(const hs_descriptor_t *desc,
                          const curve25519_secret_key_t *client_auth_sk,
                          hs_desc_encrypted_data_t *desc_encrypted_out)
