@@ -11,11 +11,9 @@ FUZZERS = """
 	diff
 	diff-apply
 	extrainfo
-	hsdescv2
 	hsdescv3
 	http
 	http-connect
-	iptsv2
 	microdesc
 	socks
 	strops
@@ -47,11 +45,10 @@ oss-fuzz-prereqs: \
 noinst_HEADERS += \
 	src/test/fuzz/fuzzing.h
 
-LIBFUZZER = -lFuzzer
 LIBFUZZER_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
 LIBFUZZER_CFLAGS = $(FUZZING_CFLAGS)
-LIBFUZZER_LDFLAG = $(FUZZING_LDFLAG)
-LIBFUZZER_LIBS = $(FUZZING_LIBS) $(LIBFUZZER) -lstdc++
+LIBFUZZER_LDFLAG = $(FUZZING_LDFLAG) -fsanitize=fuzzer
+LIBFUZZER_LIBS = $(FUZZING_LIBS) -lstdc++
 
 LIBOSS_FUZZ_CPPFLAGS = $(FUZZING_CPPFLAGS) -DLLVM_FUZZ
 LIBOSS_FUZZ_CFLAGS = $(FUZZING_CFLAGS)
