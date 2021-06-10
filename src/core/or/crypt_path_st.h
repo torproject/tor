@@ -29,6 +29,8 @@ struct onion_handshake_state_t {
   } u;
 };
 
+struct congestion_control_t;
+
 /** Macro to encapsulate private members of a struct.
  *
  *  Renames 'x' to 'x_crypt_path_private_field'.
@@ -79,6 +81,9 @@ struct crypt_path_t {
                        * at this step? */
   int deliver_window; /**< How many cells are we willing to deliver originating
                        * at this step? */
+
+  /** Congestion control info */
+  struct congestion_control_t *ccontrol;
 
   /*********************** Private members ****************************/
 
