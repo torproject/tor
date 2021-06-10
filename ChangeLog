@@ -1,5 +1,8 @@
-Changes in version 0.4.5.9 - 2021-06-1?
-  BLURB HERE
+Changes in version 0.4.5.9 - 2021-06-14
+  Tor 0.4.5.9 fixes several security issues, including a
+  denial-of-service attack against onion service clients, and another
+  denial-of-service attack against relays. Everybody should upgrade to
+  one of 0.3.5.15, 0.4.4.9, 0.4.5.9, or 0.4.6.5.
 
   o Major bugfixes (security, backport from 0.4.6.5):
     - Don't allow relays to spoof RELAY_END or RELAY_RESOLVED cell on
