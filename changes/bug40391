@@ -1,0 +1,9 @@
+  o Major bugfixes (security):
+    - Resist a hashtable-based CPU denial-of-service attack against
+      relays. Previously we used a naive unkeyed hash function to look up
+      circuits in a circuitmux object. An attacker could exploit this to
+      construct circuits with chosen circuit IDs in order to try to create
+      collisions and make the hash table inefficient.  Now we use a SipHash
+      construction for this hash table instead. Fixes bug 40391; bugfix on
+      0.2.4.4-alpha. This issue is also tracked as TROVE-2021-005.
+      Reported by Jann Horn from Google's Project Zero.
