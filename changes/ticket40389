@@ -1,3 +1,0 @@
-  o Major bugfixes (relay, TROVE):
-    - Don't allow entry or middle relays to spoof RELAY_END or RELAY_RESOLVED
-      cell on half-closed streams. Fixes bug 40389; bugfix on 0.3.5.1-alpha.
