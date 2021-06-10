@@ -1,8 +1,0 @@
-  o Major bugfixes (security, defense-in-depth):
-    - Detect a wider variety of failure conditions from the OpenSSL RNG
-      code. Previously, we would detect errors from a missing RNG
-      implementation, but not failures from the RNG code itself.
-      Fortunately, it appears those failures do not happen in practice
-      when Tor is using OpenSSL's default RNG implementation.
-      Fixes bug 40390; bugfix on 0.2.8.1-alpha. This issue is also tracked as
-      TROVE-2021-004. Reported by Jann Horn at Google's Project Zero.
