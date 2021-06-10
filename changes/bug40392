@@ -1,4 +1,0 @@
-  o Major bugfixes (security, denial of service, onion services):
-  - Fix an out-of-bounds memory access in v3 descriptor parsing. Fixes bug
-    40392; bugfix on 0.3.0.1-alpha. This issue is also tracked as
-    TROVE-2021-006. Reported by Sergei Glazunov from Google's Project Zero.
