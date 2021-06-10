@@ -2,8 +2,17 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-Changes in version 0.4.6.5 - 2021-06-1?
-  COPY BLURB HERE
+Changes in version 0.4.6.5 - 2021-06-14
+  Tor 0.4.6.5 is the first stable release in its series. The 0.4.6.x
+  series includes numerous features and bugfixes, including a significant
+  improvement to our circuit timeout algorithm that should improve
+  observed client performance, and a way for relays to report when they are
+  overloaded.
+
+  This release also includes security fixes for several security issues,
+  including a denial-of-service attack against onion service clients,
+  and another denial-of-service attack against relays. Everybody should
+  upgrade to one of 0.3.5.15, 0.4.4.9, 0.4.5.9, or 0.4.6.5.
 
   Below are the changes since 0.4.5.8. For a list of changes since
   0.4.6.4-rc, see the ChangeLog file.

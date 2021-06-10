@@ -1,6 +1,9 @@
-Changes in version 0.4.6.5 - 2021-06-1?
+Changes in version 0.4.6.5 - 2021-06-14
   Tor 0.4.6.5 is the first stable release in its series. The 0.4.6.x
-  series includes BLAH BLAH BLAH WRITEME.
+  series includes numerous features and bugfixes, including a significant
+  improvement to our circuit timeout algorithm that should improve
+  observed client performance, and a way for relays to report when they are
+  overloaded.
 
   This release also includes security fixes for several security issues,
   including a denial-of-service attack against onion service clients,
