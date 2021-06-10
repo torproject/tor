@@ -525,8 +525,8 @@ crypto_rand_unmocked(char *to, size_t n)
   /* We consider a PRNG failure non-survivable. Let's assert so that we get a
    * stack trace about where it happened.
    */
-  tor_assert(r >= 0);
-#endif /* defined(ENABLE_NSS) */
+  tor_assert(r == 1);
+#endif
 }
 
 /**
