@@ -1735,17 +1735,9 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
       if (!conn) {
         if (CIRCUIT_IS_ORIGIN(circ)) {
           origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-<<<<<<< HEAD
-          if (connection_half_edge_is_valid_end(ocirc->half_streams,
-                                                rh->stream_id)) {
-||||||| d71bf986b4faf7
-          if (connection_half_edge_is_valid_end(ocirc->half_streams,
-                                                rh.stream_id)) {
-=======
           if (relay_crypt_from_last_hop(ocirc, layer_hint) &&
               connection_half_edge_is_valid_end(ocirc->half_streams,
-                                                rh.stream_id)) {
->>>>>>> maint-0.3.5
+                                                rh->stream_id)) {
 
             circuit_read_valid_data(ocirc, rh->length);
             log_info(domain,
@@ -1954,20 +1946,10 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
 
       if (CIRCUIT_IS_ORIGIN(circ)) {
         origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-<<<<<<< HEAD
-        if (connection_half_edge_is_valid_resolved(ocirc->half_streams,
-                                                    rh->stream_id)) {
-          circuit_read_valid_data(ocirc, rh->length);
-||||||| d71bf986b4faf7
-        if (connection_half_edge_is_valid_resolved(ocirc->half_streams,
-                                                    rh.stream_id)) {
-          circuit_read_valid_data(ocirc, rh.length);
-=======
         if (relay_crypt_from_last_hop(ocirc, layer_hint) &&
             connection_half_edge_is_valid_resolved(ocirc->half_streams,
-                                                    rh.stream_id)) {
-          circuit_read_valid_data(ocirc, rh.length);
->>>>>>> maint-0.3.5
+                                                    rh->stream_id)) {
+          circuit_read_valid_data(ocirc, rh->length);
           log_info(domain,
                    "resolved cell on circ %u valid on half-closed "
                    "stream id %d", ocirc->global_identifier, rh->stream_id);
