@@ -344,9 +344,18 @@ STATIC hs_desc_decode_status_t desc_decode_encrypted_v3(
                          const curve25519_secret_key_t *client_auth_sk,
                          hs_desc_encrypted_data_t *desc_encrypted_out);
 
+STATIC hs_desc_decode_status_t
+desc_decode_superencrypted_v3(const hs_descriptor_t *desc,
+                              hs_desc_superencrypted_data_t *
+                              desc_superencrypted_out);
+
 MOCK_DECL(STATIC size_t, desc_decrypt_encrypted,(
                         const hs_descriptor_t *desc,
                         const curve25519_secret_key_t *client_auth_sk,
+                        char **decrypted_out));
+
+MOCK_DECL(STATIC size_t, desc_decrypt_superencrypted,(
+                        const hs_descriptor_t *desc,
                         char **decrypted_out));
 
 #endif /* defined(HS_DESCRIPTOR_PRIVATE) */
