@@ -97,6 +97,7 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/socks_request_st.h"
 #include "core/or/sendme.h"
+#include "core/or/congestion_control_common.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -1574,6 +1575,7 @@ process_sendme_cell(const relay_header_t *rh, const cell_t *cell,
   }
 
   /* Stream level SENDME cell. */
+  // TODO: Turn this off for cc_alg=1,2,3; use XON/XOFF instead
   ret = sendme_process_stream_level(conn, circ, rh->length);
   if (ret < 0) {
     /* Means we need to close the circuit with reason ret. */
@@ -2091,6 +2093,7 @@ void
 circuit_reset_sendme_randomness(circuit_t *circ)
 {
   circ->have_sent_sufficiently_random_cell = 0;
+  // XXX: do we need to change this check for congestion control?
   circ->send_randomness_after_n_cells = CIRCWINDOW_INCREMENT / 2 +
     crypto_fast_rng_get_uint(get_thread_fast_rng(), CIRCWINDOW_INCREMENT / 2);
 }
@@ -2350,7 +2353,8 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   /* How many cells do we have space for?  It will be the minimum of
    * the number needed to exhaust the package window, and the minimum
    * needed to fill the cell queue. */
-  max_to_package = circ->package_window;
+
+  max_to_package = congestion_control_get_package_window(circ, layer_hint);
   if (CIRCUIT_IS_ORIGIN(circ)) {
     cells_on_queue = circ->n_chan_cells.n;
   } else {
@@ -2495,7 +2499,7 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     log_debug(domain,"considering circ->package_window %d",
               circ->package_window);
-    if (circ->package_window <= 0) {
+    if (congestion_control_get_package_window(circ, layer_hint) <= 0) {
       log_debug(domain,"yes, not-at-origin. stopped.");
       for (conn = or_circ->n_streams; conn; conn=conn->next_stream)
         connection_stop_reading(TO_CONN(conn));
@@ -2506,7 +2510,7 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
   /* else, layer hint is defined, use it */
   log_debug(domain,"considering layer_hint->package_window %d",
             layer_hint->package_window);
-  if (layer_hint->package_window <= 0) {
+  if (congestion_control_get_package_window(circ, layer_hint) <= 0) {
     log_debug(domain,"yes, at-origin. stopped.");
     for (conn = TO_ORIGIN_CIRCUIT(circ)->p_streams; conn;
          conn=conn->next_stream) {
