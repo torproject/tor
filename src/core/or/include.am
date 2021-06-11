@@ -35,7 +35,10 @@ LIBTOR_APP_A_SOURCES += 				\
 	src/core/or/scheduler_kist.c		\
 	src/core/or/scheduler_vanilla.c		\
 	src/core/or/sendme.c			\
-	src/core/or/sendme_common.c			\
+	src/core/or/congestion_control_common.c			\
+	src/core/or/congestion_control_vegas.c			\
+	src/core/or/congestion_control_nola.c			\
+	src/core/or/congestion_control_westwood.c			\
 	src/core/or/status.c			\
 	src/core/or/versions.c
 
@@ -58,6 +61,7 @@ noinst_HEADERS +=					\
 	src/core/or/circuitpadding_machines.h		\
 	src/core/or/circuituse.h			\
 	src/core/or/command.h				\
+	src/core/or/congestion_control_st.h				\
 	src/core/or/connection_edge.h			\
 	src/core/or/connection_or.h			\
 	src/core/or/connection_st.h			\
@@ -98,7 +102,10 @@ noinst_HEADERS +=					\
 	src/core/or/relay_crypto_st.h			\
 	src/core/or/scheduler.h				\
 	src/core/or/sendme.h				\
-	src/core/or/sendme_common.h				\
+	src/core/or/congestion_control_common.h				\
+	src/core/or/congestion_control_vegas.h				\
+	src/core/or/congestion_control_nola.h				\
+	src/core/or/congestion_control_westwood.h				\
 	src/core/or/server_port_cfg_st.h		\
 	src/core/or/socks_request_st.h			\
 	src/core/or/status.h				\
