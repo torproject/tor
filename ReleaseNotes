@@ -2,6 +2,73 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.4.9 - 2021-06-14
+  Tor 0.4.4.9 fixes several security issues, including a
+  denial-of-service attack against onion service clients, and another
+  denial-of-service attack against relays. Everybody should upgrade to
+  one of 0.3.5.15, 0.4.4.9, 0.4.5.9, or 0.4.6.5.
+
+  Note that the scheduled end-of-life date for the Tor 0.4.4.x series is
+  June 15. This is therefore the last release in its series. Everybody
+  still running 0.4.4.x should plan to upgrade to 0.4.5.x or later.
+
+  o Major bugfixes (security, backport from 0.4.6.5):
+    - Don't allow relays to spoof RELAY_END or RELAY_RESOLVED cell on
+      half-closed streams. Previously, clients failed to validate which
+      hop sent these cells: this would allow a relay on a circuit to end
+      a stream that wasn't actually built with it. Fixes bug 40389;
+      bugfix on 0.3.5.1-alpha. This issue is also tracked as TROVE-2021-
+      003 and CVE-2021-34548.
+
+  o Major bugfixes (security, defense-in-depth, backport from 0.4.6.5):
+    - Detect more failure conditions from the OpenSSL RNG code.
+      Previously, we would detect errors from a missing RNG
+      implementation, but not failures from the RNG code itself.
+      Fortunately, it appears those failures do not happen in practice
+      when Tor is using OpenSSL's default RNG implementation. Fixes bug
+      40390; bugfix on 0.2.8.1-alpha. This issue is also tracked as
+      TROVE-2021-004. Reported by Jann Horn at Google's Project Zero.
+
+  o Major bugfixes (security, denial of service, backport from 0.4.6.5):
+    - Resist a hashtable-based CPU denial-of-service attack against
+      relays. Previously we used a naive unkeyed hash function to look
+      up circuits in a circuitmux object. An attacker could exploit this
+      to construct circuits with chosen circuit IDs, to create
+      collisions and make the hash table inefficient. Now we use a
+      SipHash construction here instead. Fixes bug 40391; bugfix on
+      0.2.4.4-alpha. This issue is also tracked as TROVE-2021-005 and
+      CVE-2021-34549. Reported by Jann Horn from Google's Project Zero.
+    - Fix an out-of-bounds memory access in v3 onion service descriptor
+      parsing. An attacker could exploit this bug by crafting an onion
+      service descriptor that would crash any client that tried to visit
+      it. Fixes bug 40392; bugfix on 0.3.0.1-alpha. This issue is also
+      tracked as TROVE-2021-006 and CVE-2021-34550. Reported by Sergei
+      Glazunov from Google's Project Zero.
+
+  o Minor features (compatibility, backport from 0.4.6.4-rc):
+    - Remove an assertion function related to TLS renegotiation. It was
+      used nowhere outside the unit tests, and it was breaking
+      compilation with recent alpha releases of OpenSSL 3.0.0. Closes
+      ticket 40399.
+
+  o Minor features (fallback directory list, backport from 0.4.6.2-alpha):
+    - Regenerate the list of fallback directories to contain a new set
+      of 200 relays. Closes ticket 40265.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2021/06/10.
+
+  o Minor bugfixes (channel, DoS, backport from 0.4.6.2-alpha):
+    - Fix a non-fatal BUG() message due to a too-early free of a string,
+      when listing a client connection from the DoS defenses subsystem.
+      Fixes bug 40345; bugfix on 0.4.3.4-rc.
+
+  o Minor bugfixes (compiler warnings, backport from 0.4.6.3-rc):
+    - Fix an indentation problem that led to a warning from GCC 11.1.1.
+      Fixes bug 40380; bugfix on 0.3.0.1-alpha.
+
+
 Changes in version 0.4.4.8 - 2021-03-16
   Tor 0.4.4.8 backports fixes for two important denial-of-service bugs
   in earlier versions of Tor.
