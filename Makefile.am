@@ -253,7 +253,7 @@ endif
 TEST_NETWORK_SHOW_WARNINGS_FOR_LAST_RUN_FLAGS=--quiet --only-warnings
 
 if LIBFUZZER_ENABLED
-TEST_CFLAGS += -fsanitize-coverage=trace-pc-guard,trace-cmp,trace-div
+TEST_CFLAGS += -fsanitize=fuzzer-no-link
 # not "edge"
 endif
 

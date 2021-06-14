@@ -1,0 +1,5 @@
+  o Minor features (fuzzing):
+    - When building with --enable-libfuzzer, use a set of compiler flags
+      that works with more recent versions of the library.  Previously
+      we were using a set of flags from 2017.
+      Closes ticket 40407.
