@@ -544,15 +544,19 @@ config_service(config_line_t *line, const or_options_t *options,
 
   tor_assert(service->config.version <= HS_VERSION_MAX);
 
-  /* Check permission on service directory that was just parsed. And this must
-   * be done regardless of the service version. Do not ask for the directory
-   * to be created, this is done when the keys are loaded because we could be
-   * in validation mode right now. */
-  if (hs_check_service_private_dir(options->User,
-                                   service->config.directory_path,
-                                   service->config.dir_group_readable,
-                                   0) < 0) {
-    goto err;
+  /* If we're running with TestingTorNetwork enabled, we relax the permissions
+   * check on the hs directory. */
+  if (!options->TestingTorNetwork) {
+    /* Check permission on service directory that was just parsed. And this
+     * must be done regardless of the service version. Do not ask for the
+     * directory to be created, this is done when the keys are loaded because
+     * we could be in validation mode right now. */
+    if (hs_check_service_private_dir(options->User,
+                                     service->config.directory_path,
+                                     service->config.dir_group_readable,
+                                     0) < 0) {
+      goto err;
+    }
   }
 
   /* We'll try to learn the service version here by loading the key(s) if
