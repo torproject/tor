@@ -1998,11 +1998,17 @@ rep_hist_note_desc_served(const char * desc)
 /** Internal statistics to track how many requests of each type of
  * handshake we've received, and how many we've assigned to cpuworkers.
  * Useful for seeing trends in cpu load.
+ *
+ * They are reset at every heartbeat.
  * @{ */
 STATIC int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
 STATIC int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
-STATIC uint64_t onion_handshakes_dropped[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
 /**@}*/
+
+/** Counters keeping the same stats as above but for the entire duration of the
+ * process (not reset). */
+static uint64_t stats_n_onionskin_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+static uint64_t stats_n_onionskin_dropped[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
 
 /** A new onionskin (using the <b>type</b> handshake) has arrived. */
 void
@@ -2017,8 +2023,10 @@ rep_hist_note_circuit_handshake_requested(uint16_t type)
 void
 rep_hist_note_circuit_handshake_assigned(uint16_t type)
 {
-  if (type <= MAX_ONION_HANDSHAKE_TYPE)
+  if (type <= MAX_ONION_HANDSHAKE_TYPE) {
     onion_handshakes_assigned[type]++;
+    stats_n_onionskin_assigned[type]++;
+  }
 }
 
 /** We've just drop an onionskin (using the <b>type</b> handshake) due to being
@@ -2026,8 +2034,9 @@ rep_hist_note_circuit_handshake_assigned(uint16_t type)
 void
 rep_hist_note_circuit_handshake_dropped(uint16_t type)
 {
-  if (type <= MAX_ONION_HANDSHAKE_TYPE)
-    onion_handshakes_dropped[type]++;
+  if (type <= MAX_ONION_HANDSHAKE_TYPE) {
+    stats_n_onionskin_dropped[type]++;
+  }
 }
 
 /** Get the circuit handshake value that is requested. */
@@ -2050,14 +2059,24 @@ rep_hist_get_circuit_handshake_assigned, (uint16_t type))
   return onion_handshakes_assigned[type];
 }
 
-/** Get the circuit handshake value that is dropped. */
+/** Get the total number of circuit handshake value that is assigned. */
 MOCK_IMPL(uint64_t,
-rep_hist_get_circuit_handshake_dropped, (uint16_t type))
+rep_hist_get_circuit_n_handshake_assigned, (uint16_t type))
 {
   if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
     return 0;
   }
-  return onion_handshakes_dropped[type];
+  return stats_n_onionskin_assigned[type];
+}
+
+/** Get the total number of circuit handshake value that is dropped. */
+MOCK_IMPL(uint64_t,
+rep_hist_get_circuit_n_handshake_dropped, (uint16_t type))
+{
+  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
+    return 0;
+  }
+  return stats_n_onionskin_dropped[type];
 }
 
 /** Log our onionskin statistics since the last time we were called. */
