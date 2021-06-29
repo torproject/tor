@@ -50,9 +50,11 @@ ENABLE_GCC_WARNING("-Wredundant-decls")
 #endif /* defined(ENABLE_OPENSSL) */
 
 #ifdef ENABLE_NSS
+DISABLE_GCC_WARNING("-Wstrict-prototypes")
 #include <pk11pub.h>
 #include <secerr.h>
 #include <prerror.h>
+ENABLE_GCC_WARNING("-Wstrict-prototypes")
 #endif
 
 #if __GNUC__ && GCC_VERSION >= 402
