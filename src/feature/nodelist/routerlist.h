@@ -145,6 +145,7 @@ was_router_added_t router_add_extrainfo_to_routerlist(
                                         int from_cache, int from_fetch);
 void routerlist_descriptors_added(smartlist_t *sl, int from_cache);
 void routerlist_remove_old_routers(void);
+void routerlist_drop_bridge_descriptors(void);
 int router_load_single_router(const char *s, uint8_t purpose, int cache,
                               const char **msg);
 int router_load_routers_from_string(const char *s, const char *eos,
