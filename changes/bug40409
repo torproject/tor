@@ -1,0 +1,3 @@
+  o Minor bugfixes (warnings, portability):
+    - Suppress a strict-prototype warning when building with some versions
+      of NSS.  Fixes bug 40409; bugfix on 0.3.5.1-alpha.
