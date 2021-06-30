@@ -2,6 +2,25 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.6.6 - 2021-06-30
+  Tor 0.4.6.6 makes several small fixes on 0.4.6.5, including one that
+  allows Tor to build correctly on older versions of GCC. You should
+  upgrade to this version if you were having trouble building Tor
+  0.4.6.5; otherwise, there is probably no need.
+
+  o Minor bugfixes (compilation):
+    - Fix a compilation error when trying to build Tor with a compiler
+      that does not support const variables in static initializers.
+      Fixes bug 40410; bugfix on 0.4.6.5.
+    - Suppress a strict-prototype warning when building with some
+      versions of NSS. Fixes bug 40409; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (testing):
+    - Enable the deterministic RNG for unit tests that covers the
+      address set bloomfilter-based API's. Fixes bug 40419; bugfix
+      on 0.3.3.2-alpha.
+
+
 Changes in version 0.4.5.9 - 2021-06-14
   Tor 0.4.5.9 fixes several security issues, including a
   denial-of-service attack against onion service clients, and another
