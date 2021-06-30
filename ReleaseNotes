@@ -10,8 +10,8 @@ Changes in version 0.4.6.6 - 2021-06-30
 
   o Minor bugfixes (compilation):
     - Fix a compilation error when trying to build Tor with a compiler
-      that does not support expanding statitically initialized const
-      values in macro's. Fixes bug 40410; bugfix on 0.4.6.5.
+      that does not support const variables in static initializers.
+      Fixes bug 40410; bugfix on 0.4.6.5.
     - Suppress a strict-prototype warning when building with some
       versions of NSS. Fixes bug 40409; bugfix on 0.3.5.1-alpha.
 
