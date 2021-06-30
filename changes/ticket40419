@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Enable the deterministic RNG for unit tests that covers the address set
-      bloomfilter-based API's. Fixes bug 40419; bugfix on 0.3.3.2-alpha.
