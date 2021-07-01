@@ -2049,13 +2049,11 @@ circuit_should_cannibalize_to_build(uint8_t purpose_to_build,
     return 0;
   }
 
-  /* For vanguards, the server-side intro circ is not cannibalized
-   * because we pre-build 4 hop HS circuits, and it only needs a 3 hop
-   * circuit. It is also long-lived, so it is more important that
-   * it have lower latency than get built fast.
+  /* The server-side intro circ is not cannibalized because it only
+   * needs a 3 hop circuit. It is also long-lived, so it is more
+   * important that it have lower latency than get built fast.
    */
-  if (circuit_should_use_vanguards(purpose_to_build) &&
-      purpose_to_build == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+  if (purpose_to_build == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
     return 0;
   }
 
