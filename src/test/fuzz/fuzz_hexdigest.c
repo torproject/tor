@@ -48,6 +48,9 @@
 
 #include "lib/crypt_ops/digestset.h"
 
+#include "test/fuzz/fuzzing.h"
+
+
 int fuzz_init(void)
 {
  return 0;
