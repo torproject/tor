@@ -53,6 +53,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "test/fuzz/fuzzing.h"
+
 int fuzz_init(void){
  return 0;
 }
