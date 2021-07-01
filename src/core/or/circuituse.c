@@ -2022,16 +2022,12 @@ circuit_is_hs_v3(const circuit_t *circ)
 int
 circuit_should_use_vanguards(uint8_t purpose)
 {
-  const or_options_t *options = get_options();
-
-  /* Only hidden service circuits use vanguards */
-  if (!circuit_purpose_is_hidden_service(purpose))
-    return 0;
-
-  /* Pinned middles are effectively vanguards */
-  if (options->HSLayer2Nodes || options->HSLayer3Nodes)
+  /* All hidden service circuits use either vanguards or
+   * vanguards-lite. */
+  if (circuit_purpose_is_hidden_service(purpose))
     return 1;
 
+  /* Everything else is a normal circuit */
   return 0;
 }
 

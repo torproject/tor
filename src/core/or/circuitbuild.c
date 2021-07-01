@@ -2259,8 +2259,9 @@ middle_node_must_be_vanguard(const or_options_t *options,
     return 0;
   }
 
-  /* If we have sticky L2 nodes, and this is an L2 pick, use vanguards */
-  if (options->HSLayer2Nodes && cur_len == 1) {
+  /* If we are a hidden service circuit, always use either vanguards-lite
+   * or HSLayer2Nodes for 2nd hop. */
+  if (cur_len == 1) {
     return 1;
   }
 
@@ -2284,12 +2285,17 @@ pick_vanguard_middle_node(const or_options_t *options,
 
   /* Pick the right routerset based on the current hop */
   if (cur_len == 1) {
-    vanguard_routerset = options->HSLayer2Nodes;
+    vanguard_routerset = options->HSLayer2Nodes ?
+      options->HSLayer2Nodes : get_layer2_guards();
   } else if (cur_len == 2) {
     vanguard_routerset = options->HSLayer3Nodes;
   } else {
     /* guaranteed by middle_node_should_be_vanguard() */
     tor_assert_nonfatal_unreached();
+    return NULL;
+  }
+
+  if (BUG(!vanguard_routerset)) {
     return NULL;
   }
 
