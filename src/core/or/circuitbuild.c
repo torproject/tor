@@ -1359,7 +1359,9 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
   int routelen = DEFAULT_ROUTE_LEN;
   int known_purpose = 0;
 
-  if (circuit_should_use_vanguards(purpose)) {
+  /* If we're using L3 vanguards, we need longer paths for onion services */
+  if (circuit_purpose_is_hidden_service(purpose) &&
+      get_options()->HSLayer3Nodes) {
     /* Clients want an extra hop for rends to avoid linkability.
      * Services want it for intro points to avoid publishing their
      * layer3 guards. They want it for hsdir posts to use
@@ -1372,14 +1374,6 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
         purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
         purpose == CIRCUIT_PURPOSE_HS_VANGUARDS ||
         purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
-      return routelen+1;
-
-    /* If we only have Layer2 vanguards, then we do not need
-     * the extra hop for linkabilty reasons (see below).
-     * This means all hops can be of the form:
-     *   S/C - G - L2 - M - R/HSDir/I
-     */
-    if (get_options()->HSLayer2Nodes && !get_options()->HSLayer3Nodes)
       return routelen+1;
 
     /* For connections to hsdirs, clients want two extra hops
