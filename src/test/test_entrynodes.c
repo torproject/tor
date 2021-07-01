@@ -92,6 +92,12 @@ bfn_mock_node_get_by_id(const char *id)
   return NULL;
 }
 
+static int
+mock_router_have_minimum_dir_info(void)
+{
+  return 1;
+}
+
 /* Helper function to free a test node. */
 static void
 test_node_free(node_t *n)
@@ -3087,6 +3093,23 @@ test_entry_guard_vanguard_path_selection(void *arg)
   circuit_free_(circ);
 }
 
+static void
+test_entry_guard_layer2_guards(void *arg)
+{
+  (void) arg;
+  MOCK(router_have_minimum_dir_info, mock_router_have_minimum_dir_info);
+
+  /* Create the guardset */
+  maintain_layer2_guards();
+
+  routerset_t *l2_guards = get_layer2_guards();
+  tt_assert(l2_guards);
+  tt_int_op(routerset_len(l2_guards), OP_EQ, 4);
+
+ done:
+  UNMOCK(router_have_minimum_dir_info);
+}
+
 static const struct testcase_setup_t big_fake_network = {
   big_fake_network_setup, big_fake_network_cleanup
 };
@@ -3151,6 +3174,8 @@ struct testcase_t entrynodes_tests[] = {
   BFN_TEST(retry_unreachable),
   BFN_TEST(manage_primary),
   BFN_TEST(correct_cascading_order),
+
+  BFN_TEST(layer2_guards),
 
   EN_TEST_FORK(guard_preferred),
 
