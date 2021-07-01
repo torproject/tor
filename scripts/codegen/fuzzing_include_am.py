@@ -6,6 +6,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 FUZZERS = """
+    hexdigest
+	address
+	addressPTR
 	consensus
 	descriptor
 	diff
