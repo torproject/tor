@@ -1,0 +1,3 @@
+  o Minor features (testing configuration):
+    - When TestingTorNetwork is enabled, skip the permission check on
+      the hidden service directory. Closes ticket 40338.
