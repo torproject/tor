@@ -27,6 +27,7 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/extendinfo.h"
+#include "core/or/congestion_control_common.h"
 
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -165,6 +166,7 @@ cpath_free(crypt_path_t *victim)
   onion_handshake_state_release(&victim->handshake_state);
   crypto_dh_free(victim->rend_dh_handshake_state);
   extend_info_free(victim->extend_info);
+  congestion_control_free(victim->ccontrol);
 
   memwipe(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
   tor_free(victim);

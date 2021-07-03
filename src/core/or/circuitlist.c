@@ -100,6 +100,7 @@
 #include "lib/compress/compress_zlib.h"
 #include "lib/compress/compress_zstd.h"
 #include "lib/buf/buffers.h"
+#include "core/or/congestion_control_common.h"
 
 #include "core/or/ocirc_event.h"
 
@@ -1142,6 +1143,8 @@ circuit_free_(circuit_t *circ)
    * circuits without closing them before. This needs to be done before the
    * hs identifier is freed. */
   hs_circ_cleanup_on_free(circ);
+
+  congestion_control_free(circ->ccontrol);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
