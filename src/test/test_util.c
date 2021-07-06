@@ -7,6 +7,7 @@
 #define COMPAT_TIME_PRIVATE
 #define UTIL_MALLOC_PRIVATE
 #define PROCESS_WIN32_PRIVATE
+#define TIME_FMT_PRIVATE
 #include "lib/testsupport/testsupport.h"
 #include "core/or/or.h"
 #include "lib/buf/buffers.h"
@@ -111,7 +112,7 @@ static time_t
 tor_timegm_wrapper(const struct tm *tm)
 {
   time_t t;
-  if (tor_timegm(tm, &t) < 0)
+  if (tor_timegm_impl(tm, &t) < 0)
     return -1;
   return t;
 }
@@ -1499,6 +1500,28 @@ test_util_parse_http_time(void *arg)
 #undef T
  done:
   teardown_capture_of_logs();
+}
+
+static void
+test_util_timegm_real(void *arg)
+{
+  (void)arg;
+  /* Get the real timegm again!  We're not testing our impl; we want the
+   * one that will actually get called. */
+#undef tor_timegm
+
+  /* Now check: is timegm the real inverse of gmtime? */
+  time_t now = time(NULL), time2=0;
+  struct tm tm, *p;
+  p = tor_gmtime_r(&now, &tm);
+  tt_ptr_op(p, OP_NE, NULL);
+
+  int r = tor_timegm(&tm, &time2);
+  tt_int_op(r, OP_EQ, 0);
+  tt_i64_op((int64_t) now, OP_EQ, (int64_t) time2);
+
+ done:
+  ;
 }
 
 static void
@@ -7036,6 +7059,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(monotonic_time_ratchet, TT_FORK),
   UTIL_TEST(monotonic_time_zero, 0),
   UTIL_TEST(monotonic_time_add_msec, 0),
+  UTIL_TEST(timegm_real, 0),
   UTIL_TEST(htonll, 0),
   UTIL_TEST(get_unquoted_path, 0),
   UTIL_TEST(map_anon, 0),

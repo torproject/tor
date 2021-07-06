@@ -806,6 +806,7 @@ AC_CHECK_FUNCS(
 	strtoull \
 	sysconf \
 	sysctl \
+        timegm \
 	truncate \
 	uname \
 	usleep \
