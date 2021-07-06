@@ -3102,7 +3102,7 @@ test_entry_guard_layer2_guards(void *arg)
   /* Create the guardset */
   maintain_layer2_guards();
 
-  routerset_t *l2_guards = get_layer2_guards();
+  const routerset_t *l2_guards = get_layer2_guards();
   tt_assert(l2_guards);
   tt_int_op(routerset_len(l2_guards), OP_EQ, 4);
 

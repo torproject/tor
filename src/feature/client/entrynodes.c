@@ -3996,8 +3996,14 @@ get_max_lifetime_of_layer2_hs_guards(void)
 static int
 get_layer2_hs_guard_lifetime(void)
 {
-  return crypto_rand_int_range(get_min_lifetime_of_layer2_hs_guards(),
-                               get_max_lifetime_of_layer2_hs_guards());
+  int min = get_min_lifetime_of_layer2_hs_guards();
+  int max = get_max_lifetime_of_layer2_hs_guards();
+
+  if (BUG(min >= max)) {
+    return min;
+  }
+
+  return crypto_rand_int_range(min, max);
 }
 
 /** Maintain the L2 guard list. Make sure the list contains enough guards, do
@@ -4107,9 +4113,10 @@ purge_vanguards_lite(void)
 
 /** Return a routerset containing the L2 guards or NULL if it's not yet
  *  initialized. Callers must not free the routerset. Designed for use in
- *  pick_vanguard_middle_node() and should not be used anywhere else (because
- *  the routerset pointer can dangle under your feet) */
-routerset_t *
+ *  pick_vanguard_middle_node() and should not be used anywhere else. Do not
+ *  store this pointer -- any future calls to maintain_layer2_guards() and
+ *  purge_vanguards_lite() can invalidate it. */
+const routerset_t *
 get_layer2_guards(void)
 {
   if (!layer2_guards) {
