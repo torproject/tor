@@ -2135,8 +2135,8 @@ test_dir_measured_bw_kb(void *arg)
     /* Test that a line with vote=0 will fail too, so that it is ignored. */
     "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=0\n",
     /* Test that a line with vote=0 will fail even if unmeasured=0. */
-    "node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=0 "
-    "unmeasured=0\n",
+    ("node_id=$557365204145532d32353620696e73746561642e bw=1024 vote=0 "
+     "unmeasured=0\n"),
     "end"
   };
 
