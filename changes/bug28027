@@ -1,0 +1,4 @@
+  o Major bugfixes (onion services, bridge):
+    - If we are running an onion service, and we change our guard to a bridge,
+      signal that we cannot complete circuits until the bridge is usable. Fixes
+      bug 28027; bugfix on 0.3.4.8. Patch by Neel Chauhan.

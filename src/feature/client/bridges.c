@@ -16,6 +16,7 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
@@ -973,9 +974,10 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
       /* If we didn't have a reachable bridge before this one, try directory
-       * documents again. */
+       * documents again and mark that we can reach introduction points. */
       if (first) {
         routerlist_retry_directory_downloads(now);
+        note_that_we_completed_a_circuit();
       }
     }
   }
