@@ -2536,6 +2536,10 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                "https://blog.torproject.org/v2-deprecation-timeline.");
       control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                   escaped(socks->address));
+      /* Send back the 0xF6 extended code indicating a bad hostname. This is
+       * mostly so Tor Browser can make a proper UX with regards to v2
+       * addresses. */
+      conn->socks_request->socks_extended_error_code = SOCKS5_HS_BAD_ADDRESS;
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
