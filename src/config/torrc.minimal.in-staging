@@ -224,4 +224,4 @@
 ## mechanisms like https://bridges.torproject.org/. If you want to run
 ## a private bridge, for example because you'll give out your bridge
 ## address manually to your friends, uncomment this line:
-#PublishServerDescriptor 0
+#BridgeDistribution none
