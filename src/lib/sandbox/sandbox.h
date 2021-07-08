@@ -136,6 +136,13 @@ int sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2);
 int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file);
 
 /**
+ * Function used to add a opendir allowed filename to a supplied configuration.
+ * The (char*) specifies the path to the allowed dir; we steal the pointer to
+ * that dir.
+ */
+int sandbox_cfg_allow_opendir_dirname(sandbox_cfg_t **cfg, char *dir);
+
+/**
  * Function used to add a stat/stat64 allowed filename to a configuration.
  * The (char*) specifies the path to the allowed file; that pointer is stolen.
  */
