@@ -3190,8 +3190,11 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
  * out to <b>conn</b>.
  *
- * If we are a directory authority, always answer dir requests thus true is
- * always returned.
+ * If we are a directory authority, false is returned (indicating that we
+ * should answer the request) if one of these conditions is met:
+ *  - Connection is from a known relay (address is looked up).
+ *  - AuthDirRejectRequestsUnderLoad is set to 0.
+ *  - Compression is being used for the request (looking at c_method).
  *
  * Note: There are a lot of parameters we could use here:
  * - global_relayed_write_bucket. Low is bad.
@@ -3206,7 +3209,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  *   that's harder to quantify and harder to keep track of.
  */
 bool
-connection_dir_is_global_write_low(const connection_t *conn, size_t attempt)
+connection_dir_is_global_write_low(const connection_t *conn, size_t attempt,
+                                   const compress_method_t c_method)
 {
   size_t smaller_bucket =
     MIN(token_bucket_rw_get_write(&global_bucket),
@@ -3214,6 +3218,16 @@ connection_dir_is_global_write_low(const connection_t *conn, size_t attempt)
 
   /* Special case for authorities (directory only). */
   if (authdir_mode_v3(get_options())) {
+    /* If this requests is uncompressed and we are configured to reject those,
+     * indicate that have reached the limit thus deny answering. */
+    if (c_method == NO_METHOD &&
+        get_options()->AuthDirRejectUncompressedRequests) {
+      return true;
+    }
+    if (c_method != NO_METHOD) {
+      /* Always answer compressed request. */
+      return false;
+    }
     /* Are we configured to possibly reject requests under load? */
     if (!get_options()->AuthDirRejectRequestsUnderLoad) {
       /* Answer request no matter what. */

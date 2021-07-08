@@ -951,7 +951,8 @@ handle_get_current_consensus(dir_connection_t *conn,
     goto done;
   }
 
-  if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess)) {
+  if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess,
+                                         compress_method)) {
     log_debug(LD_DIRSERV,
               "Client asked for network status lists, but we've been "
               "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1060,7 +1061,8 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
         }
       });
 
-    if (connection_dir_is_global_write_low(TO_CONN(conn), estimated_len)) {
+    if (connection_dir_is_global_write_low(TO_CONN(conn), estimated_len,
+                                           compress_method)) {
       write_short_http_response(conn, 503, "Directory busy, try again later");
       goto vote_done;
     }
@@ -1119,7 +1121,8 @@ handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
       write_short_http_response(conn, 404, "Not found");
       goto done;
     }
-    if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess)) {
+    if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess,
+                                           compress_method)) {
       log_info(LD_DIRSERV,
                "Client asked for server descriptors, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1217,7 +1220,8 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
         msg = "Not found";
       write_short_http_response(conn, 404, msg);
     } else {
-      if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess)) {
+      if (connection_dir_is_global_write_low(TO_CONN(conn), size_guess,
+                                             compress_method)) {
         log_info(LD_DIRSERV,
                  "Client asked for server descriptors, but we've been "
                  "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1314,7 +1318,8 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
                       len += c->cache_info.signed_descriptor_len);
 
     if (connection_dir_is_global_write_low(TO_CONN(conn),
-                                compress_method != NO_METHOD ? len/2 : len)) {
+                                compress_method != NO_METHOD ? len/2 : len,
+                                compress_method)) {
       write_short_http_response(conn, 503, "Directory busy, try again later");
       goto keys_done;
     }

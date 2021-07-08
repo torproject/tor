@@ -1,0 +1,4 @@
+  o Minor bugfix (directory authority):
+    - Always allow compressed directory requests and introduce option
+      AuthDirRejectUncompressedRequests to control that behavior. Fixes bug
+      33072; bugfix on 0.1.2.5-alpha.

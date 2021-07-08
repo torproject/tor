@@ -12,6 +12,8 @@
 #ifndef TOR_CONNECTION_H
 #define TOR_CONNECTION_H
 
+#include "lib/compress/compress.h"
+
 listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
 struct buf_t;
@@ -197,7 +199,8 @@ void connection_mark_all_noncontrol_connections(void);
 
 ssize_t connection_bucket_write_limit(struct connection_t *conn, time_t now);
 bool connection_dir_is_global_write_low(const struct connection_t *conn,
-                                        size_t attempt);
+                                        size_t attempt,
+                                        const compress_method_t c_method);
 void connection_bucket_init(void);
 void connection_bucket_adjust(const or_options_t *options);
 void connection_bucket_refill_all(time_t now,
