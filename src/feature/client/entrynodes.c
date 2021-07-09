@@ -3944,6 +3944,19 @@ typedef struct layer2_guard_t {
   time_t expire_on_date;
 } layer2_guard_t;
 
+#define layer2_guard_free(val) \
+  FREE_AND_NULL(layer2_guard_t, layer2_guard_free_, (val))
+
+static void
+layer2_guard_free_(layer2_guard_t *l2)
+{
+  if (!l2) {
+    return;
+  }
+
+  tor_free(l2);
+}
+
 /** Global list and routerset of L2 guards. They are both synced and they get
  * updated periodically. We need both the list and the routerset: we use the
  * smartlist to keep track of expiration times and the routerset is what we
@@ -4029,7 +4042,7 @@ maintain_layer2_guards(void)
                safe_str_client(hex_str(g->identity, DIGEST_LEN)));
       // Nickname may be gone from consensus and doesn't matter anyway
       control_event_guard("None", g->identity, "BAD_L2");
-      tor_free(g);
+      layer2_guard_free(g);
       SMARTLIST_DEL_CURRENT_KEEPORDER(layer2_guards, g);
       continue;
     }
@@ -4040,7 +4053,7 @@ maintain_layer2_guards(void)
                safe_str_client(hex_str(g->identity, DIGEST_LEN)));
       // Nickname may be gone from consensus and doesn't matter anyway
       control_event_guard("None", g->identity, "BAD_L2");
-      tor_free(g);
+      layer2_guard_free(g);
       SMARTLIST_DEL_CURRENT_KEEPORDER(layer2_guards, g);
       continue;
     }
@@ -4110,7 +4123,7 @@ purge_vanguards_lite(void)
 
   /* Go through the list and perform any needed expirations */
   SMARTLIST_FOREACH_BEGIN(layer2_guards, layer2_guard_t *, g) {
-    tor_free(g);
+    layer2_guard_free(g);
   } SMARTLIST_FOREACH_END(g);
 
   smartlist_clear(layer2_guards);
@@ -4158,7 +4171,7 @@ entry_guards_free_all(void)
   }
 
   SMARTLIST_FOREACH_BEGIN(layer2_guards, layer2_guard_t *, g) {
-    tor_free(g);
+    layer2_guard_free(g);
   } SMARTLIST_FOREACH_END(g);
 
   smartlist_free(layer2_guards);
