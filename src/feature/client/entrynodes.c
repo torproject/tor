@@ -3932,7 +3932,7 @@ guard_selection_free_(guard_selection_t *gs)
 
 /**********************************************************************/
 
-/** Layer2 guard subsystem used for client-side onion service circuits. */
+/** Layer2 guard subsystem used for onion service circuits. */
 
 /** A simple representation of a layer2 guard. We just need its identity so
  *  that we feed it into a routerset, and a sampled timestamp to do expiration
@@ -4057,26 +4057,34 @@ maintain_layer2_guards(void)
            new_guards_needed_n);
 
   /* Add required guards to the list */
+  smartlist_t *excluded = smartlist_new();
   for (int i = 0; i < new_guards_needed_n; i++) {
     const node_t *choice = NULL;
     const or_options_t *options = get_options();
     /* Pick Stable nodes */
     router_crn_flags_t flags = CRN_NEED_DESC|CRN_NEED_UPTIME;
-    choice = router_choose_random_node(NULL, options->ExcludeNodes, flags);
-    if (choice) {
-      /* We found our node: create an L2 guard out of it */
-      layer2_guard_t *layer2_guard = tor_malloc_zero(sizeof(layer2_guard_t));
-      memcpy(layer2_guard->identity, choice->identity, DIGEST_LEN);
-      layer2_guard->expire_on_date = approx_time() +
-                                     get_layer2_hs_guard_lifetime();
-      smartlist_add(layer2_guards, layer2_guard);
-      log_info(LD_GENERAL, "Adding Layer2 guard %s",
-               safe_str_client(hex_str(layer2_guard->identity, DIGEST_LEN)));
-      // Nickname can also be None here because it is looked up later
-      control_event_guard("None", layer2_guard->identity,
-                          "GOOD_L2");
+    choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
+    if (!choice) {
+      break;
     }
+
+    /* We found our node: create an L2 guard out of it */
+    layer2_guard_t *layer2_guard = tor_malloc_zero(sizeof(layer2_guard_t));
+    memcpy(layer2_guard->identity, choice->identity, DIGEST_LEN);
+    layer2_guard->expire_on_date = approx_time() +
+      get_layer2_hs_guard_lifetime();
+    smartlist_add(layer2_guards, layer2_guard);
+    log_info(LD_GENERAL, "Adding Layer2 guard %s",
+             safe_str_client(hex_str(layer2_guard->identity, DIGEST_LEN)));
+    // Nickname can also be None here because it is looked up later
+    control_event_guard("None", layer2_guard->identity,
+                        "GOOD_L2");
+    /* Exclude this node and its family so that we don't double-pick. */
+    nodelist_add_node_and_family(excluded, choice);
   }
+
+  /* Some cleanup */
+  smartlist_free(excluded);
 
   /* Now that the list is up to date, synchronize the routerset */
   routerset_free(layer2_routerset);
