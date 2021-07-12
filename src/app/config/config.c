@@ -669,6 +669,7 @@ static const config_var_t option_vars_[] = {
   VAR("UseEntryGuards",          BOOL,     UseEntryGuards_option, "1"),
   OBSOLETE("UseEntryGuardsAsDirGuards"),
   V(UseGuardFraction,            AUTOBOOL, "auto"),
+  V(VanguardsLiteEnabled,        AUTOBOOL, "auto"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   OBSOLETE("UseNTorHandshake"),
   V_IMMUTABLE(User,              STRING,   NULL),

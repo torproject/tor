@@ -3099,7 +3099,22 @@ test_entry_guard_layer2_guards(void *arg)
   (void) arg;
   MOCK(router_have_minimum_dir_info, mock_router_have_minimum_dir_info);
 
-  /* Create the guardset */
+  /* First check the enable/disable switch */
+  get_options_mutable()->VanguardsLiteEnabled = 0;
+  tt_int_op(vanguards_lite_is_enabled(), OP_EQ, 0);
+
+  get_options_mutable()->VanguardsLiteEnabled = 1;
+  tt_int_op(vanguards_lite_is_enabled(), OP_EQ, 1);
+
+  get_options_mutable()->VanguardsLiteEnabled = -1;
+  tt_int_op(vanguards_lite_is_enabled(), OP_EQ, 1);
+
+  /* OK now let's move to actual testing */
+
+  /* Remove restrictions to route around Big Fake Network restrictions */
+  get_options_mutable()->EnforceDistinctSubnets = 0;
+
+  /* Create the L2 guardset */
   maintain_layer2_guards();
 
   const routerset_t *l2_guards = get_layer2_guards();

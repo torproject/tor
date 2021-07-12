@@ -1749,6 +1749,13 @@ The following options are useful only for clients (that is, if
     the guard-n-primary-guards consensus parameter, and default to 3 if the
     consensus parameter isn't set. (Default: 0)
 
+[[VanguardsLiteEnabled]] **VanguardsLiteEnabled** **0**|**1**|**auto**::
+    This option specifies whether clients should use the vanguards-lite
+    subsystem to protect against guard discovery attacks. If it's set to
+    'auto', clients will do what the vanguards-lite-enabled consensus parameter
+    tells them to do, and will default to enable the subsystem if the consensus
+    parameter isn't set. (Default: auto)
+
 [[UseMicrodescriptors]] **UseMicrodescriptors** **0**|**1**|**auto**::
     Microdescriptors are a smaller version of the information that Tor needs
     in order to build its circuits.  Using microdescriptors makes Tor clients

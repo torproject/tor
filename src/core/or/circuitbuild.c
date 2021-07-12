@@ -2254,6 +2254,11 @@ middle_node_must_be_vanguard(const or_options_t *options,
     return 0;
   }
 
+  /* Don't even bother if the feature is disabled */
+  if (!vanguards_lite_is_enabled()) {
+    return 0;
+  }
+
   /* If we are a hidden service circuit, always use either vanguards-lite
    * or HSLayer2Nodes for 2nd hop. */
   if (cur_len == 1) {

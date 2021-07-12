@@ -3932,7 +3932,7 @@ guard_selection_free_(guard_selection_t *gs)
 
 /**********************************************************************/
 
-/** Layer2 guard subsystem used for onion service circuits. */
+/** Layer2 guard subsystem (vanguards-lite) used for onion service circuits */
 
 /** A simple representation of a layer2 guard. We just need its identity so
  *  that we feed it into a routerset, and a sampled timestamp to do expiration
@@ -3946,6 +3946,30 @@ typedef struct layer2_guard_t {
 
 #define layer2_guard_free(val) \
   FREE_AND_NULL(layer2_guard_t, layer2_guard_free_, (val))
+
+/** Return true if the vanguards-lite subsystem is enabled */
+bool
+vanguards_lite_is_enabled(void)
+{
+  /* First check torrc option and then maybe also the consensus parameter. */
+  const or_options_t *options = get_options();
+
+  /* If the option is explicitly disabled, that's the final word here */
+  if (options->VanguardsLiteEnabled == 0) {
+    return false;
+  }
+
+  /* If the option is set to auto, then check the consensus parameter */
+  if (options->VanguardsLiteEnabled == -1) {
+    return networkstatus_get_param(NULL, "vanguards-lite-enabled",
+                                   1, /* default to "on" */
+                                   0, 1);
+  }
+
+  /* else it's enabled */
+  tor_assert_nonfatal(options->VanguardsLiteEnabled == 1);
+  return options->VanguardsLiteEnabled;
+}
 
 static void
 layer2_guard_free_(layer2_guard_t *l2)
