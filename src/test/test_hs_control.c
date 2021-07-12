@@ -798,7 +798,7 @@ test_hs_control_add_onion_helper_add_service(void *arg)
   hs_service_ht *global_map;
   hs_port_config_t *portcfg;
   smartlist_t *portcfgs;
-  char *address_out_good, *address_out_bad;
+  char *address_out_good = NULL, *address_out_bad = NULL;
   hs_service_t *service_good = NULL;
   hs_service_t *service_bad = NULL;
 
