@@ -1394,16 +1394,14 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
     return routelen;
 
   switch (purpose) {
-    /* These two purposes connect to a router that we chose, so
-     * DEFAULT_ROUTE_LEN is safe. */
-  case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
-    /* hidden service connecting to introduction point */
+    /* These purposes connect to a router that we chose, so DEFAULT_ROUTE_LEN
+     * is safe: */
   case CIRCUIT_PURPOSE_TESTING:
     /* router reachability testing */
     known_purpose = 1;
     break;
 
-    /* These three purposes connect to a router that someone else
+    /* These purposes connect to a router that someone else
      * might have chosen, so add an extra hop to protect anonymity. */
   case CIRCUIT_PURPOSE_C_GENERAL:
   case CIRCUIT_PURPOSE_C_HSDIR_GET:
@@ -1413,6 +1411,9 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
     /* client connecting to introduction point */
   case CIRCUIT_PURPOSE_S_CONNECT_REND:
     /* hidden service connecting to rendezvous point */
+  case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+    /* hidden service connecting to intro point. In this case we want an extra
+       hop to avoid linkability attacks by the introduction point. */
     known_purpose = 1;
     routelen++;
     break;
