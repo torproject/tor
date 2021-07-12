@@ -103,16 +103,6 @@ src_test_fuzz_fuzz_extrainfo_LDADD = $(FUZZING_LIBS)
 endif
 
 if UNITTESTS_ENABLED
-src_test_fuzz_fuzz_hexdigest_SOURCES = \
-	src/test/fuzz/fuzzing_common.c \
-	src/test/fuzz/fuzz_hexdigest.c
-src_test_fuzz_fuzz_hexdigest_CPPFLAGS = $(FUZZING_CPPFLAGS)
-src_test_fuzz_fuzz_hexdigest_CFLAGS = $(FUZZING_CFLAGS)
-src_test_fuzz_fuzz_hexdigest_LDFLAGS = $(FUZZING_LDFLAG)
-src_test_fuzz_fuzz_hexdigest_LDADD = $(FUZZING_LIBS)
-endif
-
-if UNITTESTS_ENABLED
 src_test_fuzz_fuzz_hsdescv3_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \
 	src/test/fuzz/fuzz_hsdescv3.c
@@ -191,7 +181,6 @@ FUZZERS = \
 	src/test/fuzz/fuzz-diff \
 	src/test/fuzz/fuzz-diff-apply \
 	src/test/fuzz/fuzz-extrainfo \
-	src/test/fuzz/fuzz-hexdigest \
 	src/test/fuzz/fuzz-hsdescv3 \
 	src/test/fuzz/fuzz-http \
 	src/test/fuzz/fuzz-http-connect \
@@ -268,15 +257,6 @@ src_test_fuzz_lf_fuzz_extrainfo_LDADD = $(LIBFUZZER_LIBS)
 endif
 
 if UNITTESTS_ENABLED
-src_test_fuzz_lf_fuzz_hexdigest_SOURCES = \
-	$(src_test_fuzz_fuzz_hexdigest_SOURCES)
-src_test_fuzz_lf_fuzz_hexdigest_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
-src_test_fuzz_lf_fuzz_hexdigest_CFLAGS = $(LIBFUZZER_CFLAGS)
-src_test_fuzz_lf_fuzz_hexdigest_LDFLAGS = $(LIBFUZZER_LDFLAG)
-src_test_fuzz_lf_fuzz_hexdigest_LDADD = $(LIBFUZZER_LIBS)
-endif
-
-if UNITTESTS_ENABLED
 src_test_fuzz_lf_fuzz_hsdescv3_SOURCES = \
 	$(src_test_fuzz_fuzz_hsdescv3_SOURCES)
 src_test_fuzz_lf_fuzz_hsdescv3_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
@@ -347,7 +327,6 @@ LIBFUZZER_FUZZERS = \
 	src/test/fuzz/lf-fuzz-diff \
 	src/test/fuzz/lf-fuzz-diff-apply \
 	src/test/fuzz/lf-fuzz-extrainfo \
-	src/test/fuzz/lf-fuzz-hexdigest \
 	src/test/fuzz/lf-fuzz-hsdescv3 \
 	src/test/fuzz/lf-fuzz-http \
 	src/test/fuzz/lf-fuzz-http-connect \
@@ -413,13 +392,6 @@ src_test_fuzz_liboss_fuzz_extrainfo_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 endif
 
 if UNITTESTS_ENABLED
-src_test_fuzz_liboss_fuzz_hexdigest_a_SOURCES = \
-	$(src_test_fuzz_fuzz_hexdigest_SOURCES)
-src_test_fuzz_liboss_fuzz_hexdigest_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
-src_test_fuzz_liboss_fuzz_hexdigest_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
-endif
-
-if UNITTESTS_ENABLED
 src_test_fuzz_liboss_fuzz_hsdescv3_a_SOURCES = \
 	$(src_test_fuzz_fuzz_hsdescv3_SOURCES)
 src_test_fuzz_liboss_fuzz_hsdescv3_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
@@ -476,7 +448,6 @@ OSS_FUZZ_FUZZERS = \
 	src/test/fuzz/liboss-fuzz-diff.a \
 	src/test/fuzz/liboss-fuzz-diff-apply.a \
 	src/test/fuzz/liboss-fuzz-extrainfo.a \
-	src/test/fuzz/liboss-fuzz-hexdigest.a \
 	src/test/fuzz/liboss-fuzz-hsdescv3.a \
 	src/test/fuzz/liboss-fuzz-http.a \
 	src/test/fuzz/liboss-fuzz-http-connect.a \
