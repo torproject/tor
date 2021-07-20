@@ -1668,14 +1668,14 @@ mainloop_schedule_shutdown(int delay_sec)
 }
 
 /**
- * Update vanguards-lite layer2 nodes, once per hour
+ * Update vanguards-lite layer2 nodes, once every 15 minutes
  */
 static int
 manage_vglite_callback(time_t now, const or_options_t *options)
 {
  (void)now;
  (void)options;
-#define VANGUARDS_LITE_INTERVAL (60*60)
+#define VANGUARDS_LITE_INTERVAL (15*60)
 
   maintain_layer2_guards();
 
