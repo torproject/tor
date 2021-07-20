@@ -250,13 +250,13 @@ CONST_TO_LISTENER_CONN(const connection_t *c)
 }
 
 size_t
-connection_get_inbuf_len(connection_t *conn)
+connection_get_inbuf_len(const connection_t *conn)
 {
   return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
 }
 
 size_t
-connection_get_outbuf_len(connection_t *conn)
+connection_get_outbuf_len(const connection_t *conn)
 {
     return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
 }
