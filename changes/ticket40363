@@ -6,4 +6,4 @@
       services such as OnionShare. Long-lived onion services that need high
       security should still use the Vanguards addon
       (https://github.com/mikeperry-tor/vanguards). Closes ticket 40363;
-      implements proposal 332.
+      implements proposal 333.
