@@ -1367,7 +1367,7 @@ test_circuitpadding_wronghop(void *arg)
   tt_ptr_op(client_side->padding_info[0], OP_NE, NULL);
   tt_ptr_op(relay_side->padding_machine[0], OP_NE, NULL);
   tt_ptr_op(relay_side->padding_info[0], OP_NE, NULL);
-  tt_int_op(n_relay_cells, OP_EQ, 3);
+  tt_int_op(n_relay_cells, OP_EQ, 2);
   tt_int_op(n_client_cells, OP_EQ, 2);
 
   /* 6. Sending negotiated command to relay does nothing */
@@ -1396,11 +1396,9 @@ test_circuitpadding_wronghop(void *arg)
   /* verify no padding was negotiated */
   tt_ptr_op(relay_side->padding_machine[0], OP_EQ, NULL);
   tt_ptr_op(client_side->padding_machine[0], OP_EQ, NULL);
-  tt_int_op(n_relay_cells, OP_EQ, 3);
-  tt_int_op(n_client_cells, OP_EQ, 2);
 
   /* verify no echo was sent */
-  tt_int_op(n_relay_cells, OP_EQ, 3);
+  tt_int_op(n_relay_cells, OP_EQ, 2);
   tt_int_op(n_client_cells, OP_EQ, 2);
 
   /* Finish circuit */
