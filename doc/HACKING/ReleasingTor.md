@@ -16,25 +16,13 @@ new Tor release:
 
 ## 0. Preliminaries
 
-1. Get at least two of weasel/arma/Sebastian to put the new
+1. Get at least two of weasel/arma/Sebastian/Sina to put the new
    version number in their approved versions list.  Give them a few
    days to do this if you can.
 
-2. If this is going to be an important security release, give these packagers
-   some advance warning:
+2. If this is going to be an important security release, give the packagers
+   advance warning, via `tor-packagers@lists.torproject.org`.
 
-       - {weasel,sysrqb,mikeperry} at torproject dot org
-       - {blueness} at gentoo dot org
-       - {paul} at invizbox dot io
-       - {vincent} at invizbox dot com
-       - {lfleischer} at archlinux dot org
-       - {Nathan} at freitas dot net
-       - {mike} at tig dot as
-       - {tails-rm} at boum dot org
-       - {simon} at sdeziel.info
-       - {yuri} at freebsd.org
-       - {mh+tor} at scrit.ch
-       - {security} at brave.com
 
 3. Given the release date for Tor, ask the TB team about the likely release
    date of a TB that contains it.  See note below in "commit, upload,
@@ -42,7 +30,9 @@ new Tor release:
 
 ## I. Make sure it works
 
-1. Make sure that CI passes: have a look at Travis
+1. Make sure that CI passes: have a look at the branches on gitlab.
+
+   _Optionally_, have a look at Travis
    (https://travis-ci.org/torproject/tor/branches), Appveyor
    (https://ci.appveyor.com/project/torproject/tor/history), and
    Jenkins (https://jenkins.torproject.org/view/tor/).
@@ -54,13 +44,14 @@ new Tor release:
 2. Verify that there are no big outstanding issues.  You might find such
    issues --
 
-    * On Trac
+    * On Gitlab
 
     * On coverity scan
 
     * On OSS-Fuzz
 
 ## II. Write a changelog
+
 
 1a. (Alpha release variant)
 
@@ -149,15 +140,15 @@ new Tor release:
 ## III. Making the source release.
 
 1. In `maint-0.?.x`, bump the version number in `configure.ac` and run
-   `make update-versions` to update version numbers in other
+   `./scripts/main/update_versions.py` to update version numbers in other
    places, and commit.  Then merge `maint-0.?.x` into `release-0.?.x`.
 
    When you merge the maint branch forward to the next maint branch, or into
-   main, merge it with "-s ours" to avoid conflict with the version
+   main, merge it with `-s ours` to avoid conflict with the version
    bump.
 
-2. Make distcheck, put the tarball up in somewhere (how about your
-   homedir on people.torproject.org?) , and tell `#tor-dev`
+2. In `release-0.?.x`, run `make distcheck`, put the tarball up in somewhere
+   (how about your homedir on people.torproject.org?) , and tell `#tor-dev`
    about it.
 
    If you want, wait until at least one person has built it
@@ -169,8 +160,8 @@ new Tor release:
    (Otherwise, users will get confused when it complains to them
    about its status.)
 
-   If it is not, you'll need to poke Roger, Weasel, and Sebastian again: see
-   item 0.1 at the start of this document.
+   If it is not, you'll need to poke Roger, Weasel, Sebastian, and Sina
+   again: see the note at the start of the document.
 
 ## IV. Commit, upload, announce
 
@@ -192,8 +183,8 @@ $ git push origin tag tor-0.4.x.y-<status>
    `/srv/dist-master.torproject.org/htdocs/` on dist-master. Run
    "static-update-component dist.torproject.org" on dist-master.
 
-   In the project/web/tpo.git repository, update `databags/versions.ini`
-   to note the new version.  Push these changes to master.
+   In the `project/web/tpo.git` repository, update `databags/versions.ini`
+   to note the new version.  Push these changes to `master`.
 
    (NOTE: Due to #17805, there can only be one stable version listed at
    once.  Nonetheless, do not call your version "alpha" if it is stable,
@@ -207,7 +198,7 @@ $ git push origin tag tor-0.4.x.y-<status>
 
    Also, email tor-packagers@lists.torproject.org.
 
-   Mention where to download the tarball (https://dist.torproject.org).
+   Mention where to download the tarball (`https://dist.torproject.org/`).
 
    Include a link to the changelog.
 
@@ -243,3 +234,22 @@ $ git push origin tag tor-0.4.x.y-<status>
    main branch.
 
 4. Keep an eye on the blog post, to moderate comments and answer questions.
+
+## Appendix: An alternative means to notify packagers
+
+If for some reason you need to contact a bunch of packagers without
+using the publicly archived tor-packagers list, you can try these
+people:
+
+       - {weasel,sysrqb,mikeperry} at torproject dot org
+       - {blueness} at gentoo dot org
+       - {paul} at invizbox dot io
+       - {vincent} at invizbox dot com
+       - {lfleischer} at archlinux dot org
+       - {Nathan} at freitas dot net
+       - {mike} at tig dot as
+       - {tails-rm} at boum dot org
+       - {simon} at sdeziel.info
+       - {yuri} at freebsd.org
+       - {mh+tor} at scrit.ch
+       - {security} at brave.com
