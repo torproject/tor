@@ -113,7 +113,7 @@ test_new_route_len_safe_exit(void *arg)
   /* hidden service connecting to introduction point */
   r = new_route_len(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, &dummy_ei,
                     &dummy_nodes);
-  tt_int_op(DEFAULT_ROUTE_LEN, OP_EQ, r);
+  tt_int_op(DEFAULT_ROUTE_LEN+1, OP_EQ, r);
 
   /* router testing its own reachability */
   r = new_route_len(CIRCUIT_PURPOSE_TESTING, &dummy_ei, &dummy_nodes);

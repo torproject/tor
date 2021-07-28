@@ -651,4 +651,9 @@ guard_get_guardfraction_bandwidth(guardfraction_bandwidth_t *guardfraction_bw,
                                   int orig_bandwidth,
                                   uint32_t guardfraction_percentage);
 
+bool vanguards_lite_is_enabled(void);
+const routerset_t *get_layer2_guards(void);
+void maintain_layer2_guards(void);
+void purge_vanguards_lite(void);
+
 #endif /* !defined(TOR_ENTRYNODES_H) */

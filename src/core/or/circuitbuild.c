@@ -1359,7 +1359,9 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
   int routelen = DEFAULT_ROUTE_LEN;
   int known_purpose = 0;
 
-  if (circuit_should_use_vanguards(purpose)) {
+  /* If we're using L3 vanguards, we need longer paths for onion services */
+  if (circuit_purpose_is_hidden_service(purpose) &&
+      get_options()->HSLayer3Nodes) {
     /* Clients want an extra hop for rends to avoid linkability.
      * Services want it for intro points to avoid publishing their
      * layer3 guards. They want it for hsdir posts to use
@@ -1372,14 +1374,6 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
         purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
         purpose == CIRCUIT_PURPOSE_HS_VANGUARDS ||
         purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
-      return routelen+1;
-
-    /* If we only have Layer2 vanguards, then we do not need
-     * the extra hop for linkabilty reasons (see below).
-     * This means all hops can be of the form:
-     *   S/C - G - L2 - M - R/HSDir/I
-     */
-    if (get_options()->HSLayer2Nodes && !get_options()->HSLayer3Nodes)
       return routelen+1;
 
     /* For connections to hsdirs, clients want two extra hops
@@ -1400,16 +1394,14 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
     return routelen;
 
   switch (purpose) {
-    /* These two purposes connect to a router that we chose, so
-     * DEFAULT_ROUTE_LEN is safe. */
-  case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
-    /* hidden service connecting to introduction point */
+    /* These purposes connect to a router that we chose, so DEFAULT_ROUTE_LEN
+     * is safe: */
   case CIRCUIT_PURPOSE_TESTING:
     /* router reachability testing */
     known_purpose = 1;
     break;
 
-    /* These three purposes connect to a router that someone else
+    /* These purposes connect to a router that someone else
      * might have chosen, so add an extra hop to protect anonymity. */
   case CIRCUIT_PURPOSE_C_GENERAL:
   case CIRCUIT_PURPOSE_C_HSDIR_GET:
@@ -1419,6 +1411,9 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
     /* client connecting to introduction point */
   case CIRCUIT_PURPOSE_S_CONNECT_REND:
     /* hidden service connecting to rendezvous point */
+  case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+    /* hidden service connecting to intro point. In this case we want an extra
+       hop to avoid linkability attacks by the introduction point. */
     known_purpose = 1;
     routelen++;
     break;
@@ -2259,8 +2254,14 @@ middle_node_must_be_vanguard(const or_options_t *options,
     return 0;
   }
 
-  /* If we have sticky L2 nodes, and this is an L2 pick, use vanguards */
-  if (options->HSLayer2Nodes && cur_len == 1) {
+  /* Don't even bother if the feature is disabled */
+  if (!vanguards_lite_is_enabled()) {
+    return 0;
+  }
+
+  /* If we are a hidden service circuit, always use either vanguards-lite
+   * or HSLayer2Nodes for 2nd hop. */
+  if (cur_len == 1) {
     return 1;
   }
 
@@ -2284,12 +2285,17 @@ pick_vanguard_middle_node(const or_options_t *options,
 
   /* Pick the right routerset based on the current hop */
   if (cur_len == 1) {
-    vanguard_routerset = options->HSLayer2Nodes;
+    vanguard_routerset = options->HSLayer2Nodes ?
+      options->HSLayer2Nodes : get_layer2_guards();
   } else if (cur_len == 2) {
     vanguard_routerset = options->HSLayer3Nodes;
   } else {
     /* guaranteed by middle_node_should_be_vanguard() */
     tor_assert_nonfatal_unreached();
+    return NULL;
+  }
+
+  if (BUG(!vanguard_routerset)) {
     return NULL;
   }
 
