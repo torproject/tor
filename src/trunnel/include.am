@@ -12,6 +12,7 @@ TRUNNELINPUTS = \
 	src/trunnel/pwbox.trunnel \
 	src/trunnel/channelpadding_negotiation.trunnel \
 	src/trunnel/sendme_cell.trunnel \
+	src/trunnel/flow_control_cells.trunnel \
 	src/trunnel/socks5.trunnel \
 	src/trunnel/circpad_negotiation.trunnel
 
@@ -26,6 +27,7 @@ TRUNNELSOURCES = \
 	src/trunnel/hs/cell_rendezvous.c \
 	src/trunnel/channelpadding_negotiation.c \
 	src/trunnel/sendme_cell.c                    \
+	src/trunnel/flow_control_cells.c                    \
 	src/trunnel/socks5.c \
 	src/trunnel/netinfo.c \
 	src/trunnel/circpad_negotiation.c
@@ -43,6 +45,7 @@ TRUNNELHEADERS = \
 	src/trunnel/hs/cell_rendezvous.h \
 	src/trunnel/channelpadding_negotiation.h \
 	src/trunnel/sendme_cell.h                    \
+	src/trunnel/flow_control_cells.h                    \
 	src/trunnel/socks5.h                    \
 	src/trunnel/netinfo.h \
 	src/trunnel/circpad_negotiation.h
