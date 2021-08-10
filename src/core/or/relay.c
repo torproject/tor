@@ -98,6 +98,7 @@
 #include "core/or/socks_request_st.h"
 #include "core/or/sendme.h"
 #include "core/or/congestion_control_common.h"
+#include "core/or/congestion_control_flow.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -1740,6 +1741,44 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
       }
 
       return 0;
+    case RELAY_COMMAND_XOFF:
+      if (!conn) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+          if (relay_crypt_from_last_hop(ocirc, layer_hint) &&
+              connection_half_edge_is_valid_data(ocirc->half_streams,
+                                                rh->stream_id)) {
+            circuit_read_valid_data(ocirc, rh->length);
+          }
+        }
+        return 0;
+      }
+
+      if (circuit_process_stream_xoff(conn, layer_hint, cell)) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
+        }
+      }
+      return 0;
+    case RELAY_COMMAND_XON:
+      if (!conn) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+          if (relay_crypt_from_last_hop(ocirc, layer_hint) &&
+              connection_half_edge_is_valid_data(ocirc->half_streams,
+                                                rh->stream_id)) {
+            circuit_read_valid_data(ocirc, rh->length);
+          }
+        }
+        return 0;
+      }
+
+      if (circuit_process_stream_xon(conn, layer_hint, cell)) {
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), rh->length);
+        }
+      }
+      return 0;
     case RELAY_COMMAND_END:
       reason = rh->length > 0 ?
         get_uint8(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
@@ -2287,7 +2326,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   }
 
   /* Handle the stream-level SENDME package window. */
-  if (sendme_note_stream_data_packaged(conn) < 0) {
+  if (sendme_note_stream_data_packaged(conn, length) < 0) {
     connection_stop_reading(TO_CONN(conn));
     log_debug(domain,"conn->package_window reached 0.");
     circuit_consider_stop_edge_reading(circ, cpath_layer);
@@ -2402,7 +2441,8 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   /* Activate reading starting from the chosen stream */
   for (conn=chosen_stream; conn; conn = conn->next_stream) {
     /* Start reading for the streams starting from here */
-    if (conn->base_.marked_for_close || conn->package_window <= 0)
+    if (conn->base_.marked_for_close || conn->package_window <= 0 ||
+        conn->xoff_received)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
       connection_start_reading(TO_CONN(conn));
@@ -2413,7 +2453,8 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   }
   /* Go back and do the ones we skipped, circular-style */
   for (conn = first_conn; conn != chosen_stream; conn = conn->next_stream) {
-    if (conn->base_.marked_for_close || conn->package_window <= 0)
+    if (conn->base_.marked_for_close || conn->package_window <= 0 ||
+        conn->xoff_received)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
       connection_start_reading(TO_CONN(conn));

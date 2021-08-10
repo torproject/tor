@@ -641,6 +641,13 @@ connection_start_reading,(connection_t *conn))
     if (connection_should_read_from_linked_conn(conn))
       connection_start_reading_from_linked_conn(conn);
   } else {
+    if (CONN_IS_EDGE(conn) && TO_EDGE_CONN(conn)->xoff_received) {
+      /* We should not get called here if we're waiting for an XON, but
+       * belt-and-suspenders */
+      log_notice(LD_NET,
+                 "Request to start reading on an edgeconn blocked with XOFF");
+      return;
+    }
     if (event_add(conn->read_event, NULL))
       log_warn(LD_NET, "Error from libevent setting read event state for %d "
                "to watched: %s",

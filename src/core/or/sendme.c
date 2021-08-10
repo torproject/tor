@@ -22,6 +22,7 @@
 #include "core/or/relay.h"
 #include "core/or/sendme.h"
 #include "core/or/congestion_control_common.h"
+#include "core/or/congestion_control_flow.h"
 #include "feature/nodelist/networkstatus.h"
 #include "lib/ctime/di_ops.h"
 #include "trunnel/sendme_cell.h"
@@ -370,6 +371,10 @@ sendme_connection_edge_consider_sending(edge_connection_t *conn)
 
   int log_domain = TO_CONN(conn)->type == CONN_TYPE_AP ? LD_APP : LD_EXIT;
 
+  /* If we use flow control, we do not send stream sendmes */
+  if (edge_uses_flow_control(conn))
+    goto end;
+
   /* Don't send it if we still have data to deliver. */
   if (connection_outbuf_too_full(TO_CONN(conn))) {
     goto end;
@@ -546,6 +551,12 @@ sendme_process_stream_level(edge_connection_t *conn, circuit_t *circ,
   tor_assert(conn);
   tor_assert(circ);
 
+  if (edge_uses_flow_control(conn)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_EDGE,
+           "Congestion control got stream sendme");
+    return -END_CIRC_REASON_TORPROTOCOL;
+  }
+
   /* Don't allow the other endpoint to request more than our maximum (i.e.
    * initial) stream SENDME window worth of data. Well-behaved stock clients
    * will not request more than this max (as per the check in the while loop
@@ -603,7 +614,12 @@ int
 sendme_stream_data_received(edge_connection_t *conn)
 {
   tor_assert(conn);
-  return --conn->deliver_window;
+
+  if (edge_uses_flow_control(conn)) {
+    return flow_control_decide_xoff(conn);
+  } else {
+    return --conn->deliver_window;
+  }
 }
 
 /* Called when a relay DATA cell is packaged on the given circuit. If
@@ -651,9 +667,17 @@ sendme_note_circuit_data_packaged(circuit_t *circ, crypt_path_t *layer_hint)
 /* Called when a relay DATA cell is packaged for the given edge connection
  * conn. Update the package window and return its new value. */
 int
-sendme_note_stream_data_packaged(edge_connection_t *conn)
+sendme_note_stream_data_packaged(edge_connection_t *conn, size_t len)
 {
   tor_assert(conn);
+
+  if (edge_uses_flow_control(conn)) {
+    flow_control_note_sent_data(conn, len);
+    if (conn->xoff_received)
+      return -1;
+    else
+      return 1;
+  }
 
   --conn->package_window;
   log_debug(LD_APP, "Stream package_window now %d.", conn->package_window);

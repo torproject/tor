@@ -147,6 +147,8 @@
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/socks_request_st.h"
 
+#include "core/or/congestion_control_flow.h"
+
 /**
  * On Windows and Linux we cannot reliably bind() a socket to an
  * address and port if: 1) There's already a socket bound to wildcard
@@ -4594,9 +4596,9 @@ connection_handle_write_impl(connection_t *conn, int force)
       !dont_stop_writing) { /* it's done flushing */
     if (connection_finished_flushing(conn) < 0) {
       /* already marked */
-      return -1;
+      goto err;
     }
-    return 0;
+    goto done;
   }
 
   /* Call even if result is 0, since the global write bucket may
@@ -4606,7 +4608,17 @@ connection_handle_write_impl(connection_t *conn, int force)
   if (n_read > 0 && connection_is_reading(conn))
     connection_consider_empty_read_buckets(conn);
 
+ done:
+  /* If this is an edge connection with congestion control, check to see
+   * if it is time to send an xon */
+  if (conn_uses_flow_control(conn)) {
+    flow_control_decide_xon(TO_EDGE_CONN(conn), n_written);
+  }
+
   return 0;
+
+ err:
+  return -1;
 }
 
 /* DOCDOC connection_handle_write */

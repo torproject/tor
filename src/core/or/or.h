@@ -210,6 +210,9 @@ struct curve25519_public_key_t;
 #define RELAY_COMMAND_PADDING_NEGOTIATE 41
 #define RELAY_COMMAND_PADDING_NEGOTIATED 42
 
+#define RELAY_COMMAND_XOFF 43
+#define RELAY_COMMAND_XON 44
+
 /* Reasons why an OR connection is closed. */
 #define END_OR_CONN_REASON_DONE           1
 #define END_OR_CONN_REASON_REFUSED        2 /* connection refused */

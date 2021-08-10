@@ -45,6 +45,7 @@
 #include "core/or/channel.h"
 #include "core/or/channelpadding.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/congestion_control_flow.h"
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
@@ -1699,6 +1700,7 @@ notify_after_networkstatus_changes(void)
   channelpadding_new_consensus_params(c);
   circpad_new_consensus_params(c);
   router_new_consensus_params(c);
+  flow_control_new_consensus_params(c);
 
   /* Maintenance of our L2 guard list */
   maintain_layer2_guards();
