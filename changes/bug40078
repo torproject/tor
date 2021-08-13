@@ -1,3 +1,0 @@
-  o Minor bugfix (crypto):
-    - Disable the unused batch verification feature of ed25519-donna. Fixes
-      bug 40078; bugfix on 0.2.6.1-alpha. Found by Henry de Valence.
