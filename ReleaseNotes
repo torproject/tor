@@ -2,6 +2,41 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.5.10 - 2021-08-13
+  This version fixes several bugs from earlier versions.
+
+  o Minor feature (fallbackdir):
+    - Regenerate fallback directories list. Close ticket 40447.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database,
+      as retrieved on 2021/08/12.
+
+  o Minor features (testing):
+    - Enable the deterministic RNG for unit tests that covers the address set
+      bloomfilter-based API's. Fixes bug 40419; bugfix on 0.3.3.2-alpha.
+
+  o Minor bugfix (crypto):
+    - Disable the unused batch verification feature of ed25519-donna. Fixes
+      bug 40078; bugfix on 0.2.6.1-alpha. Found by Henry de Valence.
+
+  o Minor bugfixes (relay, backport from 0.4.6.x):
+    - Reduce the compression level for data streaming from HIGH to LOW. Fixes
+      bug 40301; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (timekeeping, backport from 0.4.6.x):
+    - Calculate the time of day correctly on systems where the time_t
+      type includes leap seconds. (This is not the case on most
+      operating systems, but on those where it occurs, our tor_timegm
+      function did not correctly invert the system's gmtime function,
+      which could result in assertion failures when calculating
+      voting schedules.)  Fixes bug 40383; bugfix on 0.2.0.3-alpha.
+
+  o Minor bugfixes (warnings, portability, backport from 0.4.6.x):
+    - Suppress a strict-prototype warning when building with some versions
+      of NSS.  Fixes bug 40409; bugfix on 0.3.5.1-alpha.
+
+
 Changes in version 0.4.5.9 - 2021-06-14
   Tor 0.4.5.9 fixes several security issues, including a
   denial-of-service attack against onion service clients, and another
