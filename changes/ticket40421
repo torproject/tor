@@ -1,3 +1,0 @@
-  o Minor bugfixes (onion service):
-    - Send back the extended SOCKS error 0xF6 for a v2 onion address. Fixes bug
-      40421; bugfix on 0.4.6.2-alpha.

@@ -1,7 +1,0 @@
-  o Minor bugfixes (timekeeping):
-    - Calculate the time of day correctly on systems where the time_t
-      type includes leap seconds. (This is not the case on most
-      operating systems, but on those where it occurs, our tor_timegm
-      function did not correctly invert the system's gmtime function,
-      which could result in assertion failures when calculating
-      voting schedules.)  Fixes bug 40383; bugfix on 0.2.0.3-alpha.
