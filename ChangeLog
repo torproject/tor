@@ -1,8 +1,8 @@
 Changes in version 0.4.6.7 - 2021-08-16
-  This version fixes several bugs from earlier versions of Tor, including one
-  that could lead to a denial-of-service attack. Everyone running an earlier
-  version, whether as a client, a relay, or an onion service, should upgrade
-  to Tor 0.3.5.16, 0.4.5.10, or 0.4.6.7.
+  This version fixes several bugs from earlier versions of Tor,
+  including one that could lead to a denial-of-service attack. Everyone
+  running an earlier version, whether as a client, a relay, or an onion
+  service, should upgrade to Tor 0.3.5.16, 0.4.5.10, or 0.4.6.7.
 
   o Major bugfixes (cryptography, security):
     - Resolve an assertion failure caused by a behavior mismatch between
@@ -17,29 +17,31 @@ Changes in version 0.4.6.7 - 2021-08-16
     - Regenerate fallback directories list. Close ticket 40447.
 
   o Minor features (geoip data):
-    - Update the geoip files to match the IPFire Location Database,
-      as retrieved on 2021/08/12.
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2021/08/12.
 
   o Minor bugfix (crypto):
-    - Disable the unused batch verification feature of ed25519-donna. Fixes
-      bug 40078; bugfix on 0.2.6.1-alpha. Found by Henry de Valence.
+    - Disable the unused batch verification feature of ed25519-donna.
+      Fixes bug 40078; bugfix on 0.2.6.1-alpha. Found by Henry
+      de Valence.
 
   o Minor bugfixes (onion service):
-    - Send back the extended SOCKS error 0xF6 (Onion Service Invalid Address)
-      for a v2 onion address. Fixes bug 40421; bugfix on 0.4.6.2-alpha.
+    - Send back the extended SOCKS error 0xF6 (Onion Service Invalid
+      Address) for a v2 onion address. Fixes bug 40421; bugfix
+      on 0.4.6.2-alpha.
 
   o Minor bugfixes (relay):
-    - Reduce the compression level for data streaming from HIGH to LOW in
-      order to reduce CPU load on the directory relays. Fixes bug 40301;
-      bugfix on 0.3.5.1-alpha.
+    - Reduce the compression level for data streaming from HIGH to LOW
+      in order to reduce CPU load on the directory relays. Fixes bug
+      40301; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (timekeeping):
     - Calculate the time of day correctly on systems where the time_t
       type includes leap seconds. (This is not the case on most
       operating systems, but on those where it occurs, our tor_timegm
       function did not correctly invert the system's gmtime function,
-      which could result in assertion failures when calculating
-      voting schedules.)  Fixes bug 40383; bugfix on 0.2.0.3-alpha.
+      which could result in assertion failures when calculating voting
+      schedules.) Fixes bug 40383; bugfix on 0.2.0.3-alpha.
 
 
 Changes in version 0.4.6.6 - 2021-06-30
