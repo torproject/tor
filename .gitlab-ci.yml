@@ -99,7 +99,7 @@ variables:
 # Minimal check on debian: just make, make check.
 #
 debian-minimal:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   script:
     - ./scripts/ci/ci-driver.sh
@@ -122,7 +122,7 @@ debian-hardened:
 #####
 # Distcheck on debian stable
 debian-distcheck:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   variables:
     DISTCHECK: "yes"
@@ -133,7 +133,7 @@ debian-distcheck:
 #####
 # Documentation tests on debian stable: doxygen and asciidoc.
 debian-docs:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   variables:
     DOXYGEN: "yes"
@@ -151,7 +151,7 @@ debian-docs:
 #       with the 'artifacts' mechanism, in theory, but it would be good to
 #       avoid having to have a system with hundreds of artifacts.
 debian-integration:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   variables:
     CHECK: "no"
@@ -165,7 +165,7 @@ debian-integration:
 #####
 # Tracing build on Debian stable.
 debian-tracing:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   variables:
     TRACING: "yes"
@@ -189,7 +189,7 @@ debian-tracing:
 #####
 # No-authority mode
 debian-disable-dirauth:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   variables:
     DISABLE_DIRAUTH: "yes"
@@ -199,7 +199,7 @@ debian-disable-dirauth:
 #####
 # No-relay mode
 debian-disable-relay:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   variables:
     DISABLE_RELAY: "yes"
@@ -221,7 +221,7 @@ debian-disable-relay:
 #####
 # NSS check on debian
 debian-nss:
-  image: debian:stable
+  image: debian:buster
   <<: *debian-template
   variables:
     NSS: "yes"
