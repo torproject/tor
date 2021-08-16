@@ -819,17 +819,16 @@ test_util_time(void *arg)
   /* The below tests will all cause a BUG message, so we capture, suppress,
    * and detect. */
 #define CAPTURE() do {                                          \
+    teardown_capture_of_logs();                                 \
     setup_full_capture_of_logs(LOG_WARN);                       \
   } while (0)
 #define CHECK_TIMEGM_WARNING(msg) do { \
     expect_single_log_msg_containing(msg);                              \
-    teardown_capture_of_logs();                                         \
   } while (0)
 #define CHECK_POSSIBLE_EINVAL() do {                            \
     if (mock_saved_log_n_entries()) {                           \
       expect_single_log_msg_containing("Invalid argument");     \
     }                                                           \
-    teardown_capture_of_logs();                                 \
   } while (0)
 
 #define CHECK_TIMEGM_ARG_OUT_OF_RANGE(msg) \
