@@ -2,8 +2,20 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-Changes in version 0.4.6.7 - 2021-08-13
-  This version fixes several bugs from earlier versions.
+Changes in version 0.4.6.7 - 2021-08-16
+  This version fixes several bugs from earlier versions of Tor, including one
+  that could lead to a denial-of-service attack. Everyone running an earlier
+  version, whether as a client, a relay, or an onion service, should upgrade
+  to Tor 0.3.5.16, 0.4.5.10, or 0.4.6.7.
+
+  o Major bugfixes (cryptography, security):
+    - Resolve an assertion failure caused by a behavior mismatch between our
+      batch-signature verification code and our single-signature verification
+      code. This assertion failure could be triggered remotely, leading to a
+      denial of service attack. We fix this issue by disabling batch
+      verification. Fixes bug 40078; bugfix on 0.2.6.1-alpha. This issue is
+      also tracked as TROVE-2021-007 and CVE-2021-38385. Found by Henry de
+      Valence.
 
   o Minor feature (fallbackdir):
     - Regenerate fallback directories list. Close ticket 40447.
