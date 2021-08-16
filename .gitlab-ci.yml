@@ -117,7 +117,7 @@ debian-minimal:
 #
 # TODO: This will be faster once we merge #40098 and #40099.
 debian-hardened:
-  image: debian:testing
+  image: debian:bullseye
   <<: *debian-template
   variables:
     ALL_BUGS_ARE_FATAL: "yes"
