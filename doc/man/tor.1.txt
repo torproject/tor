@@ -3562,7 +3562,6 @@ The following options are used for running a testing Tor network.
        TestingDirConnectionMaxStall 30 seconds
        TestingEnableConnBwEvent 1
        TestingEnableCellStatsEvent 1
-       RendPostPeriod 2 minutes
 
 [[TestingAuthDirTimeToLearnReachability]] **TestingAuthDirTimeToLearnReachability** __N__ **seconds**|**minutes**|**hours**::
     After starting as an authority, do not make claims about whether routers

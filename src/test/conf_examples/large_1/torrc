@@ -133,7 +133,6 @@ ReachableORAddresses 128.0.0.0/8
 RejectPlaintextPorts 23
 RelayBandwidthBurst 10000
 RelayBandwidthRate 1000
-RendPostPeriod 10 minutes
 RephistTrackTime 10 minutes
 SafeLogging 0
 SafeSocks 0

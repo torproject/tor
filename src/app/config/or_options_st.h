@@ -396,8 +396,6 @@ struct or_options_t {
   /** List of suffixes for <b>AutomapHostsOnResolve</b>.  The special value
    * "." means "match everything." */
   struct smartlist_t *AutomapHostsSuffixes;
-  int RendPostPeriod; /**< How often do we post each rendezvous service
-                       * descriptor? Remember to publish them independently. */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
                         * connections alive? */
   int SocksTimeout; /**< How long do we let a socks connection wait
