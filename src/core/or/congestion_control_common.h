@@ -39,6 +39,7 @@ int congestion_control_get_package_window(const circuit_t *,
 
 int sendme_get_inc_count(const circuit_t *, const crypt_path_t *);
 bool circuit_sent_cell_for_sendme(const circuit_t *, const crypt_path_t *);
+bool is_monotime_clock_reliable(void);
 
 /* Private section starts. */
 #ifdef TOR_CONGESTION_CONTROL_PRIVATE

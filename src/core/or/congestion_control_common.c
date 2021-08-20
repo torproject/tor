@@ -558,10 +558,16 @@ time_delta_should_use_heuristics(const congestion_control_t *cc)
   return false;
 }
 
+static bool is_monotime_clock_broken = false;
+
 /**
  * Returns true if the monotime delta is 0, or is significantly
  * different than the previous delta. Either case indicates
  * that the monotime time source stalled or jumped.
+ *
+ * Also caches the clock state in the is_monotime_clock_broken flag,
+ * so we can also provide a is_monotime_clock_reliable() function,
+ * used by flow control rate timing.
  */
 static bool
 time_delta_stalled_or_jumped(const congestion_control_t *cc,
@@ -573,22 +579,30 @@ time_delta_stalled_or_jumped(const congestion_control_t *cc,
     static ratelim_t stall_info_limit = RATELIM_INIT(60);
     log_fn_ratelim(&stall_info_limit, LOG_INFO, LD_CIRC,
            "Congestion control cannot measure RTT due to monotime stall.");
-    return true;
+
+    /* If delta is every 0, the monotime clock has stalled, and we should
+     * not use it anywhere. */
+    is_monotime_clock_broken = true;
+
+    return is_monotime_clock_broken;
   }
 
-  /* If the old_delta is 0, we have no previous values. So
-   * just assume this one is valid (beause it is non-zero) */
-  if (old_delta == 0)
-    return false;
+  /* If the old_delta is 0, we have no previous values on this circuit.
+   *
+   * So, return the global monotime status from other circuits, and
+   * do not update.
+   */
+  if (old_delta == 0) {
+    return is_monotime_clock_broken;
+  }
 
   /*
    * For the heuristic cases, we need at least a few timestamps,
    * to average out any previous partial stalls or jumps. So until
-   * than point, let's just delcare these time values "good enough
-   * to use".
+   * than point, let's just use the cached status from other circuits.
    */
   if (!time_delta_should_use_heuristics(cc)) {
-    return false;
+    return is_monotime_clock_broken;
   }
 
   /* If old_delta is significantly larger than new_delta, then
@@ -601,7 +615,9 @@ time_delta_stalled_or_jumped(const congestion_control_t *cc,
            "), likely due to clock jump.",
            new_delta/1000, old_delta/1000);
 
-    return true;
+    is_monotime_clock_broken = true;
+
+    return is_monotime_clock_broken;
   }
 
   /* If new_delta is significantly larger than old_delta, then
@@ -613,10 +629,24 @@ time_delta_stalled_or_jumped(const congestion_control_t *cc,
            "), likely due to clock jump.",
            new_delta/1000, old_delta/1000);
 
-    return true;
+    is_monotime_clock_broken = true;
+
+    return is_monotime_clock_broken;
   }
 
-  return false;
+  /* All good! Update cached status, too */
+  is_monotime_clock_broken = false;
+
+  return is_monotime_clock_broken;
+}
+
+/**
+ * Is the monotime clock stalled according to any circuits?
+ */
+bool
+is_monotime_clock_reliable(void)
+{
+  return !is_monotime_clock_broken;
 }
 
 /**
@@ -753,7 +783,7 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
     SMARTLIST_FOREACH(cc->sendme_arrival_timestamps, uint64_t *, t,
                       tor_free(t));
     smartlist_clear(cc->sendme_arrival_timestamps);
-  } else if (curr_rtt_usec) {
+  } else if (curr_rtt_usec && is_monotime_clock_reliable()) {
     /* Sendme-based BDP will quickly measure BDP in much less than
      * a cwnd worth of data when in use (in 2-10 SENDMEs).
      *
