@@ -225,24 +225,6 @@ congestion_control_free_(congestion_control_t *cc)
 }
 
 /**
- * Compute an N-count EWMA, aka N-EWMA. N-EWMA is defined as:
- *  EWMA = alpha*value + (1-alpha)*EWMA_prev
- * with alpha = 2/(N+1).
- *
- * This works out to:
- *  EWMA = value*2/(N+1) + EMA_prev*(N-1)/(N+1)
- *       = (value*2 + EWMA_prev*(N-1))/(N+1)
- */
-static inline uint64_t
-n_count_ewma(uint64_t curr, uint64_t prev, uint64_t N)
-{
-  if (prev == 0)
-    return curr;
-  else
-    return (2*curr + (N-1)*prev)/(N+1);
-}
-
-/**
  * Enqueue a u64 timestamp to the end of a queue of timestamps.
  */
 static inline void
