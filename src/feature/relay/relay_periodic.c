@@ -219,7 +219,7 @@ reachability_warnings_callback(time_t now, const or_options_t *options)
           tor_asprintf(&where4, "%s:%d", address4, me->ipv4_orport);
         if (!v6_ok)
           tor_asprintf(&where6, "[%s]:%d", address6, me->ipv6_orport);
-        const char *opt_and = (!v4_ok && !v6_ok) ? "and" : "";
+        const char *opt_and = (!v4_ok && !v6_ok) ? " and " : "";
 
         /* IPv4 reachability test worked but not the IPv6. We will _not_
          * publish the descriptor if our IPv6 was configured. We will if it

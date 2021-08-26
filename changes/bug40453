@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging, relay):
+    - Add spaces between the "and" when logging the "Your server has
+      not managed to confirm reachability for its" on dual-stack relays
+      Fixes bug 40453; bugfix on 0.4.5.1-alpha. Patch by Neel Chauhan.
