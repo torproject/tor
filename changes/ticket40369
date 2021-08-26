@@ -1,4 +1,0 @@
-  o Minor bugfixes (build, cross-compilation):
-    - Allow a custom "ar" for cross-compilation.  Our previous build script
-      had used the $AR environment variable in most places, but it missed
-      one. Fixes bug 40369; bugfix on 0.4.5.1-alpha.

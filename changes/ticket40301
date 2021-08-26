@@ -1,4 +1,0 @@
-  o Minor bugfixes (relay):
-    - Reduce the compression level for data streaming from HIGH to LOW. Fixes
-      bug 40301; bugfix on 0.3.5.1-alpha.
-

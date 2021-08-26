@@ -1,3 +1,0 @@
-  o Minor bugfix (onion service, client, memory leak):
-    - An expired cached descriptor could have been overwritten with a new one
-      leading to a memory leak. Fixes bug 40356; bugfix on 0.3.5.1-alpha.

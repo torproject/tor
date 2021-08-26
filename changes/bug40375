@@ -1,5 +1,0 @@
-  o Minor bugfixes (consensus handling):
-    - Avoid a set of bugs that could be caused by inconsistently preferring
-      an out-of-date consensus stored in a stale directory cache over
-      a more recent one stored on disk as the latest consensus.
-      Fixes bug 40375; bugfix on 0.3.1.1-alpha.

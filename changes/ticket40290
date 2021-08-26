@@ -1,3 +1,0 @@
-  o Minor bugfix (logging, relay):
-    - Emit a warning if an Address is found to be internal and tor can't use it.
-      Fixes bug 40290; bugfix on 0.4.5.1-alpha.
