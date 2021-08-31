@@ -707,6 +707,7 @@ struct testgroup_t testgroups[] = {
   { "netinfo/", netinfo_tests },
   { "nodelist/", nodelist_tests },
   { "oom/", oom_tests },
+  { "onion-handshake/ntor-v3/", ntor_v3_tests },
   { "oos/", oos_tests },
   { "options/", options_tests },
   { "options/act/", options_act_tests },

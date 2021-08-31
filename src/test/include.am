@@ -204,6 +204,7 @@ src_test_test_SOURCES += \
 	src/test/test_namemap.c \
 	src/test/test_netinfo.c \
 	src/test/test_nodelist.c \
+	src/test/test_ntor_v3.c \
 	src/test/test_oom.c \
 	src/test/test_oos.c \
 	src/test/test_options.c \
