@@ -52,6 +52,7 @@
 #include "core/crypto/onion_fast.h"
 #include "core/crypto/onion_tap.h"
 #include "core/or/policies.h"
+#include "lib/sandbox/sandbox.h"
 #include "app/config/statefile.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "feature/nodelist/networkstatus.h"
@@ -732,6 +733,9 @@ struct testgroup_t testgroups[] = {
   { "routerkeys/", routerkeys_tests },
   { "routerlist/", routerlist_tests },
   { "routerset/" , routerset_tests },
+#ifdef USE_LIBSECCOMP
+  { "sandbox/" , sandbox_tests },
+#endif
   { "scheduler/", scheduler_tests },
   { "sendme/", sendme_tests },
   { "shared-random/", sr_tests },
