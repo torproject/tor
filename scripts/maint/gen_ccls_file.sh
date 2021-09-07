@@ -19,13 +19,13 @@ echo "clang" > "$CCLS_FILE"
 # Add these include so the ccls server can properly check new files that are
 # not in the compile_commands.json yet
 {
-  echo "-I."
-  echo "-I./src"
-  echo "-I./src/ext"
-  echo "-I./src/ext/trunnel"
+    echo "-I."
+    echo "-I./src"
+    echo "-I./src/ext"
+    echo "-I./src/ext/trunnel"
 } >> "$CCLS_FILE"
 
 # Add all defines (-D).
 for p in $PRIVATE_DEFS; do
-  echo "-D$p" >> "$CCLS_FILE"
+    echo "-D$p" >> "$CCLS_FILE"
 done

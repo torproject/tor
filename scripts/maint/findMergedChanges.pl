@@ -9,7 +9,7 @@ sub nChanges {
     # requires perl 5.8.  Avoids shell issues if we ever get a changes
     # file named by the parents of Little Johnny Tables.
     open F, "-|", "git", "log", "--no-merges", "--pretty=format:%H", $branches, "--", $fname
-       or die "$!";
+        or die "$!";
     my @changes = <F>;
     return scalar @changes
 }
@@ -42,13 +42,13 @@ my $head = "origin/main";
 while (@ARGV and $ARGV[0] =~ /^--/) {
     my $flag = shift @ARGV;
     if ($flag =~ /^--(weird|merged|unmerged|list)/) {
-       $look_for_type = $1;
+        $look_for_type = $1;
     } elsif ($flag =~ /^--branch=(\S+)/) {
         $target_branch = $1;
     } elsif ($flag =~ /^--head=(\S+)/) {
         $head = $1;
     } else {
-       die "Unrecognized flag $flag";
+        die "Unrecognized flag $flag";
     }
 }
 
@@ -58,16 +58,16 @@ for my $changefile (@ARGV) {
     my $type;
 
     if ($n_merged != 0 and $n_postmerged == 0) {
-       $type = "merged";
+        $type = "merged";
     } elsif ($n_merged == 0 and $n_postmerged != 0) {
-       $type = "unmerged";
+        $type = "unmerged";
     } else {
-       $type = "weird";
+        $type = "weird";
     }
 
     if ($type eq $look_for_type) {
-       print "$changefile\n";
+        print "$changefile\n";
     } elsif ($look_for_type eq 'list') {
-       printf "% 8s: %s\n", $type, $changefile;
+        printf "% 8s: %s\n", $type, $changefile;
     }
 }

@@ -26,7 +26,7 @@ TOML="$TOPLEVEL/src/rust/Cargo.toml"
 VENDORED="$TOPLEVEL/src/ext/rust/crates"
 CARGO=$(command -v cargo)
 
-if ! test -f "$TOML"  ; then
+if ! test -f "$TOML" ; then
     printf "Error: Couldn't find workspace Cargo.toml in expected location: %s\\n" "$TOML"
 fi
 
