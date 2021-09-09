@@ -2643,7 +2643,8 @@ channel_dump_statistics, (channel_t *chan, int severity))
   }
   if (chan->timestamp_recv == 0) {
       tor_log(severity, LD_GENERAL,
-              " * Channel %"PRIu64 " never received a cell", (chan->global_identifier));
+              " * Channel %"PRIu64 " never received a cell",
+              (chan->global_identifier));
   } else {
       tor_log(severity, LD_GENERAL,
               " * Channel %"PRIu64 " last received a cell "
@@ -2654,7 +2655,8 @@ channel_dump_statistics, (channel_t *chan, int severity))
   }
   if (chan->timestamp_xmit == 0) {
       tor_log(severity, LD_GENERAL,
-              " * Channel %"PRIu64 " never transmitted a cell",(chan->global_identifier));
+              " * Channel %"PRIu64 " never transmitted a cell",
+              (chan->global_identifier));
   } else {
       tor_log(severity, LD_GENERAL,
               " * Channel %"PRIu64 " last transmitted a cell "
