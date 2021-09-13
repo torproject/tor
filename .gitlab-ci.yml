@@ -37,6 +37,12 @@ variables:
     paths:
       - artifacts/
 
+
+# This template is used for x86-64 builds.
+.x86-64-template: &x86-64-template
+  tags:
+    - amd64
+
 # This template should be usable on any system that's based on apt.
 .apt-template: &apt-template |
       export LC_ALL=C.UTF-8
@@ -57,6 +63,7 @@ variables:
 # This template sets us up for Debian system in particular.
 .debian-template: &debian-template
   <<: *artifacts-template
+  <<: *x86-64-template
   variables:
     DEBIAN_FRONTEND: "noninteractive"
   # TODO: Using "cache" in this way speeds up our downloads.  It would be
@@ -110,7 +117,7 @@ debian-minimal:
 #
 # TODO: This will be faster once we merge #40098 and #40099.
 debian-hardened:
-  image: debian:testing
+  image: debian:bullseye
   <<: *debian-template
   variables:
     ALL_BUGS_ARE_FATAL: "yes"
