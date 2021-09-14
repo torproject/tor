@@ -426,6 +426,7 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
                                   cc->onionskin, cc->handshake_len,
                                   onion_keys,
                                   cell_out->reply,
+                                  sizeof(cell_out->reply),
                                   rpl.keys, CPATH_KEY_MATERIAL_LEN,
                                   rpl.rend_auth_material);
   if (n < 0) {

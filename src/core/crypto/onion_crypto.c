@@ -103,19 +103,23 @@ onion_handshake_state_release(onion_handshake_state_t *state)
 
 /** Perform the first step of a circuit-creation handshake of type <b>type</b>
  * (one of ONION_HANDSHAKE_TYPE_*): generate the initial "onion skin" in
- * <b>onion_skin_out</b>, and store any state information in <b>state_out</b>.
+ * <b>onion_skin_out</b> with length of up to <b>onion_skin_out_maxlen</b>,
+ * and store any state information in <b>state_out</b>.
  * Return -1 on failure, and the length of the onionskin on acceptance.
  */
 int
 onion_skin_create(int type,
                   const extend_info_t *node,
                   onion_handshake_state_t *state_out,
-                  uint8_t *onion_skin_out)
+                  uint8_t *onion_skin_out,
+                  size_t onion_skin_out_maxlen)
 {
   int r = -1;
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
+    if (onion_skin_out_maxlen < TAP_ONIONSKIN_CHALLENGE_LEN)
+      return -1;
     if (!node->onion_key)
       return -1;
 
@@ -133,7 +137,9 @@ onion_skin_create(int type,
     r = CREATE_FAST_LEN;
     break;
   case ONION_HANDSHAKE_TYPE_NTOR:
-    if (!extend_info_supports_ntor(node))
+    if (onion_skin_out_maxlen < NTOR_ONIONSKIN_LEN)
+      return -1;
+   if (!extend_info_supports_ntor(node))
       return -1;
     if (onion_skin_ntor_create((const uint8_t*)node->identity_digest,
                                &node->curve25519_onion_key,
@@ -175,6 +181,7 @@ onion_skin_server_handshake(int type,
                       const uint8_t *onion_skin, size_t onionskin_len,
                       const server_onion_keys_t *keys,
                       uint8_t *reply_out,
+                      size_t reply_out_maxlen,
                       uint8_t *keys_out, size_t keys_out_len,
                       uint8_t *rend_nonce_out)
 {
@@ -182,6 +189,8 @@ onion_skin_server_handshake(int type,
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
+    if (reply_out_maxlen < TAP_ONIONSKIN_REPLY_LEN)
+      return -1;
     if (onionskin_len != TAP_ONIONSKIN_CHALLENGE_LEN)
       return -1;
     if (onion_skin_TAP_server_handshake((const char*)onion_skin,
@@ -193,6 +202,8 @@ onion_skin_server_handshake(int type,
     memcpy(rend_nonce_out, reply_out+DH1024_KEY_LEN, DIGEST_LEN);
     break;
   case ONION_HANDSHAKE_TYPE_FAST:
+    if (reply_out_maxlen < CREATED_FAST_LEN)
+      return -1;
     if (onionskin_len != CREATE_FAST_LEN)
       return -1;
     if (fast_server_handshake(onion_skin, reply_out, keys_out, keys_out_len)<0)
@@ -201,6 +212,8 @@ onion_skin_server_handshake(int type,
     memcpy(rend_nonce_out, reply_out+DIGEST_LEN, DIGEST_LEN);
     break;
   case ONION_HANDSHAKE_TYPE_NTOR:
+    if (reply_out_maxlen < NTOR_REPLY_LEN)
+      return -1;
     if (onionskin_len < NTOR_ONIONSKIN_LEN)
       return -1;
     {

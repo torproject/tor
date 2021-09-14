@@ -367,6 +367,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
                                        create_cell->handshake_len,
                                        NULL,
                                        created_cell.reply,
+                                       sizeof(created_cell.reply),
                                        keys, CPATH_KEY_MATERIAL_LEN,
                                        rend_circ_nonce);
     tor_free(create_cell);

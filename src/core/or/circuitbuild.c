@@ -995,7 +995,8 @@ circuit_send_first_onion_skin(origin_circuit_t *circ)
   len = onion_skin_create(cc.handshake_type,
                           circ->cpath->extend_info,
                           &circ->cpath->handshake_state,
-                          cc.onionskin);
+                          cc.onionskin,
+                          sizeof(cc.onionskin));
   if (len < 0) {
     log_warn(LD_CIRC,"onion_skin_create (first hop) failed.");
     return - END_CIRC_REASON_INTERNAL;
@@ -1142,7 +1143,8 @@ circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
   len = onion_skin_create(ec.create_cell.handshake_type,
                           hop->extend_info,
                           &hop->handshake_state,
-                          ec.create_cell.onionskin);
+                          ec.create_cell.onionskin,
+                          sizeof(ec.create_cell.onionskin));
   if (len < 0) {
     log_warn(LD_CIRC,"onion_skin_create failed.");
     return - END_CIRC_REASON_INTERNAL;

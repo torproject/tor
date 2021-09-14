@@ -25,11 +25,13 @@ void onion_handshake_state_release(onion_handshake_state_t *state);
 int onion_skin_create(int type,
                       const extend_info_t *node,
                       onion_handshake_state_t *state_out,
-                      uint8_t *onion_skin_out);
+                      uint8_t *onion_skin_out,
+                      size_t onion_skin_out_maxlen);
 int onion_skin_server_handshake(int type,
                       const uint8_t *onion_skin, size_t onionskin_len,
                       const server_onion_keys_t *keys,
                       uint8_t *reply_out,
+                      size_t reply_out_maxlen,
                       uint8_t *keys_out, size_t key_out_len,
                       uint8_t *rend_nonce_out);
 int onion_skin_client_handshake(int type,
