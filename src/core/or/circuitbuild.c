@@ -1242,6 +1242,7 @@ circuit_finish_handshake(origin_circuit_t *circ,
   }
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
+  circuit_params_t params;
   {
     const char *msg = NULL;
     if (onion_skin_client_handshake(hop->handshake_state.tag,
@@ -1249,6 +1250,7 @@ circuit_finish_handshake(origin_circuit_t *circ,
                                     reply->reply, reply->handshake_len,
                                     (uint8_t*)keys, sizeof(keys),
                                     (uint8_t*)hop->rend_circ_nonce,
+                                    &params,
                                     &msg) < 0) {
       if (msg)
         log_warn(LD_CIRC,"onion_skin_client_handshake failed: %s", msg);
@@ -1257,6 +1259,8 @@ circuit_finish_handshake(origin_circuit_t *circ,
   }
 
   onion_handshake_state_release(&hop->handshake_state);
+
+  // XXXX TODO: use `params` to initialize the congestion control.
 
   if (cpath_init_circuit_crypto(hop, keys, sizeof(keys), 0, 0)<0) {
     return -END_CIRC_REASON_TORPROTOCOL;

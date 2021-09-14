@@ -183,9 +183,11 @@ onion_skin_server_handshake(int type,
                       uint8_t *reply_out,
                       size_t reply_out_maxlen,
                       uint8_t *keys_out, size_t keys_out_len,
-                      uint8_t *rend_nonce_out)
+                      uint8_t *rend_nonce_out,
+                      circuit_params_t *params_out)
 {
   int r = -1;
+  memset(params_out, 0, sizeof(*params_out)); // TODO: actually set.
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
@@ -262,10 +264,13 @@ onion_skin_client_handshake(int type,
                       const uint8_t *reply, size_t reply_len,
                       uint8_t *keys_out, size_t keys_out_len,
                       uint8_t *rend_authenticator_out,
+                      circuit_params_t *params_out,
                       const char **msg_out)
 {
   if (handshake_state->tag != type)
     return -1;
+
+  memset(params_out, 0, sizeof(*params_out)); // TODO: actually set.
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:

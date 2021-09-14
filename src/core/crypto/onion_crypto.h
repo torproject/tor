@@ -22,6 +22,16 @@ typedef struct server_onion_keys_t {
 
 void onion_handshake_state_release(onion_handshake_state_t *state);
 
+/**
+ * Parameters negotiated as part of a circuit handshake.
+ */
+typedef struct circuit_params_t {
+  /* placeholder field for congestion control algorithm. Right now this
+   * is always set to zero */
+  int cc_algorithm;
+  int cc_window;
+} circuit_params_t;
+
 int onion_skin_create(int type,
                       const extend_info_t *node,
                       onion_handshake_state_t *state_out,
@@ -33,12 +43,14 @@ int onion_skin_server_handshake(int type,
                       uint8_t *reply_out,
                       size_t reply_out_maxlen,
                       uint8_t *keys_out, size_t key_out_len,
-                      uint8_t *rend_nonce_out);
+                      uint8_t *rend_nonce_out,
+                      circuit_params_t *negotiated_params_out);
 int onion_skin_client_handshake(int type,
                       const onion_handshake_state_t *handshake_state,
                       const uint8_t *reply, size_t reply_len,
                       uint8_t *keys_out, size_t key_out_len,
                       uint8_t *rend_authenticator_out,
+                      circuit_params_t *negotiated_params_out,
                       const char **msg_out);
 
 server_onion_keys_t *server_onion_keys_new(void);

@@ -416,6 +416,7 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
   const create_cell_t *cc = &req.create_cell;
   created_cell_t *cell_out = &rpl.created_cell;
   struct timeval tv_start = {0,0}, tv_end;
+  circuit_params_t params;
   int n;
   rpl.timed = req.timed;
   rpl.started_at = req.started_at;
@@ -428,7 +429,8 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
                                   cell_out->reply,
                                   sizeof(cell_out->reply),
                                   rpl.keys, CPATH_KEY_MATERIAL_LEN,
-                                  rpl.rend_auth_material);
+                                  rpl.rend_auth_material,
+                                  &params);
   if (n < 0) {
     /* failure */
     log_debug(LD_OR,"onion_skin_server_handshake failed.");
@@ -451,6 +453,9 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
     }
     rpl.success = 1;
   }
+
+  // TODO: pass the parameters back up so we can initialize the cc paremeters.
+
   rpl.magic = CPUWORKER_REPLY_MAGIC;
   if (req.timed) {
     struct timeval tv_diff;

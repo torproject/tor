@@ -360,6 +360,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     uint8_t rend_circ_nonce[DIGEST_LEN];
     int len;
     created_cell_t created_cell;
+    circuit_params_t params;
 
     memset(&created_cell, 0, sizeof(created_cell));
     len = onion_skin_server_handshake(ONION_HANDSHAKE_TYPE_FAST,
@@ -369,7 +370,8 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
                                        created_cell.reply,
                                        sizeof(created_cell.reply),
                                        keys, CPATH_KEY_MATERIAL_LEN,
-                                       rend_circ_nonce);
+                                       rend_circ_nonce,
+                                       &params);
     tor_free(create_cell);
     if (len < 0) {
       log_warn(LD_OR,"Failed to generate key material. Closing.");
@@ -378,6 +380,9 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     }
     created_cell.cell_type = CELL_CREATED_FAST;
     created_cell.handshake_len = len;
+
+    // TODO: We should in theory look at params here, though it will always
+    // tell us to use the old-fashioned congestion control.
 
     if (onionskin_answer(circ, &created_cell,
                          (const char *)keys, sizeof(keys),
