@@ -2,13 +2,6 @@ language: c
 
 cache:
   ccache: true
-  ## cargo: true
-  directories:
-    - $HOME/.cargo
-    ## caching CARGO_TARGET_DIR actually slows down the build over time,
-    ## because old build products are never deleted.
-    ## where we point CARGO_TARGET_DIR in all our cargo invocations
-    #- $TRAVIS_BUILD_DIR/src/rust/target
 
 compiler:
   - gcc
@@ -29,8 +22,6 @@ env:
     - HARDENING_OPTIONS="--enable-all-bugs-are-fatal --enable-expensive-hardening"
     ## We turn off asciidoc by default, because it's slow
     - ASCIIDOC_OPTIONS="--disable-asciidoc"
-    ## Our default rust version is the minimum supported version
-    - RUST_VERSION="1.31.0"
     ## Turn off tor's sandbox in chutney, until we fix sandbox errors that are
     ## triggered by Ubuntu Xenial and Bionic. See #32722.
     - CHUTNEY_TOR_SANDBOX="0"
@@ -68,10 +59,6 @@ matrix:
     ## We check disable module dirauth
     - env: MODULES_OPTIONS="--disable-module-dirauth" HARDENING_OPTIONS="--enable-expensive-hardening"
 
-    ## We run rust on Linux, because it's faster than rust on macOS
-    ## We check rust offline
-    - env: RUST_OPTIONS="--enable-rust" TOR_RUST_DEPENDENCIES=true
-
     ## We check NSS
     ## Use -std=gnu99 to turn off some newer features, and maybe turn on some
     ## extra gcc warnings?
@@ -86,14 +73,6 @@ matrix:
     ## We run `make doxygen` without `make check`.
     - env: SKIP_MAKE_CHECK="yes" DOXYGEN="yes"
 
-    ## macOS builds are very slow, and we have a limited number of
-    ## concurrent macOS jobs. We're not actively developing Rust, so it is
-    ## the lowest priority.
-    ## We run rust on macOS, because we have seen macOS rust failures before
-    #- env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-    #  compiler: clang
-    #  os: osx
-
   ## Allow the build to report success (with non-required sub-builds
   ## continuing to run) if all required sub-builds have succeeded.
   fast_finish: true
@@ -101,16 +80,6 @@ matrix:
   ## Careful! We use global envs, which makes it hard to allow failures by env:
   ## https://docs.travis-ci.com/user/customizing-the-build#matching-jobs-with-allow_failures
   allow_failures:
-    ## macOS rust and chutney are very slow, so we let the build finish before
-    ## they are done.  We'd like to fast finish, but still eventually show
-    ## any failures in the build status. But Travis doesn't have that ability.
-
-    ## Since this job is disabled, there's not much point having an exception
-    ## for it
-    #- env: RUST_VERSION="nightly" RUST_OPTIONS="--enable-rust --enable-cargo-online-mode"
-    #  compiler: clang
-    #  os: osx
-
     ## Since we're actively developing IPv6, we want to require the IPv6
     ## chutney tests
     #- env: CHUTNEY_MAKE="test-network-ipv6" CHUTNEY="yes" CHUTNEY_ALLOW_FAILURES="2" SKIP_MAKE_CHECK="yes"
@@ -187,8 +156,6 @@ osx_image: xcode11.2
 before_install:
   ## Set pipefail: we use pipes
   - set -o pipefail || echo "pipefail failed"
-  ## Create empty rust directories for non-Rust builds, so caching succeeds
-  - if [[ "$RUST_OPTIONS" == "" ]]; then mkdir -p $HOME/.cargo $TRAVIS_BUILD_DIR/src/rust/target; fi
 
 install:
   ## If we're on OSX, configure ccache (ccache is automatically installed and configured on Linux)
@@ -200,13 +167,6 @@ install:
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then pip install --user cpp-coveralls; fi
   ## If we're on OSX, and using asciidoc, configure asciidoc
   - if [[ "$ASCIIDOC_OPTIONS" == "" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export XML_CATALOG_FILES="/usr/local/etc/xml/catalog"; fi
-  ## If we're using Rust, download rustup
-  - if [[ "$RUST_OPTIONS" != "" ]]; then curl -Ssf -o rustup.sh https://sh.rustup.rs; fi
-  ## Install the stable channels of rustc and cargo and setup our toolchain environment
-  - if [[ "$RUST_OPTIONS" != "" ]]; then sh rustup.sh -y --default-toolchain $RUST_VERSION; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then source $HOME/.cargo/env; fi
-  ## If we're testing rust builds in offline-mode, then set up our vendored dependencies
-  - if [[ "$TOR_RUST_DEPENDENCIES" == "true" ]]; then export TOR_RUST_DEPENDENCIES=$PWD/src/ext/rust/crates; fi
   ## If we're running chutney, install it.
   - if [[ "$CHUTNEY" != "" ]]; then git clone --depth 1 https://github.com/torproject/chutney.git ; export CHUTNEY_PATH="$(pwd)/chutney"; fi
   ## If we're running stem, install it.
@@ -215,13 +175,6 @@ install:
   ## Finally, list installed package versions
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then dpkg-query --show; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew list --versions; fi
-  ## Get some info about rustup, rustc and cargo
-  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustup; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then which rustc; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then which cargo; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then rustup --version; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then rustc --version; fi
-  - if [[ "$RUST_OPTIONS" != "" ]]; then cargo --version; fi
   ## Get python version
   - python --version
   ## If we're running chutney, show the chutney commit
@@ -240,7 +193,7 @@ script:
   # Skip test_rebind and test_include on macOS
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export TOR_SKIP_TEST_REBIND=true; export TOR_SKIP_TEST_INCLUDE=true; fi
   - ./autogen.sh
-  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS $RUST_OPTIONS --enable-fatal-warnings --disable-silent-rules"
+  - CONFIGURE_FLAGS="$ASCIIDOC_OPTIONS $COVERAGE_OPTIONS $HARDENING_OPTIONS $MODULES_OPTIONS $NSS_OPTIONS $OPENSSL_OPTIONS --enable-fatal-warnings --disable-silent-rules"
   - echo "Configure flags are $CONFIGURE_FLAGS CC=\"$CC $C_DIALECT_OPTIONS\""
   - ./configure $CONFIGURE_FLAGS CC="$CC $C_DIALECT_OPTIONS";
   ## We run `make check` because that's what https://jenkins.torproject.org does.
@@ -270,9 +223,6 @@ after_failure:
 before_cache:
   ## Delete all gcov files.
   - if [[ "$COVERAGE_OPTIONS" != "" ]]; then make reset-gcov; fi
-  ## Delete the cargo registry before caching .cargo, because it's cheaper to
-  ## download the registry and throw it away, rather than caching it
-  - rm -rf $HOME/.cargo/registry
 
 notifications:
   irc:

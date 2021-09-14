@@ -52,7 +52,6 @@ core.*
 /autom4te.cache
 /build-stamp
 /compile
-/config.rust
 /configure
 /Doxyfile
 /orconfig.h
@@ -63,7 +62,6 @@ core.*
 /config.guess
 /config.sub
 /conftest*
-/link_rust.sh
 /micro-revision.*
 /patch-stamp
 /stamp-h
@@ -160,12 +158,6 @@ core.*
 /src/app/tor.exe
 /src/app/tor-cov
 /src/app/tor-cov.exe
-
-# /src/rust
-/src/rust/.cargo/config
-/src/rust/.cargo/registry
-/src/rust/target
-/src/rust/registry
 
 # /src/test
 /src/test/Makefile

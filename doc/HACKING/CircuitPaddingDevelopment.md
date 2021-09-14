@@ -381,11 +381,10 @@ use case.
 #### 2.2.2. Detecting and Negotiating Machine Support
 
 When a new machine specification is added to Tor (or removed from Tor), you
-should bump the Padding subprotocol version in `src/core/or/protover.c` and
-`src/rust/protover/protover.rs`, add a field to `protover_summary_flags_t` in
-`or.h`, and set this field in `memoize_protover_summary()` in versions.c. This
-new field must then be checked in `circpad_node_supports_padding()` in
-`circuitpadding.c`.
+should bump the Padding subprotocol version in `src/core/or/protover.c`, add a
+field to `protover_summary_flags_t` in `or.h`, and set this field in
+`memoize_protover_summary()` in versions.c. This new field must then be
+checked in `circpad_node_supports_padding()` in `circuitpadding.c`.
 
 Note that this protocol version update and associated support check is not
 necessary if your experiments will *only* be using your own relays that

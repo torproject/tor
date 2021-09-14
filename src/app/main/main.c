@@ -102,12 +102,6 @@
 #include <systemd/sd-daemon.h>
 #endif /* defined(HAVE_SYSTEMD) */
 
-#ifdef HAVE_RUST
-// helper function defined in Rust to output a log message indicating if tor is
-// running with Rust enabled. See src/rust/tor_util
-void rust_log_welcome_string(void);
-#endif
-
 /********* PROTOTYPES **********/
 
 static void dumpmemusage(int severity);
@@ -610,10 +604,6 @@ tor_init(int argc, char *argv[])
 
     tor_compress_log_init_warnings();
   }
-
-#ifdef HAVE_RUST
-  rust_log_welcome_string();
-#endif /* defined(HAVE_RUST) */
 
   /* Warn _if_ the tracing subsystem is built in. */
   tracing_log_warning();

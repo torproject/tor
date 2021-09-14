@@ -30,7 +30,6 @@ RUN_STAGE_TEST="${RUN_STAGE_TEST:-yes}"
 FATAL_WARNINGS="${FATAL_WARNINGS:-yes}"
 HARDENING="${HARDENING:-no}"
 COVERAGE="${COVERAGE:-no}"
-RUST="${RUST:-no}"
 DOXYGEN="${DOXYGEN:-no}"
 ASCIIDOC="${ASCIIDOC:-no}"
 TRACING="${TRACING:-no}"
@@ -193,7 +192,6 @@ yes_or_no ON_GITLAB
 yes_or_no FATAL_WARNINGS
 yes_or_no HARDENING
 yes_or_no COVERAGE
-yes_or_no RUST
 yes_or_no DOXYGEN
 yes_or_no ASCIIDOC
 yes_or_no TRACING
@@ -244,9 +242,6 @@ if [[ "$HARDENING" == "yes" ]]; then
 fi
 if [[ "$COVERAGE" == "yes" ]]; then
     configure_options+=("--enable-coverage")
-fi
-if [[ "$RUST" == "yes" ]]; then
-    configure_options+=("--enable-rust")
 fi
 if [[ "$ASCIIDOC" != "yes" ]]; then
     configure_options+=("--disable-asciidoc")

@@ -8,11 +8,7 @@ TESTS_ENVIRONMENT = \
 	export abs_top_builddir="$(abs_top_builddir)"; \
 	export builddir="$(builddir)"; \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)"; \
-	export CARGO="$(CARGO)"; \
-	export EXTRA_CARGO_OPTIONS="$(EXTRA_CARGO_OPTIONS)"; \
-	export CARGO_ONLINE="$(CARGO_ONLINE)"; \
-	export CCLD="$(CCLD)"; \
-	export RUSTFLAGS="-C linker=`echo '$(CC)' | cut -d' ' -f 1` $(RUST_LINKER_OPTIONS)";
+	export CCLD="$(CCLD)";
 
 TESTSCRIPTS = \
 	src/test/fuzz_static_testcases.sh \
@@ -34,11 +30,6 @@ TESTSCRIPTS = \
         src/test/unittest_part6.sh \
         src/test/unittest_part7.sh \
         src/test/unittest_part8.sh
-
-if USE_RUST
-TESTSCRIPTS += \
-	src/test/test_rust.sh
-endif
 
 if USEPYTHON
 TESTSCRIPTS += \
@@ -306,7 +297,6 @@ src_test_test_switch_id_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_test_test_switch_id_LDFLAGS = @TOR_LDFLAGS_zlib@
 src_test_test_switch_id_LDADD = \
 	$(TOR_UTIL_TESTING_LIBS) \
-	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_USERENV@ \
 	@TOR_LZMA_LIBS@ @TOR_ZSTD_LIBS@ @TOR_TRACE_LIBS@
@@ -314,7 +304,6 @@ src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_test_LDADD = \
 	src/test/libtor-testing.a \
-	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
@@ -343,7 +332,6 @@ src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_bench_LDADD = \
         libtor.a \
-	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
@@ -353,7 +341,6 @@ src_test_test_workqueue_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB) \
 	@TOR_LDFLAGS_libevent@
 src_test_test_workqueue_LDADD = \
         src/test/libtor-testing.a \
-	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
@@ -365,7 +352,6 @@ src_test_test_timers_LDADD = \
 	src/lib/libtor-evloop-testing.a \
 	$(TOR_CRYPTO_TESTING_LIBS) \
 	$(TOR_UTIL_TESTING_LIBS) \
-	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ \
@@ -401,7 +387,6 @@ src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
 src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ $(TOR_LDFLAGS_CRYPTLIB)
 src_test_test_ntor_cl_LDADD = \
 	libtor.a \
-	$(rust_ldadd) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	$(TOR_LIBS_CRYPTLIB) @TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
 	@CURVE25519_LIBS@ @TOR_LZMA_LIBS@ @TOR_TRACE_LIBS@
@@ -424,7 +409,6 @@ noinst_PROGRAMS += src/test/test-bt-cl
 src_test_test_bt_cl_SOURCES = src/test/test_bt_cl.c
 src_test_test_bt_cl_LDADD = \
 	$(TOR_UTIL_TESTING_LIBS) \
-	$(rust_ldadd) \
 	@TOR_LIB_MATH@ \
 	@TOR_LIB_WS32@ @TOR_LIB_IPHLPAPI@ @TOR_LIB_SHLWAPI@ @TOR_LIB_GDI@ @TOR_LIB_USERENV@ \
         @TOR_TRACE_LIBS@
@@ -446,13 +430,11 @@ EXTRA_DIST += \
 	src/test/test_include.py \
 	src/test/zero_length_keys.sh \
 	scripts/maint/run_check_subsystem_order.sh \
-	src/test/rust_supp.txt \
 	src/test/test_keygen.sh \
 	src/test/test_key_expiration.sh \
 	src/test/test_zero_length_keys.sh \
 	src/test/test_ntor.sh src/test/test_hs_ntor.sh src/test/test_bt.sh \
 	src/test/test-network.sh \
-	src/test/test_rust.sh \
 	src/test/test_switch_id.sh \
 	src/test/test_workqueue_cancel.sh \
 	src/test/test_workqueue_efd.sh \
@@ -470,6 +452,3 @@ EXTRA_DIST += \
         src/test/unittest_part6.sh \
         src/test/unittest_part7.sh \
         src/test/unittest_part8.sh
-
-test-rust:
-	$(TESTS_ENVIRONMENT) "$(abs_top_srcdir)/src/test/test_rust.sh"

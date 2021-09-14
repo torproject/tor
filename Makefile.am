@@ -36,12 +36,6 @@ else
 TESTING_TOR_BINARY=$(top_builddir)/src/app/tor$(EXEEXT)
 endif
 
-if USE_RUST
-rust_ldadd=$(top_builddir)/$(TOR_RUST_LIB_PATH)
-else
-rust_ldadd=
-endif
-
 # "Common" libraries used to link tor's utility code.
 TOR_UTIL_LIBS = \
         src/lib/libtor-geoip.a \
@@ -601,51 +595,6 @@ check-typos:
 		echo "You can install the latest version of misspell here: https://github.com/client9/misspell#install"; \
 	fi
 
-.PHONY: rustfmt
-rustfmt:
-if USE_RUST
-	@if test -x "`which cargo-fmt 2>&1;true`"; then \
-		echo "Formatting Rust code ..."; \
-		(cd "$(top_srcdir)/src/rust" && cargo fmt --all --); \
-	else \
-		echo "Tor uses rustfmt (via cargo-fmt) to format Rust code."; \
-		echo "However, it seems that you don't have rustfmt installed."; \
-		printf "You can install rustfmt by following the directions here:"; \
-		echo " https://github.com/rust-lang-nursery/rustfmt"; \
-	fi
-endif
-
-.PHONY: check-rustfmt
-check-rustfmt:
-if USE_RUST
-	@if test -x "`which cargo-fmt 2>&1;true`"; then \
-		printf "Running rustfmt..."; \
-		(cd "$(top_srcdir)/src/rust" && cargo fmt --all -- --check && echo "done.") || \
-		(echo "**************** check-rustfmt failed. ****************"; \
-		 echo "   Run \`make rustfmt\` to apply the above changes."; \
-		 exit 1); \
-	else \
-		echo "Tor uses rustfmt (via cargo-fmt) to format Rust code."; \
-		echo "However, it seems that you don't have rustfmt installed."; \
-		printf "You can install rustfmt by following the directions here:"; \
-		echo " https://github.com/rust-lang-nursery/rustfmt"; \
-	fi
-endif
-
-.PHONY: clippy
-clippy:
-if USE_RUST
-	@if test -x "`which cargo-clippy 2>&1;true`"; then \
-		echo "Running cargo clippy ..."; \
-		echo "Prepare yourself for the onslaught of suggestions ..."; \
-		(cd "$(top_srcdir)/src/rust" && cargo clippy); \
-	else \
-		echo "Tor can use clippy to lint Rust code."; \
-		echo "However, it seems that you don't have clippy installed."; \
-		echo "You can install the latest version of clippy by following the directions here: https://github.com/rust-lang-nursery/rust-clippy"; \
-	fi
-endif
-
 .PHONY: check-changes
 check-changes:
 if USEPYTHON
@@ -686,21 +635,13 @@ update-copyright:
 	$(PERL) $(top_srcdir)/scripts/maint/updateCopyright.pl $(OWNED_TOR_C_FILES)
 
 .PHONY: autostyle
-autostyle: update-versions rustfmt autostyle-ifdefs rectify-includes
+autostyle: update-versions autostyle-ifdefs rectify-includes
 
 mostlyclean-local:
 	rm -f $(top_builddir)/src/*/*.gc{da,no} $(top_builddir)/src/*/*/*.gc{da,no}
 	rm -rf $(HTML_COVER_DIR)
 	rm -rf $(top_builddir)/doc/doxygen
 	rm -rf $(TEST_NETWORK_ALL_LOG_DIR)
-
-clean-local:
-	rm -rf $(top_builddir)/src/rust/target
-	rm -rf $(top_builddir)/src/rust/.cargo/registry
-
-if USE_RUST
-distclean-local: distclean-rust
-endif
 
 # This relies on some internal details of how automake implements
 # distcheck.  We check two directories because automake-1.15 changed

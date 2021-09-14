@@ -1,0 +1,4 @@
+  o Code simplification and refactoring (rust):
+    - Remove Rust support and its associated code. It is unsupported and Rust
+      focus should be shifted to arti. Closes 40469.
+

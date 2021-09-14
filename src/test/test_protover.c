@@ -23,13 +23,6 @@ static void
 test_protover_parse(void *arg)
 {
   (void) arg;
-#ifdef HAVE_RUST
-  /** This test is disabled on rust builds, because it only exists to test
-   * internal C functions. */
-  tt_skip();
- done:
-  ;
-#else /* !defined(HAVE_RUST) */
   char *re_encoded = NULL;
 
   const char *orig = "Foo=1,3 Bar=3 Baz= Quux=9-12,14,15-16";
@@ -64,18 +57,12 @@ test_protover_parse(void *arg)
     SMARTLIST_FOREACH(elts, proto_entry_t *, ent, proto_entry_free(ent));
   smartlist_free(elts);
   tor_free(re_encoded);
-#endif /* defined(HAVE_RUST) */
 }
 
 static void
 test_protover_parse_fail(void *arg)
 {
   (void)arg;
-#ifdef HAVE_RUST
-  /** This test is disabled on rust builds, because it only exists to test
-   * internal C functions. */
-  tt_skip();
-#else
   smartlist_t *elts;
 
   /* random junk */
@@ -108,7 +95,6 @@ test_protover_parse_fail(void *arg)
                            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   tt_ptr_op(elts, OP_EQ, NULL);
 
-#endif /* defined(HAVE_RUST) */
  done:
   ;
 }
@@ -265,7 +251,7 @@ test_protover_all_supported(void *arg)
 #endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
   /* Protocol name too long */
-#if !defined(HAVE_RUST) && !defined(ALL_BUGS_ARE_FATAL)
+#if !defined(ALL_BUGS_ARE_FATAL)
   tor_capture_bugs_(1);
   tt_assert(protover_all_supported(
                  "DoSaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -273,7 +259,7 @@ test_protover_all_supported(void *arg)
                  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                  "aaaaaaaaaaaa=1-65536", &msg));
   tor_end_capture_bugs_();
-#endif /* !defined(HAVE_RUST) && !defined(ALL_BUGS_ARE_FATAL) */
+#endif /* !defined(ALL_BUGS_ARE_FATAL) */
 
  done:
   tor_end_capture_bugs_();

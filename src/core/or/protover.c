@@ -28,8 +28,6 @@
 #include "core/or/versions.h"
 #include "lib/tls/tortls.h"
 
-#ifndef HAVE_RUST
-
 static const smartlist_t *get_supported_protocol_list(void);
 static int protocol_list_contains(const smartlist_t *protos,
                                   protocol_type_t pr, uint32_t ver);
@@ -752,5 +750,3 @@ protover_free_all(void)
     supported_protocol_list = NULL;
   }
 }
-
-#endif /* !defined(HAVE_RUST) */
