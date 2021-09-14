@@ -277,10 +277,10 @@ congestion_control_new(const circuit_params_t *params)
 {
   congestion_control_t *cc = tor_malloc_zero(sizeof(congestion_control_t));
 
-  /* TODO: Use `params` to pick the algorithm and the window. */
+  /* TODO-324: Use `params` to pick the algorithm and the window. */
   (void) params;
 
-  // XXX: the alg and the sendme_inc need to be negotiated during
+  // TODO-324: XXX: the alg and the sendme_inc need to be negotiated during
   // circuit handshake
   congestion_control_init(cc, CC_ALG_VEGAS, SENDME_INC_DFLT);
 

@@ -20,7 +20,11 @@ typedef struct congestion_control_t congestion_control_t;
 
 void congestion_control_free_(congestion_control_t *cc);
 
-/* TODO: Whisky Tango Foxtot‽  Nothing calls this function anywhere! */
+/* TODO-324: Whisky Tango Foxtot‽  Nothing calls this function anywhere!
+ *
+ * It needs to be called client-side and relay-side every time we initialize a
+ * circuit!
+ */
 struct circuit_params_t;
 congestion_control_t *congestion_control_new(
                                     const struct circuit_params_t *params);

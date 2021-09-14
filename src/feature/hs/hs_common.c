@@ -1688,9 +1688,16 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
   info = extend_info_new(NULL, legacy_id,
                          (have_ed25519_id) ? &ed25519_pk : NULL, NULL,
                          onion_key, &ap.addr, ap.port,
-                         /* TODO: The protover summary here needs to explain
+                         /* TODO-324: oh wow, this is a hard one.
+
+                            The protover summary here needs to explain
                             if we support the newer congestion control or
-                            not.  This may require new specification stuff */
+                            not.  This may require new specification changes.
+
+                            Probably there is some analogous service-side
+                            function that needs to initialize congestion
+                            control structures based on what the client says.
+                         */
                          NULL);
  done:
   return info;

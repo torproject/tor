@@ -482,7 +482,7 @@ memoize_protover_summary(protover_summary_flags_t *out,
     protocol_list_supports_protocol(protocols, PRT_PADDING,
                                     PROTOVER_HS_SETUP_PADDING);
 
-  /* TODO: Set these flags based on real values.
+  /* TODO-324: Set these flags based on real values.
   out->supports_ntor3_and_param_negotiation =
     protocol_list_supports_protocol(protocols, PRT_RELAY,
                                     XXXX)

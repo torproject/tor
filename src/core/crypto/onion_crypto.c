@@ -47,7 +47,7 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/extend_info_st.h"
 
-/* TODO: Add this to the specification! */
+/* TODO-324: Add this to the specification! */
 const uint8_t NTOR3_CIRC_VERIFICATION[] = "circuit extend";
 const size_t NTOR3_CIRC_VERIFICATION_LEN = 14;
 
@@ -233,7 +233,7 @@ onion_skin_server_handshake(int type,
                       circuit_params_t *params_out)
 {
   int r = -1;
-  memset(params_out, 0, sizeof(*params_out)); // TODO: actually set.
+  memset(params_out, 0, sizeof(*params_out)); // TODO-324: actually set this!
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
@@ -306,10 +306,10 @@ onion_skin_server_handshake(int type,
     uint8_t reply_msg[1] = { 0 };
     size_t reply_msg_len = 1;
     {
-      /* TODO, Okay, we have a message from the client trying to negotiate
-       * parameters.  We need to decide whether the client's request is
-       * okay, what we're going to say in response, and what circuit
-       * parameters we've just negotiated
+      /* TODO-324, Okay, we have a message from the client trying to negotiate
+       * parameters.  We need to decide whether the client's request is okay,
+       * what we're going to say in response, and what circuit parameters
+       * we've just negotiated
        */
 
       /* NOTE! DANGER, DANGER, DANGER!
@@ -331,12 +331,12 @@ onion_skin_server_handshake(int type,
                reply_msg, reply_msg_len,
                &server_handshake, &server_handshake_len,
                keys_tmp, keys_tmp_len) < 0) {
-      // XXX TODO free some stuff
+      // XXX TODO-324 free some stuff
       return -1;
     }
 
     if (server_handshake_len > reply_out_maxlen) {
-      // XXX TODO free that stuff
+      // XXX TODO-324 free that stuff
       return -1;
     }
 
@@ -382,7 +382,7 @@ onion_skin_client_handshake(int type,
   if (handshake_state->tag != type)
     return -1;
 
-  memset(params_out, 0, sizeof(*params_out)); // TODO: actually set.
+  memset(params_out, 0, sizeof(*params_out)); // TODO-324: actually set this!
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
@@ -450,9 +450,8 @@ onion_skin_client_handshake(int type,
       return -1;
     }
 
-    // XXXX handle the server message!
     {
-      // XXXX TODO: see what the server said, make sure it's okay, see what
+      // XXXX TODO-324: see what the server said, make sure it's okay, see what
       // parameters it gave us, make sure we like them, and put them into
       // `params_out`
     }

@@ -794,7 +794,7 @@ typedef enum {
 #define ONION_HANDSHAKE_TYPE_TAP  0x0000
 #define ONION_HANDSHAKE_TYPE_FAST 0x0001
 #define ONION_HANDSHAKE_TYPE_NTOR 0x0002
-#define ONION_HANDSHAKE_TYPE_NTOR_V3 0x0003 /* TODO: Add to spec */
+#define ONION_HANDSHAKE_TYPE_NTOR_V3 0x0003 /* TODO-324: Add to spec */
 #define MAX_ONION_HANDSHAKE_TYPE 0x0003
 
 typedef struct onion_handshake_state_t onion_handshake_state_t;

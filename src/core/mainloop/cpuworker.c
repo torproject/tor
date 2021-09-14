@@ -390,7 +390,7 @@ cpuworker_onion_handshake_replyfn(void *work_)
     goto done_processing;
   }
 
-  /* TODO! We need to use rpl.circ_params here to initialize the congestion
+  /* TODO-324! We need to use rpl.circ_params here to initialize the congestion
      control parameters of the circuit. */
 
   log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
