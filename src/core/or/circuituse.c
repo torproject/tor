@@ -2462,7 +2462,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                                           digest,
                                           NULL, /* Ed25519 ID */
                                           NULL, NULL, /* onion keys */
-                                          &addr, conn->socks_request->port);
+                                          &addr, conn->socks_request->port,
+                                          NULL);
           } else { /* ! (want_onehop && conn->chosen_exit_name[0] == '$') */
             /* We will need an onion key for the router, and we
              * don't have one. Refuse or relax requirements. */

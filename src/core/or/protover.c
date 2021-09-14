@@ -430,6 +430,8 @@ protover_get_supported_protocols(void)
    * XXX: WARNING!
    */
 
+  /* TODO: Add a new Relay=* and a new FlowCtrl=* version to indicate support
+   * for Ntorv3 and prop324.  Make sure they get into the spec. */
   return
     "Cons=1-2 "
     "Desc=1-2 "

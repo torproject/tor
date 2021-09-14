@@ -1609,7 +1609,7 @@ simulate_single_hop_extend(circuit_t *client, circuit_t *mid_relay,
   hop->extend_info = extend_info_new(
           padding ? "padding" : "non-padding",
           digest, NULL, NULL, NULL,
-          &addr, padding);
+          &addr, padding, NULL);
 
   cpath_init_circuit_crypto(hop, whatevs_key, sizeof(whatevs_key), 0, 0);
 

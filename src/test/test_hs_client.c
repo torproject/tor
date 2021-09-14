@@ -1186,7 +1186,7 @@ test_socks_hs_errors(void *arg)
   /* Code path will log this exit so build it. */
   ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
                                                     NULL, NULL, NULL, &addr,
-                                                    4242);
+                                                    4242, NULL);
   /* Attach socks connection to this rendezvous circuit. */
   ocirc->p_streams = ENTRY_TO_EDGE_CONN(socks_conn);
   /* Trigger the rendezvous failure. Timeout the circuit and free. */
@@ -1281,7 +1281,7 @@ test_close_intro_circuit_failure(void *arg)
   /* Code path will log this exit so build it. */
   ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
                                                     NULL, NULL, NULL, &addr,
-                                                    4242);
+                                                    4242, NULL);
   ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk, &intro_kp.pubkey);
 
   /* We'll make for close the circuit for a timeout failure. It should _NOT_
@@ -1308,7 +1308,7 @@ test_close_intro_circuit_failure(void *arg)
   /* Code path will log this exit so build it. */
   ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
                                                     NULL, NULL, NULL, &addr,
-                                                    4242);
+                                                    4242, NULL);
   ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk, &intro_kp.pubkey);
 
   /* On free, we should get an unreachable failure. */
@@ -1331,7 +1331,7 @@ test_close_intro_circuit_failure(void *arg)
   /* Code path will log this exit so build it. */
   ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,
                                                     NULL, NULL, NULL, &addr,
-                                                    4242);
+                                                    4242, NULL);
   ed25519_pubkey_copy(&ocirc->hs_ident->intro_auth_pk, &intro_kp.pubkey);
 
   circuit_mark_for_close(circ, END_CIRC_REASON_TIMEOUT);

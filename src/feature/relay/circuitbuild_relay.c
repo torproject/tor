@@ -392,7 +392,8 @@ circuit_open_connection_for_extend(const struct extend_cell_t *ec,
                                 NULL, /*onion_key*/
                                 NULL, /*curve25519_key*/
                                 &chosen_ap->addr,
-                                chosen_ap->port);
+                                chosen_ap->port,
+                                NULL /* protover summary */);
 
   circ->n_chan_create_cell = tor_memdup(&ec->create_cell,
                                         sizeof(ec->create_cell));

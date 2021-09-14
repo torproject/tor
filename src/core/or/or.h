@@ -732,6 +732,10 @@ typedef struct protover_summary_flags_t {
    * negotiate hs circuit setup padding. Requires Padding=2. */
   unsigned int supports_hs_setup_padding : 1;
 
+  /** True iff this router supports ntor3 _and_ supports negotiating
+   * additional circuit parameters via the handshake used in ntor3.
+   */
+  unsigned int supports_ntor3_and_param_negotiation : 1;
 } protover_summary_flags_t;
 
 typedef struct routerinfo_t routerinfo_t;

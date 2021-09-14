@@ -35,7 +35,8 @@ extend_info_new(const char *nickname,
                 const ed25519_public_key_t *ed_id,
                 crypto_pk_t *onion_key,
                 const curve25519_public_key_t *ntor_key,
-                const tor_addr_t *addr, uint16_t port)
+                const tor_addr_t *addr, uint16_t port,
+                const protover_summary_flags_t *pv)
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
   if (rsa_id_digest)
@@ -57,7 +58,10 @@ extend_info_new(const char *nickname,
     extend_info_add_orport(info, addr, port);
   }
 
-  info->supports_ntor3_and_param_negotiation = false; // TODO: set this.
+  if (pv) {
+    info->supports_ntor3_and_param_negotiation =
+      pv->supports_ntor3_and_param_negotiation;
+  }
 
   return info;
 }
@@ -152,7 +156,8 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
                            rsa_pubkey,
                            curve_pubkey,
                            &ap.addr,
-                           ap.port);
+                           ap.port,
+                           &node->ri->pv);
   } else if (valid_addr && node->rs && node->md) {
     info = extend_info_new(node->rs->nickname,
                            node->identity,
@@ -160,7 +165,8 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
                            rsa_pubkey,
                            curve_pubkey,
                            &ap.addr,
-                           ap.port);
+                           ap.port,
+                           &node->rs->pv);
   }
 
   crypto_pk_free(rsa_pubkey);

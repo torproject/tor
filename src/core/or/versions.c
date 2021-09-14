@@ -482,6 +482,15 @@ memoize_protover_summary(protover_summary_flags_t *out,
     protocol_list_supports_protocol(protocols, PRT_PADDING,
                                     PROTOVER_HS_SETUP_PADDING);
 
+  /* TODO: Set these flags based on real values.
+  out->supports_ntor3_and_param_negotiation =
+    protocol_list_supports_protocol(protocols, PRT_RELAY,
+                                    XXXX)
+    &&
+    protocol_list_supports_protocol(protocols, PRT_FLOWCTRL,
+                                    XXXX);
+  */
+
   protover_summary_flags_t *new_cached = tor_memdup(out, sizeof(*out));
   cached = strmap_set(protover_summary_map, protocols, new_cached);
   tor_assert(!cached);
