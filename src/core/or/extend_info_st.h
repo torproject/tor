@@ -38,6 +38,9 @@ struct extend_info_t {
   crypto_pk_t *onion_key;
   /** Ntor onion key for this hop. */
   curve25519_public_key_t curve25519_onion_key;
+  /** True if this hop supports NtorV3 _and_ negotiation of at least one
+   * relevant circuit parameter (currently only congestion control). */
+  bool supports_ntor3_and_param_negotiation;
 };
 
 #endif /* !defined(EXTEND_INFO_ST_H) */

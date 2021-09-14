@@ -12,8 +12,11 @@
 #ifndef TOR_ONION_CRYPTO_H
 #define TOR_ONION_CRYPTO_H
 
+#include "lib/crypt_ops/crypto_ed25519.h"
+
 typedef struct server_onion_keys_t {
   uint8_t my_identity[DIGEST_LEN];
+  ed25519_public_key_t my_ed_identity;
   crypto_pk_t *onion_key;
   crypto_pk_t *last_onion_key;
   struct di_digest256_map_t *curve25519_key_map;

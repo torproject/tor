@@ -841,7 +841,10 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
    * using the TAP handshake, and CREATE2 otherwise. */
   if (extend_info_supports_ntor(ei)) {
     *cell_type_out = CELL_CREATE2;
-    *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
+    if (ei->supports_ntor3_and_param_negotiation)
+      *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR_V3;
+    else
+      *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
   } else {
     /* XXXX030 Remove support for deciding to use TAP and EXTEND. */
     *cell_type_out = CELL_CREATE;
@@ -2578,4 +2581,25 @@ circuit_upgrade_circuits_from_guard_wait(void)
   } SMARTLIST_FOREACH_END(circ);
 
   smartlist_free(to_upgrade);
+}
+
+/**
+ * Try to generate a circuit-negotiation message for communication with a
+ * given relay.  Assumes we are using ntor v3, or some later version that
+ * supports parameter negotiatoin.
+ *
+ * On success, return 0 and pass back a message in the `out` parameters.
+ * Otherwise, return -1.
+ **/
+int
+client_circ_negotiation_message(const extend_info_t *ei,
+                                uint8_t **msg_out,
+                                size_t *msg_len_out)
+{
+  tor_assert(ei && msg_out && msg_len_out);
+  if (! ei->supports_ntor3_and_param_negotiation)
+    return -1;
+
+  /* TODO: fill in the client message that gets sent. */
+  tor_assert_unreached();
 }

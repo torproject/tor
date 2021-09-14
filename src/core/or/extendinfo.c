@@ -56,6 +56,9 @@ extend_info_new(const char *nickname,
   if (addr) {
     extend_info_add_orport(info, addr, port);
   }
+
+  info->supports_ntor3_and_param_negotiation = false; // TODO: set this.
+
   return info;
 }
 
@@ -208,6 +211,15 @@ extend_info_supports_ntor(const extend_info_t* ei)
   return !fast_mem_is_zero(
                           (const char*)ei->curve25519_onion_key.public_key,
                           CURVE25519_PUBKEY_LEN);
+}
+
+/** Return true if we can use the Ntor v3 handshake with `ei` */
+int
+extend_info_supports_ntor_v3(const extend_info_t *ei)
+{
+  tor_assert(ei);
+  return extend_info_supports_ntor(ei) &&
+    ei->supports_ntor3_and_param_negotiation;
 }
 
 /* Does ei have an onion key which it would prefer to use?
