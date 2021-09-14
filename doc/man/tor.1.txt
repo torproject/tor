@@ -3826,7 +3826,12 @@ __KeyDirectory__/**`secret_onion_key_ntor`** and **`secret_onion_key_ntor.old`**
     by clients that didn't have the new one.
 
 __DataDirectory__/**`fingerprint`**::
-    Only used by servers. Contains the fingerprint of the server's identity key.
+    Only used by servers. Contains the fingerprint of the server's RSA
+    identity key.
+
+__DataDirectory__/**`fingerprint-ed25519`**::
+    Only used by servers. Contains the fingerprint of the server's ed25519
+    identity key.
 
 __DataDirectory__/**`hashed-fingerprint`**::
     Only used by bridges. Contains the hashed fingerprint of the bridge's

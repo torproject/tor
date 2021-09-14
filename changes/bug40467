@@ -1,0 +1,5 @@
+  o Minor bugfixes (documentation):
+    - Add a mention of the `fingerprint-ed25519` for relays in the tor.1 man
+      page. Also clarify the difference between the RSA-based `fingerprint` and
+      `fingerprint-ed25519` files. Fixes bug 40467; bugfix on 0.4.3.1-alpha.
+      Patch by Neel Chauhan.
