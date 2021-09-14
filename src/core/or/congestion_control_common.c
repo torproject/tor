@@ -10,6 +10,7 @@
 
 #include "core/or/or.h"
 
+#include "core/crypto/onion_crypto.h"
 #include "core/or/circuitlist.h"
 #include "core/or/crypt_path.h"
 #include "core/or/or_circuit_st.h"
@@ -272,9 +273,12 @@ congestion_control_init(congestion_control_t *cc, cc_alg_t cc_alg,
 
 /** Allocate and initialize a new congestion control object */
 congestion_control_t *
-congestion_control_new(void)
+congestion_control_new(const circuit_params_t *params)
 {
   congestion_control_t *cc = tor_malloc_zero(sizeof(congestion_control_t));
+
+  /* TODO: Use `params` to pick the algorithm and the window. */
+  (void) params;
 
   // XXX: the alg and the sendme_inc need to be negotiated during
   // circuit handshake

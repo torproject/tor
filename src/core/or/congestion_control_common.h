@@ -20,7 +20,10 @@ typedef struct congestion_control_t congestion_control_t;
 
 void congestion_control_free_(congestion_control_t *cc);
 
-congestion_control_t *congestion_control_new(void);
+/* TODO: Whisky Tango Foxtot‽  Nothing calls this function anywhere! */
+struct circuit_params_t;
+congestion_control_t *congestion_control_new(
+                                    const struct circuit_params_t *params);
 
 int congestion_control_dispatch_cc_alg(congestion_control_t *cc,
                                        const circuit_t *circ,
