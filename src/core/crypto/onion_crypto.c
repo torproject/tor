@@ -312,6 +312,14 @@ onion_skin_server_handshake(int type,
        * parameters we've just negotiated
        */
 
+      /* NOTE! DANGER, DANGER, DANGER!
+
+         Remember that this function can be run in a worker thread, and so
+         therefore you can't access "global" state that isn't lock-protected.
+
+         CAVEAT HAXX0R!
+      */
+
       tor_free(client_msg);
     }
 

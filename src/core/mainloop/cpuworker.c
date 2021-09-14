@@ -158,6 +158,8 @@ typedef struct cpuworker_reply_t {
   uint8_t keys[CPATH_KEY_MATERIAL_LEN];
   /** Input to use for authenticating introduce1 cells. */
   uint8_t rend_auth_material[DIGEST_LEN];
+  /** Negotiated circuit parameters. */
+  circuit_params_t circ_params;
 } cpuworker_reply_t;
 
 typedef struct cpuworker_job_u_t {
@@ -387,6 +389,10 @@ cpuworker_onion_handshake_replyfn(void *work_)
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     goto done_processing;
   }
+
+  /* TODO! We need to use rpl.circ_params here to initialize the congestion
+     control parameters of the circuit. */
+
   log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
 
  done_processing:
@@ -416,7 +422,6 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
   const create_cell_t *cc = &req.create_cell;
   created_cell_t *cell_out = &rpl.created_cell;
   struct timeval tv_start = {0,0}, tv_end;
-  circuit_params_t params;
   int n;
   rpl.timed = req.timed;
   rpl.started_at = req.started_at;
@@ -430,7 +435,7 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
                                   sizeof(cell_out->reply),
                                   rpl.keys, CPATH_KEY_MATERIAL_LEN,
                                   rpl.rend_auth_material,
-                                  &params);
+                                  &rpl.circ_params);
   if (n < 0) {
     /* failure */
     log_debug(LD_OR,"onion_skin_server_handshake failed.");
@@ -453,8 +458,6 @@ cpuworker_onion_handshake_threadfn(void *state_, void *work_)
     }
     rpl.success = 1;
   }
-
-  // TODO: pass the parameters back up so we can initialize the cc paremeters.
 
   rpl.magic = CPUWORKER_REPLY_MAGIC;
   if (req.timed) {
