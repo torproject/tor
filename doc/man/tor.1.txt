@@ -71,7 +71,7 @@ The following options in this section are only recognized on the
     Specify a new configuration file to contain further Tor configuration
     options, or pass *-* to make Tor read its configuration from standard
     input. (Default: **`@CONFDIR@/torrc`**, or **`$HOME/.torrc`** if
-    that file is not found)
+    that file is not found.)
 
 [[opt-allow-missing-torrc]] **`--allow-missing-torrc`**::
     Allow the configuration file specified by **`-f`** to be missing,
@@ -101,7 +101,7 @@ The following options in this section are only recognized on the
 [[opt-dump-config]] **`--dump-config`** **`short`**|**`full`**::
     Write a list of Tor's configured options to standard output.
     When the `short` flag is selected, only write the options that
-    are different from their default values
+    are different from their default values.
     When `full` is selected, write every option.
 
 [[opt-serviceinstall]] **`--service install`** [**`--options`** __command-line options__]::
@@ -988,20 +988,20 @@ forward slash (/) in the configuration file and on the command line.
     running. (Default: none)
 
 [[TCPProxy]] **TCPProxy** __protocol__ __host__:__port__::
-	Tor will use the given protocol to make all its OR (SSL) connections through
-	a TCP proxy on host:port, rather than connecting directly to servers. You may
-	want to set **FascistFirewall** to restrict the set of ports you might try to
-	connect to, if your proxy only allows connecting to certain ports. There is no
-	equivalent option for directory connections, because all Tor client versions
-	that support this option download directory documents via OR connections. +
+    Tor will use the given protocol to make all its OR (SSL) connections through
+    a TCP proxy on host:port, rather than connecting directly to servers. You may
+    want to set **FascistFirewall** to restrict the set of ports you might try to
+    connect to, if your proxy only allows connecting to certain ports. There is no
+    equivalent option for directory connections, because all Tor client versions
+    that support this option download directory documents via OR connections. +
 +
-	The only protocol supported right now 'haproxy'. This option is only for
-	clients. (Default: none) +
+    The only protocol supported right now 'haproxy'. This option is only for
+    clients. (Default: none) +
 +
-	The HAProxy version 1 proxy protocol is described in detail at
-	https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt +
+    The HAProxy version 1 proxy protocol is described in detail at
+    https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt +
 +
-	Both source IP address and source port will be set to zero.
+    Both source IP address and source port will be set to zero.
 
 [[TruncateLogFile]] **TruncateLogFile** **0**|**1**::
     If 1, Tor will overwrite logs at startup and in response to a HUP signal,
