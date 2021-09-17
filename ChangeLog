@@ -1,3 +1,102 @@
+Changes in version 0.4.7.1-alpha - 2021-09-17
+  This version is the first alpha release of the 0.4.7.x series. One major
+  feature is the Vanguard Lite, from proposal 333, that help mitigate guard
+  discovery attacks for onion services. It also includes numerous bugfixes.
+
+  o Major features (Proposal 332, onion services, guard selection algorithm):
+    - Clients and onion services now choose four long-lived "layer 2"
+      guard relays for use as the middle hop in all onion circuits.
+      These relays are kept in place for a randomized duration averaging
+      1 week each. This mitigates guard discovery attacks against
+      clients and short-lived onion services such as OnionShare. Long-
+      lived onion services that need high security should still use the
+      Vanguards addon (https://github.com/mikeperry-tor/vanguards).
+      Closes ticket 40363; implements proposal 333.
+
+  o Minor features (bridge testing support):
+    - Let external bridge reachability testing tools discard cached
+      bridge descriptors when setting new bridges, so they can be sure
+      to get a clean reachability test. Implements ticket 40209.
+
+  o Minor features (fuzzing):
+    - When building with --enable-libfuzzer, use a set of compiler flags
+      that works with more recent versions of the library. Previously we
+      were using a set of flags from 2017. Closes ticket 40407.
+
+  o Minor features (testing configuration):
+    - When TestingTorNetwork is enabled, skip the permission check on
+      the hidden service directory. Closes ticket 40338.
+
+  o Minor features (testing):
+    - On a testing network, relays can now use the
+      TestingMinTimeToReportBandwidth option to change the smallest
+      amount of time over which they're willing to report their observed
+      maximum bandwidth. Previously, this was fixed at 1 day. For
+      safety, values under 2 hours are only supported on testing
+      networks. Part of a fix for ticket 40337.
+    - Relays on testing networks no longer rate-limit how frequently
+      they are willing to report new bandwidth measurements. Part of a
+      fix for ticket 40337.
+    - Relays on testing networks now report their observed bandwidths
+      immediately from startup. Previously, they waited until they had
+      been running for a full day. Closes ticket 40337.
+
+  o Minor bugfix (onion service):
+    - Do not flag an HSDir as non-running in case the descriptor upload
+      or fetch fails. An onion service closes pending directory
+      connections before uploading a new descriptor which leads to
+      wrongly flagging many relays and thus affecting circuit path
+      selection. Fixes bug 40434; bugfix on 0.2.0.13-alpha.
+
+  o Minor bugfixes (circuit padding):
+    - Don't send STOP circuit padding cells when the other side has
+      already shut down the corresponding padding machine. Fixes bug
+      40435; bugfix on 0.4.0.1-alpha.
+
+  o Minor bugfixes (compatibility):
+    - Fix compatibility with the most recent Libevent versions, which no
+      longer have an evdns_set_random_bytes() function. Because this
+      function has been a no-op since Libevent 2.0.4-alpha, it is safe
+      for us to just stop calling it. Fixes bug 40371; bugfix
+      on 0.2.1.7-alpha.
+
+  o Minor bugfixes (control, sandbox):
+    - Allows the control command SAVECONF to succeed when the seccomp
+      sandbox is enabled. Makes SAVECONF keep only one backup file to
+      simplify implementation. Fixes bug 40317; bugfix on 0.2.5.4-alpha.
+      Patch by Daniel Pinto.
+
+  o Minor bugfixes (documentation):
+    - Add a mention of the "fingerprint-ed25519" for relays in the tor.1
+      man page. Also clarify the difference between the RSA-based
+      "fingerprint" and "fingerprint-ed25519" files. Fixes bug 40467;
+      bugfix on 0.4.3.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (heartbeat):
+    - Adjust the heartbeat log message about distinct clients to
+      consider the HeartbeatPeriod rather than a flat 6-hour delay.
+      Fixes bug 40330; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (logging, relay):
+    - Add spaces between the "and" when logging the "Your server has not
+      managed to confirm reachability for its" on dual-stack relays
+      Fixes bug 40453; bugfix on 0.4.5.1-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (statistics):
+    - Fix the fencepost issue when we check stability_last_downrated
+      where we call rep_hist_downrate_old_runs() twice. Fixes bug 40394;
+      bugfix on 0.2.0.5-alpha. Patch by Neel Chauhan.
+
+  o Minor bugfixes (tests):
+    - Fix a bug that prevented some tests from running with the correct
+      names. Fixes bug 40365; bugfix on 0.4.3.1-alpha.
+
+  o Documentation:
+    - Add links to original tor design paper and anonbib to
+      docs/HACKING/README.1st.md. Closes ticket 33742. Patch from
+      Emily Bones.
+
+
 Changes in version 0.4.6.7 - 2021-08-16
   This version fixes several bugs from earlier versions of Tor,
   including one that could lead to a denial-of-service attack. Everyone

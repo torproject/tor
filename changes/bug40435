@@ -1,4 +1,0 @@
-  o Minor bugfixes (circuit padding):
-    - Don't send STOP circuit padding cells when the other side has already
-      shut down the corresponding padding machine. Fixes bug 40435; bugfix on
-      0.4.0.1-alpha.

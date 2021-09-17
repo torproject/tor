@@ -1,9 +1,0 @@
-  o Major features (Proposal 332, onion services, guard selection algorithm):
-    - Clients and onion services now choose four long-lived "layer 2" guard
-      relays for use as the middle hop in all onion circuits.  These relays are
-      kept in place for a randomized duration averaging 1 week each. This
-      mitigates guard discovery attacks against clients and short-lived onion
-      services such as OnionShare. Long-lived onion services that need high
-      security should still use the Vanguards addon
-      (https://github.com/mikeperry-tor/vanguards). Closes ticket 40363;
-      implements proposal 333.

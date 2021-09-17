@@ -1,4 +1,0 @@
-  o Minor bugfixes (statistics):
-    - Fix the fencepost issue when we check stability_last_downrated where
-      we call rep_hist_downrate_old_runs() twice. Fixes bug 40394; bugfix
-      on 0.2.0.5-alpha. Patch by Neel Chauhan.
