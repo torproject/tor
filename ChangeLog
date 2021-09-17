@@ -1,17 +1,18 @@
 Changes in version 0.4.7.1-alpha - 2021-09-17
-  This version is the first alpha release of the 0.4.7.x series. One major
-  feature is Vanguards Lite, from proposal 333, to help mitigate guard
-  discovery attacks against onion services. It also includes numerous bugfixes.
+  This version is the first alpha release of the 0.4.7.x series. One
+  major feature is Vanguards Lite, from proposal 333, to help mitigate
+  guard discovery attacks against onion services. It also includes
+  numerous bugfixes.
 
   o Major features (Proposal 332, onion services, guard selection algorithm):
     - Clients and onion services now choose four long-lived "layer 2"
       guard relays for use as the middle hop in all onion circuits.
       These relays are kept in place for a randomized duration averaging
-      1 week. This mitigates guard discovery attacks against
-      clients and short-lived onion services such as OnionShare. Long-
-      lived onion services that need high security should still use the
-      Vanguards addon (https://github.com/mikeperry-tor/vanguards).
-      Closes ticket 40363; implements proposal 333.
+      1 week. This mitigates guard discovery attacks against clients and
+      short-lived onion services such as OnionShare. Long- lived onion
+      services that need high security should still use the Vanguards
+      addon (https://github.com/mikeperry-tor/vanguards). Closes ticket
+      40363; implements proposal 333.
 
   o Minor features (bridge testing support):
     - Let external bridge reachability testing tools discard cached
@@ -38,13 +39,6 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
     - Relays on testing networks now report their observed bandwidths
       immediately from startup. Previously, they waited until they had
       been running for a full day. Closes ticket 40337.
-
-  o Minor bugfixes (onion service):
-    - Do not flag an HSDir as non-running in case the descriptor upload
-      or fetch fails. An onion service closes pending directory
-      connections before uploading a new descriptor which leads to
-      wrongly flagging many relays and thus affecting circuit path
-      selection. Fixes bug 40434; bugfix on 0.2.0.13-alpha.
 
   o Minor bugfixes (circuit padding):
     - Don't send STOP circuit padding cells when the other side has
@@ -74,11 +68,18 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
       managed to confirm reachability for its" on dual-stack relays
       Fixes bug 40453; bugfix on 0.4.5.1-alpha. Patch by Neel Chauhan.
 
+  o Minor bugfixes (onion service):
+    - Do not flag an HSDir as non-running in case the descriptor upload
+      or fetch fails. An onion service closes pending directory
+      connections before uploading a new descriptor which leads to
+      wrongly flagging many relays and thus affecting circuit path
+      selection. Fixes bug 40434; bugfix on 0.2.0.13-alpha.
+
   o Minor bugfixes (statistics):
-    - Fix a fencepost issue when we check stability_last_downrated
-      that had caused us to call
-      where we call rep_hist_downrate_old_runs() twice. Fixes bug 40394;
-      bugfix on 0.2.0.5-alpha. Patch by Neel Chauhan.
+    - Fix a fencepost issue when we check stability_last_downrated that
+      had caused us to call where we call rep_hist_downrate_old_runs()
+      twice. Fixes bug 40394; bugfix on 0.2.0.5-alpha. Patch by
+      Neel Chauhan.
 
   o Minor bugfixes (tests):
     - Fix a bug that prevented some tests from running with the correct
@@ -88,9 +89,8 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
     - Add links to original tor design paper and anonbib to
       docs/HACKING/README.1st.md. Closes ticket 33742. Patch from
       Emily Bones.
-    - Describe the "fingerprint-ed25519" file the tor.1
-      man page. Fixes bug 40467;
-      bugfix on 0.4.3.1-alpha. Patch by Neel Chauhan.
+    - Describe the "fingerprint-ed25519" file the tor.1 man page. Fixes
+      bug 40467; bugfix on 0.4.3.1-alpha. Patch by Neel Chauhan.
 
 
 Changes in version 0.4.6.7 - 2021-08-16
