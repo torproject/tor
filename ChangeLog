@@ -1,13 +1,13 @@
 Changes in version 0.4.7.1-alpha - 2021-09-17
   This version is the first alpha release of the 0.4.7.x series. One major
-  feature is the Vanguard Lite, from proposal 333, that help mitigate guard
-  discovery attacks for onion services. It also includes numerous bugfixes.
+  feature is Vanguards Lite, from proposal 333, to help mitigate guard
+  discovery attacks against onion services. It also includes numerous bugfixes.
 
   o Major features (Proposal 332, onion services, guard selection algorithm):
     - Clients and onion services now choose four long-lived "layer 2"
       guard relays for use as the middle hop in all onion circuits.
       These relays are kept in place for a randomized duration averaging
-      1 week each. This mitigates guard discovery attacks against
+      1 week. This mitigates guard discovery attacks against
       clients and short-lived onion services such as OnionShare. Long-
       lived onion services that need high security should still use the
       Vanguards addon (https://github.com/mikeperry-tor/vanguards).
@@ -24,10 +24,8 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
       were using a set of flags from 2017. Closes ticket 40407.
 
   o Minor features (testing configuration):
-    - When TestingTorNetwork is enabled, skip the permission check on
-      the hidden service directory. Closes ticket 40338.
-
-  o Minor features (testing):
+    - When TestingTorNetwork is enabled, skip the permissions check on
+      hidden service directories. Closes ticket 40338.
     - On a testing network, relays can now use the
       TestingMinTimeToReportBandwidth option to change the smallest
       amount of time over which they're willing to report their observed
@@ -41,7 +39,7 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
       immediately from startup. Previously, they waited until they had
       been running for a full day. Closes ticket 40337.
 
-  o Minor bugfix (onion service):
+  o Minor bugfixes (onion service):
     - Do not flag an HSDir as non-running in case the descriptor upload
       or fetch fails. An onion service closes pending directory
       connections before uploading a new descriptor which leads to
@@ -62,15 +60,9 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
 
   o Minor bugfixes (control, sandbox):
     - Allows the control command SAVECONF to succeed when the seccomp
-      sandbox is enabled. Makes SAVECONF keep only one backup file to
+      sandbox is enabled. Makes SAVECONF keep only one backup file, to
       simplify implementation. Fixes bug 40317; bugfix on 0.2.5.4-alpha.
       Patch by Daniel Pinto.
-
-  o Minor bugfixes (documentation):
-    - Add a mention of the "fingerprint-ed25519" for relays in the tor.1
-      man page. Also clarify the difference between the RSA-based
-      "fingerprint" and "fingerprint-ed25519" files. Fixes bug 40467;
-      bugfix on 0.4.3.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (heartbeat):
     - Adjust the heartbeat log message about distinct clients to
@@ -83,7 +75,8 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
       Fixes bug 40453; bugfix on 0.4.5.1-alpha. Patch by Neel Chauhan.
 
   o Minor bugfixes (statistics):
-    - Fix the fencepost issue when we check stability_last_downrated
+    - Fix a fencepost issue when we check stability_last_downrated
+      that had caused us to call
       where we call rep_hist_downrate_old_runs() twice. Fixes bug 40394;
       bugfix on 0.2.0.5-alpha. Patch by Neel Chauhan.
 
@@ -95,6 +88,9 @@ Changes in version 0.4.7.1-alpha - 2021-09-17
     - Add links to original tor design paper and anonbib to
       docs/HACKING/README.1st.md. Closes ticket 33742. Patch from
       Emily Bones.
+    - Describe the "fingerprint-ed25519" file the tor.1
+      man page. Fixes bug 40467;
+      bugfix on 0.4.3.1-alpha. Patch by Neel Chauhan.
 
 
 Changes in version 0.4.6.7 - 2021-08-16
