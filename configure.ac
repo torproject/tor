@@ -119,6 +119,11 @@ AM_CONDITIONAL(USE_RUST, test "x$enable_rust" = "xyes")
 AM_CONDITIONAL(USE_NSS, test "x$enable_nss" = "xyes")
 AM_CONDITIONAL(USE_OPENSSL, test "x$enable_nss" != "xyes")
 
+if test "x$enable_coverage" = "xyes"; then
+  AC_DEFINE(ENABLE_COVERAGE, 1,
+  	    [Defined if coverage support is enabled for the unit tests])
+fi
+
 if test "x$enable_nss" = "xyes"; then
   AC_DEFINE(ENABLE_NSS, 1,
   	    [Defined if we're building with NSS.])
