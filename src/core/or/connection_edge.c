@@ -69,6 +69,8 @@
 #include "core/or/circuituse.h"
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
+#include "core/or/congestion_control_flow.h"
+#include "core/or/circuitstats.h"
 #include "core/or/connection_or.h"
 #include "core/or/extendinfo.h"
 #include "core/or/policies.h"
@@ -614,20 +616,39 @@ connection_half_edge_add(const edge_connection_t *conn,
 
   half_conn->stream_id = conn->stream_id;
 
-  // How many sendme's should I expect?
-  half_conn->sendmes_pending =
-   (STREAMWINDOW_START-conn->package_window)/STREAMWINDOW_INCREMENT;
-
    // Is there a connected cell pending?
   half_conn->connected_pending = conn->base_.state ==
       AP_CONN_STATE_CONNECT_WAIT;
 
-  /* Data should only arrive if we're not waiting on a resolved cell.
-   * It can arrive after waiting on connected, because of optimistic
-   * data. */
-  if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
-    // How many more data cells can arrive on this id?
-    half_conn->data_pending = conn->deliver_window;
+  if (edge_uses_flow_control(conn)) {
+    /* If the edge uses the new congestion control flow control, we must use
+     * time-based limits on half-edge activity. */
+    uint64_t timeout_usec = (uint64_t)(get_circuit_build_timeout_ms()*1000);
+    half_conn->used_ccontrol = 1;
+
+    /* If this is an onion service circuit, double the CBT as an approximate
+     * value for the other half of the circuit */
+    if (conn->hs_ident) {
+      timeout_usec *= 2;
+    }
+
+    /* The stream should stop seeing any use after the larger of the circuit
+     * RTT and the overall circuit build timeout */
+    half_conn->end_ack_expected_usec = MAX(timeout_usec,
+                                           edge_get_max_rtt(conn)) +
+                                        monotime_absolute_usec();
+  } else {
+    // How many sendme's should I expect?
+    half_conn->sendmes_pending =
+     (STREAMWINDOW_START-conn->package_window)/STREAMWINDOW_INCREMENT;
+
+    /* Data should only arrive if we're not waiting on a resolved cell.
+     * It can arrive after waiting on connected, because of optimistic
+     * data. */
+    if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
+      // How many more data cells can arrive on this id?
+      half_conn->data_pending = conn->deliver_window;
+    }
   }
 
   insert_at = smartlist_bsearch_idx(circ->half_streams, &half_conn->stream_id,
@@ -688,6 +709,12 @@ connection_half_edge_is_valid_data(const smartlist_t *half_conns,
   if (!half)
     return 0;
 
+  if (half->used_ccontrol) {
+    if (monotime_absolute_usec() > half->end_ack_expected_usec)
+      return 0;
+    return 1;
+  }
+
   if (half->data_pending > 0) {
     half->data_pending--;
     return 1;
@@ -738,6 +765,10 @@ connection_half_edge_is_valid_sendme(const smartlist_t *half_conns,
                                                           stream_id);
 
   if (!half)
+    return 0;
+
+  /* congestion control edges don't use sendmes */
+  if (half->used_ccontrol)
     return 0;
 
   if (half->sendmes_pending > 0) {
