@@ -863,7 +863,7 @@ handle_methods_done(const managed_proxy_t *mp)
 STATIC void
 handle_proxy_line(const char *line, managed_proxy_t *mp)
 {
-  log_info(LD_GENERAL, "Got a line from managed proxy '%s': (%s)",
+  log_info(LD_PT, "Got a line from managed proxy '%s': (%s)",
            mp->argv[0], line);
 
   if (!strcmpstart(line, PROTO_ENV_ERROR)) {
