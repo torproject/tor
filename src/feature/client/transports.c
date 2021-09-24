@@ -1941,9 +1941,12 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
 {
   tor_assert(process);
 
+  const managed_proxy_t *mp = process_get_data(process);
+  const char *name = mp ? mp->argv[0] : "N/A";
+
   log_warn(LD_PT,
-          "Pluggable Transport process terminated with status code %" PRIu64,
-          exit_code);
+          "Managed proxy \"%s\" process terminated with status code %" PRIu64,
+          name, exit_code);
 
   /* Returning true here means that the process subsystem will take care of
    * calling process_free() on our process_t. */
