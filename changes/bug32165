@@ -1,0 +1,5 @@
+  o Minor bugfixes (logging):
+    - When starting up without cached microdescriptors, stop mistakenly
+      printing out "The current consensus has no exit nodes. Tor can only
+      build internal paths, such as paths to onion services." Fixes bug
+      32165; bugfix on 0.2.6.2-alpha.
