@@ -556,6 +556,8 @@ launch_managed_proxy(managed_proxy_t *mp)
   smartlist_t *env = create_managed_proxy_environment(mp);
 
   /* Configure our process. */
+  tor_assert(mp->process == NULL);
+  mp->process = process_new(mp->argv[0]);
   process_set_data(mp->process, mp);
   process_set_stdout_read_callback(mp->process, managed_proxy_stdout_callback);
   process_set_stderr_read_callback(mp->process, managed_proxy_stderr_callback);
@@ -1532,7 +1534,9 @@ managed_proxy_create(const smartlist_t *with_transport_list,
   mp->argv = proxy_argv;
   mp->transports = smartlist_new();
   mp->proxy_uri = get_pt_proxy_uri();
-  mp->process = process_new(proxy_argv[0]);
+
+  /* Gets set in launch_managed_proxy(). */
+  mp->process = NULL;
 
   mp->transports_to_launch = smartlist_new();
   SMARTLIST_FOREACH(with_transport_list, const char *, transport,
@@ -1943,12 +1947,24 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
 {
   tor_assert(process);
 
-  const managed_proxy_t *mp = process_get_data(process);
+  managed_proxy_t *mp = process_get_data(process);
   const char *name = mp ? mp->argv[0] : "N/A";
 
   log_warn(LD_PT,
           "Managed proxy \"%s\" process terminated with status code %" PRIu64,
           name, exit_code);
+
+  if (mp) {
+    /* We remove this process_t from the mp. */
+    tor_assert(mp->process == process);
+    mp->process = NULL;
+
+    /* Prepare the proxy for restart. */
+    proxy_prepare_for_restart(mp);
+
+    /* We have proxies we want to restart? */
+    pt_configure_remaining_proxies();
+  }
 
   /* Returning true here means that the process subsystem will take care of
    * calling process_free() on our process_t. */
