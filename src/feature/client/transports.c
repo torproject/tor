@@ -519,8 +519,10 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
 
   /* destroy the process handle and terminate the process. */
-  process_set_data(mp->process, NULL);
-  process_terminate(mp->process);
+  if (mp->process) {
+    process_set_data(mp->process, NULL);
+    process_terminate(mp->process);
+  }
 
   /* destroy all its registered transports, since we will no longer
      use them. */
