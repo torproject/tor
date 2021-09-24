@@ -58,6 +58,10 @@
 #include <linux/futex.h>
 #include <sys/file.h>
 
+#ifdef ENABLE_FRAGILE_HARDENING
+#include <sys/ptrace.h>
+#endif
+
 #include <stdarg.h>
 #include <seccomp.h>
 #include <signal.h>
@@ -191,6 +195,9 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(getgid32),
 #endif
     SCMP_SYS(getpid),
+#ifdef ENABLE_FRAGILE_HARDENING
+    SCMP_SYS(getppid),
+#endif
 #ifdef __NR_getrlimit
     SCMP_SYS(getrlimit),
 #endif
@@ -532,6 +539,24 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   int use_openat = libc_uses_openat_for_open();
 
+#ifdef ENABLE_FRAGILE_HARDENING
+  /* AddressSanitizer uses the "open" syscall to access information about the
+   * running process via the filesystem, so that call must be allowed without
+   * restriction or the sanitizer will be unable to execute normally when the
+   * process terminates. */
+  rc = seccomp_rule_add_0(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open));
+  if (rc != 0) {
+    log_err(LD_BUG,"(Sandbox) failed to add open syscall, received "
+        "libseccomp error %d", rc);
+    return rc;
+  }
+
+  /* If glibc also uses only the "open" syscall to open files on this system
+   * there is no need to consider any additional rules. */
+  if (!use_openat)
+    return 0;
+#endif
+
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
     smp_param_t *param = elem->param;
@@ -686,6 +711,34 @@ sb_opendir(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   return 0;
 }
+
+#ifdef ENABLE_FRAGILE_HARDENING
+/**
+ * Function responsible for setting up the ptrace syscall for
+ * the seccomp filter sandbox.
+ */
+static int
+sb_ptrace(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  pid_t pid = getpid();
+  (void) filter;
+
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(ptrace),
+      SCMP_CMP(0, SCMP_CMP_EQ, PTRACE_ATTACH),
+      SCMP_CMP(1, SCMP_CMP_EQ, pid));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(ptrace),
+      SCMP_CMP(0, SCMP_CMP_EQ, PTRACE_GETREGS),
+      SCMP_CMP(1, SCMP_CMP_EQ, pid));
+  if (rc)
+    return rc;
+
+  return 0;
+}
+#endif
 
 /**
  * Function responsible for setting up the socket syscall for
@@ -1009,6 +1062,18 @@ sb_prctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   int rc = 0;
   (void) filter;
 
+#ifdef ENABLE_FRAGILE_HARDENING
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(prctl),
+      SCMP_CMP(0, SCMP_CMP_EQ, PR_GET_DUMPABLE));
+  if (rc)
+    return rc;
+
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(prctl),
+      SCMP_CMP(0, SCMP_CMP_EQ, PR_SET_PTRACER));
+  if (rc)
+    return rc;
+#endif
+
   rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(prctl),
       SCMP_CMP(0, SCMP_CMP_EQ, PR_SET_DUMPABLE));
   if (rc)
@@ -1052,6 +1117,13 @@ sb_rt_sigprocmask(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
   (void) filter;
+
+#ifdef ENABLE_FRAGILE_HARDENING
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigprocmask),
+      SCMP_CMP(0, SCMP_CMP_EQ, SIG_BLOCK));
+  if (rc)
+    return rc;
+#endif
 
   rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigprocmask),
       SCMP_CMP(0, SCMP_CMP_EQ, SIG_UNBLOCK));
@@ -1202,6 +1274,9 @@ static sandbox_filter_func_t filter_func[] = {
     sb_open,
     sb_openat,
     sb_opendir,
+#ifdef ENABLE_FRAGILE_HARDENING
+    sb_ptrace,
+#endif
     sb_rename,
 #ifdef __NR_fcntl64
     sb_fcntl64,

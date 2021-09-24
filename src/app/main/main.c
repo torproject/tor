@@ -1343,6 +1343,13 @@ tor_run_main(const tor_main_configuration_t *tor_cfg)
   pubsub_connect();
 
   if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
+#ifdef ENABLE_FRAGILE_HARDENING
+    log_warn(LD_CONFIG, "Sandbox is enabled but this Tor was built using "
+             "fragile compiler hardening. The sandbox may be unable to filter "
+             "requests to open files and directories and its overall "
+             "effectiveness will be reduced.");
+#endif
+
     sandbox_cfg_t* cfg = sandbox_init_filter();
 
     if (sandbox_init(cfg)) {
