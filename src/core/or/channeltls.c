@@ -64,6 +64,7 @@
 #include "trunnel/netinfo.h"
 #include "core/or/channelpadding.h"
 #include "core/or/extendinfo.h"
+#include "core/or/congestion_control_common.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cell_queue_st.h"
@@ -793,7 +794,7 @@ channel_tls_num_cells_writeable_method(channel_t *chan)
   cell_network_size = get_cell_network_size(tlschan->conn->wide_circ_ids);
   outbuf_len = connection_get_outbuf_len(TO_CONN(tlschan->conn));
   /* Get the number of cells */
-  n = CEIL_DIV(OR_CONN_HIGHWATER - outbuf_len, cell_network_size);
+  n = CEIL_DIV(or_conn_highwatermark() - outbuf_len, cell_network_size);
   if (n < 0) n = 0;
 #if SIZEOF_SIZE_T > SIZEOF_INT
   if (n > INT_MAX) n = INT_MAX;

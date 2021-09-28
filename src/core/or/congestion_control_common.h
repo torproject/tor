@@ -41,6 +41,27 @@ int sendme_get_inc_count(const circuit_t *, const crypt_path_t *);
 bool circuit_sent_cell_for_sendme(const circuit_t *, const crypt_path_t *);
 bool is_monotime_clock_reliable(void);
 
+void congestion_control_new_consensus_params(const networkstatus_t *ns);
+
+/* Ugh, C.. these two are private. Use the getter instead, when
+ * external to the congestion control code. */
+extern uint32_t or_conn_highwater;
+extern uint32_t or_conn_lowwater;
+
+/** Stop writing on an orconn when its outbuf is this large */
+static inline uint32_t
+or_conn_highwatermark(void)
+{
+  return or_conn_highwater;
+}
+
+/** Resume writing on an orconn when its outbuf is less than this */
+static inline uint32_t
+or_conn_lowwatermark(void)
+{
+  return or_conn_lowwater;
+}
+
 /**
  * Compute an N-count EWMA, aka N-EWMA. N-EWMA is defined as:
  *  EWMA = alpha*value + (1-alpha)*EWMA_prev
