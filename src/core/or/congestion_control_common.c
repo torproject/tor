@@ -33,6 +33,7 @@
 
 #define SENDME_INC_DFLT  (50)
 #define CWND_MIN_DFLT    (MAX(100, SENDME_INC_DFLT))
+#define CWND_MAX_DFLT    (INT32_MAX)
 
 #define CWND_INC_DFLT (50)
 
@@ -82,6 +83,14 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
         OR_CONN_LOWWATER_DFLT,
         OR_CONN_LOWWATER_MIN,
         OR_CONN_LOWWATER_MAX);
+
+#define CWND_MAX_MIN 500
+#define CWND_MAX_MAX (INT32_MAX)
+  cwnd_max =
+    networkstatus_get_param(NULL, "cc_cwnd_max",
+        CWND_MAX_DFLT,
+        CWND_MAX_MIN,
+        CWND_MAX_MAX);
 }
 
 /**
@@ -963,20 +972,32 @@ congestion_control_dispatch_cc_alg(congestion_control_t *cc,
                                    const circuit_t *circ,
                                    const crypt_path_t *layer_hint)
 {
+  int ret = -END_CIRC_REASON_INTERNAL;
   switch (cc->cc_alg) {
     case CC_ALG_WESTWOOD:
-      return congestion_control_westwood_process_sendme(cc, circ, layer_hint);
+      ret = congestion_control_westwood_process_sendme(cc, circ, layer_hint);
+      break;
 
     case CC_ALG_VEGAS:
-      return congestion_control_vegas_process_sendme(cc, circ, layer_hint);
+      ret = congestion_control_vegas_process_sendme(cc, circ, layer_hint);
+      break;
 
     case CC_ALG_NOLA:
-      return congestion_control_nola_process_sendme(cc, circ, layer_hint);
+      ret = congestion_control_nola_process_sendme(cc, circ, layer_hint);
+      break;
 
     case CC_ALG_SENDME:
     default:
       tor_assert(0);
   }
 
-  return -END_CIRC_REASON_INTERNAL;
+  if (cc->cwnd > cwnd_max) {
+    static ratelim_t cwnd_limit = RATELIM_INIT(60);
+    log_fn_ratelim(&cwnd_limit, LOG_NOTICE, LD_CIRC,
+           "Congestion control cwnd %"PRIu64" exceeds max %d, clamping.",
+           cc->cwnd, cwnd_max);
+    cc->cwnd = cwnd_max;
+  }
+
+  return ret;
 }
