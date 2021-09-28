@@ -22,6 +22,7 @@
 #include "core/or/congestion_control_nola.h"
 #include "core/or/congestion_control_westwood.h"
 #include "core/or/congestion_control_st.h"
+#include "core/or/trace_probes_cc.h"
 #include "lib/time/compat_time.h"
 #include "feature/nodelist/networkstatus.h"
 
@@ -915,7 +916,12 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
 
   /* We updated BDP this round if either we had a blocked channel, or
    * the curr_rtt_usec was not 0. */
-  return (blocked_on_chan || curr_rtt_usec != 0);
+  bool ret = (blocked_on_chan || curr_rtt_usec != 0);
+  if (ret) {
+    tor_trace(TR_SUBSYS(cc), TR_EV(bdp_update), circ, cc, curr_rtt_usec,
+              sendme_rate_bdp);
+  }
+  return ret;
 }
 
 /**
