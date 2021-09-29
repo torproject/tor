@@ -117,13 +117,6 @@ static void adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
                                                   node_t *node,
                                                   const tor_addr_t *addr);
 
-/** Stop reading on edge connections when we have this many cells
- * waiting on the appropriate queue. */
-#define CELL_QUEUE_HIGHWATER_SIZE 256
-/** Start reading from edge connections again when we get down to this many
- * cells. */
-#define CELL_QUEUE_LOWWATER_SIZE 64
-
 /** Stats: how many relay cells have originated at this hop, or have
  * been relayed onward (not recognized at this hop)?
  */
@@ -2400,8 +2393,8 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     cells_on_queue = or_circ->p_chan_cells.n;
   }
-  if (CELL_QUEUE_HIGHWATER_SIZE - cells_on_queue < max_to_package)
-    max_to_package = CELL_QUEUE_HIGHWATER_SIZE - cells_on_queue;
+  if (cell_queue_highwatermark() - cells_on_queue < max_to_package)
+    max_to_package = cell_queue_highwatermark() - cells_on_queue;
 
   /* Once we used to start listening on the streams in the order they
    * appeared in the linked list.  That leads to starvation on the
@@ -3121,7 +3114,7 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 
     /* Is the cell queue low enough to unblock all the streams that are waiting
      * to write to this circuit? */
-    if (streams_blocked && queue->n <= CELL_QUEUE_LOWWATER_SIZE)
+    if (streams_blocked && queue->n <= cell_queue_lowwatermark())
       set_streams_blocked_on_circ(circ, chan, 0, 0); /* unblock streams */
 
     /* If n_flushed < max still, loop around and pick another circuit */
@@ -3239,7 +3232,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
 
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */
-  if (!streams_blocked && queue->n >= CELL_QUEUE_HIGHWATER_SIZE)
+  if (!streams_blocked && queue->n >= cell_queue_highwatermark())
     set_streams_blocked_on_circ(circ, chan, 1, 0); /* block streams */
 
   if (streams_blocked && fromstream) {

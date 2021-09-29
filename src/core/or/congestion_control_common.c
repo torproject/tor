@@ -50,6 +50,9 @@
 #define OR_CONN_HIGHWATER_DFLT (32*1024)
 #define OR_CONN_LOWWATER_DFLT (16*1024)
 
+#define CELL_QUEUE_LOW_DFLT (10)
+#define CELL_QUEUE_HIGH_DFLT (256)
+
 static uint64_t congestion_control_update_circuit_rtt(congestion_control_t *,
                                                       uint64_t);
 static bool congestion_control_update_circuit_bdp(congestion_control_t *,
@@ -61,6 +64,9 @@ static uint32_t cwnd_max = CWND_MAX_DFLT;
 uint32_t or_conn_highwater = OR_CONN_HIGHWATER_DFLT;
 uint32_t or_conn_lowwater = OR_CONN_LOWWATER_DFLT;
 
+int32_t cell_queue_high = CELL_QUEUE_HIGH_DFLT;
+int32_t cell_queue_low = CELL_QUEUE_LOW_DFLT;
+
 /**
  * Update global congestion control related consensus parameter values,
  * every consensus update.
@@ -68,6 +74,20 @@ uint32_t or_conn_lowwater = OR_CONN_LOWWATER_DFLT;
 void
 congestion_control_new_consensus_params(const networkstatus_t *ns)
 {
+#define CELL_QUEUE_HIGH_MIN (1)
+#define CELL_QUEUE_HIGH_MAX (1000)
+  cell_queue_high = networkstatus_get_param(ns, "cellq_high",
+      CELL_QUEUE_HIGH_DFLT,
+      CELL_QUEUE_HIGH_MIN,
+      CELL_QUEUE_HIGH_MAX);
+
+#define CELL_QUEUE_LOW_MIN (1)
+#define CELL_QUEUE_LOW_MAX (1000)
+  cell_queue_low = networkstatus_get_param(ns, "cellq_low",
+      CELL_QUEUE_LOW_DFLT,
+      CELL_QUEUE_LOW_MIN,
+      CELL_QUEUE_LOW_MAX);
+
 #define OR_CONN_HIGHWATER_MIN (CELL_PAYLOAD_SIZE)
 #define OR_CONN_HIGHWATER_MAX (INT32_MAX)
   or_conn_highwater =

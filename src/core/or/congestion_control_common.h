@@ -43,10 +43,12 @@ bool is_monotime_clock_reliable(void);
 
 void congestion_control_new_consensus_params(const networkstatus_t *ns);
 
-/* Ugh, C.. these two are private. Use the getter instead, when
+/* Ugh, C.. these four are private. Use the getter instead, when
  * external to the congestion control code. */
 extern uint32_t or_conn_highwater;
 extern uint32_t or_conn_lowwater;
+extern int32_t cell_queue_high;
+extern int32_t cell_queue_low;
 
 /** Stop writing on an orconn when its outbuf is this large */
 static inline uint32_t
@@ -60,6 +62,22 @@ static inline uint32_t
 or_conn_lowwatermark(void)
 {
   return or_conn_lowwater;
+}
+
+/** Stop reading on edge connections when we have this many cells
+ * waiting on the appropriate queue. */
+static inline int32_t
+cell_queue_highwatermark(void)
+{
+  return cell_queue_high;
+}
+
+/** Start reading from edge connections again when we get down to this many
+ * cells. */
+static inline int32_t
+cell_queue_lowwatermark(void)
+{
+  return cell_queue_low;
 }
 
 /**
