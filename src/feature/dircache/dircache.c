@@ -356,8 +356,6 @@ static int handle_get_descriptor(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_keys(dir_connection_t *conn,
                                 const get_handler_args_t *args);
-static int handle_get_hs_descriptor_v2(dir_connection_t *conn,
-                                       const get_handler_args_t *args);
 static int handle_get_robots(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_networkstatus_bridges(dir_connection_t *conn,
@@ -376,7 +374,6 @@ static const url_table_ent_t url_table[] = {
   { "/tor/server/", 1, handle_get_descriptor },
   { "/tor/extra/", 1, handle_get_descriptor },
   { "/tor/keys/", 1, handle_get_keys },
-  { "/tor/rendezvous2/", 1, handle_get_hs_descriptor_v2 },
   { "/tor/hs/3/", 1, handle_get_hs_descriptor_v3 },
   { "/tor/robots.txt", 0, handle_get_robots },
   { "/tor/networkstatus-bridges", 0, handle_get_networkstatus_bridges },
@@ -1350,45 +1347,7 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
   return 0;
 }
 
-/** Helper function for GET /tor/rendezvous2/
- */
-static int
-handle_get_hs_descriptor_v2(dir_connection_t *conn,
-                            const get_handler_args_t *args)
-{
-  const char *url = args->url;
-  if (connection_dir_is_encrypted(conn)) {
-    /* Handle v2 rendezvous descriptor fetch request. */
-    const char *descp;
-    const char *query = url + strlen("/tor/rendezvous2/");
-    if (rend_valid_descriptor_id(query)) {
-      log_info(LD_REND, "Got a v2 rendezvous descriptor request for ID '%s'",
-               safe_str(escaped(query)));
-      switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
-        case 1: /* valid */
-          write_http_response_header(conn, strlen(descp), NO_METHOD, 0);
-          connection_buf_add(descp, strlen(descp), TO_CONN(conn));
-          break;
-        case 0: /* well-formed but not present */
-          write_short_http_response(conn, 404, "Not found");
-          break;
-        case -1: /* not well-formed */
-          write_short_http_response(conn, 400, "Bad request");
-          break;
-      }
-    } else { /* not well-formed */
-      write_short_http_response(conn, 400, "Bad request");
-    }
-    goto done;
-  } else {
-    /* Not encrypted! */
-    write_short_http_response(conn, 404, "Not found");
-  }
- done:
-  return 0;
-}
-
-/** Helper function for GET `/tor/hs/3/...`. Only for version 3.
+/** Helper function for GET /tor/hs/3/<z>. Only for version 3.
  */
 STATIC int
 handle_get_hs_descriptor_v3(dir_connection_t *conn,
@@ -1611,6 +1570,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
   char *url = NULL;
   const or_options_t *options = get_options();
 
+  (void) body_len;
+
   log_debug(LD_DIRSERV,"Received POST command.");
 
   conn->base_.state = DIR_CONN_STATE_SERVER_WRITING;
@@ -1628,22 +1589,6 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
     return 0;
   }
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", escaped(url));
-
-  /* Handle v2 rendezvous service publish request. */
-  if (connection_dir_is_encrypted(conn) &&
-      !strcmpstart(url,"/tor/rendezvous2/publish")) {
-    if (rend_cache_store_v2_desc_as_dir(body) < 0) {
-      log_warn(LD_REND, "Rejected v2 rend descriptor (body size %d) from %s.",
-               (int)body_len,
-               connection_describe_peer(TO_CONN(conn)));
-      write_short_http_response(conn, 400,
-                             "Invalid v2 service descriptor rejected");
-    } else {
-      write_short_http_response(conn, 200, "Service descriptor (v2) stored");
-      log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
-    }
-    goto done;
-  }
 
   /* Handle HS descriptor publish request. We force an anonymous connection
    * (which also tests for encrypted). We do not allow single-hop client to
