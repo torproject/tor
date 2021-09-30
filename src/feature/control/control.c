@@ -4653,11 +4653,13 @@ add_onion_helper_add_service(int hs_version,
   tor_assert(port_cfgs);
   tor_assert(address_out);
 
+  /* Version 2 is disabled. */
+  (void) auth_type;
+  (void) auth_clients;
+
   switch (hs_version) {
   case HS_VERSION_TWO:
-    ret = rend_service_add_ephemeral(pk->v2, port_cfgs, max_streams,
-                                     max_streams_close_circuit, auth_type,
-                                     auth_clients, address_out);
+    ret = RSAE_INTERNAL;
     break;
   case HS_VERSION_THREE:
     ret = hs_service_add_ephemeral(pk->v3, port_cfgs, max_streams,
