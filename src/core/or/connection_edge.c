@@ -4348,9 +4348,6 @@ parse_extended_hostname(char *address)
     if (q != address) {
       memmove(address, q, strlen(q) + 1 /* also get \0 */);
     }
-    if (rend_valid_v2_service_id(query)) {
-      return ONION_V2_HOSTNAME; /* success */
-    }
     if (hs_address_is_valid(query)) {
       return ONION_V3_HOSTNAME;
     }
