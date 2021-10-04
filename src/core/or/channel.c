@@ -2629,24 +2629,42 @@ channel_dump_statistics, (channel_t *chan, int severity))
          circuitmux_num_circuits(chan->cmux) : 0);
 
   /* Describe timestamps */
-  tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " was last used by a "
-      "client at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan->global_identifier),
-      (uint64_t)(chan->timestamp_client),
-      (uint64_t)(now - chan->timestamp_client));
-  tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " last received a cell "
-      "at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan->global_identifier),
-      (uint64_t)(chan->timestamp_recv),
-      (uint64_t)(now - chan->timestamp_recv));
-  tor_log(severity, LD_GENERAL,
-      " * Channel %"PRIu64 " last transmitted a cell "
-      "at %"PRIu64 " (%"PRIu64 " seconds ago)",
-      (chan->global_identifier),
-      (uint64_t)(chan->timestamp_xmit),
-      (uint64_t)(now - chan->timestamp_xmit));
+  if (chan->timestamp_client == 0) {
+      tor_log(severity, LD_GENERAL,
+              " * Channel %"PRIu64 " was never used by a "
+             "client", (chan->global_identifier));
+  } else {
+      tor_log(severity, LD_GENERAL,
+              " * Channel %"PRIu64 " was last used by a "
+              "client at %"PRIu64 " (%"PRIu64 " seconds ago)",
+              (chan->global_identifier),
+              (uint64_t)(chan->timestamp_client),
+              (uint64_t)(now - chan->timestamp_client));
+  }
+  if (chan->timestamp_recv == 0) {
+      tor_log(severity, LD_GENERAL,
+              " * Channel %"PRIu64 " never received a cell",
+              (chan->global_identifier));
+  } else {
+      tor_log(severity, LD_GENERAL,
+              " * Channel %"PRIu64 " last received a cell "
+              "at %"PRIu64 " (%"PRIu64 " seconds ago)",
+              (chan->global_identifier),
+              (uint64_t)(chan->timestamp_recv),
+              (uint64_t)(now - chan->timestamp_recv));
+  }
+  if (chan->timestamp_xmit == 0) {
+      tor_log(severity, LD_GENERAL,
+              " * Channel %"PRIu64 " never transmitted a cell",
+              (chan->global_identifier));
+  } else {
+      tor_log(severity, LD_GENERAL,
+              " * Channel %"PRIu64 " last transmitted a cell "
+              "at %"PRIu64 " (%"PRIu64 " seconds ago)",
+              (chan->global_identifier),
+              (uint64_t)(chan->timestamp_xmit),
+              (uint64_t)(now - chan->timestamp_xmit));
+  }
 
   /* Describe counters and rates */
   tor_log(severity, LD_GENERAL,
