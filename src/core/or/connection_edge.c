@@ -2530,10 +2530,15 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
 
     /* We don't support v2 onions anymore. Log a warning and bail. */
     if (addresstype == ONION_V2_HOSTNAME) {
-      log_warn(LD_PROTOCOL, "Tried to connect to a v2 onion address, but this "
-               "version of Tor no longer supports them. Please encourage the "
-               "site operator to upgrade. For more information see "
-               "https://blog.torproject.org/v2-deprecation-timeline.");
+      static bool log_once = false;
+      if (!log_once) {
+        log_warn(LD_PROTOCOL, "Tried to connect to a v2 onion address, but "
+                 "this version of Tor no longer supports them. Please "
+                 "encourage the site operator to upgrade. For more "
+                 "information see "
+                 "https://blog.torproject.org/v2-deprecation-timeline.");
+        log_once = true;
+      }
       control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                   escaped(socks->address));
       /* Send back the 0xF6 extended code indicating a bad hostname. This is
