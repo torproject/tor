@@ -22,28 +22,51 @@
 #include "core/or/congestion_control_nola.h"
 #include "core/or/congestion_control_westwood.h"
 #include "core/or/congestion_control_st.h"
+#include "core/or/trace_probes_cc.h"
 #include "lib/time/compat_time.h"
 #include "feature/nodelist/networkstatus.h"
 
-/* Consensus parameter defaults */
+/* Consensus parameter defaults.
+ *
+ * More details for each of the parameters can be found in proposal 324,
+ * section 6.5 including tuning notes. */
 #define CIRCWINDOW_INIT (500)
-
-#define CWND_INC_PCT_SS_DFLT (100)
-
-#define SENDME_INC_DFLT  (50)
-#define CWND_MIN_DFLT    (MAX(100, SENDME_INC_DFLT))
+#define SENDME_INC_DFLT (50)
 
 #define CWND_INC_DFLT (50)
-
+#define CWND_INC_PCT_SS_DFLT (100)
 #define CWND_INC_RATE_DFLT (1)
+#define CWND_MAX_DFLT (INT32_MAX)
+#define CWND_MIN_DFLT (MAX(100, SENDME_INC_DFLT))
 
+#define BWE_SENDME_MIN_DFLT (5)
+#define EWMA_CWND_COUNT_DFLT (2)
+
+/* BDP algorithms for each congestion control algorithms use the piecewise
+ * estimattor. See section 3.1.4 of proposal 324. */
 #define WESTWOOD_BDP_ALG BDP_ALG_PIECEWISE
 #define VEGAS_BDP_MIX_ALG BDP_ALG_PIECEWISE
 #define NOLA_BDP_ALG BDP_ALG_PIECEWISE
 
-#define EWMA_CWND_COUNT_DFLT  2
+/* Indicate OR connection buffer limitations used to stop or start accepting
+ * cells in its outbuf.
+ *
+ * These watermarks are historical to tor in a sense that they've been used
+ * almost from the genesis point. And were likely defined to fit the bounds of
+ * TLS records of 16KB which would be around 32 cells.
+ *
+ * These are defaults of the consensus parameter "orconn_high" and "orconn_low"
+ * values. */
+#define OR_CONN_HIGHWATER_DFLT (32*1024)
+#define OR_CONN_LOWWATER_DFLT (16*1024)
 
-#define BWE_SENDME_MIN_DFLT   5
+/* Low and high values of circuit cell queue sizes. They are used to tell when
+ * to start or stop reading on the streams attached on the circuit.
+ *
+ * These are defaults of the consensus parameters "cellq_high" and "cellq_low".
+ */
+#define CELL_QUEUE_LOW_DFLT (10)
+#define CELL_QUEUE_HIGH_DFLT (256)
 
 static uint64_t congestion_control_update_circuit_rtt(congestion_control_t *,
                                                       uint64_t);
@@ -51,6 +74,59 @@ static bool congestion_control_update_circuit_bdp(congestion_control_t *,
                                                   const circuit_t *,
                                                   const crypt_path_t *,
                                                   uint64_t, uint64_t);
+
+/* Consensus parameters cached. The non static ones are extern. */
+static uint32_t cwnd_max = CWND_MAX_DFLT;
+int32_t cell_queue_high = CELL_QUEUE_HIGH_DFLT;
+int32_t cell_queue_low = CELL_QUEUE_LOW_DFLT;
+uint32_t or_conn_highwater = OR_CONN_HIGHWATER_DFLT;
+uint32_t or_conn_lowwater = OR_CONN_LOWWATER_DFLT;
+
+/**
+ * Update global congestion control related consensus parameter values,
+ * every consensus update.
+ */
+void
+congestion_control_new_consensus_params(const networkstatus_t *ns)
+{
+#define CELL_QUEUE_HIGH_MIN (1)
+#define CELL_QUEUE_HIGH_MAX (1000)
+  cell_queue_high = networkstatus_get_param(ns, "cellq_high",
+      CELL_QUEUE_HIGH_DFLT,
+      CELL_QUEUE_HIGH_MIN,
+      CELL_QUEUE_HIGH_MAX);
+
+#define CELL_QUEUE_LOW_MIN (1)
+#define CELL_QUEUE_LOW_MAX (1000)
+  cell_queue_low = networkstatus_get_param(ns, "cellq_low",
+      CELL_QUEUE_LOW_DFLT,
+      CELL_QUEUE_LOW_MIN,
+      CELL_QUEUE_LOW_MAX);
+
+#define OR_CONN_HIGHWATER_MIN (CELL_PAYLOAD_SIZE)
+#define OR_CONN_HIGHWATER_MAX (INT32_MAX)
+  or_conn_highwater =
+    networkstatus_get_param(ns, "orconn_high",
+        OR_CONN_HIGHWATER_DFLT,
+        OR_CONN_HIGHWATER_MIN,
+        OR_CONN_HIGHWATER_MAX);
+
+#define OR_CONN_LOWWATER_MIN (CELL_PAYLOAD_SIZE)
+#define OR_CONN_LOWWATER_MAX (INT32_MAX)
+  or_conn_lowwater =
+    networkstatus_get_param(ns, "orconn_low",
+        OR_CONN_LOWWATER_DFLT,
+        OR_CONN_LOWWATER_MIN,
+        OR_CONN_LOWWATER_MAX);
+
+#define CWND_MAX_MIN 500
+#define CWND_MAX_MAX (INT32_MAX)
+  cwnd_max =
+    networkstatus_get_param(NULL, "cc_cwnd_max",
+        CWND_MAX_DFLT,
+        CWND_MAX_MIN,
+        CWND_MAX_MAX);
+}
 
 /**
  * Set congestion control parameters on a circuit's congestion
@@ -222,24 +298,6 @@ congestion_control_free_(congestion_control_t *cc)
   smartlist_free(cc->sendme_arrival_timestamps);
 
   tor_free(cc);
-}
-
-/**
- * Compute an N-count EWMA, aka N-EWMA. N-EWMA is defined as:
- *  EWMA = alpha*value + (1-alpha)*EWMA_prev
- * with alpha = 2/(N+1).
- *
- * This works out to:
- *  EWMA = value*2/(N+1) + EMA_prev*(N-1)/(N+1)
- *       = (value*2 + EWMA_prev*(N-1))/(N+1)
- */
-static inline uint64_t
-n_count_ewma(uint64_t curr, uint64_t prev, uint64_t N)
-{
-  if (prev == 0)
-    return curr;
-  else
-    return (2*curr + (N-1)*prev)/(N+1);
 }
 
 /**
@@ -558,10 +616,16 @@ time_delta_should_use_heuristics(const congestion_control_t *cc)
   return false;
 }
 
+static bool is_monotime_clock_broken = false;
+
 /**
  * Returns true if the monotime delta is 0, or is significantly
  * different than the previous delta. Either case indicates
  * that the monotime time source stalled or jumped.
+ *
+ * Also caches the clock state in the is_monotime_clock_broken flag,
+ * so we can also provide a is_monotime_clock_reliable() function,
+ * used by flow control rate timing.
  */
 static bool
 time_delta_stalled_or_jumped(const congestion_control_t *cc,
@@ -573,22 +637,30 @@ time_delta_stalled_or_jumped(const congestion_control_t *cc,
     static ratelim_t stall_info_limit = RATELIM_INIT(60);
     log_fn_ratelim(&stall_info_limit, LOG_INFO, LD_CIRC,
            "Congestion control cannot measure RTT due to monotime stall.");
-    return true;
+
+    /* If delta is every 0, the monotime clock has stalled, and we should
+     * not use it anywhere. */
+    is_monotime_clock_broken = true;
+
+    return is_monotime_clock_broken;
   }
 
-  /* If the old_delta is 0, we have no previous values. So
-   * just assume this one is valid (beause it is non-zero) */
-  if (old_delta == 0)
-    return false;
+  /* If the old_delta is 0, we have no previous values on this circuit.
+   *
+   * So, return the global monotime status from other circuits, and
+   * do not update.
+   */
+  if (old_delta == 0) {
+    return is_monotime_clock_broken;
+  }
 
   /*
    * For the heuristic cases, we need at least a few timestamps,
    * to average out any previous partial stalls or jumps. So until
-   * than point, let's just delcare these time values "good enough
-   * to use".
+   * than point, let's just use the cached status from other circuits.
    */
   if (!time_delta_should_use_heuristics(cc)) {
-    return false;
+    return is_monotime_clock_broken;
   }
 
   /* If old_delta is significantly larger than new_delta, then
@@ -601,7 +673,9 @@ time_delta_stalled_or_jumped(const congestion_control_t *cc,
            "), likely due to clock jump.",
            new_delta/1000, old_delta/1000);
 
-    return true;
+    is_monotime_clock_broken = true;
+
+    return is_monotime_clock_broken;
   }
 
   /* If new_delta is significantly larger than old_delta, then
@@ -613,10 +687,24 @@ time_delta_stalled_or_jumped(const congestion_control_t *cc,
            "), likely due to clock jump.",
            new_delta/1000, old_delta/1000);
 
-    return true;
+    is_monotime_clock_broken = true;
+
+    return is_monotime_clock_broken;
   }
 
-  return false;
+  /* All good! Update cached status, too */
+  is_monotime_clock_broken = false;
+
+  return is_monotime_clock_broken;
+}
+
+/**
+ * Is the monotime clock stalled according to any circuits?
+ */
+bool
+is_monotime_clock_reliable(void)
+{
+  return !is_monotime_clock_broken;
 }
 
 /**
@@ -753,7 +841,7 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
     SMARTLIST_FOREACH(cc->sendme_arrival_timestamps, uint64_t *, t,
                       tor_free(t));
     smartlist_clear(cc->sendme_arrival_timestamps);
-  } else if (curr_rtt_usec) {
+  } else if (curr_rtt_usec && is_monotime_clock_reliable()) {
     /* Sendme-based BDP will quickly measure BDP in much less than
      * a cwnd worth of data when in use (in 2-10 SENDMEs).
      *
@@ -903,7 +991,12 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
 
   /* We updated BDP this round if either we had a blocked channel, or
    * the curr_rtt_usec was not 0. */
-  return (blocked_on_chan || curr_rtt_usec != 0);
+  bool ret = (blocked_on_chan || curr_rtt_usec != 0);
+  if (ret) {
+    tor_trace(TR_SUBSYS(cc), TR_EV(bdp_update), circ, cc, curr_rtt_usec,
+              sendme_rate_bdp);
+  }
+  return ret;
 }
 
 /**
@@ -914,20 +1007,32 @@ congestion_control_dispatch_cc_alg(congestion_control_t *cc,
                                    const circuit_t *circ,
                                    const crypt_path_t *layer_hint)
 {
+  int ret = -END_CIRC_REASON_INTERNAL;
   switch (cc->cc_alg) {
     case CC_ALG_WESTWOOD:
-      return congestion_control_westwood_process_sendme(cc, circ, layer_hint);
+      ret = congestion_control_westwood_process_sendme(cc, circ, layer_hint);
+      break;
 
     case CC_ALG_VEGAS:
-      return congestion_control_vegas_process_sendme(cc, circ, layer_hint);
+      ret = congestion_control_vegas_process_sendme(cc, circ, layer_hint);
+      break;
 
     case CC_ALG_NOLA:
-      return congestion_control_nola_process_sendme(cc, circ, layer_hint);
+      ret = congestion_control_nola_process_sendme(cc, circ, layer_hint);
+      break;
 
     case CC_ALG_SENDME:
     default:
       tor_assert(0);
   }
 
-  return -END_CIRC_REASON_INTERNAL;
+  if (cc->cwnd > cwnd_max) {
+    static ratelim_t cwnd_limit = RATELIM_INIT(60);
+    log_fn_ratelim(&cwnd_limit, LOG_NOTICE, LD_CIRC,
+           "Congestion control cwnd %"PRIu64" exceeds max %d, clamping.",
+           cc->cwnd, cwnd_max);
+    cc->cwnd = cwnd_max;
+  }
+
+  return ret;
 }

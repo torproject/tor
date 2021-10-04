@@ -33,7 +33,7 @@ int sendme_circuit_data_received(circuit_t *circ, crypt_path_t *layer_hint);
 /* Update package window functions. */
 int sendme_note_circuit_data_packaged(circuit_t *circ,
                                       crypt_path_t *layer_hint);
-int sendme_note_stream_data_packaged(edge_connection_t *conn);
+int sendme_note_stream_data_packaged(edge_connection_t *conn, size_t len);
 
 /* Record cell digest on circuit. */
 void sendme_record_cell_digest_on_circ(circuit_t *circ, crypt_path_t *cpath);

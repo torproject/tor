@@ -39,6 +39,7 @@ LIBTOR_APP_A_SOURCES += 				\
 	src/core/or/congestion_control_vegas.c			\
 	src/core/or/congestion_control_nola.c			\
 	src/core/or/congestion_control_westwood.c			\
+	src/core/or/congestion_control_flow.c			\
 	src/core/or/status.c			\
 	src/core/or/versions.c
 
@@ -82,6 +83,7 @@ noinst_HEADERS +=					\
 	src/core/or/entry_port_cfg_st.h			\
 	src/core/or/extend_info_st.h			\
 	src/core/or/listener_connection_st.h		\
+	src/core/or/lttng_cc.inc			\
 	src/core/or/lttng_circuit.inc			\
 	src/core/or/onion.h				\
 	src/core/or/or.h				\
@@ -102,6 +104,7 @@ noinst_HEADERS +=					\
 	src/core/or/relay_crypto_st.h			\
 	src/core/or/scheduler.h				\
 	src/core/or/sendme.h				\
+	src/core/or/congestion_control_flow.h				\
 	src/core/or/congestion_control_common.h				\
 	src/core/or/congestion_control_vegas.h				\
 	src/core/or/congestion_control_nola.h				\
@@ -115,7 +118,9 @@ noinst_HEADERS +=					\
 
 if USE_TRACING_INSTRUMENTATION_LTTNG
 LIBTOR_APP_A_SOURCES += \
+	src/core/or/trace_probes_cc.c				\
 	src/core/or/trace_probes_circuit.c
 noinst_HEADERS += \
+	src/core/or/trace_probes_cc.h				\
 	src/core/or/trace_probes_circuit.h
 endif

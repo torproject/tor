@@ -117,6 +117,7 @@
 #include "lib/cc/ctassert.h"
 #include "lib/sandbox/sandbox.h"
 #include "lib/net/buffers_net.h"
+#include "lib/net/address.h"
 #include "lib/tls/tortls.h"
 #include "lib/evloop/compat_libevent.h"
 #include "lib/compress/compress.h"
@@ -145,6 +146,8 @@
 #include "core/or/port_cfg_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "core/or/socks_request_st.h"
+
+#include "core/or/congestion_control_flow.h"
 
 /**
  * On Windows and Linux we cannot reliably bind() a socket to an
@@ -612,6 +615,11 @@ entry_connection_new(int type, int socket_family)
     entry_conn->entry_cfg.ipv4_traffic = 1;
   else if (socket_family == AF_INET6)
     entry_conn->entry_cfg.ipv6_traffic = 1;
+
+  /* Initialize the read token bucket to the maximum value which is the same as
+   * no rate limiting. */
+  token_bucket_rw_init(&ENTRY_TO_EDGE_CONN(entry_conn)->bucket, INT32_MAX,
+                       INT32_MAX, monotime_coarse_get_stamp());
   return entry_conn;
 }
 
@@ -623,6 +631,10 @@ edge_connection_new(int type, int socket_family)
   edge_connection_t *edge_conn = tor_malloc_zero(sizeof(edge_connection_t));
   tor_assert(type == CONN_TYPE_EXIT);
   connection_init(time(NULL), TO_CONN(edge_conn), type, socket_family);
+  /* Initialize the read token bucket to the maximum value which is the same as
+   * no rate limiting. */
+  token_bucket_rw_init(&edge_conn->bucket, INT32_MAX, INT32_MAX,
+                       monotime_coarse_get_stamp());
   return edge_conn;
 }
 
@@ -3457,6 +3469,19 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
     base = get_cell_network_size(or_conn->wide_circ_ids);
   }
 
+  /* Edge connection have their own read bucket due to flow control being able
+   * to set a rate limit for them. However, for exit connections, we still need
+   * to honor the global bucket as well. */
+  if (CONN_IS_EDGE(conn)) {
+    const edge_connection_t *edge_conn = CONST_TO_EDGE_CONN(conn);
+    conn_bucket = token_bucket_rw_get_read(&edge_conn->bucket);
+    if (conn->type == CONN_TYPE_EXIT) {
+      /* Decide between our limit and the global one. */
+      goto end;
+    }
+    return conn_bucket;
+  }
+
   if (!connection_is_rate_limited(conn)) {
     /* be willing to read on local conns even if our buckets are empty */
     return conn_bucket>=0 ? conn_bucket : 1<<14;
@@ -3467,6 +3492,7 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
     global_bucket_val = MIN(global_bucket_val, relayed);
   }
 
+ end:
   return connection_bucket_get_share(base, priority,
                                      global_bucket_val, conn_bucket);
 }
@@ -3644,6 +3670,13 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 
   record_num_bytes_transferred_impl(conn, now, num_read, num_written);
 
+  /* Edge connection need to decrement the read side of the bucket used by our
+   * congestion control. */
+  if (CONN_IS_EDGE(conn) && num_read > 0) {
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    token_bucket_rw_dec(&edge_conn->bucket, num_read, 0);
+  }
+
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
 
@@ -3697,14 +3730,16 @@ connection_write_bw_exhausted(connection_t *conn, bool is_global_bw)
 void
 connection_consider_empty_read_buckets(connection_t *conn)
 {
+  int is_global = 1;
   const char *reason;
 
-  if (!connection_is_rate_limited(conn))
+  if (CONN_IS_EDGE(conn) &&
+             token_bucket_rw_get_read(&TO_EDGE_CONN(conn)->bucket) <= 0) {
+    reason = "edge connection read bucket exhausted. Pausing.";
+    is_global = false;
+  } else if (!connection_is_rate_limited(conn)) {
     return; /* Always okay. */
-
-  int is_global = 1;
-
-  if (token_bucket_rw_get_read(&global_bucket) <= 0) {
+  } else if (token_bucket_rw_get_read(&global_bucket) <= 0) {
     reason = "global read bucket exhausted. Pausing.";
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
              token_bucket_rw_get_read(&global_relayed_bucket) <= 0) {
@@ -3714,8 +3749,9 @@ connection_consider_empty_read_buckets(connection_t *conn)
              token_bucket_rw_get_read(&TO_OR_CONN(conn)->bucket) <= 0) {
     reason = "connection read bucket exhausted. Pausing.";
     is_global = false;
-  } else
+  } else {
     return; /* all good, no need to stop it */
+  }
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "%s", reason));
   connection_read_bw_exhausted(conn, is_global);
@@ -3818,6 +3854,10 @@ connection_bucket_refill_single(connection_t *conn, uint32_t now_ts)
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
     token_bucket_rw_refill(&or_conn->bucket, now_ts);
+  }
+
+  if (CONN_IS_EDGE(conn)) {
+    token_bucket_rw_refill(&TO_EDGE_CONN(conn)->bucket, now_ts);
   }
 }
 
@@ -4556,9 +4596,9 @@ connection_handle_write_impl(connection_t *conn, int force)
       !dont_stop_writing) { /* it's done flushing */
     if (connection_finished_flushing(conn) < 0) {
       /* already marked */
-      return -1;
+      goto err;
     }
-    return 0;
+    goto done;
   }
 
   /* Call even if result is 0, since the global write bucket may
@@ -4568,7 +4608,17 @@ connection_handle_write_impl(connection_t *conn, int force)
   if (n_read > 0 && connection_is_reading(conn))
     connection_consider_empty_read_buckets(conn);
 
+ done:
+  /* If this is an edge connection with congestion control, check to see
+   * if it is time to send an xon */
+  if (conn_uses_flow_control(conn)) {
+    flow_control_decide_xon(TO_EDGE_CONN(conn), n_written);
+  }
+
   return 0;
+
+ err:
+  return -1;
 }
 
 /* DOCDOC connection_handle_write */

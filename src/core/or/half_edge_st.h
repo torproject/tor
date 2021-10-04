@@ -31,6 +31,18 @@ typedef struct half_edge_t {
    * our deliver window */
   int data_pending;
 
+  /**
+   * Monotime timestamp of when the other end should have successfuly
+   * shut down the stream and stop sending data, based on the larger
+   * of circuit RTT and CBT. Used if 'used_ccontrol' is true, to expire
+   * the half_edge at this monotime timestamp. */
+  uint64_t end_ack_expected_usec;
+
+  /**
+   * Did this edge use congestion control? If so, use
+   * timer instead of pending data approach */
+  int used_ccontrol : 1;
+
   /** Is there a connected cell pending? */
   int connected_pending : 1;
 } half_edge_t;

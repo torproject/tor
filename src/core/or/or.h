@@ -210,6 +210,9 @@ struct curve25519_public_key_t;
 #define RELAY_COMMAND_PADDING_NEGOTIATE 41
 #define RELAY_COMMAND_PADDING_NEGOTIATED 42
 
+#define RELAY_COMMAND_XOFF 43
+#define RELAY_COMMAND_XON 44
+
 /* Reasons why an OR connection is closed. */
 #define END_OR_CONN_REASON_DONE           1
 #define END_OR_CONN_REASON_REFUSED        2 /* connection refused */
@@ -591,18 +594,6 @@ typedef struct or_handshake_state_t or_handshake_state_t;
 
 /** Length of Extended ORPort connection identifier. */
 #define EXT_OR_CONN_ID_LEN DIGEST_LEN /* 20 */
-/*
- * OR_CONN_HIGHWATER and OR_CONN_LOWWATER moved from connection_or.c so
- * channeltls.c can see them too.
- */
-
-/** When adding cells to an OR connection's outbuf, keep adding until the
- * outbuf is at least this long, or we run out of cells. */
-#define OR_CONN_HIGHWATER (32*1024)
-
-/** Add cells to an OR connection's outbuf whenever the outbuf's data length
- * drops below this size. */
-#define OR_CONN_LOWWATER (16*1024)
 
 typedef struct connection_t connection_t;
 typedef struct control_connection_t control_connection_t;

@@ -65,6 +65,7 @@
 #include "core/or/scheduler.h"
 #include "feature/nodelist/torcert.h"
 #include "core/or/channelpadding.h"
+#include "core/or/congestion_control_common.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/hs/hs_service.h"
 
@@ -636,7 +637,7 @@ connection_or_flushed_some(or_connection_t *conn)
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   datalen = connection_get_outbuf_len(TO_CONN(conn));
-  if (datalen < OR_CONN_LOWWATER) {
+  if (datalen < or_conn_lowwatermark()) {
     /* Let the scheduler know */
     scheduler_channel_wants_writes(TLS_CHAN_TO_BASE(conn->chan));
   }
@@ -660,9 +661,9 @@ connection_or_num_cells_writeable(or_connection_t *conn)
    * used to trigger when to start writing after we've stopped.
    */
   datalen = connection_get_outbuf_len(TO_CONN(conn));
-  if (datalen < OR_CONN_HIGHWATER) {
+  if (datalen < or_conn_highwatermark()) {
     cell_network_size = get_cell_network_size(conn->wide_circ_ids);
-    n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, cell_network_size);
+    n = CEIL_DIV(or_conn_highwatermark() - datalen, cell_network_size);
   }
 
   return n;

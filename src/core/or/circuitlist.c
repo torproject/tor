@@ -2602,6 +2602,7 @@ circuits_handle_oom(size_t current_allocation)
   size_t mem_recovered=0;
   int n_circuits_killed=0;
   int n_dirconns_killed=0;
+  int n_edgeconns_killed = 0;
   uint32_t now_ts;
   log_notice(LD_GENERAL, "We're low on memory (cell queues total alloc:"
              " %"TOR_PRIuSZ" buffer total alloc: %" TOR_PRIuSZ ","
@@ -2668,12 +2669,19 @@ circuits_handle_oom(size_t current_allocation)
       if (conn_age < circ->age_tmp) {
         break;
       }
-      if (conn->type == CONN_TYPE_DIR && conn->linked_conn == NULL) {
+      /* Also consider edge connections so we don't accumulate bytes on the
+       * outbuf due to a malicious destination holding off the read on us. */
+      if ((conn->type == CONN_TYPE_DIR && conn->linked_conn == NULL) ||
+          CONN_IS_EDGE(conn)) {
         if (!conn->marked_for_close)
           connection_mark_for_close(conn);
         mem_recovered += single_conn_free_bytes(conn);
 
-        ++n_dirconns_killed;
+        if (conn->type == CONN_TYPE_DIR) {
+          ++n_dirconns_killed;
+        } else {
+          ++n_edgeconns_killed;
+        }
 
         if (mem_recovered >= mem_to_recover)
           goto done_recovering_mem;
@@ -2703,11 +2711,12 @@ circuits_handle_oom(size_t current_allocation)
  done_recovering_mem:
   log_notice(LD_GENERAL, "Removed %"TOR_PRIuSZ" bytes by killing %d circuits; "
              "%d circuits remain alive. Also killed %d non-linked directory "
-             "connections.",
+             "connections. Killed %d edge connections",
              mem_recovered,
              n_circuits_killed,
              smartlist_len(circlist) - n_circuits_killed,
-             n_dirconns_killed);
+             n_dirconns_killed,
+             n_edgeconns_killed);
 
   return mem_recovered;
 }

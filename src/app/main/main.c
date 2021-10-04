@@ -27,6 +27,8 @@
 #include "core/or/channel.h"
 #include "core/or/channelpadding.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/congestion_control_common.h"
+#include "core/or/congestion_control_flow.h"
 #include "core/or/circuitlist.h"
 #include "core/or/command.h"
 #include "core/or/connection_or.h"
@@ -630,6 +632,8 @@ tor_init(int argc, char *argv[])
    * until we get a consensus */
   channelpadding_new_consensus_params(NULL);
   circpad_new_consensus_params(NULL);
+  congestion_control_new_consensus_params(NULL);
+  flow_control_new_consensus_params(NULL);
 
   /* Initialize circuit padding to defaults+torrc until we get a consensus */
   circpad_machines_init();

@@ -1,0 +1,20 @@
+/* This file contains the xon and xoff cell definitions, for flow control. */
+
+/* xoff cell definition. Tells the other endpoint to stop sending, because
+ * we have too much data queued for this stream. */
+struct xoff_cell {
+  /* Version field. */
+  u8 version IN [0x00];
+}
+
+/* xon cell declaration. Tells the other endpoint to resume sending and/or
+ * update its sending rate on this stream based on advisory information. */
+struct xon_cell {
+  /* Version field. */
+  u8 version IN [0x00];
+
+  /* Advisory field: The ewma rate of socket drain we have seen so far
+   * on this stream, in kilobytes/sec (1000 bytes/sec). May be zero,
+   * which means no rate advice. */
+  u32 kbps_ewma;
+}
