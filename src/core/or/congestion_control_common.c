@@ -26,30 +26,45 @@
 #include "lib/time/compat_time.h"
 #include "feature/nodelist/networkstatus.h"
 
-/* Consensus parameter defaults */
+/* Consensus parameter defaults.
+ *
+ * More details for each of the parameters can be found in proposal 324,
+ * section 6.5 including tuning notes. */
 #define CIRCWINDOW_INIT (500)
-
-#define CWND_INC_PCT_SS_DFLT (100)
-
-#define SENDME_INC_DFLT  (50)
-#define CWND_MIN_DFLT    (MAX(100, SENDME_INC_DFLT))
-#define CWND_MAX_DFLT    (INT32_MAX)
+#define SENDME_INC_DFLT (50)
 
 #define CWND_INC_DFLT (50)
-
+#define CWND_INC_PCT_SS_DFLT (100)
 #define CWND_INC_RATE_DFLT (1)
+#define CWND_MAX_DFLT (INT32_MAX)
+#define CWND_MIN_DFLT (MAX(100, SENDME_INC_DFLT))
 
+#define BWE_SENDME_MIN_DFLT (5)
+#define EWMA_CWND_COUNT_DFLT (2)
+
+/* BDP algorithms for each congestion control algorithms use the piecewise
+ * estimattor. See section 3.1.4 of proposal 324. */
 #define WESTWOOD_BDP_ALG BDP_ALG_PIECEWISE
 #define VEGAS_BDP_MIX_ALG BDP_ALG_PIECEWISE
 #define NOLA_BDP_ALG BDP_ALG_PIECEWISE
 
-#define EWMA_CWND_COUNT_DFLT  2
-
-#define BWE_SENDME_MIN_DFLT   5
-
+/* Indicate OR connection buffer limitations used to stop or start accepting
+ * cells in its outbuf.
+ *
+ * These watermarks are historical to tor in a sense that they've been used
+ * almost from the genesis point. And were likely defined to fit the bounds of
+ * TLS records of 16KB which would be around 32 cells.
+ *
+ * These are defaults of the consensus parameter "orconn_high" and "orconn_low"
+ * values. */
 #define OR_CONN_HIGHWATER_DFLT (32*1024)
 #define OR_CONN_LOWWATER_DFLT (16*1024)
 
+/* Low and high values of circuit cell queue sizes. They are used to tell when
+ * to start or stop reading on the streams attached on the circuit.
+ *
+ * These are defaults of the consensus parameters "cellq_high" and "cellq_low".
+ */
 #define CELL_QUEUE_LOW_DFLT (10)
 #define CELL_QUEUE_HIGH_DFLT (256)
 
@@ -60,12 +75,12 @@ static bool congestion_control_update_circuit_bdp(congestion_control_t *,
                                                   const crypt_path_t *,
                                                   uint64_t, uint64_t);
 
+/* Consensus parameters cached. The non static ones are extern. */
 static uint32_t cwnd_max = CWND_MAX_DFLT;
-uint32_t or_conn_highwater = OR_CONN_HIGHWATER_DFLT;
-uint32_t or_conn_lowwater = OR_CONN_LOWWATER_DFLT;
-
 int32_t cell_queue_high = CELL_QUEUE_HIGH_DFLT;
 int32_t cell_queue_low = CELL_QUEUE_LOW_DFLT;
+uint32_t or_conn_highwater = OR_CONN_HIGHWATER_DFLT;
+uint32_t or_conn_lowwater = OR_CONN_LOWWATER_DFLT;
 
 /**
  * Update global congestion control related consensus parameter values,

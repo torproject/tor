@@ -32,28 +32,34 @@ static uint32_t xoff_client;
 static uint32_t xoff_exit;
 
 static uint32_t xon_change_pct;
-static uint32_t xon_rate_bytes;
 static uint32_t xon_ewma_cnt;
+static uint32_t xon_rate_bytes;
 
-/** In normal operation, we can get a burst of up to 32 cells before
- * returning to libevent to flush the outbuf. This is a heuristic from
- * hardcoded values and strange logic in connection_bucket_get_share(). */
+/* In normal operation, we can get a burst of up to 32 cells before returning
+ * to libevent to flush the outbuf. This is a heuristic from hardcoded values
+ * and strange logic in connection_bucket_get_share(). */
 #define MAX_EXPECTED_CELL_BURST 32
 
-/**
- * The following three are for dropmark rate limiting. They define when
- * we scale down our XON, XOFF, and xmit byte counts. Early scaling
- * is beneficial because it limits the ability of spurious XON/XOFF
- * to be sent after large amounts of data without XON/XOFF. At these
- * limits, after 10MB of data (or more), an adversary can only inject
- * (log2(10MB)-log2(200*500))*100 ~= 1000 cells of fake XOFF/XON before
- * the xmit byte * count will be halved enough to triggering a limit. */
+/* The following three are for dropmark rate limiting. They define when we
+ * scale down our XON, XOFF, and xmit byte counts. Early scaling is beneficial
+ * because it limits the ability of spurious XON/XOFF to be sent after large
+ * amounts of data without XON/XOFF. At these limits, after 10MB of data (or
+ * more), an adversary can only inject (log2(10MB)-log2(200*500))*100 ~= 1000
+ * cells of fake XOFF/XON before the xmit byte count will be halved enough to
+ * triggering a limit. */
 #define XON_COUNT_SCALE_AT 200
 #define XOFF_COUNT_SCALE_AT 200
 #define ONE_MEGABYTE (UINT64_C(1) << 20)
-#define TOTAL_XMIT_SCALE_AT 10*ONE_MEGABYTE
+#define TOTAL_XMIT_SCALE_AT (10 * ONE_MEGABYTE)
 
-static const congestion_control_t *
+/**
+ * Return the congestion control object of the given edge connection.
+ *
+ * Returns NULL if the edge connection doesn't have a cpath_layer or not
+ * attached to a circuit. But also if the cpath_layer or circuit doesn't have a
+ * congestion control object.
+ */
+static inline const congestion_control_t *
 edge_get_ccontrol(const edge_connection_t *edge)
 {
   if (edge->cpath_layer)
@@ -64,6 +70,13 @@ edge_get_ccontrol(const edge_connection_t *edge)
     return NULL;
 }
 
+/**
+ * Update global congestion control related consensus parameter values, every
+ * consensus update.
+ *
+ * More details for each of the parameters can be found in proposal 324,
+ * section 6.5 including tuning notes.
+ */
 void
 flow_control_new_consensus_params(const networkstatus_t *ns)
 {
