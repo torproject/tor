@@ -1347,11 +1347,10 @@ connection_ap_attach_pending(int retry)
       continue;
     }
     if (conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
-      log_warn(LD_BUG, "%p is no longer in circuit_wait. Its current state "
-               "is %s. Why is it on pending_entry_connections?",
-               entry_conn,
-               conn_state_to_string(conn->type, conn->state));
-      UNMARK();
+      /* The connection_ap_handshake_attach_circuit() call, for onion service,
+       * can lead to more than one connections in the "pending" list to change
+       * state and so it is OK to get here. Ignore it because this connection
+       * won't be in pending_entry_connections list after this point. */
       continue;
     }
 

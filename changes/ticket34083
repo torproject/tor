@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion service):
+    - Fix a warning BUG that would occur often on heavily loaded onion service
+      leading to filling the logs with useless warnings. Fixes bug 34083; bugfix
+      on 0.3.2.1-alpha.
+
