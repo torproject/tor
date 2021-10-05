@@ -396,7 +396,7 @@ circuit_process_stream_xon(edge_connection_t *conn,
 
   /* Adjust the token bucket of this edge connection with the drain rate in
    * the XON. Rate is in bytes from kilobit (kpbs). */
-  uint64_t rate = xon_cell_get_kbps_ewma(xon) * 1000;
+  uint64_t rate = ((uint64_t) xon_cell_get_kbps_ewma(xon) * 1000);
   if (rate == 0 || INT32_MAX < rate) {
     /* No rate. */
     rate = INT32_MAX;
