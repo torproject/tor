@@ -709,7 +709,22 @@ connection_dir_client_request_failed(dir_connection_t *conn)
     entry_guard_failed(&conn->guard_state);
   }
   if (!entry_list_is_constrained(get_options()))
-    router_set_status(conn->identity_digest, 0); /* don't try this one again */
+    /* We must not set a directory to non-running for HS purposes else we end
+     * up flagging nodes from the hashring has unusable. It doesn't have direct
+     * effect on the HS subsystem because the nodes are selected regardless of
+     * their status but still, we shouldn't flag them as non running.
+     *
+     * One example where this can go bad is if a tor instance gets added a lot
+     * of ephemeral services and with a network with problem then many nodes in
+     * the consenus ends up unusable.
+     *
+     * Furthermore, a service does close any pending directory connections
+     * before uploading a descriptor and thus we can end up here in a natural
+     * way since closing a pending directory connection leads to this code
+     * path. */
+    if (!DIR_PURPOSE_IS_HS(TO_CONN(conn)->purpose)) {
+      router_set_status(conn->identity_digest, 0);
+    }
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
              conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
     log_info(LD_DIR, "Giving up on serverdesc/extrainfo fetch from "
