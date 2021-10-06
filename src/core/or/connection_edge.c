@@ -2584,12 +2584,16 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     tor_assert(!automap);
 
     if (addresstype == ONION_V2_HOSTNAME) {
-      log_warn(LD_PROTOCOL,
-               "Warning! You've just connected to a v2 onion address. These "
-               "addresses are deprecated for security reasons, and are no "
-               "longer supported in Tor. Please encourage the site operator "
-               "to upgrade. For more information see "
-               "https://blog.torproject.org/v2-deprecation-timeline");
+      static bool log_once = false;
+      if (!log_once) {
+        log_warn(LD_PROTOCOL,
+                 "Warning! You've just connected to a v2 onion address. These "
+                 "addresses are deprecated for security reasons, and are no "
+                 "longer supported in Tor. Please encourage the site operator "
+                 "to upgrade. For more information see "
+                 "https://blog.torproject.org/v2-deprecation-timeline");
+        log_once = true;
+      }
     }
 
     return connection_ap_handle_onion(conn, socks, circ, addresstype);
