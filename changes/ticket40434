@@ -1,0 +1,6 @@
+  o Minor bugfix (onion service):
+    - Do not flag an HSDir as non-running in case the descriptor upload or
+      fetch fails. An onion service closes pending directory connections
+      before uploading a new descriptor which can thus lead to wrongly
+      flagging many relays and thus affecting circuit building path selection.
+      Fixes bug 40434; bugfix on 0.2.0.13-alpha.
