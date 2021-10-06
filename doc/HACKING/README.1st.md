@@ -5,12 +5,11 @@
 This directory has helpful information about what you need to know to
 hack on Tor!
 
-First, read `GettingStarted.md` and `GettingStartedRust.md`
-to learn how to get a start in Tor development.
+First, read `GettingStarted.md` to learn how to get a start in Tor
+development.
 
-If you've decided to write a patch, `CodingStandards.md` and
-`CodingStandardsRust.md` will give you a bunch of information
-about how we structure our code.
+If you've decided to write a patch, `CodingStandards.md` will give you a bunch
+of information about how we structure our code.
 
 It's important to get the code right!  Reading `WritingTests.md` will
 tell you how to write and run tests in the Tor codebase.
