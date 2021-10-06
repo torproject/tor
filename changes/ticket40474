@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion service, TROVE-2021-008):
+    - Only log once any v2 access attempts in order to not pollute the logs
+      with warnings and avoid recording the times on disk when v2 access was
+      attempted. Important to note that the onion address was _never_ logged.
+      That is a Low security issue. Fixes bug 40474; bugfix on 0.4.5.8.
