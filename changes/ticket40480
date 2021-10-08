@@ -1,0 +1,3 @@
+  o Minor feature (authority, relay):
+    - Reject End-Of-Life relays running version 0.4.2.x, 0.4.3.x, 0.4.4.x and
+      0.4.5 alphas and rc. Closes ticket 40480.
