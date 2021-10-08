@@ -499,6 +499,9 @@ struct or_options_t {
   struct smartlist_t *NodeFamilySets;
   struct config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
                                   * mark as bad exits. */
+  /** Address policy for descriptors to mark as only suitable for the
+   * middle position in circuits. */
+  struct config_line_t *AuthDirMiddleOnly;
   struct config_line_t *AuthDirReject; /**< Address policy for descriptors to
                                  * reject. */
   struct config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
@@ -512,6 +515,7 @@ struct or_options_t {
    */
   struct smartlist_t *AuthDirBadExitCCs;
   struct smartlist_t *AuthDirInvalidCCs;
+  struct smartlist_t *AuthDirMiddleOnlyCCs;
   struct smartlist_t *AuthDirRejectCCs;
   /**@}*/
 

@@ -565,7 +565,8 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                          node_t *node,
                                          const routerinfo_t *ri,
                                          time_t now,
-                                         int listbadexits)
+                                         int listbadexits,
+                                         int listmiddleonly)
 {
   const or_options_t *options = get_options();
   uint32_t routerbw_kb = dirserv_get_credible_bandwidth_kb(ri);
@@ -596,6 +597,14 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
   /* Override rs->is_bad_exit */
   rs->is_bad_exit = listbadexits && node->is_bad_exit;
+
+  /* Override rs->is_middle_only and related flags. */
+  rs->is_middle_only = listmiddleonly && node->is_middle_only;
+  if (rs->is_middle_only) {
+    if (listbadexits)
+      rs->is_bad_exit = 1;
+    rs->is_exit = rs->is_possible_guard = rs->is_hs_dir = rs->is_v2_dir = 0;
+  }
 
   /* Set rs->is_staledesc. */
   rs->is_staledesc =

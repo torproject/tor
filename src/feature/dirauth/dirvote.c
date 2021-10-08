@@ -4581,6 +4581,7 @@ const char DIRVOTE_UNIVERSAL_FLAGS[] =
  * depending on our configuration. */
 const char DIRVOTE_OPTIONAL_FLAGS[] =
   "BadExit "
+  "MiddleOnly "
   "Running";
 
 /** Return a new networkstatus_t* containing our current opinion. (For v3
@@ -4598,7 +4599,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   smartlist_t *routers, *routerstatuses;
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
-  const int listbadexits = d_options->AuthDirListBadExits;
+  const int list_bad_exits = d_options->AuthDirListBadExits;
+  const int list_middle_only = d_options->AuthDirListMiddleOnly;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
@@ -4703,7 +4705,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       dirauth_set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                               listbadexits);
+                                               list_bad_exits,
+                                               list_middle_only);
 
       if (ri->cache_info.signing_key_cert) {
         memcpy(vrs->ed25519_id,
@@ -4827,8 +4830,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                          0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
     smartlist_add_strdup(v3_out->known_flags, "Running");
-  if (listbadexits)
+  if (list_bad_exits)
     smartlist_add_strdup(v3_out->known_flags, "BadExit");
+  if (list_middle_only)
+    smartlist_add_strdup(v3_out->known_flags, "MiddleOnly");
   smartlist_sort_strings(v3_out->known_flags);
 
   if (d_options->ConsensusParams) {

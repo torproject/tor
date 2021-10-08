@@ -226,6 +226,8 @@ dirserv_load_fingerprint_file(void)
         add_status = RTR_BADEXIT;
     } else if (!strcasecmp(nickname, "!invalid")) {
         add_status = RTR_INVALID;
+    }  else if (!strcasecmp(nickname, "!middleonly")) {
+        add_status = RTR_MIDDLEONLY;
     }
 
     /* Check if fingerprint is RSA or ed25519 by verifying it. */
@@ -496,6 +498,13 @@ dirserv_get_status_impl(const char *id_digest,
     result |= RTR_BADEXIT;
   }
 
+  if (authdir_policy_middleonly_address(ipv4_addr, ipv4_orport)) {
+    log_fn(severity, LD_DIRSERV,
+           "Marking '%s' as middle-only because of address '%s'",
+               nickname, fmt_addr(ipv4_addr));
+    result |= RTR_MIDDLEONLY;
+  }
+
   if (!authdir_policy_permits_address(ipv4_addr, ipv4_orport)) {
     log_fn(severity, LD_DIRSERV, "Rejecting '%s' because of address '%s'",
                nickname, fmt_addr(ipv4_addr));
@@ -630,6 +639,7 @@ dirserv_set_node_flags_from_authoritative_status(node_t *node,
 {
   node->is_valid = (authstatus & RTR_INVALID) ? 0 : 1;
   node->is_bad_exit = (authstatus & RTR_BADEXIT) ? 1 : 0;
+  node->is_middle_only = (authstatus & RTR_MIDDLEONLY) ? 1 : 0;
 }
 
 /** True iff <b>a</b> is more severe than <b>b</b>. */
@@ -962,6 +972,11 @@ directory_remove_invalid(void)
       log_info(LD_DIRSERV, "Router '%s' is now a %s exit", description,
                (r & RTR_BADEXIT) ? "bad" : "good");
       node->is_bad_exit = (r&RTR_BADEXIT) ? 1: 0;
+    }
+    if (bool_neq((r & RTR_MIDDLEONLY), node->is_middle_only)) {
+      log_info(LD_DIRSERV, "Router '%s' is now %smiddle-only", description,
+               (r & RTR_MIDDLEONLY) ? "" : "not");
+      node->is_middle_only = (r&RTR_MIDDLEONLY) ? 1: 0;
     }
   } SMARTLIST_FOREACH_END(node);
 

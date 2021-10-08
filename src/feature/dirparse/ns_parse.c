@@ -434,6 +434,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         rs->is_possible_guard = 1;
       else if (!strcmp(tok->args[i], "BadExit"))
         rs->is_bad_exit = 1;
+      else if (!strcmp(tok->args[i], "MiddleOnly"))
+        rs->is_middle_only = 1;
       else if (!strcmp(tok->args[i], "Authority"))
         rs->is_authority = 1;
       else if (!strcmp(tok->args[i], "Unnamed") &&
