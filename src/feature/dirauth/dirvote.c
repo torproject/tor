@@ -1479,6 +1479,21 @@ compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
   return result;
 }
 
+/** Helper: Takes a smartlist of `const char *` flags, and a flag to remove.
+ *
+ * Removes that flag if it is present in the list.  Doesn't free it.
+ */
+static void
+remove_flag(smartlist_t *sl, const char *flag)
+{
+  /* We can't use smartlist_string_remove() here, since that doesn't preserve
+   * order, and since it frees elements from the string. */
+
+  int idx = smartlist_string_pos(sl, flag);
+  if (idx >= 0)
+    smartlist_del_keeporder(sl, idx);
+}
+
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -1633,6 +1648,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(votesec_list);
     tor_free(distsec_list);
   }
+  // True if anybody is voting on the BadExit flag.
+  const bool badexit_flag_is_listed =
+    smartlist_contains_string(flags, "BadExit");
 
   chunks = smartlist_new();
 
@@ -1924,7 +1942,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       const char *chosen_name = NULL;
       int exitsummary_disagreement = 0;
       int is_named = 0, is_unnamed = 0, is_running = 0, is_valid = 0;
-      int is_guard = 0, is_exit = 0, is_bad_exit = 0;
+      int is_guard = 0, is_exit = 0, is_bad_exit = 0, is_middle_only = 0;
       int naming_conflict = 0;
       int n_listing = 0;
       char microdesc_digest[DIGEST256_LEN];
@@ -2055,7 +2073,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       /* Set the flags. */
-      smartlist_add(chosen_flags, (char*)"s"); /* for the start of the line. */
       SMARTLIST_FOREACH_BEGIN(flags, const char *, fl) {
         if (!strcmp(fl, "Named")) {
           if (is_named)
@@ -2077,6 +2094,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
               is_running = 1;
             else if (!strcmp(fl, "BadExit"))
               is_bad_exit = 1;
+            else if (!strcmp(fl, "MiddleOnly"))
+              is_middle_only = 1;
             else if (!strcmp(fl, "Valid"))
               is_valid = 1;
           }
@@ -2092,6 +2111,22 @@ networkstatus_compute_consensus(smartlist_t *votes,
        * that are not valid in a consensus.  See Proposal 272 */
       if (!is_valid)
         continue;
+
+      /* Starting with consensus method 32, we handle the middle-only
+       * flag specially: when it is present, we clear some flags, and
+       * set others. */
+      if (is_middle_only && consensus_method >= MIN_METHOD_FOR_MIDDLEONLY) {
+        remove_flag(chosen_flags, "Exit");
+        remove_flag(chosen_flags, "V2Dir");
+        remove_flag(chosen_flags, "Guard");
+        remove_flag(chosen_flags, "HSDir");
+        is_exit = is_guard = 0;
+        if (! is_bad_exit && badexit_flag_is_listed) {
+          is_bad_exit = 1;
+          smartlist_add(chosen_flags, (char *)"BadExit");
+          smartlist_sort_strings(chosen_flags); // restore order.
+        }
+      }
 
       /* Pick the version. */
       if (smartlist_len(versions)) {
@@ -2253,6 +2288,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add_asprintf(chunks, "m %s\n", m);
       }
       /*     Next line is all flags.  The "\n" is missing. */
+      smartlist_add_asprintf(chunks, "s%s",
+                             smartlist_len(chosen_flags)?" ":"");
       smartlist_add(chunks,
                     smartlist_join_strings(chosen_flags, " ", 0, NULL));
       /*     Now the version line. */
