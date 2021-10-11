@@ -1300,15 +1300,6 @@ connection_ap_rescan_and_attach_pending(void)
   connection_ap_attach_pending(1);
 }
 
-#ifdef DEBUGGING_17659
-#define UNMARK() do {                           \
-    entry_conn->marked_pending_circ_line = 0;   \
-    entry_conn->marked_pending_circ_file = 0;   \
-  } while (0)
-#else /* !defined(DEBUGGING_17659) */
-#define UNMARK() do { } while (0)
-#endif /* defined(DEBUGGING_17659) */
-
 /** Tell any AP streams that are listed as waiting for a new circuit to try
  * again.  If there is an available circuit for a stream, attach it. Otherwise,
  * launch a new circuit.
@@ -1337,13 +1328,11 @@ connection_ap_attach_pending(int retry)
     connection_t *conn = ENTRY_TO_CONN(entry_conn);
     tor_assert(conn && entry_conn);
     if (conn->marked_for_close) {
-      UNMARK();
       continue;
     }
     if (conn->magic != ENTRY_CONNECTION_MAGIC) {
       log_warn(LD_BUG, "%p has impossible magic value %u.",
                entry_conn, (unsigned)conn->magic);
-      UNMARK();
       continue;
     }
     if (conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
@@ -1375,7 +1364,6 @@ connection_ap_attach_pending(int retry)
 
     /* If we got here, then we either closed the connection, or
      * we attached it. */
-    UNMARK();
   } SMARTLIST_FOREACH_END(entry_conn);
 
   smartlist_free(pending);
@@ -1446,7 +1434,6 @@ connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn)
 {
   if (PREDICT_UNLIKELY(NULL == pending_entry_connections))
     return;
-  UNMARK();
   smartlist_remove(pending_entry_connections, entry_conn);
 }
 
