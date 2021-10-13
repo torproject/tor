@@ -255,7 +255,8 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
                  "QUSE: %"PRIu64", "
                  "NCCE: %"PRIu64", "
                  "SS: %d",
-                 circ->n_chan->global_identifier, circ->n_circ_id,
+               CONST_TO_OR_CIRCUIT(circ)->p_chan->global_identifier,
+               CONST_TO_OR_CIRCUIT(circ)->p_circ_id,
                cc->cwnd,
                cc->inflight,
                vegas_bdp_mix(cc),

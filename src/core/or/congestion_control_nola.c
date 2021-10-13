@@ -111,7 +111,8 @@ congestion_control_nola_process_sendme(congestion_control_t *cc,
                "INFL: %"PRIu64", "
                "NCCE: %"PRIu64", "
                "SS: %d",
-               circ->n_chan->global_identifier, circ->n_circ_id,
+             CONST_TO_OR_CIRCUIT(circ)->p_chan->global_identifier,
+             CONST_TO_OR_CIRCUIT(circ)->p_circ_id,
              cc->cwnd,
              cc->inflight,
              cc->next_cc_event,

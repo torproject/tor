@@ -1040,9 +1040,8 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
                  "%"PRIu64", "
                  "%"PRIu64", "
                  "%"PRIu64". ",
-                 // XXX: actually, is this p_chan here? This is
-                 // an or_circuit (exit or onion)
-                 circ->n_chan->global_identifier, circ->n_circ_id,
+                 CONST_TO_OR_CIRCUIT(circ)->p_chan->global_identifier,
+                 CONST_TO_OR_CIRCUIT(circ)->p_circ_id,
                  cc->min_rtt_usec/1000,
                  curr_rtt_usec/1000,
                  cc->ewma_rtt_usec/1000,
