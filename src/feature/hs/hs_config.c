@@ -135,9 +135,13 @@ helper_parse_uint64(const char *opt, const char *value, uint64_t min,
   *ok = 0;
   ret = tor_parse_uint64(value, 10, min, max, ok, NULL);
   if (!*ok) {
-    log_warn(LD_CONFIG, "%s must be between %" PRIu64 " and %"PRIu64
-                        ", not %s.",
-             opt, min, max, value);
+    if (min == max) {
+      log_warn(LD_CONFIG, "%s must be %" PRIu64 ", not %s.", opt, max, value);
+    } else {
+      log_warn(LD_CONFIG, "%s must be between %" PRIu64 " and %"PRIu64
+                          ", not %s.",
+               opt, min, max, value);
+    }
     goto err;
   }
   log_info(LD_CONFIG, "%s was parsed to %" PRIu64, opt, ret);
