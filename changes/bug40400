@@ -3,4 +3,4 @@
       instead log it at DEBUG. In every case where we would want to log
       this as a protocol warning, we are already logging another warning
       from inside circuit_receive_relay_cell. Fixes part of bug 40400;
-      bugfix on 0.1.1.9.
+      bugfix on 0.1.1.9-alpha.
