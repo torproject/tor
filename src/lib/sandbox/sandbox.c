@@ -346,6 +346,7 @@ sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return rc;
 }
 
+#ifdef __NR_time
 /**
  * Function responsible for setting up the time syscall for
  * the seccomp filter sandbox.
@@ -354,13 +355,11 @@ static int
 sb_time(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   (void) filter;
-#ifdef __NR_time
+
   return seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(time),
        SCMP_CMP(0, SCMP_CMP_EQ, 0));
-#else
-  return 0;
-#endif /* defined(__NR_time) */
 }
+#endif /* defined(__NR_time) */
 
 /**
  * Function responsible for setting up the accept4 syscall for
@@ -1264,7 +1263,9 @@ sb_kill(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_rt_sigprocmask,
+#ifdef __NR_time
     sb_time,
+#endif
     sb_accept4,
 #ifdef __NR_mmap2
     sb_mmap2,
