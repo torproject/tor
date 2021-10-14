@@ -563,7 +563,7 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
   }
 
   if ((reason = circuit_receive_relay_cell(cell, circ, direction)) < 0) {
-    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
+    log_fn(LOG_DEBUG,LD_PROTOCOL,"circuit_receive_relay_cell "
            "(%s) failed. Closing.",
            direction==CELL_DIRECTION_OUT?"forward":"backward");
     /* Always emit a bandwidth event for closed circs */
