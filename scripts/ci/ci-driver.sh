@@ -449,6 +449,8 @@ if [[ "${CHUTNEY}" = "yes" ]]; then
     start_section "Chutney"
     export CHUTNEY_TOR_SANDBOX=0
     export CHUTNEY_ALLOW_FAILURES=2
+    # Send 5MB for every verify check.
+    export CHUTNEY_DATA_BYTES=5000000
     if runcmd make "${CHUTNEY_MAKE_TARGET}"; then
         hooray "Chutney tests have succeeded"
     else
