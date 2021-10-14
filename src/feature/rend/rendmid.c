@@ -131,7 +131,11 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
 
   rend_circ = hs_circuitmap_get_rend_circ_relay_side(request);
   if (!rend_circ) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+    /* Once this was a LOG_PROTOCOL_WARN, but it can happen naturally if a
+     * client gives up on a rendezvous circuit after sending INTRODUCE1, but
+     * before the onion service sends the RENDEZVOUS1 cell.
+     */
+    log_fn(LOG_DEBUG, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
          hexid);
     reason = END_CIRC_REASON_TORPROTOCOL;

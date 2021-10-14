@@ -1,0 +1,5 @@
+  o Minor bugfixes (usability):
+    - Do not log "RENDEZVOUS1 cell with unrecognized rendezvous cookie"
+      at LOG_PROTOCOL_WARN; instead log it at DEBUG. This warning can happen
+      naturally if a client gives up on a rendezvous circuit after sending
+      INTRODUCE1. Fixes part of bug 40400; bugfix on 0.1.1.13-alpha.
