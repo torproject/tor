@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion service, config):
+    - Fix a memory leak for a small config line string that could occur if the
+      service failed to be configured from file properly. Fixes bug 40484;
+      bugfix on 0.3.2.1-alpha.
+

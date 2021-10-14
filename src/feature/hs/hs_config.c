@@ -640,6 +640,7 @@ hs_config_service_all(const or_options_t *options, int validate_only)
     int rv = config_service(section, options, new_service_list);
     config_free_lines(section);
     if (rv < 0) {
+      config_free_lines(remaining);
       goto err;
     }
   }
