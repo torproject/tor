@@ -1,0 +1,4 @@
+  o Minor features (testing):
+    - We now have separate fuzzers for the inner layers of v3 onion
+      service descriptors, to prevent future bugs like 40392.
+      Closes ticket 40488.
