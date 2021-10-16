@@ -112,6 +112,28 @@ src_test_fuzz_fuzz_hsdescv3_LDADD = $(FUZZING_LIBS)
 endif
 
 if UNITTESTS_ENABLED
+src_test_fuzz_fuzz_hsdescv3_inner_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_hsdescv3_inner.c
+src_test_fuzz_fuzz_hsdescv3_inner_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_hsdescv3_inner_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_hsdescv3_inner_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_hsdescv3_inner_LDADD = $(FUZZING_LIBS)
+endif
+
+
+if UNITTESTS_ENABLED
+src_test_fuzz_fuzz_hsdescv3_middle_SOURCES = \
+	src/test/fuzz/fuzzing_common.c \
+	src/test/fuzz/fuzz_hsdescv3_middle.c
+src_test_fuzz_fuzz_hsdescv3_middle_CPPFLAGS = $(FUZZING_CPPFLAGS)
+src_test_fuzz_fuzz_hsdescv3_middle_CFLAGS = $(FUZZING_CFLAGS)
+src_test_fuzz_fuzz_hsdescv3_middle_LDFLAGS = $(FUZZING_LDFLAG)
+src_test_fuzz_fuzz_hsdescv3_middle_LDADD = $(FUZZING_LIBS)
+endif
+
+
+if UNITTESTS_ENABLED
 src_test_fuzz_fuzz_http_SOURCES = \
 	src/test/fuzz/fuzzing_common.c \
 	src/test/fuzz/fuzz_http.c
@@ -181,6 +203,8 @@ FUZZERS = \
 	src/test/fuzz/fuzz-diff-apply \
 	src/test/fuzz/fuzz-extrainfo \
 	src/test/fuzz/fuzz-hsdescv3 \
+	src/test/fuzz/fuzz-hsdescv3-inner \
+	src/test/fuzz/fuzz-hsdescv3-middle \
 	src/test/fuzz/fuzz-http \
 	src/test/fuzz/fuzz-http-connect \
 	src/test/fuzz/fuzz-microdesc \
@@ -265,6 +289,25 @@ src_test_fuzz_lf_fuzz_hsdescv3_LDADD = $(LIBFUZZER_LIBS)
 endif
 
 if UNITTESTS_ENABLED
+src_test_fuzz_lf_fuzz_hsdescv3_inner_SOURCES = \
+	$(src_test_fuzz_fuzz_hsdescv3_inner_SOURCES)
+src_test_fuzz_lf_fuzz_hsdescv3_inner_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_hsdescv3_inner_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_hsdescv3_inner_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_hsdescv3_inner_LDADD = $(LIBFUZZER_LIBS)
+endif
+
+if UNITTESTS_ENABLED
+src_test_fuzz_lf_fuzz_hsdescv3_middle_SOURCES = \
+	$(src_test_fuzz_fuzz_hsdescv3_middle_SOURCES)
+src_test_fuzz_lf_fuzz_hsdescv3_middle_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
+src_test_fuzz_lf_fuzz_hsdescv3_middle_CFLAGS = $(LIBFUZZER_CFLAGS)
+src_test_fuzz_lf_fuzz_hsdescv3_middle_LDFLAGS = $(LIBFUZZER_LDFLAG)
+src_test_fuzz_lf_fuzz_hsdescv3_middle_LDADD = $(LIBFUZZER_LIBS)
+endif
+
+
+if UNITTESTS_ENABLED
 src_test_fuzz_lf_fuzz_http_SOURCES = \
 	$(src_test_fuzz_fuzz_http_SOURCES)
 src_test_fuzz_lf_fuzz_http_CPPFLAGS = $(LIBFUZZER_CPPFLAGS)
@@ -327,6 +370,8 @@ LIBFUZZER_FUZZERS = \
 	src/test/fuzz/lf-fuzz-diff-apply \
 	src/test/fuzz/lf-fuzz-extrainfo \
 	src/test/fuzz/lf-fuzz-hsdescv3 \
+	src/test/fuzz/lf-fuzz-hsdescv3-inner \
+	src/test/fuzz/lf-fuzz-hsdescv3-middle \
 	src/test/fuzz/lf-fuzz-http \
 	src/test/fuzz/lf-fuzz-http-connect \
 	src/test/fuzz/lf-fuzz-microdesc \
@@ -398,6 +443,20 @@ src_test_fuzz_liboss_fuzz_hsdescv3_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
 endif
 
 if UNITTESTS_ENABLED
+src_test_fuzz_liboss_fuzz_hsdescv3_inner_a_SOURCES = \
+	$(src_test_fuzz_fuzz_hsdescv3_inner_SOURCES)
+src_test_fuzz_liboss_fuzz_hsdescv3_inner_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_hsdescv3_inner_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
+endif
+
+if UNITTESTS_ENABLED
+src_test_fuzz_liboss_fuzz_hsdescv3_middle_a_SOURCES = \
+	$(src_test_fuzz_fuzz_hsdescv3_middle_SOURCES)
+src_test_fuzz_liboss_fuzz_hsdescv3_middle_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
+src_test_fuzz_liboss_fuzz_hsdescv3_middle_a_CFLAGS = $(LIBOSS_FUZZ_CFLAGS)
+endif
+
+if UNITTESTS_ENABLED
 src_test_fuzz_liboss_fuzz_http_a_SOURCES = \
 	$(src_test_fuzz_fuzz_http_SOURCES)
 src_test_fuzz_liboss_fuzz_http_a_CPPFLAGS = $(LIBOSS_FUZZ_CPPFLAGS)
@@ -448,6 +507,8 @@ OSS_FUZZ_FUZZERS = \
 	src/test/fuzz/liboss-fuzz-diff-apply.a \
 	src/test/fuzz/liboss-fuzz-extrainfo.a \
 	src/test/fuzz/liboss-fuzz-hsdescv3.a \
+	src/test/fuzz/liboss-fuzz-hsdescv3-inner.a \
+	src/test/fuzz/liboss-fuzz-hsdescv3-middle.a \
 	src/test/fuzz/liboss-fuzz-http.a \
 	src/test/fuzz/liboss-fuzz-http-connect.a \
 	src/test/fuzz/liboss-fuzz-microdesc.a \

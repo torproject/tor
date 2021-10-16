@@ -14,6 +14,8 @@ FUZZERS = """
 	diff-apply
 	extrainfo
 	hsdescv3
+    hsdescv3-inner
+    hsdescv3-middle
 	http
 	http-connect
 	microdesc
