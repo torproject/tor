@@ -808,13 +808,11 @@ test_parse_extended_hostname(void *arg)
   tt_assert(parse_extended_hostname(address4, &type));
   tt_int_op(type, OP_EQ, NORMAL_HOSTNAME);
 
-  tt_assert(parse_extended_hostname(address5, &type));
-  tt_int_op(type, OP_EQ, ONION_V2_HOSTNAME);
-  tt_str_op(address5, OP_EQ, "abcdefghijklmnop");
+  tt_assert(!parse_extended_hostname(address5, &type));
+  tt_int_op(type, OP_EQ, BAD_HOSTNAME);
 
-  tt_assert(parse_extended_hostname(address6, &type));
-  tt_int_op(type, OP_EQ, ONION_V2_HOSTNAME);
-  tt_str_op(address6, OP_EQ, "abcdefghijklmnop");
+  tt_assert(!parse_extended_hostname(address6, &type));
+  tt_int_op(type, OP_EQ, BAD_HOSTNAME);
 
   tt_assert(!parse_extended_hostname(address7, &type));
   tt_int_op(type, OP_EQ, BAD_HOSTNAME);

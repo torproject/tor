@@ -1,0 +1,8 @@
+  o Major feature (onion service v2):
+    - Tor does NOT allow anymore to create v2 services, to connect as a client
+      to a v2 service and for a relay to be a v2 HSDir or introduction point.
+      This effectively disable onion service version 2 tor wide. Closes 40476.
+    - The control port command HSFETCH and HSPOST don't allow version 2 as well.
+      It is also not possible to create a v2 service with ADD_ONION.
+    - See https://blog.torproject.org/v2-deprecation-timeline for details on
+      how to transition from v2 to v3.
