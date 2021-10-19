@@ -1636,12 +1636,12 @@ consider_plaintext_ports(entry_connection_t *conn, uint16_t port)
  * The possible recognized forms are (where true is returned):
  *
  *  If address is of the form "y.onion" with a well-formed handle y:
- *     Put a NUL after y, lower-case it, and return ONION_V2_HOSTNAME or
- *     ONION_V3_HOSTNAME depending on the HS version.
+ *     Put a NUL after y, lower-case it, and return ONION_V3_HOSTNAME
+ *     depending on the HS version.
  *
  *  If address is of the form "x.y.onion" with a well-formed handle x:
  *     Drop "x.", put a NUL after y, lower-case it, and return
- *     ONION_V2_HOSTNAME or ONION_V3_HOSTNAME depending on the HS version.
+ *     ONION_V3_HOSTNAME depending on the HS version.
  *
  * If address is of the form "y.onion" with a badly-formed handle y:
  *     Return BAD_HOSTNAME and log a message.
@@ -1691,14 +1691,6 @@ parse_extended_hostname(char *address, hostname_type_t *type_out)
   if (q != address) {
     memmove(address, q, strlen(q) + 1 /* also get \0 */);
   }
-  /* v2 onion address check. */
-  if (strlen(query) == REND_SERVICE_ID_LEN_BASE32) {
-    *type_out = ONION_V2_HOSTNAME;
-    if (rend_valid_v2_service_id(query)) {
-      goto success;
-    }
-    goto failed;
-  }
 
   /* v3 onion address check. */
   if (strlen(query) == HS_SERVICE_ADDR_LEN_BASE32) {
@@ -1718,8 +1710,7 @@ parse_extended_hostname(char *address, hostname_type_t *type_out)
  failed:
   /* otherwise, return to previous state and return 0 */
   *s = '.';
-  const bool is_onion = (*type_out == ONION_V2_HOSTNAME) ||
-    (*type_out == ONION_V3_HOSTNAME);
+  const bool is_onion = (*type_out == ONION_V3_HOSTNAME);
   log_warn(LD_APP, "Invalid %shostname %s; rejecting",
            is_onion ? "onion " : "",
            safe_str_client(address));
