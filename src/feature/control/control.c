@@ -4406,12 +4406,10 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
                        const char *body)
 {
   int i;
-  char digest[DIGEST_LEN], *hsaddress = NULL, *arg1 = NULL, *desc_id = NULL;
+  char *hsaddress = NULL, *arg1 = NULL, *desc_id = NULL;
   smartlist_t *args = NULL, *hsdirs = NULL;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
   static const char *hsfetch_command = "HSFETCH";
-  static const char *v2_str = "v2-";
-  const size_t v2_str_len = strlen(v2_str);
   rend_data_t *rend_query = NULL;
 
   /* Make sure we have at least one argument, the HSAddress. */
@@ -4422,21 +4420,13 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
 
   /* Extract the first argument (either HSAddress or DescID). */
   arg1 = smartlist_get(args, 0);
-  /* Test if it's an HS address without the .onion part. */
-  if (rend_valid_v2_service_id(arg1)) {
-    hsaddress = arg1;
-  } else if (strcmpstart(arg1, v2_str) == 0 &&
-             rend_valid_descriptor_id(arg1 + v2_str_len) &&
-             base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
-                           REND_DESC_ID_V2_LEN_BASE32) == 0) {
-    /* We have a well formed version 2 descriptor ID. Keep the decoded value
-     * of the id. */
-    desc_id = digest;
-  } else {
-    connection_printf_to_buf(conn, "513 Invalid argument \"%s\"\r\n",
-                             arg1);
-    goto done;
-  }
+
+  /* We no longer support version 2 on the network and so immediately return an
+   * error. We do this in order to not remove the code so to minimize the merge
+   * forward conflicts. */
+  connection_printf_to_buf(conn, "513 Invalid argument \"%s\"\r\n",
+                           arg1);
+  goto done;
 
   static const char *opt_server = "SERVER=";
 
@@ -4575,8 +4565,12 @@ handle_control_hspost(control_connection_t *conn,
       send_control_done(conn);
     }
     tor_free(desc_str);
-    goto done;
   }
+
+  /* As for HSFETCH, we no longer support v2 on the network and so we stop
+   * right now. Code is not removed in order to minimize the merge forward
+   * conflicts. */
+  goto done;
 
   /* From this point on, it is only v2. */
 
@@ -4653,11 +4647,13 @@ add_onion_helper_add_service(int hs_version,
   tor_assert(port_cfgs);
   tor_assert(address_out);
 
+  /* Version 2 is disabled. */
+  (void) auth_type;
+  (void) auth_clients;
+
   switch (hs_version) {
   case HS_VERSION_TWO:
-    ret = rend_service_add_ephemeral(pk->v2, port_cfgs, max_streams,
-                                     max_streams_close_circuit, auth_type,
-                                     auth_clients, address_out);
+    ret = RSAE_INTERNAL;
     break;
   case HS_VERSION_THREE:
     ret = hs_service_add_ephemeral(pk->v3, port_cfgs, max_streams,

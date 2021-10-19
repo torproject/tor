@@ -792,14 +792,11 @@ test_parse_extended_hostname(void *arg)
     "www.25njqamcweflpvkl73j4szahhihoc4xt3ktcgjnpaingr5yhkenl5sid.onion";
 
   tt_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
-  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address2));
-  tt_str_op(address2,OP_EQ, "aaaaaaaaaaaaaaaa");
+  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address2));
   tt_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
   tt_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
-  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address5));
-  tt_str_op(address5,OP_EQ, "abcdefghijklmnop");
-  tt_assert(ONION_V2_HOSTNAME == parse_extended_hostname(address6));
-  tt_str_op(address6,OP_EQ, "abcdefghijklmnop");
+  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address5));
+  tt_assert(BAD_HOSTNAME == parse_extended_hostname(address6));
   tt_assert(BAD_HOSTNAME == parse_extended_hostname(address7));
   tt_assert(ONION_V3_HOSTNAME == parse_extended_hostname(address8));
   tt_str_op(address8, OP_EQ,
