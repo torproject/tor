@@ -333,8 +333,17 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
       }
       return 0;
     }
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Didn't recognize cell, but circ stops here! Closing circ.");
+    if (BUG(CIRCUIT_IS_ORIGIN(circ))) {
+      /* Should be impossible at this point. */
+      return -END_CIRC_REASON_TORPROTOCOL;
+    }
+    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+    if (++or_circ->n_cells_discarded_at_end == 1) {
+      time_t seconds_open = approx_time() - circ->timestamp_created.tv_sec;
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Didn't recognize a cell, but circ stops here! Closing circuit. "
+             "It was created %ld seconds ago.", (long)seconds_open);
+    }
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 

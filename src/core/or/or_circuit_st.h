@@ -52,6 +52,10 @@ struct or_circuit_t {
   /** Stores KH for the handshake. */
   char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
 
+  /** Number of cells which we have discarded because of having no next hop,
+   * despite not recognizing the cell. */
+  uint32_t n_cells_discarded_at_end;
+
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */
   unsigned int remaining_relay_early_cells : 4;
@@ -93,4 +97,3 @@ struct or_circuit_t {
 };
 
 #endif /* !defined(OR_CIRCUIT_ST_H) */
-

@@ -64,6 +64,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/crypt_path.h"
 #include "core/or/extendinfo.h"
+#include "core/or/status.h"
 #include "core/or/trace_probes_circuit.h"
 #include "core/mainloop/connection.h"
 #include "app/config/config.h"
@@ -2345,6 +2346,12 @@ circuit_about_to_free(circuit_t *circ)
       }
       circuitmux_detach_circuit(or_circ->p_chan->cmux, circ);
       circuit_set_p_circid_chan(or_circ, 0, NULL);
+    }
+
+    if (or_circ->n_cells_discarded_at_end) {
+      time_t age = approx_time() - circ->timestamp_created.tv_sec;
+      note_circ_closed_for_unrecognized_cells(
+                      age, or_circ->n_cells_discarded_at_end);
     }
   } else {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
