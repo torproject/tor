@@ -48,7 +48,7 @@ test_invalid_service(void *arg)
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
-    expect_log_msg_containing("HiddenServiceVersion must be between 3 and 3");
+    expect_log_msg_containing("HiddenServiceVersion must be 3, not 1");
     teardown_capture_of_logs();
   }
 

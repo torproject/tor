@@ -1569,6 +1569,8 @@ directory_handle_command_post,(dir_connection_t *conn, const char *headers,
   char *url = NULL;
   const or_options_t *options = get_options();
 
+  (void) body_len;
+
   log_debug(LD_DIRSERV,"Received POST command.");
 
   conn->base_.state = DIR_CONN_STATE_SERVER_WRITING;
