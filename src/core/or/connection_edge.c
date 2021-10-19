@@ -2233,7 +2233,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   }
 
   /* Now, we handle everything that isn't a .onion address. */
-  if (addresstype != ONION_V3_HOSTNAME && addresstype != ONION_V2_HOSTNAME) {
+  if (addresstype != ONION_V3_HOSTNAME) {
     /* Not a hidden-service request.  It's either a hostname or an IP,
      * possibly with a .exit that we stripped off.  We're going to check
      * if we're allowed to connect/resolve there, and then launch the
@@ -2518,28 +2518,6 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     return 0;
   } else {
     /* If we get here, it's a request for a .onion address! */
-
-    /* We don't support v2 onions anymore. Log a warning and bail. */
-    if (addresstype == ONION_V2_HOSTNAME) {
-      static bool log_once = false;
-      if (!log_once) {
-        log_warn(LD_PROTOCOL, "Tried to connect to a v2 onion address, but "
-                 "this version of Tor no longer supports them. Please "
-                 "encourage the site operator to upgrade. For more "
-                 "information see "
-                 "https://blog.torproject.org/v2-deprecation-timeline.");
-        log_once = true;
-      }
-      control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
-                                  escaped(socks->address));
-      /* Send back the 0xF6 extended code indicating a bad hostname. This is
-       * mostly so Tor Browser can make a proper UX with regards to v2
-       * addresses. */
-      conn->socks_request->socks_extended_error_code = SOCKS5_HS_BAD_ADDRESS;
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
-      return -1;
-    }
-
     tor_assert(addresstype == ONION_V3_HOSTNAME);
     tor_assert(!automap);
     return connection_ap_handle_onion(conn, socks, circ);
