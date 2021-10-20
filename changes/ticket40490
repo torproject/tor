@@ -1,0 +1,5 @@
+  o Major bugfix (relay, metrics):
+    - On the MetricsPort, the DNS error statistics are not reported by record
+      type ("record=...") anymore due to a libevent bug
+      (https://github.com/libevent/libevent/issues/1219). Fixes bug 40490;
+      bugfix on 0.4.7.1-alpha.

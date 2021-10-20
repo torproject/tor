@@ -296,12 +296,29 @@ typedef struct {
   uint64_t stats_n_request;
 } dns_stats_t;
 
+/* This is disabled because of the libevent bug where on error we don't get the
+ * DNS query type back. Once it is fixed, we can re-enable this. */
+#if 0
 /** DNS statistics store for each DNS record type for which tor supports only
  * three at the moment: A, PTR and AAAA. */
 static dns_stats_t dns_A_stats;
 static dns_stats_t dns_PTR_stats;
 static dns_stats_t dns_AAAA_stats;
+#endif
 
+/** DNS query statistics store. It covers all type of queries. */
+static dns_stats_t dns_all_stats;
+
+/** Return the point to the DNS statistics store. Ignore the type for now
+ * because of a libevent problem. */
+static inline dns_stats_t *
+get_dns_stats_by_type(const int type)
+{
+  (void) type;
+  return &dns_all_stats;
+}
+
+#if 0
 /** From a libevent record type, return a pointer to the corresponding DNS
  * statistics store. NULL is returned if the type is unhandled. */
 static inline dns_stats_t *
@@ -318,6 +335,7 @@ get_dns_stats_by_type(const int type)
     return NULL;
   }
 }
+#endif
 
 /** Assess the DNS timeout errors and if we have enough to trigger a general
  * overload. */
