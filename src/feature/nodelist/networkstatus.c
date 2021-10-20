@@ -103,6 +103,7 @@
 #include "feature/dirauth/vote_microdesc_hash_st.h"
 #include "feature/nodelist/vote_routerstatus_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/stats/rephist.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -1663,6 +1664,7 @@ notify_before_networkstatus_changes(const networkstatus_t *old_c,
   dos_consensus_has_changed(new_c);
   relay_consensus_has_changed(new_c);
   hs_dos_consensus_has_changed(new_c);
+  rep_hist_consensus_has_changed(new_c);
 }
 
 /* Called after a new consensus has been put in the global state. It is safe

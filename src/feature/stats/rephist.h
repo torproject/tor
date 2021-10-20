@@ -72,11 +72,14 @@ void rep_hist_seen_new_rp_cell(bool is_v2);
 char *rep_hist_get_hs_v3_stats_string(void);
 void rep_hist_hsdir_stored_maybe_new_v3_onion(const uint8_t *blinded_key);
 
+void rep_hist_note_dns_query(int type, uint8_t error);
+
 void rep_hist_free_all(void);
 
 void rep_hist_note_negotiated_link_proto(unsigned link_proto,
                                          int started_here);
 void rep_hist_log_link_protocol_counts(void);
+void rep_hist_consensus_has_changed(const networkstatus_t *ns);
 
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;

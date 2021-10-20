@@ -1548,16 +1548,6 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
 
   tor_addr_make_unspec(&addr);
 
-  /* Note down any DNS errors to the statistics module */
-  if (result == DNS_ERR_TIMEOUT) {
-    /* libevent timed out while resolving a name. However, because libevent
-     * handles retries and timeouts internally, this means that all attempts of
-     * libevent timed out. If we wanted to get more granular information about
-     * individual libevent attempts, we would have to implement our own DNS
-     * timeout/retry logic */
-    rep_hist_note_overload(OVERLOAD_GENERAL);
-  }
-
   /* Keep track of whether IPv6 is working */
   if (type == DNS_IPv6_AAAA) {
     if (result == DNS_ERR_TIMEOUT) {
@@ -1658,6 +1648,10 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   if (result != DNS_ERR_SHUTDOWN)
     dns_found_answer(string_address, orig_query_type,
                      result, &addr, hostname, ttl);
+
+  /* The result can be changed within this function thus why we note the result
+   * at the end. */
+  rep_hist_note_dns_query(type, result);
 
   tor_free(arg_);
 }
