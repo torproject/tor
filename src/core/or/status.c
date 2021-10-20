@@ -147,6 +147,32 @@ note_connection(bool inbound, int family)
   }
 }
 
+/**
+ * @name Counters for unrecognized cells
+ *
+ * Track cells that we drop because they are unrecognized and we have
+ * nobody to send them to.
+ **/
+/**@{*/
+static unsigned n_circs_closed_for_unrecognized_cells;
+static uint64_t n_unrecognized_cells_discarded;
+static uint64_t n_secs_on_circs_with_unrecognized_cells;
+/**@}*/
+
+/**
+ * Note that a circuit has closed @a n_seconds after having been created,
+ * because of one or more unrecognized cells.  Also note the number of
+ * unrecognized cells @a n_cells.
+ */
+void
+note_circ_closed_for_unrecognized_cells(time_t n_seconds, uint32_t n_cells)
+{
+  ++n_circs_closed_for_unrecognized_cells;
+  n_unrecognized_cells_discarded += n_cells;
+  if (n_seconds >= 0)
+    n_secs_on_circs_with_unrecognized_cells += (uint64_t) n_seconds;
+}
+
 /** Log a "heartbeat" message describing Tor's status and history so that the
  * user can know that there is indeed a running Tor.  Return 0 on success and
  * -1 on failure. */
@@ -238,6 +264,23 @@ log_heartbeat(time_t now)
          (main_loop_success_count),
          (main_loop_error_count),
          (main_loop_idle_count));
+  }
+
+  if (n_circs_closed_for_unrecognized_cells) {
+    double avg_time_alive = ((double) n_secs_on_circs_with_unrecognized_cells)
+      / n_circs_closed_for_unrecognized_cells;
+    double avg_cells = ((double) n_unrecognized_cells_discarded)
+      / n_circs_closed_for_unrecognized_cells;
+    log_fn(LOG_NOTICE, LD_HEARTBEAT,
+        "Since our last heartbeat, %u circuits were closed because of "
+        "unrecognized cells while we were the last hop. On average, each "
+        "one was alive for %lf seconds, and had %lf unrecognized cells.",
+        n_circs_closed_for_unrecognized_cells,
+        avg_time_alive,
+        avg_cells);
+    n_circs_closed_for_unrecognized_cells = 0;
+    n_unrecognized_cells_discarded = 0;
+    n_secs_on_circs_with_unrecognized_cells = 0;
   }
 
   /** Now, if we are an HS service, log some stats about our usage */
