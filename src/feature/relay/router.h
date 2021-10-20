@@ -119,6 +119,7 @@ void router_free_all(void);
 /* Used only by router.c and test.c */
 STATIC void get_platform_str(char *platform, size_t len);
 STATIC int router_write_fingerprint(int hashed);
+STATIC void router_announce_bridge_status_page(void);
 #endif
 
 #endif /* !defined(TOR_ROUTER_H) */
