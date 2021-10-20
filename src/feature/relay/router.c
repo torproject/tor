@@ -843,6 +843,25 @@ router_initialize_tls_context(void)
                               (unsigned int)lifetime);
 }
 
+/** Announce URL to bridge status page. */
+STATIC void
+router_announce_bridge_status_page(void)
+{
+  char fingerprint[FINGERPRINT_LEN + 1];
+
+  if (crypto_pk_get_hashed_fingerprint(get_server_identity_key(),
+                                       fingerprint) < 0) {
+    // LCOV_EXCL_START
+    log_err(LD_GENERAL, "Unable to compute bridge fingerprint");
+    return;
+    // LCOV_EXCL_STOP
+  }
+
+  log_notice(LD_GENERAL, "You can check the status of your bridge relay at "
+                         "https://bridges.torproject.org/status?id=%s",
+                         fingerprint);
+}
+
 /** Compute fingerprint (or hashed fingerprint if hashed is 1) and write
  * it to 'fingerprint' (or 'hashed-fingerprint'). Return 0 on success, or
  * -1 if Tor should die,
@@ -1144,6 +1163,10 @@ init_keys(void)
     log_err(LD_FS, "Error writing ed25519 identity to file");
     return -1;
   }
+
+  /* Display URL to bridge status page. */
+  if (! public_server_mode(options))
+    router_announce_bridge_status_page();
 
   if (!authdir_mode(options))
     return 0;
