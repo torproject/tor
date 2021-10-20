@@ -124,6 +124,8 @@ fill_tcp_exhaustion_values(void)
   metrics_store_entry_update(sentry, rep_hist_get_n_tcp_exhaustion());
 }
 
+/* NOTE: Disable the record type label until libevent is fixed. */
+#if 0
 /** Helper array containing mapping for the name of the different DNS records
  * and their corresponding libevent values. */
 static struct dns_type {
@@ -135,6 +137,7 @@ static struct dns_type {
   { .name = "AAAA", .type = DNS_IPv6_AAAA  },
 };
 static const size_t num_dns_types = ARRAY_LENGTH(dns_types);
+#endif
 
 /** Fill function for the RELAY_METRICS_NUM_DNS_ERRORS metrics. */
 static void
@@ -166,7 +169,6 @@ fill_dns_error_values(void)
   static const size_t num_errors = ARRAY_LENGTH(errors);
 
   /* NOTE: Disable the record type label until libevent is fixed. */
-  (void) num_dns_types;
 #if 0
   for (size_t i = 0; i < num_dns_types; i++) {
     /* Dup the label because metrics_format_label() returns a pointer to a
