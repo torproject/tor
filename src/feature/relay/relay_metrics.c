@@ -165,25 +165,36 @@ fill_dns_error_values(void)
   };
   static const size_t num_errors = ARRAY_LENGTH(errors);
 
-  for (size_t i = 0; i < num_dns_types; i++) {
-    /* NOTE: Disable the record type label until libevent is fixed. */
+  /* NOTE: Disable the record type label until libevent is fixed. */
+  (void) num_dns_types;
 #if 0
+  for (size_t i = 0; i < num_dns_types; i++) {
     /* Dup the label because metrics_format_label() returns a pointer to a
      * string on the stack and we need that label for all metrics. */
     char *record_label =
       tor_strdup(metrics_format_label("record", dns_types[i].name));
-#endif
 
     for (size_t j = 0; j < num_errors; j++) {
       sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                  rentry->help);
-      //metrics_store_entry_add_label(sentry, record_label);
+      metrics_store_entry_add_label(sentry, record_label);
       metrics_store_entry_add_label(sentry,
               metrics_format_label("reason", errors[j].name));
       metrics_store_entry_update(sentry,
               rep_hist_get_n_dns_error(dns_types[i].type, errors[j].key));
     }
-    //tor_free(record_label);
+    tor_free(record_label);
+  }
+#endif
+
+  /* Put in the DNS errors, unfortunately not per-type for now. */
+  for (size_t j = 0; j < num_errors; j++) {
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    metrics_store_entry_add_label(sentry,
+            metrics_format_label("reason", errors[j].name));
+    metrics_store_entry_update(sentry,
+            rep_hist_get_n_dns_error(0, errors[j].key));
   }
 }
 
