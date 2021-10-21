@@ -2622,7 +2622,10 @@ check_descriptor_bandwidth_changed(time_t now)
   if ((prev != cur && (!prev || !cur)) ||
       cur > (prev * BANDWIDTH_CHANGE_FACTOR) ||
       cur < (prev / BANDWIDTH_CHANGE_FACTOR) ) {
-    if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now || !prev) {
+    const bool change_recent_enough =
+      last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now;
+    const bool testing_network = get_options()->TestingTorNetwork;
+    if (change_recent_enough || testing_network || !prev) {
       log_info(LD_GENERAL,
                "Measured bandwidth has changed; rebuilding descriptor.");
       mark_my_descriptor_dirty("bandwidth has changed");
