@@ -2265,7 +2265,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add_asprintf(chunks, "pr %s\n", chosen_protocol_list);
       }
       /*     Now the weight line. */
-      if (rs_out.has_bandwidth) {
+      if (rs_out.has_bandwidth && (!rs_out.is_authority ||
+          !dirauth_get_options()->AuthDirDontVoteOnDirAuthBandwidth)) {
         char *guardfraction_str = NULL;
         int unmeasured = rs_out.bw_is_unmeasured;
 
