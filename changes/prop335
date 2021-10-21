@@ -1,0 +1,11 @@
+  o Major features (directory authority):
+    - Authorities can now be configured to label relays as "MiddleOnly".
+      When voting for this flag, authorities automatically vote against
+      Exit, Guard, HSDir, and V2Dir; and in favor of BadExit.
+      Implements part of proposal 335. Based on a patch from Neel
+      Chauhan.
+    - Add a new consensus method to handle MiddleOnly specially. When
+      enough authorities are using this method, then any relay
+      tagged with the MiddleOnly flag will have its Exit, Guard, HSDir,
+      and V2Dir flags automatically cleared, and will have its BadExit flag
+      automatically set. Implements part of proposal 335.

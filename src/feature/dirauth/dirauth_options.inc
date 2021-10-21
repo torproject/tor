@@ -27,6 +27,10 @@ CONF_VAR(AuthDirHasIPv6Connectivity, BOOL, 0, "0")
  * good. */
 CONF_VAR(AuthDirListBadExits, BOOL, 0, "0")
 
+/** True iff we should list middle-only relays, and vote for all other
+ * relays as possibly suitable for other positions. */
+CONF_VAR(AuthDirListMiddleOnly, BOOL, 0, "0")
+
 /** Do not permit more than this number of servers per IP address. */
 CONF_VAR(AuthDirMaxServersPerAddr, POSINT, 0, "2")
 

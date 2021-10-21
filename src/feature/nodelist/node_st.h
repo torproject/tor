@@ -70,6 +70,8 @@ struct node_t {
   unsigned int is_exit:1; /**< Do we think this is an OK exit? */
   unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
                                * or otherwise nasty? */
+  /** Is this unsuitable for use as anything besides a middle relay? */
+  unsigned int is_middle_only:1;
   unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
                              * directory according to the authorities. */
 

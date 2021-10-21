@@ -22,7 +22,8 @@ void dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                               node_t *node,
                                               const routerinfo_t *ri,
                                               time_t now,
-                                              int listbadexits);
+                                              int listbadexits,
+                                              int listmiddleonly);
 
 void dirserv_compute_performance_thresholds(digestmap_t *omit_as_sybil);
 #endif /* defined(HAVE_MODULE_DIRAUTH) */

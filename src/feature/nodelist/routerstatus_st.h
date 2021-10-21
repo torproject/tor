@@ -51,6 +51,8 @@ struct routerstatus_t {
                                      * choice as an entry guard. */
   unsigned int is_bad_exit:1; /**< True iff this node is a bad choice for
                                * an exit node. */
+  unsigned int is_middle_only:1; /**< True iff this node is marked as bad
+                                  * for anything besides middle positions. */
   unsigned int is_hs_dir:1; /**< True iff this router is a v2-or-later hidden
                              * service directory. */
   unsigned int is_v2_dir:1; /** True iff this router publishes an open DirPort

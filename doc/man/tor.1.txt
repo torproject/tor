@@ -3091,6 +3091,11 @@ on the public Tor network.
     is the same as for exit policies, except that you don't need to say
     "accept" or "reject", and ports are not needed.)
 
+[[AuthDirMiddleOnly]] **AuthMiddleOnly** __AddressPattern...__::
+    Authoritative directories only. A set of address patterns for servers that
+    will be listed as middle-only in any network status document this authority
+    publishes, if **AuthDirListMiddleOnly** is set. +
+
 [[AuthDirFastGuarantee]] **AuthDirFastGuarantee** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     Authoritative directories only. If non-zero, always vote the
     Fast flag for any relay advertising this amount of capacity or
@@ -3138,6 +3143,13 @@ on the public Tor network.
     1 unless you plan to list non-functioning exits as bad; otherwise, you are
     effectively voting in favor of every declared exit as an exit.)
 
+[[AuthDirListMiddleOnly]] **AuthDirListMiddleOnly** **0**|**1**::
+    Authoritative directories only. If set to 1, this directory has some
+    opinion about which nodes should only be used in the middle position.
+    (Do not set this to 1 unless you plan to list questionable relays
+    as "middle only"; otherwise, you are effectively voting _against_
+    middle-only status for every relay.)
+
 [[AuthDirMaxServersPerAddr]] **AuthDirMaxServersPerAddr** __NUM__::
     Authoritative directories only. The maximum number of servers that we will
     list as acceptable on a single IP address. Set this to "0" for "no limit".
@@ -3156,18 +3168,20 @@ on the public Tor network.
     authority publishes, or accepted as an OR address in any descriptor
     submitted for publication by this authority.
 
+[[AuthDirRejectRequestsUnderLoad]] **AuthDirRejectRequestsUnderLoad** **0**|**1**::
+    If set, the directory authority will start rejecting directory requests
+    from non relay connections by sending a 503 error code if it is under
+    bandwidth pressure (reaching the configured limit if any). Relays will
+    always tried to be answered even if this is on. (Default: 1)
+
 //Out of order because it logically belongs with the other CCs options.
 [[AuthDirBadExitCCs]] **AuthDirBadExitCCs** __CC__,... +
 
 //Out of order because it logically belongs with the other CCs options.
 [[AuthDirInvalidCCs]] **AuthDirInvalidCCs** __CC__,... +
 
-
-[[AuthDirRejectRequestsUnderLoad]] **AuthDirRejectRequestsUnderLoad** **0**|**1**::
-    If set, the directory authority will start rejecting directory requests
-    from non relay connections by sending a 503 error code if it is under
-    bandwidth pressure (reaching the configured limit if any). Relays will
-    always tried to be answered even if this is on. (Default: 1)
+//Out of order because it logically belongs with the other CCs options.
+[[AuthDirMiddleOnlytCCs]] **AuthDirMiddleOnlyCCs** __CC__,... +
 
 [[AuthDirRejectCCs]] **AuthDirRejectCCs** __CC__,...::
     Authoritative directories only. These options contain a comma-separated
@@ -3889,7 +3903,8 @@ __DataDirectory__/**`approved-routers`**::
     descriptors are accepted, but marked in the vote as not valid.
     If it is **!badexit**, then the authority will vote for it to receive a
     BadExit flag, indicating that it shouldn't be used for traffic leaving
-    the Tor network.
+    the Tor network.  If it is **!middleonly**, then the authority will
+    vote for it to only be used in the middle of circuits.
     (Neither rejected nor invalid relays are included in the consensus.)
 
 __DataDirectory__/**`v3-status-votes`**::
