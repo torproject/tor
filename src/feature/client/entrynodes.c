@@ -2271,6 +2271,13 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
            guard->is_primary?"primary ":"",
            guard->confirmed_idx>=0?"confirmed ":"",
            entry_guard_describe(guard));
+
+  /* Schedule a re-assessment of whether we have enough dir info to
+   * use the network. Counterintuitively, *losing* a bridge might actually
+   * be just what we need to *resume* using the network, if we had it in
+   * state GUARD_REACHABLE_MAYBE and we were stalling to learn this
+   * outcome. See bug 40396 for more details. */
+  router_dir_info_changed();
 }
 
 /**
