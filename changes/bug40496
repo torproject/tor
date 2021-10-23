@@ -1,0 +1,6 @@
+  o Minor bugfixes (logging):
+    - When we no longer have enough directory information to use the
+      network, we would log a notice-level message -- but we would not
+      reliably log a message when we recovered and resumed using the
+      network. Now make sure there is always a corresponding message
+      about recovering. Fixes bug 40496; bugfix on 0.3.5.1-alpha.

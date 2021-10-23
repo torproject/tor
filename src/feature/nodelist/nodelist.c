@@ -2820,6 +2820,7 @@ update_router_have_minimum_dir_info(void)
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
   int using_md;
+  static int be_loud_when_things_work_again = 0;
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())
@@ -2875,8 +2876,9 @@ update_router_have_minimum_dir_info(void)
   if (res && !have_min_dir_info) {
     control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
     control_event_boot_dir(BOOTSTRAP_STATUS_ENOUGH_DIRINFO, 0);
-    log_info(LD_DIR,
-             "We now have enough directory information to build circuits.");
+    tor_log(be_loud_when_things_work_again ? LOG_NOTICE : LOG_INFO, LD_DIR,
+            "We now have enough directory information to build circuits.");
+    be_loud_when_things_work_again = 0;
   }
 
   /* If paths have just become unavailable in this update. */
@@ -2885,6 +2887,10 @@ update_router_have_minimum_dir_info(void)
     tor_log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
         "Our directory information is no longer up-to-date "
         "enough to build circuits: %s", dir_info_status);
+    if (!quiet) {
+      /* remember to do a notice-level log when things come back */
+      be_loud_when_things_work_again = 1;
+    }
 
     /* a) make us log when we next complete a circuit, so we know when Tor
      * is back up and usable, and b) disable some activities that Tor
