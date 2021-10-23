@@ -961,12 +961,14 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
 
     if (bridge) { /* if we actually want to use this one */
       node_t *node;
-      /* it's here; schedule its re-fetch for a long time from now. */
       if (!from_cache) {
         /* This schedules the re-fetch at a constant interval, which produces
          * a pattern of bridge traffic. But it's better than trying all
          * configured bridges several times in the first few minutes. */
         download_status_reset(&bridge->fetch_status);
+        /* it's here; schedule its re-fetch for a long time from now. */
+        bridge->fetch_status.next_attempt_at +=
+          get_options()->TestingBridgeDownloadInitialDelay;
       }
 
       node = node_get_mutable_by_id(ri->cache_info.identity_digest);

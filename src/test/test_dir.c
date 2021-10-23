@@ -6652,13 +6652,7 @@ test_dir_find_dl_min_delay(void* data)
 
   dls.schedule = DL_SCHED_BRIDGE;
   /* client */
-  mock_options->ClientOnly = 1;
-  mock_options->UseBridges = 1;
-  if (num_bridges_usable(0) > 0) {
-    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge);
-  } else {
-    tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge_bootstrap);
-  }
+  tt_int_op(find_dl_min_delay(&dls, mock_options), OP_EQ, bridge_bootstrap);
 
  done:
   UNMOCK(networkstatus_consensus_is_bootstrapping);

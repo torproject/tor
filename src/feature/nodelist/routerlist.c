@@ -1617,6 +1617,13 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                "descriptor for router %s",
                router_describe(router));
     } else {
+      if (router->purpose == ROUTER_PURPOSE_BRIDGE) {
+        /* Even if we're not going to keep this descriptor, we need to
+         * let the bridge descriptor fetch subsystem know that we
+         * succeeded at getting it -- so we can adjust the retry schedule
+         * to stop trying for a while. */
+        learned_bridge_descriptor(router, from_cache);
+      }
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router %s",
                router_describe(router));

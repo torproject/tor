@@ -3556,14 +3556,15 @@ The following options are used for running a testing Tor network.
 [[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours** +
 
 [[TestingBridgeBootstrapDownloadInitialDelay]] **TestingBridgeBootstrapDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download each bridge descriptor when they
-    have just started, or when they can not contact any of their bridges.
+    Initial delay in seconds for how long clients should wait before
+    downloading a bridge descriptor for a new bridge.
     Changing this requires that **TestingTorNetwork** is set. (Default: 0)
 
 [[TestingBridgeDownloadInitialDelay]] **TestingBridgeDownloadInitialDelay** __N__::
-    Initial delay in seconds for when clients should download each bridge descriptor when they
-    know that one or more of their configured bridges are running. Changing
-    this requires that **TestingTorNetwork** is set. (Default: 10800)
+    How long to wait (in seconds) once clients have successfully
+    downloaded a bridge descriptor, before trying another download for
+    that same bridge. Changing this requires that **TestingTorNetwork**
+    is set. (Default: 10800)
 
 [[TestingClientConsensusDownloadInitialDelay]] **TestingClientConsensusDownloadInitialDelay** __N__::
     Initial delay in seconds for when clients should download consensuses. Changing this
