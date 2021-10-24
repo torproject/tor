@@ -2059,6 +2059,14 @@ entry_guard_consider_retry(entry_guard_t *guard)
     get_retry_schedule(guard->failing_since, now, guard->is_primary);
   const time_t last_attempt = guard->last_tried_to_connect;
 
+  /* Check if it is a bridge and we don't have its descriptor yet */
+  if (guard->bridge_addr && !guard_has_descriptor(guard)) {
+    /* We want to leave the retry schedule to fetch_bridge_descriptors(),
+     * so we don't have two retry schedules clobbering each other. See
+     * bugs 40396 and 40497 for details of why we need this exception. */
+    return;
+  }
+
   if (BUG(last_attempt == 0) ||
       now >= last_attempt + delay) {
     /* We should mark this retriable. */

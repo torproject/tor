@@ -1,0 +1,8 @@
+  o Minor bugfixes (bridges):
+    - When we don't yet have a descriptor for one of our bridges, disable
+      the entry guard retry schedule on that bridge. The entry guard retry
+      schedule and the bridge descriptor retry schedule can conflict,
+      e.g. where we mark a bridge as "maybe up" yet we don't try to fetch
+      its descriptor yet, leading Tor to wait (refusing to do anything)
+      until it becomes time to fetch the descriptor. Fixes bug 40497;
+      bugfix on 0.3.0.3-alpha.
