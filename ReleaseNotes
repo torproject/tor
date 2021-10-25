@@ -32,6 +32,10 @@ Changes in version 0.4.6.7 - 2021-08-16
     - Send back the extended SOCKS error 0xF6 (Onion Service Invalid Address)
       for a v2 onion address. Fixes bug 40421; bugfix on 0.4.6.2-alpha.
 
+  o Minor bugfix (CI, onion service):
+    - Exclude onion service version 2 Stem tests in our CI. Fixes bug 40500;
+      bugfix on 0.3.2.1-alpha.
+
   o Minor bugfixes (relay):
     - Reduce the compression level for data streaming from HIGH to LOW in
       order to reduce CPU load on the directory relays. Fixes bug 40301;

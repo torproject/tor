@@ -99,6 +99,10 @@ Changes in version 0.4.7.2-alpha - 2021-10-26
       service leading to filling the logs with useless warnings. Fixes
       bug 34083; bugfix on 0.3.2.1-alpha.
 
+  o Minor bugfix (CI, onion service):
+    - Exclude onion service version 2 Stem tests in our CI. Fixes bug 40500;
+      bugfix on 0.3.2.1-alpha.
+
   o Minor bugfixes (onion service, config):
     - Fix a memory leak for a small config line string that could occur
       if the onion service failed to be configured from file properly.
