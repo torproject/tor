@@ -460,12 +460,20 @@ fi
 
 if [[ "${STEM}" = "yes" ]]; then
    start_section "Stem"
+   # 0.3.5 and onward have now disabled onion service v2 so we need to exclude
+   # these Stem tests from now on.
+   EXCLUDE_TESTS="--exclude-test control.controller.test_ephemeral_hidden_services_v2 --exclude-test control.controller.test_hidden_services_conf --exclude-test control.controller.test_with_ephemeral_hidden_services_basic_auth --exclude-test control.controller.test_without_ephemeral_hidden_services --exclude-test control.controller.test_with_ephemeral_hidden_services_basic_auth_no_credentials"
    if [[ "${TOR_VER_AT_LEAST_044}" = 'yes' ]]; then
      # XXXX This should probably be part of some test-stem make target.
+
+     # Disable the check around EXCLUDE_TESTS that requires double quote. We
+     # need it to be expanded.
+     # shellcheck disable=SC2086
      if runcmd timelimit -p -t 520 -s USR1 -T 30 -S ABRT \
            python3 "${STEM_PATH}/run_tests.py" \
            --tor src/app/tor \
            --integ --test control.controller \
+           $EXCLUDE_TESTS \
            --test control.base_controller \
            --test process \
            --log TRACE \
