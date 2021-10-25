@@ -53,11 +53,6 @@ Changes in version 0.4.7.2-alpha - 2021-10-26
     - See https://blog.torproject.org/v2-deprecation-timeline for
       details on how to transition from v2 to v3.
 
-  o Minor features (bridge):
-    - We now announce the URL to Tor's new bridge status at
-      https://bridges.torproject.org/ when Tor is configured to run as a
-      bridge relay. Closes ticket 30477.
-
   o Minor features (fallbackdir):
     - Regenerate fallback directories for October 2021. Close
       ticket 40493.
