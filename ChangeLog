@@ -3,7 +3,7 @@ Changes in version 0.4.7.2-alpha - 2021-10-26
   major features were added which are congestion control (prop334) for
   network performance and the MiddleOnly flag (prop335) voted by the
   authorities used to pin relays to the middle position for various
-  network health reasons. This version also fixes numerous bugfixes.
+  network health reasons. This version also fixes numerous bugs.
 
   The congestion control feature, detailed in proposal 324, still needs
   more work before we can enabled it by default. It is currently in its
