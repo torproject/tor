@@ -42,6 +42,10 @@ Changes in version 0.4.6.8 - 2021-10-26
     - Improve logging when a bad HS version is given. Fixes bug 40476;
       bugfix on 0.4.6.1-alpha.
 
+  o Minor bugfix (CI, onion service):
+    - Exclude onion service version 2 Stem tests in our CI. Fixes bug 40500;
+      bugfix on 0.3.2.1-alpha.
+
   o Minor bugfixes (compatibility):
     - Fix compatibility with the most recent Libevent versions, which no
       longer have an evdns_set_random_bytes() function. Because this
