@@ -1,12 +1,12 @@
 Changes in version 0.4.7.2-alpha - 2021-10-26
-  This version is the second alpha release of the 0.4.7.x series. Two
-  major features were added which are congestion control (prop334) for
-  network performance and the MiddleOnly flag (prop335) voted by the
-  authorities used to pin relays to the middle position for various
-  network health reasons. This version also fixes numerous bugs.
+  This second alpha release of the 0.4.7.x series adds two major
+  features: congestion control (prop324) for network performance, and
+  the MiddleOnly flag (prop335) voted by the authorities to pin relays
+  to the middle position for various network health reasons. This
+  release also fixes numerous bugs.
 
   The congestion control feature, detailed in proposal 324, still needs
-  more work before we can enabled it by default. It is currently in its
+  more work before we can enable it by default. It is currently in its
   testing and tuning phase which means that you should expect more
   0.4.7.x alphas as congestion control gets stabilized and tuned for
   optimal performance. And so, at this release, it can not be used
@@ -54,7 +54,7 @@ Changes in version 0.4.7.2-alpha - 2021-10-26
       details on how to transition from v2 to v3.
 
   o Minor features (fallbackdir):
-    - Regenerate fallback directories for October 2021. Close
+    - Regenerate fallback directories for October 2021. Closes
       ticket 40493.
 
   o Minor features (logging, heartbeat):
@@ -90,9 +90,9 @@ Changes in version 0.4.7.2-alpha - 2021-10-26
       permitted. Fixes bug 11477; bugfix on 0.2.5.4-alpha.
 
   o Minor bugfixes (logging):
-    - If a channel has never received, transmitted a cell or seen a
-      client, do not calculate time diffs against 1/1/1970 but log
-      another prettier message. Fixes bug 40182; bugfix on 0.2.4.4.
+    - If a channel has never received or transmitted a cell, or seen a
+      client, do not calculate time diffs against 1/1/1970 but log a
+      better prettier message. Fixes bug 40182; bugfix on 0.2.4.4.
 
   o Minor bugfixes (onion service):
     - Fix a warning BUG that would occur often on heavily loaded onion
@@ -101,18 +101,18 @@ Changes in version 0.4.7.2-alpha - 2021-10-26
 
   o Minor bugfixes (onion service, config):
     - Fix a memory leak for a small config line string that could occur
-      if the service failed to be configured from file properly. Fixes
-      bug 40484; bugfix on 0.3.2.1-alpha.
+      if the onion service failed to be configured from file properly.
+      Fixes bug 40484; bugfix on 0.3.2.1-alpha.
 
   o Minor bugfixes (onion service, TROVE-2021-008):
-    - Only log once any v2 access attempts in order to not pollute the
-      logs with warnings and avoid recording the times on disk when v2
-      access was attempted. Important to note that the onion address was
-      _never_ logged. That is a Low security issue. Fixes bug 40474;
-      bugfix on 0.4.5.8.
+    - Only log v2 access attempts once total, in order to not pollute
+      the logs with warnings and to avoid recording the times on disk
+      when v2 access was attempted. Note that the onion address was
+      _never_ logged. This counts as a Low-severity security issue.
+      Fixes bug 40474; bugfix on 0.4.5.8.
     - Note that due to #40476 which removes v2 support entirely, this
       log line is not emitted anymore. We still mention this in the
-      changelog because it is a low security TROVE.
+      changelog because it is a Low-severity TROVE.
 
   o Minor bugfixes (usability):
     - Do not log "RENDEZVOUS1 cell with unrecognized rendezvous cookie"
@@ -138,11 +138,11 @@ Changes in version 0.4.7.2-alpha - 2021-10-26
 
   o Code simplification and refactoring (rust):
     - Remove Rust support and its associated code. It is unsupported and
-      Rust focus should be shifted to arti. Closes 40469.
+      Rust focus should be shifted to arti. Closes ticket 40469.
 
   o Testing (CI, chutney):
-    - Bump the data size that chutney transmit to 5MB in order to
-      trigger flow control and congestion window code. Closes
+    - Bump the data size that chutney transmits to 5MBytes in order to
+      trigger the flow control and congestion window code. Closes
       ticket 40485.
 
 
