@@ -1,4 +1,0 @@
-  o Minor features (bridge):
-    - We now announce the URL to Tor's new bridge status at
-      https://bridges.torproject.org/ when Tor is configured to run as a bridge
-      relay. Closes ticket 30477.
