@@ -13,11 +13,6 @@ Changes in version 0.4.6.8 - 2021-10-26
       respectively but they are also controlled by consensus parameters.
       Fixes bug 40491; bugfix on 0.4.6.1-alpha.
 
-  o Minor features (bridge):
-    - We now announce the URL to Tor's new bridge status at
-      https://bridges.torproject.org/ when Tor is configured to run as a
-      bridge relay. Closes ticket 30477.
-
   o Minor features (fallbackdir):
     - Regenerate fallback directories for October 2021. Close
       ticket 40493.
