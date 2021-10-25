@@ -51,6 +51,10 @@ Changes in version 0.4.5.11 - 2021-10-26
       immediately from startup. Previously, they waited until they had
       been running for a full day. Closes ticket 40337.
 
+  o Minor bugfix (CI, onion service):
+    - Exclude onion service version 2 Stem tests in our CI. Fixes bug 40500;
+      bugfix on 0.3.2.1-alpha.
+
   o Minor bugfix (onion service, backport from 0.4.6.8):
     - Do not flag an HSDir as non-running in case the descriptor upload
       or fetch fails. An onion service closes pending directory
