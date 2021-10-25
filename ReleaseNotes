@@ -2,6 +2,68 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.6.8 - 2021-10-26
+  This version fixes several bugs from earlier versions of Tor. Worth
+  noting is a fix on how we use DNS timeout to report general overload.
+  Everyone running an earlier version, whether as a client, a relay, or
+  an onion service, should upgrade to Tor 0.3.5.17, 0.4.5.11,
+  or 0.4.6.8.
+
+  o Major bugfixes (relay, overload state):
+    - Report the general overload state for DNS timeout errors only if
+      X% of all DNS queries over Y seconds are errors. Before that, it
+      only took 1 timeout to report the overload state which was just
+      too low of a threshold. The X and Y values are 1% and 10 minutes
+      respectively but they are also controlled by consensus parameters.
+      Fixes bug 40491; bugfix on 0.4.6.1-alpha.
+
+  o Minor features (bridge):
+    - We now announce the URL to Tor's new bridge status at
+      https://bridges.torproject.org/ when Tor is configured to run as a
+      bridge relay. Closes ticket 30477.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories for October 2021. Close
+      ticket 40493.
+
+  o Minor features (testing):
+    - On a testing network, relays can now use the
+      TestingMinTimeToReportBandwidth option to change the smallest
+      amount of time over which they're willing to report their observed
+      maximum bandwidth. Previously, this was fixed at 1 day. For
+      safety, values under 2 hours are only supported on testing
+      networks. Part of a fix for ticket 40337.
+    - Relays on testing networks no longer rate-limit how frequently
+      they are willing to report new bandwidth measurements. Part of a
+      fix for ticket 40337.
+    - Relays on testing networks now report their observed bandwidths
+      immediately from startup. Previously, they waited until they had
+      been running for a full day. Closes ticket 40337.
+
+  o Minor bugfix (onion service):
+    - Do not flag an HSDir as non-running in case the descriptor upload
+      or fetch fails. An onion service closes pending directory
+      connections before uploading a new descriptor which can thus lead
+      to wrongly flagging many relays and thus affecting circuit building
+      path selection. Fixes bug 40434; bugfix on 0.2.0.13-alpha.
+    - Improve logging when a bad HS version is given. Fixes bug 40476;
+      bugfix on 0.4.6.1-alpha.
+
+  o Minor bugfixes (compatibility):
+    - Fix compatibility with the most recent Libevent versions, which no
+      longer have an evdns_set_random_bytes() function. Because this
+      function has been a no-op since Libevent 2.0.4-alpha, it is safe
+      for us to just stop calling it. Fixes bug 40371; bugfix
+      on 0.2.1.7-alpha.
+
+  o Minor bugfixes (onion service, TROVE-2021-008):
+    - Only log once any v2 access attempts in order to not pollute the
+      logs with warnings and avoid recording the times on disk when v2
+      access was attempted. Important to note that the onion address was
+      _never_ logged. That is a Low security issue. Fixes bug 40474;
+      bugfix on 0.4.5.8.
+
+
 Changes in version 0.4.6.7 - 2021-08-16
   This version fixes several bugs from earlier versions of Tor, including one
   that could lead to a denial-of-service attack. Everyone running an earlier
