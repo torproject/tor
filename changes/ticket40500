@@ -1,0 +1,3 @@
+  o Minor bugfix (CI, onion service):
+    - Exclude onion service version 2 Stem tests in our CI. Fixes bug 40500;
+      bugfix on 0.3.2.1-alpha.
