@@ -3,27 +3,20 @@ release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
 Changes in version 0.4.6.8 - 2021-10-26
-  This version fixes several bugs from earlier versions of Tor. Worth
-  noting is a fix on how we use DNS timeout to report general overload.
-  Everyone running an earlier version, whether as a client, a relay, or
-  an onion service, should upgrade to Tor 0.3.5.17, 0.4.5.11,
-  or 0.4.6.8.
+  This version fixes several bugs from earlier versions of Tor. One
+  highlight is a fix on how we track DNS timeouts to report general
+  relay overload.
 
   o Major bugfixes (relay, overload state):
-    - Report the general overload state for DNS timeout errors only if
-      X% of all DNS queries over Y seconds are errors. Before that, it
-      only took 1 timeout to report the overload state which was just
-      too low of a threshold. The X and Y values are 1% and 10 minutes
-      respectively but they are also controlled by consensus parameters.
-      Fixes bug 40491; bugfix on 0.4.6.1-alpha.
-
-  o Minor features (bridge):
-    - We now announce the URL to Tor's new bridge status at
-      https://bridges.torproject.org/ when Tor is configured to run as a
-      bridge relay. Closes ticket 30477.
+    - Relays report the general overload state for DNS timeout errors
+      only if X% of all DNS queries over Y seconds are errors. Before
+      that, it only took 1 timeout to report the overload state which
+      was just too low of a threshold. The X and Y values are 1% and 10
+      minutes respectively but they are also controlled by consensus
+      parameters. Fixes bug 40491; bugfix on 0.4.6.1-alpha.
 
   o Minor features (fallbackdir):
-    - Regenerate fallback directories for October 2021. Close
+    - Regenerate fallback directories for October 2021. Closes
       ticket 40493.
 
   o Minor features (testing):
@@ -57,11 +50,11 @@ Changes in version 0.4.6.8 - 2021-10-26
       on 0.2.1.7-alpha.
 
   o Minor bugfixes (onion service, TROVE-2021-008):
-    - Only log once any v2 access attempts in order to not pollute the
-      logs with warnings and avoid recording the times on disk when v2
-      access was attempted. Important to note that the onion address was
-      _never_ logged. That is a Low security issue. Fixes bug 40474;
-      bugfix on 0.4.5.8.
+    - Only log v2 access attempts once total, in order to not pollute
+      the logs with warnings and to avoid recording the times on disk
+      when v2 access was attempted. Note that the onion address was
+      _never_ logged. This counts as a Low-severity security issue.
+      Fixes bug 40474; bugfix on 0.4.5.8.
 
 
 Changes in version 0.4.6.7 - 2021-08-16
