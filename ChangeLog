@@ -1,22 +1,22 @@
 Changes in version 0.4.5.11 - 2021-10-26
-  This version fixes several bugs from earlier versions of Tor. A major
-  change is that v2 onion service are now disabled at the client,
-  service and relay meaning that any tor nodes running this version and
-  onward will stops supporting v2. This is the last step into the long
-  deprecation process of onion service version 2. Everyone running an
-  earlier version, whether as a client, a relay, or an onion service,
-  should upgrade to Tor 0.3.5.17, 0.4.5.11, or 0.4.6.8.
+  The major change in this version is that v2 onion services are now
+  disabled at the client, service, and relay: any Tor nodes running this
+  version and onward will stop supporting v2 onion services. This is the
+  last step in the long deprecation process of v2 onion services.
+  Everyone running an earlier version, whether as a client, a relay, or
+  an onion service, should upgrade to Tor 0.3.5.17, 0.4.5.11,
+  or 0.4.6.8.
 
   o Major feature (onion service v2):
     - See https://blog.torproject.org/v2-deprecation-timeline for
       details on how to transition from v2 to v3.
-    - The control port command HSFETCH and HSPOST don't allow version 2
-      as well. It is also not possible to create a v2 service
+    - The control port commands HSFETCH and HSPOST no longer allow
+      version 2, and it is no longer possible to create a v2 service
       with ADD_ONION.
-    - Tor does NOT allow anymore to create v2 services, to connect as a
-      client to a v2 service and for a relay to be a v2 HSDir or
-      introduction point. This effectively disable onion service version
-      2 tor wide. Closes 40476.
+    - Tor no longer allows creating v2 services, or connecting as a
+      client to a v2 service. Relays will decline to be a v2 HSDir or
+      introduction point. This effectively disables onion service
+      version 2 Tor-wide. Closes ticket 40476.
 
   o Minor features (bridge, backport from 0.4.6.8):
     - We now announce the URL to Tor's new bridge status at
@@ -24,7 +24,7 @@ Changes in version 0.4.5.11 - 2021-10-26
       bridge relay. Closes ticket 30477.
 
   o Minor features (fallbackdir):
-    - Regenerate fallback directories for October 2021. Close
+    - Regenerate fallback directories for October 2021. Closes
       ticket 40493.
 
   o Minor features (logging, diagnostic, backport from 0.4.6.5):
@@ -68,11 +68,11 @@ Changes in version 0.4.5.11 - 2021-10-26
       consensus. Fixes bug 40375; bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (onion service, TROVE-2021-008, backport from 0.4.6.8):
-    - Only log once any v2 access attempts in order to not pollute the
-      logs with warnings and avoid recording the times on disk when v2
-      access was attempted. Important to note that the onion address was
-      _never_ logged. That is a Low security issue. Fixes bug 40474;
-      bugfix on 0.4.5.8.
+    - Only log v2 access attempts once total, in order to not pollute
+      the logs with warnings and to avoid recording the times on disk
+      when v2 access was attempted. Note that the onion address was
+      _never_ logged. This counts as a Low-severity security issue.
+      Fixes bug 40474; bugfix on 0.4.5.8.
 
 
 Changes in version 0.4.5.10 - 2021-08-16
@@ -91,7 +91,7 @@ Changes in version 0.4.5.10 - 2021-08-16
       CVE-2021-38385. Found by Henry de Valence.
 
   o Minor feature (fallbackdir):
-    - Regenerate fallback directories list. Close ticket 40447.
+    - Regenerate fallback directories list. Closes ticket 40447.
 
   o Minor features (geoip data):
     - Update the geoip files to match the IPFire Location Database, as
