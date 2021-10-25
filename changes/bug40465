@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix compilation error when __NR_time is not defined. Fixes bug
-      40465; bugfix on 0.2.5.5-alpha. Patch by Daniel Pinto.

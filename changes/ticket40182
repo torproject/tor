@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging):
-   - If a channel has never received, transmitted a cell or seen a client, do
-     not calculate time diffs against 1/1/1970 but log another prettier
-     message. Fixes bug 40182; bugfix on 0.2.4.4.

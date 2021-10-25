@@ -1,4 +1,0 @@
-  o Minor bugfixes (dirauth, bandwidth scanner):
-    - Add the AuthDirDontVoteOnDirAuthBandwidth dirauth config parameter to
-      avoid voting on bandwidth scanner weights to v3 directory authorities.
-      Fixes bug 40471; bugfix on 0.2.2.1-alpha. Patch by Neel Chauhan.

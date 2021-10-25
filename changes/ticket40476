@@ -1,7 +1,0 @@
-  o Minor feature (onion service v2):
-    - Onion service v2 address are now not recognized anymore by tor meaning a
-      bad hostname is returned when attempting to pass it on a SOCKS
-      connection. No more deprecation log is emitted client side. Closes
-      ticket 40476.
-    - See https://blog.torproject.org/v2-deprecation-timeline for details on
-      how to transition from v2 to v3.

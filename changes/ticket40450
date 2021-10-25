@@ -1,3 +1,0 @@
-  o Major features (congestion control):
-    - Implement support for flow control over congestion controlled circuits.
-      This work comes from proposal 324. Closes ticket 40450.

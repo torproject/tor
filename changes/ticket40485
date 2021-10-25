@@ -1,3 +1,0 @@
-  o Testing (CI, chutney):
-    - Bump the data size that chutney transmit to 5MB in order to trigger flow
-      control and congestion window code. Closes ticket 40485.

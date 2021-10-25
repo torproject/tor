@@ -1,7 +1,0 @@
-  o Minor features (logging, heartbeat):
-    - When a relay receives a cell that isn't encrypted properly for
-      it, but the relay is the last hop on the circuit, the relay
-      now counts how many cells of this kind it receives, on how
-      many circuits, and reports this information in the log.
-      Previously, we'd log each cell at PROTOCOL_WARN level, which
-      is far too verbose to be useful. Fixes part of ticket 40400.

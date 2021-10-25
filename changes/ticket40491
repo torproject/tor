@@ -1,7 +1,0 @@
-  o Major bugfixes (relay, overload state):
-    - Report the general overload state for DNS timeout errors only if X% of all
-      DNS queries over Y seconds are errors. Before that, it only took 1 timeout
-      to report the overload state which was just too low of a threshold. The X
-      and Y values are 1% and 10 minutes respectively but they are also
-      controlled by consensus parameters. Fixes bug 40491; bugfix on
-      0.4.6.1-alpha.

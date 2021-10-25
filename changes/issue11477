@@ -1,8 +1,0 @@
-  o Minor bugfixes (fragile-hardening, sandbox):
-    - When building with --enable-fragile-hardening, add or relax Linux
-      seccomp rules to allow AddressSanitizer to execute normally if the
-      process terminates with the sandbox active. This has the side
-      effect of disabling the filtering of file- and directory-open
-      requests on most systems and dilutes the effectiveness of the
-      sandbox overall, as a wider range of system calls must be
-      permitted. Fixes bug 11477; bugfix on 0.2.5.4-alpha.

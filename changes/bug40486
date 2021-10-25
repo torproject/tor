@@ -1,5 +1,0 @@
-  o Code simplification and refactoring:
-    - Lower the official maximum for "guard-extreme-restriction-percent" to
-      100. This has no effect on when the guard code will generate a warning,
-      but it makes the intent of the option clearer.  Fixes bug 40486; bugfix
-      on 0.3.0.1-alpha.
