@@ -8,7 +8,7 @@ SCRIPT_NAME=$(basename "$0")
 
 function usage()
 {
-    echo "$SCRIPT_NAME [-h] [-l|-s|-b|-m] [-R]"
+    echo "$SCRIPT_NAME [-h] [-l|-s|-b|-m] [-R|-M]"
     echo
     echo "  arguments:"
     echo "   -h: show this help text"
@@ -20,6 +20,7 @@ function usage()
     echo "       ( branch parent path suffix parent_suffix ) arrays"
     echo
     echo "   -R: omit release branches."
+    echo "   -M: omit maint branches."
 }
 
 # list : just a list of branch names.
@@ -27,9 +28,10 @@ function usage()
 # suffix: write a list of suffixes.
 # merge: branch, upstream, path, suffix, upstream suffix.
 mode="list"
+skip_maint_branches="no"
 skip_release_branches="no"
 
-while getopts "hblmsR" opt ; do
+while getopts "hblmsRM" opt ; do
     case "$opt" in
         h) usage
            exit 0
@@ -41,6 +43,8 @@ while getopts "hblmsR" opt ; do
         s) mode="suffix"
            ;;
         m) mode="merge"
+           ;;
+        M) skip_maint_branches="yes"
            ;;
         R) skip_release_branches="yes"
            ;;
@@ -80,6 +84,9 @@ branch() {
         suffix="_${brname_nodots#maint-}"
         location="\$GIT_PATH/\$TOR_WKT_NAME/$brname"
         is_maint="yes"
+        if [[ "$skip_maint_branches" = "yes" ]]; then
+            return
+        fi
     elif [[ "$brname" =~ ^release- ]]; then
         suffix="_r${brname_nodots#release-}"
         location="\$GIT_PATH/\$TOR_WKT_NAME/$brname"
