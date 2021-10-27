@@ -5,7 +5,7 @@ set -e
 DIR=$(cd "$(dirname "$0")" && pwd)
 TMP=$(mktemp -d)
 
-location update
+location --quiet update
 location dump "$TMP/geoip-dump.txt"
 
 OLDDIR=$(pwd)
