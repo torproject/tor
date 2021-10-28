@@ -1,3 +1,0 @@
-  o Minor bugfix (onion service):
-    - Improve logging when a bad HS version is given. Fixes bug 40476; bugfix on
-      0.4.6.1-alpha.

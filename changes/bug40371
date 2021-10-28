@@ -1,6 +1,0 @@
-  o Minor bugfixes (compatibility):
-    - Fix compatibility with the most recent Libevent versions, which
-      no longer have an evdns_set_random_bytes() function.  Because
-      this function has been a no-op since Libevent 2.0.4-alpha,
-      it is safe for us to just stop calling it.  Fixes bug 40371;
-      bugfix on 0.2.1.7-alpha.
