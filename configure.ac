@@ -16,7 +16,7 @@ configure_flags="$*"
 # version number changes.  Tor uses it to make sure that it
 # only shuts down for missing "required protocols" when those protocols
 # are listed as required by a consensus after this date.
-AC_DEFINE(APPROX_RELEASE_DATE, ["2021-10-26"], # for 0.4.5.11
+AC_DEFINE(APPROX_RELEASE_DATE, ["2021-10-28"], # for 0.4.5.11-dev
           [Approximate date when this software was released. (Updated when the version changes.)])
 
 # "foreign" means we don't follow GNU package layout standards
