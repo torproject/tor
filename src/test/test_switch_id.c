@@ -31,6 +31,8 @@ static const struct {
   { NULL, 0 }
 };
 
+#if !defined(_WIN32)
+
 /* Returns the first port that we think we can bind to without special
  * permissions. Usually this function returns 1024. */
 static uint16_t
@@ -66,8 +68,6 @@ unprivileged_port_range_start(void)
 
   return result;
 }
-
-#if !defined(_WIN32)
 
 #define PORT_TEST_RANGE_START 600
 #define PORT_TEST_RANGE_END   1024
