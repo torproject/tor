@@ -1622,7 +1622,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
          * let the bridge descriptor fetch subsystem know that we
          * succeeded at getting it -- so we can adjust the retry schedule
          * to stop trying for a while. */
-        learned_bridge_descriptor(router, from_cache);
+        learned_bridge_descriptor(router, from_cache, 0);
       }
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router %s",
@@ -2054,7 +2054,7 @@ routerlist_descriptors_added(smartlist_t *sl, int from_cache)
   control_event_descriptors_changed(sl);
   SMARTLIST_FOREACH_BEGIN(sl, routerinfo_t *, ri) {
     if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
-      learned_bridge_descriptor(ri, from_cache);
+      learned_bridge_descriptor(ri, from_cache, 1);
     if (ri->needs_retest_if_added) {
       ri->needs_retest_if_added = 0;
       dirserv_single_reachability_test(approx_time(), ri);
