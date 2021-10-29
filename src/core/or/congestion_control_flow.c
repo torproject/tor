@@ -447,7 +447,7 @@ flow_control_decide_xoff(edge_connection_t *stream)
 
   if (total_buffered > buffer_limit_xoff) {
     if (!stream->xoff_sent) {
-      log_info(LD_EDGE, "Sending XOFF: %ld %d",
+      log_info(LD_EDGE, "Sending XOFF: %"TOR_PRIuSZ" %d",
                  total_buffered, buffer_limit_xoff);
       tor_trace(TR_SUBSYS(cc), TR_EV(flow_decide_xoff_sending), stream);
 
@@ -544,7 +544,7 @@ flow_control_decide_xon(edge_connection_t *stream, size_t n_written)
     /* If we have no drain start timestamp, and we still have
      * remaining buffer, start the buffering counter */
     if (!stream->drain_start_usec && total_buffered > 0) {
-      log_debug(LD_EDGE, "Began edge buffering: %d %d %ld",
+      log_debug(LD_EDGE, "Began edge buffering: %d %d %"TOR_PRIuSZ,
                  stream->ewma_rate_last_sent,
                  stream->ewma_drain_rate,
                  total_buffered);
@@ -580,7 +580,7 @@ flow_control_decide_xon(edge_connection_t *stream, size_t n_written)
             (uint32_t)n_count_ewma(drain_rate,
                                    stream->ewma_drain_rate,
                                    xon_ewma_cnt);
-        log_debug(LD_EDGE, "Updating drain rate: %d %d %ld",
+        log_debug(LD_EDGE, "Updating drain rate: %d %d %"TOR_PRIuSZ,
                    drain_rate,
                    stream->ewma_drain_rate,
                    total_buffered);
@@ -600,7 +600,7 @@ flow_control_decide_xon(edge_connection_t *stream, size_t n_written)
     if (stream_drain_rate_changed(stream)) {
       /* If we are still buffering and the rate changed, update
        * advisory XON */
-      log_info(LD_EDGE, "Sending rate-change XON: %d %d %ld",
+      log_info(LD_EDGE, "Sending rate-change XON: %d %d %"TOR_PRIuSZ,
                  stream->ewma_rate_last_sent,
                  stream->ewma_drain_rate,
                  total_buffered);
@@ -608,7 +608,7 @@ flow_control_decide_xon(edge_connection_t *stream, size_t n_written)
       circuit_send_stream_xon(stream);
     }
   } else if (total_buffered == 0) {
-    log_info(LD_EDGE, "Sending XON: %d %d %ld",
+    log_info(LD_EDGE, "Sending XON: %d %d %"TOR_PRIuSZ,
                stream->ewma_rate_last_sent,
                stream->ewma_drain_rate,
                total_buffered);
