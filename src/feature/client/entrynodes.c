@@ -132,6 +132,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control_events.h"
+#include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/microdesc.h"
@@ -576,6 +577,18 @@ mark_guard_maybe_reachable(entry_guard_t *guard)
   guard->is_reachable = GUARD_REACHABLE_MAYBE;
   if (guard->is_filtered_guard)
     guard->is_usable_filtered_guard = 1;
+
+  /* Check if it is a bridge and we don't have its descriptor yet */
+  if (guard->bridge_addr && !guard_has_descriptor(guard)) {
+    /* Reset the descriptor fetch retry schedule, so it gives it another
+     * go soon. It's important to keep any "REACHABLE_MAYBE" bridges in
+     * sync with the descriptor fetch schedule, since we will refuse to
+     * use the network until our first primary bridges are either
+     * known-usable or known-unusable. See bug 40396. */
+    download_status_t *dl = get_bridge_dl_status_by_id(guard->identity);
+    if (dl)
+      download_status_reset(dl);
+  }
 }
 
 /**
@@ -2302,6 +2315,12 @@ entry_guards_note_guard_success(guard_selection_t *gs,
   /* If guard was not already marked as reachable, send a GUARD UP signal */
   if (guard->is_reachable != GUARD_REACHABLE_YES) {
     control_event_guard(guard->nickname, guard->identity, "UP");
+
+    /* Schedule a re-assessment of whether we have enough dir info to
+     * use the network. One of our guards has just moved to
+     * GUARD_REACHABLE_YES, so maybe we can resume using the network
+     * now. */
+    router_dir_info_changed();
   }
 
   guard->is_reachable = GUARD_REACHABLE_YES;
@@ -3545,6 +3564,11 @@ entry_guards_changed_for_guard_selection(guard_selection_t *gs)
      entry_guards_update_guards_in_state()
   */
   or_state_mark_dirty(get_or_state(), when);
+
+  /* Schedule a re-assessment of whether we have enough dir info to
+   * use the network. When we add or remove or disable or enable a
+   * guard, the decision could shift. */
+  router_dir_info_changed();
 }
 
 /** Our list of entry guards has changed for the default guard selection
