@@ -739,3 +739,7 @@ lsp:
 	else \
 		echo "No bear command found. On debian, apt install bear"; \
 	fi
+
+# Reproducible tarball. We change the tar options for this.
+dist-reprod:
+	$(MAKE) dist am__tar="$${TAR-tar} --format=gnu --owner=root --group=root --sort=name --mtime=\"`git show --no-patch --format='%ci'`\" -chof - $(distdir)"
