@@ -2782,7 +2782,7 @@ types of statistics that Tor relays collect and publish:
     If ExtraInfoStatistics is enabled, it can also put two more specific
     overload lines in the extra-info document if at least one of these
     conditions is met:
-        - TCP Port exhaustion
+        - TCP Port exhaustion.
         - Connection rate limits have been reached (read and write side).
 
 [[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
