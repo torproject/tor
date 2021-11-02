@@ -132,6 +132,7 @@
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
 #include "feature/control/control_events.h"
+#include "feature/dirclient/dlstatus.h"
 #include "feature/dircommon/directory.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/microdesc.h"
@@ -576,6 +577,18 @@ mark_guard_maybe_reachable(entry_guard_t *guard)
   guard->is_reachable = GUARD_REACHABLE_MAYBE;
   if (guard->is_filtered_guard)
     guard->is_usable_filtered_guard = 1;
+
+  /* Check if it is a bridge and we don't have its descriptor yet */
+  if (guard->bridge_addr && !guard_has_descriptor(guard)) {
+    /* Reset the descriptor fetch retry schedule, so it gives it another
+     * go soon. It's important to keep any "REACHABLE_MAYBE" bridges in
+     * sync with the descriptor fetch schedule, since we will refuse to
+     * use the network until our first primary bridges are either
+     * known-usable or known-unusable. See bug 40396. */
+    download_status_t *dl = get_bridge_dl_status_by_id(guard->identity);
+    if (dl)
+      download_status_reset(dl);
+  }
 }
 
 /**
@@ -2046,6 +2059,14 @@ entry_guard_consider_retry(entry_guard_t *guard)
     get_retry_schedule(guard->failing_since, now, guard->is_primary);
   const time_t last_attempt = guard->last_tried_to_connect;
 
+  /* Check if it is a bridge and we don't have its descriptor yet */
+  if (guard->bridge_addr && !guard_has_descriptor(guard)) {
+    /* We want to leave the retry schedule to fetch_bridge_descriptors(),
+     * so we don't have two retry schedules clobbering each other. See
+     * bugs 40396 and 40497 for details of why we need this exception. */
+    return;
+  }
+
   if (BUG(last_attempt == 0) ||
       now >= last_attempt + delay) {
     /* We should mark this retriable. */
@@ -2271,6 +2292,13 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
            guard->is_primary?"primary ":"",
            guard->confirmed_idx>=0?"confirmed ":"",
            entry_guard_describe(guard));
+
+  /* Schedule a re-assessment of whether we have enough dir info to
+   * use the network. Counterintuitively, *losing* a bridge might actually
+   * be just what we need to *resume* using the network, if we had it in
+   * state GUARD_REACHABLE_MAYBE and we were stalling to learn this
+   * outcome. See bug 40396 for more details. */
+  router_dir_info_changed();
 }
 
 /**
@@ -2295,6 +2323,12 @@ entry_guards_note_guard_success(guard_selection_t *gs,
   /* If guard was not already marked as reachable, send a GUARD UP signal */
   if (guard->is_reachable != GUARD_REACHABLE_YES) {
     control_event_guard(guard->nickname, guard->identity, "UP");
+
+    /* Schedule a re-assessment of whether we have enough dir info to
+     * use the network. One of our guards has just moved to
+     * GUARD_REACHABLE_YES, so maybe we can resume using the network
+     * now. */
+    router_dir_info_changed();
   }
 
   guard->is_reachable = GUARD_REACHABLE_YES;
@@ -3538,6 +3572,11 @@ entry_guards_changed_for_guard_selection(guard_selection_t *gs)
      entry_guards_update_guards_in_state()
   */
   or_state_mark_dirty(get_or_state(), when);
+
+  /* Schedule a re-assessment of whether we have enough dir info to
+   * use the network. When we add or remove or disable or enable a
+   * guard, the decision could shift. */
+  router_dir_info_changed();
 }
 
 /** Our list of entry guards has changed for the default guard selection
