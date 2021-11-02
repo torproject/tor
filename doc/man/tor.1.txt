@@ -2765,6 +2765,26 @@ types of statistics that Tor relays collect and publish:
     is enabled, it will be published as part of the extra-info document.
     (Default: 1)
 
+[[OverloadStatistics]] **OverloadStatistics** *0**|**1**::
+    Relays and bridges only.
+    When this option is enabled, a Tor relay will write an overload general
+    line in the server descriptor if the relay is considered overloaded.
+    (Default: 1)
+     +
+    A relay is considered overloaded if at least one of these conditions is
+    met:
+        - Onionskins are starting to be dropped.
+        - The OOM was invoked.
+
+        - (Exit only) DNS timeout occurs X% of the time over Y seconds (values
+          controlled by consensus parameters, see param-spec.txt).
+     +
+    If ExtraInfoStatistics is enabled, it can also put two more specific
+    overload lines in the extra-info document if at least one of these
+    conditions is met:
+        - TCP Port exhaustion.
+        - Connection rate limits have been reached (read and write side).
+
 [[PaddingStatistics]] **PaddingStatistics** **0**|**1**::
     Relays and bridges only.
     When this option is enabled, Tor collects statistics for padding cells
