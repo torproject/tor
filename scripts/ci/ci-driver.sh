@@ -288,7 +288,6 @@ TOR_VERSION=$(grep -m 1 AC_INIT "${CI_SRCDIR}"/configure.ac | sed -e 's/.*\[//; 
 # Tor version.  Only create the variables we need.
 TOR_VER_AT_LEAST_043=no
 TOR_VER_AT_LEAST_044=no
-TOR_VER_AT_LEAST_046=no
 
 # These are the currently supported Tor versions; no need to work with anything
 # ancient in this script.
@@ -316,7 +315,6 @@ case "$TOR_VERSION" in
     0.4.6.*)
         TOR_VER_AT_LEAST_043=yes
         TOR_VER_AT_LEAST_044=yes
-        TOR_VER_AT_LEAST_046=yes
         ;;
 esac
 
