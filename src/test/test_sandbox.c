@@ -331,13 +331,13 @@ struct testcase_t sandbox_tests[] = {
   SANDBOX_TEST_IN_SANDBOX(rename_filename),
 
 /* Currently the sandbox is unable to filter stat() calls on systems where
- * glibc implements this function using the legacy "stat" system call, or where
- * glibc version 2.33 or later is in use and the newer "newfstatat" syscall is
- * available.
+ * glibc implements this function using either of the legacy "stat" or "stat64"
+ * system calls, or where glibc version 2.33 or later is in use and the newer
+ * "newfstatat" syscall is available.
  *
  * Skip testing sandbox_cfg_allow_stat_filename() if it seems the likely the
  * function will have no effect and the test will therefore not succeed. */
-#if !defined(__NR_newfstatat) && (!defined(__NR_stat) || defined(__NR_stat64))
+#if !defined(__NR_stat) && !defined(__NR_stat64) && !defined(__NR_newfstatat)
   SANDBOX_TEST_IN_SANDBOX(stat_filename),
 #else
   SANDBOX_TEST_SKIPPED(stat_filename),
