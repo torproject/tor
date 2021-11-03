@@ -1,0 +1,5 @@
+  o Minor bugfixes (relay):
+    - Reject IPv6-only DirPorts. Our reachability self-test forces DirPorts to
+      be IPv4, but our configuration parser allowed them to be IPv6-only,
+      which led to an assertion failure. Fixes bug 40494; bugfix on
+      0.4.5.1-alpha.
