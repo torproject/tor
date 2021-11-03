@@ -2803,7 +2803,8 @@ details.)
     more than once, but only one advertised DirPort is supported: all
     but one DirPort must have the **NoAdvertise** flag set. (Default: 0) +
      +
-    The same flags are supported here as are supported by ORPort.
+    The same flags are supported here as are supported by ORPort. This port can
+    only be IPv4.
 
 [[DirPortFrontPage]] **DirPortFrontPage** __FILENAME__::
     When this option is set, it takes an HTML file and publishes it as "/" on
