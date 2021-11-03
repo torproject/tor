@@ -2820,7 +2820,8 @@ details.)
     more than once, but only one advertised DirPort is supported: all
     but one DirPort must have the **NoAdvertise** flag set. (Default: 0) +
      +
-    The same flags are supported here as are supported by ORPort.
+    The same flags are supported here as are supported by ORPort. This port can
+    only be IPv4.
      +
     As of Tor 0.4.6.1-alpha, non-authoritative relays (see
     AuthoritativeDirectory) will not publish the DirPort but will still listen

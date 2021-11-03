@@ -352,6 +352,7 @@ check_and_prune_server_ports(smartlist_t *ports,
   int n_orport_listeners = 0;
   int n_dirport_advertised = 0;
   int n_dirport_listeners = 0;
+  int n_dirport_listeners_v4 = 0;
   int n_low_port = 0;
   int r = 0;
 
@@ -362,8 +363,12 @@ check_and_prune_server_ports(smartlist_t *ports,
     if (port->type == CONN_TYPE_DIR_LISTENER) {
       if (! port->server_cfg.no_advertise)
         ++n_dirport_advertised;
-      if (! port->server_cfg.no_listen)
+      if (! port->server_cfg.no_listen) {
         ++n_dirport_listeners;
+        if (port_binds_ipv4(port)) {
+          ++n_dirport_listeners_v4;
+        }
+      }
     } else if (port->type == CONN_TYPE_OR_LISTENER) {
       if (! port->server_cfg.no_advertise) {
         ++n_orport_advertised;
@@ -406,6 +411,12 @@ check_and_prune_server_ports(smartlist_t *ports,
       !options->BridgeRelay) {
     log_warn(LD_CONFIG, "Configured public relay to listen only on an IPv6 "
              "address. Tor needs to listen on an IPv4 address too.");
+    r = -1;
+  }
+  if (n_dirport_advertised && n_dirport_listeners_v4 == 0) {
+    log_warn(LD_CONFIG, "We are listening on a non-IPv4 DirPort. This is not "
+                        "allowed. Consider either setting an IPv4 address or "
+                        "simply removing it because it is not used anymore.");
     r = -1;
   }
 
