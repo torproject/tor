@@ -152,7 +152,11 @@ static sandbox_cfg_t *filter_dynamic = NULL;
 static int filter_nopar_gen[] = {
     SCMP_SYS(access),
     SCMP_SYS(brk),
+#ifdef __NR_clock_gettime64
+    SCMP_SYS(clock_gettime64),
+#else
     SCMP_SYS(clock_gettime),
+#endif
     SCMP_SYS(close),
     SCMP_SYS(clone),
     SCMP_SYS(dup),
