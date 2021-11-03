@@ -599,6 +599,32 @@ sb_chmod(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+#ifdef __i386__
+static int
+sb_chown32(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  sandbox_cfg_t *elem = NULL;
+
+  // for each dynamic parameter filters
+  for (elem = filter; elem != NULL; elem = elem->next) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 && param->syscall
+        == SCMP_SYS(chown32)) {
+      rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(chown32),
+            SCMP_CMP_STR(0, SCMP_CMP_EQ, param->value));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add chown32 syscall, received "
+            "libseccomp error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+#else
 static int
 sb_chown(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
@@ -623,6 +649,7 @@ sb_chown(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   return 0;
 }
+#endif /* defined(__i386__) */
 
 /**
  * Function responsible for setting up the rename syscall for
@@ -1270,7 +1297,11 @@ static sandbox_filter_func_t filter_func[] = {
 #ifdef __NR_mmap2
     sb_mmap2,
 #endif
+#ifdef __i386__
+    sb_chown32,
+#else
     sb_chown,
+#endif
     sb_chmod,
     sb_open,
     sb_openat,
@@ -1544,6 +1575,12 @@ new_element(int syscall, char *value)
   return new_element2(syscall, value, NULL);
 }
 
+#ifdef __i386__
+#define SCMP_chown SCMP_SYS(chown32)
+#else
+#define SCMP_chown SCMP_SYS(chown)
+#endif
+
 #ifdef __NR_stat64
 #define SCMP_stat SCMP_SYS(stat64)
 #else
@@ -1594,7 +1631,7 @@ sandbox_cfg_allow_chown_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(chown), file);
+  elem = new_element(SCMP_chown, file);
 
   elem->next = *cfg;
   *cfg = elem;
