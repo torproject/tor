@@ -282,7 +282,7 @@ fi
 #############################################################################
 # Determine the version of Tor.
 
-TOR_VERSION=$(grep -m 1 AC_INIT ${CI_SRCDIR}/configure.ac | sed -e 's/.*\[//; s/\].*//;')
+TOR_VERSION=$(grep -m 1 AC_INIT "${CI_SRCDIR}"/configure.ac | sed -e 's/.*\[//; s/\].*//;')
 
 # Use variables like these when we need to behave differently depending on
 # Tor version.  Only create the variables we need.
