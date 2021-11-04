@@ -1,0 +1,25 @@
+/* This file contains the definition for the encrypted payload of 
+ * a circuit parameter negotiation request/response portion of the
+ * ntorv3 onionskin handshake. Currently only supports congestion
+ * control params. */
+
+/* Param definitions */
+struct circ_params_request {
+  /* Version */
+  u8 version IN [0];
+
+  /* Is cc supported or not? */
+  u8 cc_supported IN [0, 1];
+}
+
+/* Param definitions */
+struct circ_params_response {
+  /* Version */
+  u8 version IN [0];
+
+  /* Is cc supported or not? */
+  u8 cc_enabled IN [0, 1];
+
+  /* How many cells does a SENDME ack? */
+  u8 sendme_inc_cells;
+}
