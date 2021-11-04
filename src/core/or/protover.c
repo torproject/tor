@@ -385,6 +385,46 @@ protocol_list_supports_protocol_or_later(const char *list,
 /*
  * XXX START OF HAZARDOUS ZONE XXX
  */
+/* All protocol version that this relay version supports. */
+#define PR_CONS_V      "1-2"
+#define PR_DESC_V      "1-2"
+#define PR_DIRCACHE_V  "2"
+#define PR_FLOWCTRL_V  "1-2"
+#define PR_HSDIR_V     "2"
+#define PR_HSINTRO_V   "4-5"
+#define PR_HSREND_V    "1-2"
+#define PR_LINK_V      "1-5"
+#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
+#define PR_LINKAUTH_V  "1,3"
+#else
+#define PR_LINKAUTH_V  "3"
+#endif
+#define PR_MICRODESC_V "1-2"
+#define PR_PADDING_V   "2"
+#define PR_RELAY_V     "1-4"
+
+/** Return the string containing the supported version for the given protocol
+ * type. */
+const char *
+protover_get_supported(const protocol_type_t type)
+{
+  switch (type) {
+  case PRT_CONS: return PR_CONS_V;
+  case PRT_DESC: return PR_DESC_V;
+  case PRT_DIRCACHE: return PR_DIRCACHE_V;
+  case PRT_FLOWCTRL: return PR_FLOWCTRL_V;
+  case PRT_HSDIR: return PR_HSDIR_V;
+  case PRT_HSINTRO:  return PR_HSINTRO_V;
+  case PRT_HSREND: return PR_HSREND_V;
+  case PRT_LINK: return PR_LINK_V;
+  case PRT_LINKAUTH: return PR_LINKAUTH_V;
+  case PRT_MICRODESC: return PR_MICRODESC_V;
+  case PRT_PADDING: return PR_PADDING_V;
+  case PRT_RELAY: return PR_RELAY_V;
+  default:
+    tor_assert_unreached();
+  }
+}
 
 /** Return the canonical string containing the list of protocols
  * that we support.
@@ -431,22 +471,18 @@ protover_get_supported_protocols(void)
    */
 
   return
-    "Cons=1-2 "
-    "Desc=1-2 "
-    "DirCache=2 "
-    "FlowCtrl=1-2 "
-    "HSDir=2 "
-    "HSIntro=4-5 "
-    "HSRend=1-2 "
-    "Link=1-5 "
-#ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
-    "LinkAuth=1,3 "
-#else
-    "LinkAuth=3 "
-#endif
-    "Microdesc=1-2 "
-    "Padding=2 "
-    "Relay=1-4";
+    "Cons=" PR_CONS_V " "
+    "Desc=" PR_DESC_V " "
+    "DirCache=" PR_DIRCACHE_V " "
+    "FlowCtrl=" PR_FLOWCTRL_V " "
+    "HSDir=" PR_HSDIR_V " "
+    "HSIntro=" PR_HSINTRO_V " "
+    "HSRend=" PR_HSREND_V " "
+    "Link=" PR_LINK_V " "
+    "LinkAuth=" PR_LINKAUTH_V " "
+    "Microdesc=" PR_MICRODESC_V " "
+    "Padding=" PR_PADDING_V " "
+    "Relay=" PR_RELAY_V;
 }
 
 /*
