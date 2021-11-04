@@ -275,10 +275,6 @@ circuit_process_stream_xoff(edge_connection_t *conn,
    */
   if (TO_CONN(conn)->type == CONN_TYPE_AP || conn->hs_ident != NULL) {
     uint32_t limit = 0;
-
-    /* TODO: This limit technically needs to come from negotiation,
-     * and be bounds checked for sanity, because the other endpoint
-     * may have a different consensus */
     if (conn->hs_ident)
       limit = xoff_client;
     else
@@ -295,9 +291,6 @@ circuit_process_stream_xoff(edge_connection_t *conn,
       retval = false;
     }
   }
-
-  // TODO: Count how many xoffs we have; log if "too many", for shadow
-  // analysis of chatter. Possibly add to extra-info?
 
   log_info(LD_EDGE, "Got XOFF!");
   connection_stop_reading(TO_CONN(conn));
@@ -371,9 +364,6 @@ circuit_process_stream_xon(edge_connection_t *conn,
   if (TO_CONN(conn)->type == CONN_TYPE_AP || conn->hs_ident != NULL) {
     uint32_t limit = 0;
 
-    /* TODO: This limit technically needs to come from negotiation,
-     * and be bounds checked for sanity, because the other endpoint
-     * may have a different consensus */
     if (conn->hs_ident)
       limit = MIN(xoff_client, xon_rate_bytes);
     else

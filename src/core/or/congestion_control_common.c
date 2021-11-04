@@ -33,6 +33,7 @@
  * section 6.5 including tuning notes. */
 #define CIRCWINDOW_INIT (500)
 #define SENDME_INC_DFLT (50)
+#define CC_ALG_DFLT (CC_ALG_SENDME)
 
 #define CWND_INC_DFLT (50)
 #define CWND_INC_PCT_SS_DFLT (100)
@@ -82,6 +83,8 @@ int32_t cell_queue_high = CELL_QUEUE_HIGH_DFLT;
 int32_t cell_queue_low = CELL_QUEUE_LOW_DFLT;
 uint32_t or_conn_highwater = OR_CONN_HIGHWATER_DFLT;
 uint32_t or_conn_lowwater = OR_CONN_LOWWATER_DFLT;
+uint8_t cc_sendme_inc = SENDME_INC_DFLT;
+static cc_alg_t cc_alg = CC_ALG_DFLT;
 
 /**
  * Update global congestion control related consensus parameter values,
@@ -127,6 +130,22 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
         CWND_MAX_DFLT,
         CWND_MAX_MIN,
         CWND_MAX_MAX);
+
+#define SENDME_INC_MIN 10
+#define SENDME_INC_MAX (1000)
+  cc_sendme_inc =
+    networkstatus_get_param(NULL, "cc_sendme_inc",
+        SENDME_INC_DFLT,
+        SENDME_INC_MIN,
+        SENDME_INC_MAX);
+
+#define CC_ALG_MIN 0
+#define CC_ALG_MAX (NUM_CC_ALGS-1)
+  cc_alg =
+    networkstatus_get_param(NULL, "cc_alg",
+        CC_ALG_DFLT,
+        CC_ALG_MIN,
+        CC_ALG_MAX);
 }
 
 /**
@@ -140,9 +159,10 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
  */
 static void
 congestion_control_init_params(congestion_control_t *cc,
-                               cc_alg_t cc_alg,
-                               int sendme_inc)
+                               const circuit_params_t *params)
 {
+  cc->sendme_inc = params->sendme_inc_cells;
+
 #define CWND_INIT_MIN 100
 #define CWND_INIT_MAX (10000)
   cc->cwnd =
@@ -175,16 +195,7 @@ congestion_control_init_params(congestion_control_t *cc,
         CWND_INC_RATE_MIN,
         CWND_INC_RATE_MAX);
 
-#define SENDME_INC_MIN 10
-#define SENDME_INC_MAX (1000)
-  cc->sendme_inc =
-    networkstatus_get_param(NULL, "cc_sendme_inc",
-        sendme_inc,
-        SENDME_INC_MIN,
-        SENDME_INC_MAX);
-
-  // XXX: this min needs to abide by sendme_inc range rules somehow
-#define CWND_MIN_MIN sendme_inc
+#define CWND_MIN_MIN 20
 #define CWND_MIN_MAX (1000)
   cc->cwnd_min =
     networkstatus_get_param(NULL, "cc_cwnd_min",
@@ -250,6 +261,14 @@ congestion_control_init_params(congestion_control_t *cc,
   }
 }
 
+/** Returns true if congestion control is enabled in the most recent
+ * consensus */
+bool
+congestion_control_enabled(void)
+{
+  return cc_alg != CC_ALG_SENDME;
+}
+
 /**
  * Allocate and initialize fields in congestion control object.
  *
@@ -259,14 +278,14 @@ congestion_control_init_params(congestion_control_t *cc,
  * acks. This parameter will come from circuit negotiation.
  */
 static void
-congestion_control_init(congestion_control_t *cc, cc_alg_t cc_alg,
-                        int sendme_inc)
+congestion_control_init(congestion_control_t *cc,
+                        const circuit_params_t *params)
 {
   cc->sendme_pending_timestamps = smartlist_new();
   cc->sendme_arrival_timestamps = smartlist_new();
 
   cc->in_slow_start = 1;
-  congestion_control_init_params(cc, cc_alg, sendme_inc);
+  congestion_control_init_params(cc, params);
 
   cc->next_cc_event = CWND_UPDATE_RATE(cc);
 }
@@ -277,12 +296,7 @@ congestion_control_new(const circuit_params_t *params)
 {
   congestion_control_t *cc = tor_malloc_zero(sizeof(congestion_control_t));
 
-  /* TODO-324: Use `params` to pick the algorithm and the window. */
-  (void) params;
-
-  // TODO-324: XXX: the alg and the sendme_inc need to be negotiated during
-  // circuit handshake
-  congestion_control_init(cc, CC_ALG_VEGAS, SENDME_INC_DFLT);
+  congestion_control_init(cc, params);
 
   return cc;
 }

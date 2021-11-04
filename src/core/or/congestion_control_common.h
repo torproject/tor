@@ -20,11 +20,6 @@ typedef struct congestion_control_t congestion_control_t;
 
 void congestion_control_free_(congestion_control_t *cc);
 
-/* TODO-324: Whisky Tango Foxtot‽  Nothing calls this function anywhere!
- *
- * It needs to be called client-side and relay-side every time we initialize a
- * circuit!
- */
 struct circuit_params_t;
 congestion_control_t *congestion_control_new(
                                     const struct circuit_params_t *params);
@@ -50,12 +45,15 @@ bool is_monotime_clock_reliable(void);
 
 void congestion_control_new_consensus_params(const networkstatus_t *ns);
 
-/* Ugh, C.. these four are private. Use the getter instead, when
+bool congestion_control_enabled(void);
+
+/* Ugh, C.. these are private. Use the getter instead, when
  * external to the congestion control code. */
 extern uint32_t or_conn_highwater;
 extern uint32_t or_conn_lowwater;
 extern int32_t cell_queue_high;
 extern int32_t cell_queue_low;
+extern uint8_t cc_sendme_inc;
 
 /** Stop writing on an orconn when its outbuf is this large */
 static inline uint32_t
@@ -85,6 +83,13 @@ static inline int32_t
 cell_queue_lowwatermark(void)
 {
   return cell_queue_low;
+}
+
+/** Returns the sendme inc rate cached from the most recent consensus */
+static inline uint8_t
+congestion_control_sendme_inc(void)
+{
+  return cc_sendme_inc;
 }
 
 /**
