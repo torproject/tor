@@ -29,10 +29,11 @@ void onion_handshake_state_release(onion_handshake_state_t *state);
  * Parameters negotiated as part of a circuit handshake.
  */
 typedef struct circuit_params_t {
-  /* placeholder field for congestion control algorithm. Right now this
-   * is always set to zero */
-  int cc_algorithm;
-  int cc_window;
+  /** Is true if congestion control is enabled in consensus or param,
+   * as per congestion_control_enabled() result. */
+  bool cc_enabled;
+  /** The number of cells in a sendme increment. Only used if cc_enabled=1. */
+  uint8_t sendme_inc_cells;
 } circuit_params_t;
 
 int onion_skin_create(int type,
@@ -43,6 +44,7 @@ int onion_skin_create(int type,
 int onion_skin_server_handshake(int type,
                       const uint8_t *onion_skin, size_t onionskin_len,
                       const server_onion_keys_t *keys,
+                      const circuit_params_t *ns_params,
                       uint8_t *reply_out,
                       size_t reply_out_maxlen,
                       uint8_t *keys_out, size_t key_out_len,

@@ -41,15 +41,17 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/relay/routerkeys.h"
+#include "core/or/congestion_control_common.h"
 
 #include "core/or/circuitbuild.h"
 
 #include "core/or/crypt_path_st.h"
 #include "core/or/extend_info_st.h"
+#include "trunnel/circ_params.h"
 
 /* TODO-324: Add this to the specification! */
-const uint8_t NTOR3_CIRC_VERIFICATION[] = "circuit extend";
-const size_t NTOR3_CIRC_VERIFICATION_LEN = 14;
+static const uint8_t NTOR3_CIRC_VERIFICATION[] = "circuit extend";
+static const size_t NTOR3_CIRC_VERIFICATION_LEN = 14;
 
 #define NTOR3_VERIFICATION_ARGS \
   NTOR3_CIRC_VERIFICATION, NTOR3_CIRC_VERIFICATION_LEN
@@ -210,6 +212,93 @@ onion_skin_create(int type,
   return r;
 }
 
+/**
+ * Takes a param request message from the client, compares it to our
+ * consensus parameters, and creates a reply message and output
+ * parameters.
+ *
+ * This function runs in a worker thread, so it can only inspect
+ * arguments and local variables.
+ *
+ * Returns 0 if successful.
+ * Returns -1 on parsing, parameter failure, or reply creation failure.
+ */
+static int
+negotiate_v3_ntor_server_circ_params(const uint8_t *param_request_msg,
+                                     size_t param_request_len,
+                                     const circuit_params_t *our_ns_params,
+                                     circuit_params_t *params_out,
+                                     uint8_t **resp_msg_out,
+                                     size_t *resp_msg_len_out)
+{
+  circ_params_response_t *resp = NULL;
+  circ_params_request_t *param_request = NULL;
+  ssize_t resp_msg_len;
+
+  if (circ_params_request_parse(&param_request, param_request_msg,
+                                param_request_len) < 0) {
+    return -1;
+  }
+
+  /* CC is enabled if the client wants it, and our consensus paramers
+   * allow it. If both are true, its on. If either is false, it's off. */
+  params_out->cc_enabled =
+      circ_params_request_get_cc_supported(param_request) &&
+      our_ns_params->cc_enabled;
+
+  resp = circ_params_response_new();
+
+  if (circ_params_response_set_version(resp, 0) < 0) {
+    circ_params_request_free(param_request);
+    circ_params_response_free(resp);
+    return -1;
+  }
+
+  /* The relay always chooses its sendme_inc, and sends it to the client */
+  params_out->sendme_inc_cells = our_ns_params->sendme_inc_cells;
+
+  if (circ_params_response_set_sendme_inc_cells(resp,
+              our_ns_params->sendme_inc_cells) < 0) {
+    circ_params_request_free(param_request);
+    circ_params_response_free(resp);
+    return -1;
+  }
+
+  /* Use the negotiated cc_enabled value to respond */
+  if (circ_params_response_set_cc_enabled(resp, params_out->cc_enabled) < 0) {
+    circ_params_request_free(param_request);
+    circ_params_response_free(resp);
+    return -1;
+  }
+
+  resp_msg_len = circ_params_response_encoded_len(resp);
+
+  if (resp_msg_len < 0) {
+    circ_params_request_free(param_request);
+    circ_params_response_free(resp);
+    return -1;
+  }
+
+  *resp_msg_out = tor_malloc_zero(resp_msg_len);
+
+  resp_msg_len = circ_params_response_encode(*resp_msg_out, resp_msg_len,
+                                             resp);
+  if (resp_msg_len < 0) {
+    circ_params_request_free(param_request);
+    circ_params_response_free(resp);
+
+    tor_free(*resp_msg_out);
+    return -1;
+  }
+
+  *resp_msg_len_out = (size_t)resp_msg_len;
+
+  circ_params_request_free(param_request);
+  circ_params_response_free(resp);
+
+  return 0;
+}
+
 /* This is the maximum value for keys_out_len passed to
  * onion_skin_server_handshake, plus 16. We can make it bigger if needed:
  * It just defines how many bytes to stack-allocate. */
@@ -226,6 +315,7 @@ int
 onion_skin_server_handshake(int type,
                       const uint8_t *onion_skin, size_t onionskin_len,
                       const server_onion_keys_t *keys,
+                      const circuit_params_t *our_ns_params,
                       uint8_t *reply_out,
                       size_t reply_out_maxlen,
                       uint8_t *keys_out, size_t keys_out_len,
@@ -233,7 +323,7 @@ onion_skin_server_handshake(int type,
                       circuit_params_t *params_out)
 {
   int r = -1;
-  memset(params_out, 0, sizeof(*params_out)); // TODO-324: actually set this!
+  memset(params_out, 0, sizeof(*params_out));
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
@@ -290,6 +380,9 @@ onion_skin_server_handshake(int type,
     uint8_t keys_tmp[MAX_KEYS_TMP_LEN];
     uint8_t *client_msg = NULL;
     size_t client_msg_len = 0;
+    uint8_t *reply_msg = NULL;
+    size_t reply_msg_len = 0;
+
     ntor3_server_handshake_state_t *state = NULL;
 
     if (onion_skin_ntor3_server_handshake_part1(
@@ -303,25 +396,17 @@ onion_skin_server_handshake(int type,
       return -1;
     }
 
-    uint8_t reply_msg[1] = { 0 };
-    size_t reply_msg_len = 1;
-    {
-      /* TODO-324, Okay, we have a message from the client trying to negotiate
-       * parameters.  We need to decide whether the client's request is okay,
-       * what we're going to say in response, and what circuit parameters
-       * we've just negotiated
-       */
-
-      /* NOTE! DANGER, DANGER, DANGER!
-
-         Remember that this function can be run in a worker thread, and so
-         therefore you can't access "global" state that isn't lock-protected.
-
-         CAVEAT HAXX0R!
-      */
-
+    if (negotiate_v3_ntor_server_circ_params(client_msg,
+                                             client_msg_len,
+                                             our_ns_params,
+                                             params_out,
+                                             &reply_msg,
+                                             &reply_msg_len) < 0) {
+      ntor3_server_handshake_state_free(state);
       tor_free(client_msg);
+      return -1;
     }
+    tor_free(client_msg);
 
     uint8_t *server_handshake = NULL;
     size_t server_handshake_len = 0;
@@ -331,12 +416,15 @@ onion_skin_server_handshake(int type,
                reply_msg, reply_msg_len,
                &server_handshake, &server_handshake_len,
                keys_tmp, keys_tmp_len) < 0) {
-      // XXX TODO-324 free some stuff
+      tor_free(reply_msg);
+      ntor3_server_handshake_state_free(state);
       return -1;
     }
+    tor_free(reply_msg);
 
     if (server_handshake_len > reply_out_maxlen) {
-      // XXX TODO-324 free that stuff
+      tor_free(server_handshake);
+      ntor3_server_handshake_state_free(state);
       return -1;
     }
 
@@ -346,6 +434,7 @@ onion_skin_server_handshake(int type,
     memwipe(keys_tmp, 0, keys_tmp_len);
     memwipe(server_handshake, 0, server_handshake_len);
     tor_free(server_handshake);
+    ntor3_server_handshake_state_free(state);
 
     r = (int) server_handshake_len;
   }
@@ -360,6 +449,61 @@ onion_skin_server_handshake(int type,
   }
 
   return r;
+}
+
+/**
+ * Takes a param response message from the exit, compares it to our
+ * consensus parameters for sanity, and creates output parameters
+ * if sane.
+ *
+ * Returns -1 on parsing or insane params, 0 if success.
+ */
+static int
+negotiate_v3_ntor_client_circ_params(const uint8_t *param_response_msg,
+                                     size_t param_response_len,
+                                     circuit_params_t *params_out)
+{
+  circ_params_response_t *param_response = NULL;
+  bool cc_enabled;
+  uint8_t sendme_inc_cells;
+
+  if (circ_params_response_parse(&param_response, param_response_msg,
+                               param_response_len) < 0) {
+    return -1;
+  }
+
+  cc_enabled =
+      circ_params_response_get_cc_enabled(param_response);
+
+  /* If congestion control came back enabled, but we didn't ask for it
+   * because the consensus said no, close the circuit */
+  if (cc_enabled && !congestion_control_enabled()) {
+    circ_params_response_free(param_response);
+    return -1;
+  }
+  params_out->cc_enabled = cc_enabled;
+
+  /* We will only accept this response (and this circuit) if sendme_inc
+   * is within a factor of 2 of our consensus value. We should not need
+   * to change cc_sendme_inc much, and if we do, we can spread out those
+   * changes over smaller increments once every 4 hours. Exits that
+   * violate this range should just not be used. */
+#define MAX_SENDME_INC_NEGOTIATE_FACTOR 2
+
+  sendme_inc_cells =
+      circ_params_response_get_sendme_inc_cells(param_response);
+
+  if (sendme_inc_cells >
+      MAX_SENDME_INC_NEGOTIATE_FACTOR*congestion_control_sendme_inc() ||
+      sendme_inc_cells <
+      congestion_control_sendme_inc()/MAX_SENDME_INC_NEGOTIATE_FACTOR) {
+    circ_params_response_free(param_response);
+    return -1;
+  }
+  params_out->sendme_inc_cells = sendme_inc_cells;
+
+  circ_params_response_free(param_response);
+  return 0;
 }
 
 /** Perform the final (client-side) step of a circuit-creation handshake of
@@ -382,7 +526,7 @@ onion_skin_client_handshake(int type,
   if (handshake_state->tag != type)
     return -1;
 
-  memset(params_out, 0, sizeof(*params_out)); // TODO-324: actually set this!
+  memset(params_out, 0, sizeof(*params_out));
 
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
@@ -450,10 +594,12 @@ onion_skin_client_handshake(int type,
       return -1;
     }
 
-    {
-      // XXXX TODO-324: see what the server said, make sure it's okay, see what
-      // parameters it gave us, make sure we like them, and put them into
-      // `params_out`
+    if (negotiate_v3_ntor_client_circ_params(server_msg,
+                                             server_msg_len,
+                                             params_out) < 0) {
+      tor_free(keys_tmp);
+      tor_free(server_msg);
+      return -1;
     }
     tor_free(server_msg);
 
