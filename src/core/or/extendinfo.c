@@ -36,7 +36,8 @@ extend_info_new(const char *nickname,
                 crypto_pk_t *onion_key,
                 const curve25519_public_key_t *ntor_key,
                 const tor_addr_t *addr, uint16_t port,
-                const protover_summary_flags_t *pv)
+                const protover_summary_flags_t *pv,
+                bool for_exit_use)
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
   if (rsa_id_digest)
@@ -58,9 +59,9 @@ extend_info_new(const char *nickname,
     extend_info_add_orport(info, addr, port);
   }
 
-  if (pv) {
-    info->supports_ntor3_and_param_negotiation =
-      pv->supports_ntor3_and_param_negotiation;
+  if (pv && for_exit_use) {
+    info->exit_supports_congestion_control =
+      pv->supports_congestion_control;
   }
 
   return info;
@@ -96,7 +97,8 @@ extend_info_add_orport(extend_info_t *ei,
  * and IP version config.
  **/
 extend_info_t *
-extend_info_from_node(const node_t *node, int for_direct_connect)
+extend_info_from_node(const node_t *node, int for_direct_connect,
+                      bool for_exit)
 {
   crypto_pk_t *rsa_pubkey = NULL;
   extend_info_t *info = NULL;
@@ -157,7 +159,8 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
                            curve_pubkey,
                            &ap.addr,
                            ap.port,
-                           &node->ri->pv);
+                           &node->ri->pv,
+                           for_exit);
   } else if (valid_addr && node->rs && node->md) {
     info = extend_info_new(node->rs->nickname,
                            node->identity,
@@ -166,7 +169,8 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
                            curve_pubkey,
                            &ap.addr,
                            ap.port,
-                           &node->rs->pv);
+                           &node->rs->pv,
+                           for_exit);
   }
 
   crypto_pk_free(rsa_pubkey);
@@ -225,7 +229,7 @@ extend_info_supports_ntor_v3(const extend_info_t *ei)
 {
   tor_assert(ei);
   return extend_info_supports_ntor(ei) &&
-    ei->supports_ntor3_and_param_negotiation;
+    ei->exit_supports_congestion_control;
 }
 
 /* Does ei have an onion key which it would prefer to use?

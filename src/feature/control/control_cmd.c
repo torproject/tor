@@ -823,7 +823,10 @@ handle_control_extendcircuit(control_connection_t *conn,
   first_node = zero_circ;
   SMARTLIST_FOREACH(nodes, const node_t *, node,
   {
-    extend_info_t *info = extend_info_from_node(node, first_node);
+    /* We treat every hop as an exit to try to negotiate congestion
+     * control, because we have no idea which hop the controller wil
+     * try to use for streams and when */
+    extend_info_t *info = extend_info_from_node(node, first_node, true);
     if (!info) {
       tor_assert_nonfatal(first_node);
       log_warn(LD_CONTROL,

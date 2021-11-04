@@ -2427,7 +2427,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
           /* We might want to connect to an IPv6 bridge for loading
              descriptors so we use the preferred address rather than
              the primary. */
-          extend_info = extend_info_from_node(r, conn->want_onehop ? 1 : 0);
+          extend_info = extend_info_from_node(r, conn->want_onehop ? 1 : 0,
+                         desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL);
           if (!extend_info) {
             log_warn(LD_CIRC,"Could not make a one-hop connection to %s. "
                      "Discarding this circuit.", conn->chosen_exit_name);
@@ -2463,7 +2464,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                                           NULL, /* Ed25519 ID */
                                           NULL, NULL, /* onion keys */
                                           &addr, conn->socks_request->port,
-                                          NULL);
+                                          NULL,
+                                          false);
           } else { /* ! (want_onehop && conn->chosen_exit_name[0] == '$') */
             /* We will need an onion key for the router, and we
              * don't have one. Refuse or relax requirements. */

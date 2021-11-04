@@ -72,6 +72,7 @@
 #include "feature/stats/predict_ports.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/trace/events.h"
+#include "core/or/congestion_control_common.h"
 
 #include "core/or/cell_st.h"
 #include "core/or/cpath_build_state_st.h"
@@ -80,6 +81,7 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "trunnel/circ_params.h"
 
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
@@ -841,7 +843,10 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
    * using the TAP handshake, and CREATE2 otherwise. */
   if (extend_info_supports_ntor(ei)) {
     *cell_type_out = CELL_CREATE2;
-    if (ei->supports_ntor3_and_param_negotiation)
+    /* Only use ntor v3 with exits that support congestion control,
+     * and only when it is enabled. */
+    if (ei->exit_supports_congestion_control &&
+        congestion_control_enabled())
       *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR_V3;
     else
       *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
@@ -1263,10 +1268,12 @@ circuit_finish_handshake(origin_circuit_t *circ,
 
   onion_handshake_state_release(&hop->handshake_state);
 
-  // XXXX TODO-324: use `params` to initialize the congestion control.
-
   if (cpath_init_circuit_crypto(hop, keys, sizeof(keys), 0, 0)<0) {
     return -END_CIRC_REASON_TORPROTOCOL;
+  }
+
+  if (params.cc_enabled) {
+    hop->ccontrol = congestion_control_new(&params);
   }
 
   hop->state = CPATH_STATE_OPEN;
@@ -2068,7 +2075,10 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
       log_warn(LD_CIRC,"Failed to choose an exit server");
       return -1;
     }
-    exit_ei = extend_info_from_node(node, state->onehop_tunnel);
+    exit_ei = extend_info_from_node(node, state->onehop_tunnel,
+                /* for_exit_use */
+                !state->is_internal && TO_CIRCUIT(circ)->purpose ==
+                  CIRCUIT_PURPOSE_C_GENERAL);
     if (BUG(exit_ei == NULL))
       return -1;
   }
@@ -2464,7 +2474,7 @@ onion_extend_cpath(origin_circuit_t *circ)
          primary address, for potentially connecting to an IPv6 OR
          port. Servers always want the primary (IPv4) address. */
       int client = (server_mode(get_options()) == 0);
-      info = extend_info_from_node(r, client);
+      info = extend_info_from_node(r, client, false);
       /* Clients can fail to find an allowed address */
       tor_assert_nonfatal(info || client);
     }
@@ -2472,7 +2482,7 @@ onion_extend_cpath(origin_circuit_t *circ)
     const node_t *r =
       choose_good_middle_server(purpose, state, circ->cpath, cur_len);
     if (r) {
-      info = extend_info_from_node(r, 0);
+      info = extend_info_from_node(r, 0, false);
     }
   }
 
@@ -2597,9 +2607,33 @@ client_circ_negotiation_message(const extend_info_t *ei,
                                 size_t *msg_len_out)
 {
   tor_assert(ei && msg_out && msg_len_out);
-  if (! ei->supports_ntor3_and_param_negotiation)
+  circ_params_request_t params = {0};
+  ssize_t msg_len = 0;
+
+  if (! ei->exit_supports_congestion_control)
     return -1;
 
-  /* TODO-324: fill in the client message that gets sent. */
-  tor_assert_unreached();
+  circ_params_request_set_version(&params, 0);
+
+  circ_params_request_set_cc_supported(&params,
+                                       congestion_control_enabled());
+
+  msg_len = circ_params_request_encoded_len(&params);
+
+  if (msg_len < 0) {
+    return -1;
+  }
+
+  *msg_out = tor_malloc_zero(msg_len);
+
+  msg_len = circ_params_request_encode(*msg_out, msg_len, &params);
+
+  if (msg_len < 0) {
+    tor_free(*msg_out);
+    return -1;
+  }
+
+  *msg_len_out = (size_t)msg_len;
+
+  return 0;
 }

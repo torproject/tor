@@ -367,6 +367,7 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
                                        create_cell->onionskin,
                                        create_cell->handshake_len,
                                        NULL,
+                                       NULL,
                                        created_cell.reply,
                                        sizeof(created_cell.reply),
                                        keys, CPATH_KEY_MATERIAL_LEN,
@@ -380,9 +381,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     }
     created_cell.cell_type = CELL_CREATED_FAST;
     created_cell.handshake_len = len;
-
-    // TODO-324: We should in theory look at params here, though it will
-    // always tell us to use the old-fashioned congestion control.
 
     if (onionskin_answer(circ, &created_cell,
                          (const char *)keys, sizeof(keys),

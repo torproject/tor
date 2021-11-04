@@ -18,8 +18,10 @@ extend_info_t *extend_info_new(const char *nickname,
                                crypto_pk_t *onion_key,
                                const struct curve25519_public_key_t *ntor_key,
                                const tor_addr_t *addr, uint16_t port,
-                               const struct protover_summary_flags_t *pv);
-extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect);
+                               const struct protover_summary_flags_t *pv,
+                               bool for_exit_use);
+extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect,
+                                     bool for_exit);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free_(extend_info_t *info);
 #define extend_info_free(info) \
