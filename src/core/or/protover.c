@@ -423,8 +423,8 @@ protover_get_supported_protocols(void)
     "Cons=1-2 "
     "Desc=1-2 "
     "DirCache=1-2 "
-    "HSDir=1-2 "
-    "HSIntro=3-4 "
+    "HSDir=2 "
+    "HSIntro=4 "
     "HSRend=1-2 "
     "Link=1-5 "
 #ifdef HAVE_WORKING_TOR_TLS_GET_TLSSECRETS
@@ -475,7 +475,7 @@ protover_get_supported_protocols(void)
 const char *
 protover_get_recommended_client_protocols(void)
 {
-  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=2 HSIntro=4 HSRend=1 "
          "Link=4 Microdesc=1-2 Relay=2";
 }
 
@@ -484,7 +484,7 @@ protover_get_recommended_client_protocols(void)
 const char *
 protover_get_recommended_relay_protocols(void)
 {
-  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=2 HSIntro=4 HSRend=1 "
          "Link=4 Microdesc=1-2 Relay=2";
 }
 
@@ -493,7 +493,7 @@ protover_get_recommended_relay_protocols(void)
 const char *
 protover_get_required_client_protocols(void)
 {
-  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=2 HSIntro=4 HSRend=1 "
          "Link=4 Microdesc=1-2 Relay=2";
 }
 
@@ -502,7 +502,7 @@ protover_get_required_client_protocols(void)
 const char *
 protover_get_required_relay_protocols(void)
 {
-  return "Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+  return "Cons=1 Desc=1 DirCache=1 HSDir=2 HSIntro=4 HSRend=1 "
          "Link=3-4 Microdesc=1 Relay=1-2";
 }
 

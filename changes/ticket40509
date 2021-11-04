@@ -1,0 +1,4 @@
+  o Minor bugfix (relay):
+    - Remove the HSDir and HSIntro onion service v2 protocol versions so relay
+      stop advertising that they support them. Fixes bug 40509; bugfix on
+      0.3.5.17.

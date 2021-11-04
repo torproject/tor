@@ -369,12 +369,12 @@ test_protover_supports_version(void *arg)
 /* Highest supported HSv2 introduce protocol version.
  * Hard-coded here, because it does not appear anywhere in the code.
  * It's not clear if we actually support version 2, see #25068. */
-#define PROTOVER_HSINTRO_V2 3
+#define PROTOVER_HSINTRO_V2 4
 
 /* HSv2 Rend and HSDir protocol versions.
  * Hard-coded here, because they do not appear anywhere in the code. */
 #define PROTOVER_HS_RENDEZVOUS_POINT_V2 1
-#define PROTOVER_HSDIR_V2 1
+#define PROTOVER_HSDIR_V2 2
 
 /* DirCache, Desc, Microdesc, and Cons protocol versions.
  * Hard-coded here, because they do not appear anywhere in the code. */
