@@ -714,7 +714,7 @@ get_extend_info_from_intro_point(const hs_service_intro_point_t *ip,
 
   /* In the case of a direct connection (single onion service), it is possible
    * our firewall policy won't allow it so this can return a NULL value. */
-  info = extend_info_from_node(node, direct_conn);
+  info = extend_info_from_node(node, direct_conn, false);
 
  end:
   return info;

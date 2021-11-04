@@ -1698,7 +1698,7 @@ hs_get_extend_info_from_lspecs(const smartlist_t *lspecs,
                             function that needs to initialize congestion
                             control structures based on what the client says.
                          */
-                         NULL);
+                         NULL, false);
  done:
   return info;
 }

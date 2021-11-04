@@ -229,7 +229,9 @@ extend_info_from_router(const routerinfo_t *r, int family)
                          ed_id_key,
                          rsa_pubkey, r->onion_curve25519_pkey,
                          &ap.addr, ap.port,
-                         NULL /* should self-tests use ntor3? */);
+                         /* TODO-324: Should self-test circuits use
+                          * congestion control? */
+                         NULL, false);
   crypto_pk_free(rsa_pubkey);
   return info;
 }
