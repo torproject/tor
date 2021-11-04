@@ -430,13 +430,11 @@ protover_get_supported_protocols(void)
    * XXX: WARNING!
    */
 
-  /* TODO-324: Add a new Relay=* and a new FlowCtrl=* version to indicate
-   * support for Ntorv3 and prop324.  Make sure they get into the spec. */
   return
     "Cons=1-2 "
     "Desc=1-2 "
     "DirCache=2 "
-    "FlowCtrl=1 "
+    "FlowCtrl=1-2 "
     "HSDir=2 "
     "HSIntro=4-5 "
     "HSRend=1-2 "
@@ -448,7 +446,7 @@ protover_get_supported_protocols(void)
 #endif
     "Microdesc=1-2 "
     "Padding=2 "
-    "Relay=1-3";
+    "Relay=1-4";
 }
 
 /*

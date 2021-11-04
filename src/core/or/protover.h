@@ -35,6 +35,8 @@ struct smartlist_t;
 /** The protover version number where relays can consider IPv6 connections
  *  canonical */
 #define PROTOVER_RELAY_CANONICAL_IPV6 3
+/** The protover version number where relays can accept ntorv3 */
+#define PROTOVER_RELAY_NTOR_V3 4
 
 /** The protover version number that signifies HSv3 intro point support */
 #define PROTOVER_HS_INTRO_V3 4
@@ -50,6 +52,9 @@ struct smartlist_t;
 
 /** The protover that signals support for HS circuit setup padding machines */
 #define PROTOVER_HS_SETUP_PADDING 2
+
+/** The protover that signals support for congestion control */
+#define PROTOVER_FLOWCTRL_CC 2
 
 /** List of recognized subprotocols. */
 /// C_RUST_COUPLED: src/rust/protover/ffi.rs `translate_to_rust`
