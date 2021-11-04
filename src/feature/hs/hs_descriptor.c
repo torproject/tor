@@ -61,6 +61,8 @@
 #include "trunnel/ed25519_cert.h" /* Trunnel interface. */
 #include "feature/hs/hs_descriptor.h"
 #include "core/or/circuitbuild.h"
+#include "core/or/congestion_control_common.h"
+#include "core/or/protover.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "feature/dirparse/parsecommon.h"
@@ -69,6 +71,7 @@
 #include "feature/nodelist/torcert.h" /* tor_cert_encode_ed22519() */
 #include "lib/memarea/memarea.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "core/or/versions.h"
 
 #include "core/or/extend_info_st.h"
 
@@ -92,6 +95,7 @@
 #define str_ip_legacy_key "legacy-key"
 #define str_ip_legacy_key_cert "legacy-key-cert"
 #define str_intro_point_start "\n" str_intro_point " "
+#define str_flow_control "flow-control"
 /* Constant string value for the construction to encrypt the encrypted data
  * section. */
 #define str_enc_const_superencryption "hsdir-superencrypted-data"
@@ -138,6 +142,7 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   T1_START(str_create2_formats, R3_CREATE2_FORMATS, CONCAT_ARGS, NO_OBJ),
   T01(str_intro_auth_required, R3_INTRO_AUTH_REQUIRED, GE(1), NO_OBJ),
   T01(str_single_onion, R3_SINGLE_ONION_SERVICE, ARGS, NO_OBJ),
+  T01(str_flow_control, R3_FLOW_CONTROL, GE(2), NO_OBJ),
   END_OF_TABLE
 };
 
@@ -764,6 +769,13 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
 
     if (desc->encrypted_data.single_onion_service) {
       smartlist_add_asprintf(lines, "%s\n", str_single_onion);
+    }
+
+    if (congestion_control_enabled()) {
+      /* Add flow control line into the descriptor. */
+      smartlist_add_asprintf(lines, "%s %s %u\n", str_flow_control,
+                             protover_get_supported(PRT_FLOWCTRL),
+                             congestion_control_sendme_inc());
     }
   }
 
