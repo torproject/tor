@@ -252,6 +252,9 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(sigreturn),
 #endif
     SCMP_SYS(stat),
+#if defined(__i386__) && defined(__NR_statx)
+    SCMP_SYS(statx),
+#endif
     SCMP_SYS(uname),
     SCMP_SYS(wait4),
     SCMP_SYS(write),
