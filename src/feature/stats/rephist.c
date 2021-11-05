@@ -2053,21 +2053,38 @@ rep_hist_note_desc_served(const char * desc)
  *
  * They are reset at every heartbeat.
  * @{ */
-STATIC int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
-STATIC int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+STATIC int onion_handshakes_requested[MAX_ONION_STAT_TYPE+1] = {0};
+STATIC int onion_handshakes_assigned[MAX_ONION_STAT_TYPE+1] = {0};
 /**@}*/
 
 /** Counters keeping the same stats as above but for the entire duration of the
  * process (not reset). */
-static uint64_t stats_n_onionskin_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
-static uint64_t stats_n_onionskin_dropped[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+static uint64_t stats_n_onionskin_assigned[MAX_ONION_STAT_TYPE+1] = {0};
+static uint64_t stats_n_onionskin_dropped[MAX_ONION_STAT_TYPE+1] = {0};
+
+/**
+ * We combine ntorv3 and ntor into the same stat, so we must
+ * use this function to covert the cell type to a stat index.
+ */
+static inline uint16_t
+onionskin_type_to_stat(uint16_t type)
+{
+  if (type == ONION_HANDSHAKE_TYPE_NTOR_V3) {
+    return ONION_HANDSHAKE_TYPE_NTOR;
+  }
+
+  if (BUG(type > MAX_ONION_STAT_TYPE)) {
+    return MAX_ONION_STAT_TYPE; // use ntor if out of range
+  }
+
+  return type;
+}
 
 /** A new onionskin (using the <b>type</b> handshake) has arrived. */
 void
 rep_hist_note_circuit_handshake_requested(uint16_t type)
 {
-  if (type <= MAX_ONION_HANDSHAKE_TYPE)
-    onion_handshakes_requested[type]++;
+  onion_handshakes_requested[onionskin_type_to_stat(type)]++;
 }
 
 /** We've sent an onionskin (using the <b>type</b> handshake) to a
@@ -2075,10 +2092,8 @@ rep_hist_note_circuit_handshake_requested(uint16_t type)
 void
 rep_hist_note_circuit_handshake_assigned(uint16_t type)
 {
-  if (type <= MAX_ONION_HANDSHAKE_TYPE) {
-    onion_handshakes_assigned[type]++;
-    stats_n_onionskin_assigned[type]++;
-  }
+  onion_handshakes_assigned[onionskin_type_to_stat(type)]++;
+  stats_n_onionskin_assigned[onionskin_type_to_stat(type)]++;
 }
 
 /** We've just drop an onionskin (using the <b>type</b> handshake) due to being
@@ -2086,49 +2101,35 @@ rep_hist_note_circuit_handshake_assigned(uint16_t type)
 void
 rep_hist_note_circuit_handshake_dropped(uint16_t type)
 {
-  if (type <= MAX_ONION_HANDSHAKE_TYPE) {
-    stats_n_onionskin_dropped[type]++;
-  }
+  stats_n_onionskin_dropped[onionskin_type_to_stat(type)]++;
 }
 
 /** Get the circuit handshake value that is requested. */
 MOCK_IMPL(int,
 rep_hist_get_circuit_handshake_requested, (uint16_t type))
 {
-  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
-    return 0;
-  }
-  return onion_handshakes_requested[type];
+  return onion_handshakes_requested[onionskin_type_to_stat(type)];
 }
 
 /** Get the circuit handshake value that is assigned. */
 MOCK_IMPL(int,
 rep_hist_get_circuit_handshake_assigned, (uint16_t type))
 {
-  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
-    return 0;
-  }
-  return onion_handshakes_assigned[type];
+  return onion_handshakes_assigned[onionskin_type_to_stat(type)];
 }
 
 /** Get the total number of circuit handshake value that is assigned. */
 MOCK_IMPL(uint64_t,
 rep_hist_get_circuit_n_handshake_assigned, (uint16_t type))
 {
-  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
-    return 0;
-  }
-  return stats_n_onionskin_assigned[type];
+  return stats_n_onionskin_assigned[onionskin_type_to_stat(type)];
 }
 
 /** Get the total number of circuit handshake value that is dropped. */
 MOCK_IMPL(uint64_t,
 rep_hist_get_circuit_n_handshake_dropped, (uint16_t type))
 {
-  if (BUG(type > MAX_ONION_HANDSHAKE_TYPE)) {
-    return 0;
-  }
-  return stats_n_onionskin_dropped[type];
+  return stats_n_onionskin_dropped[onionskin_type_to_stat(type)];
 }
 
 /** Log our onionskin statistics since the last time we were called. */

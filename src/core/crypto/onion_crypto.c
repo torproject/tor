@@ -49,7 +49,6 @@
 #include "core/or/extend_info_st.h"
 #include "trunnel/circ_params.h"
 
-/* TODO-324: Add this to the specification! */
 static const uint8_t NTOR3_CIRC_VERIFICATION[] = "circuit extend";
 static const size_t NTOR3_CIRC_VERIFICATION_LEN = 14;
 

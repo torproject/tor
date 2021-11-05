@@ -89,11 +89,15 @@ uint64_t rep_hist_get_n_dns_request(int type);
 void rep_hist_note_dns_request(int type);
 void rep_hist_note_dns_error(int type, uint8_t error);
 
+/** We combine ntor and ntorv3 stats, so we have 3 stat types:
+ * tap, fast, and ntor. The max type is ntor (2) */
+#define MAX_ONION_STAT_TYPE   ONION_HANDSHAKE_TYPE_NTOR
+
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
-extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
-extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
+extern int onion_handshakes_requested[MAX_ONION_STAT_TYPE+1];
+extern int onion_handshakes_assigned[MAX_ONION_STAT_TYPE+1];
 #endif
 
 #ifdef REPHIST_PRIVATE
