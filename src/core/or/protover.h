@@ -73,6 +73,10 @@ bool protover_list_is_invalid(const char *s);
 int protover_all_supported(const char *s, char **missing);
 int protover_is_supported_here(protocol_type_t pr, uint32_t ver);
 const char *protover_get_supported_protocols(void);
+const char *protover_get_recommended_client_protocols(void);
+const char *protover_get_recommended_relay_protocols(void);
+const char *protover_get_required_client_protocols(void);
+const char *protover_get_required_relay_protocols(void);
 
 char *protover_compute_vote(const struct smartlist_t *list_of_proto_strings,
                             int threshold);
