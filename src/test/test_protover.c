@@ -606,10 +606,10 @@ test_protover_vote_roundtrip_ours(void *args)
   (void) args;
   const char *examples[] = {
     protover_get_supported_protocols(),
-    DIRVOTE_RECOMMEND_RELAY_PROTO,
-    DIRVOTE_RECOMMEND_CLIENT_PROTO,
-    DIRVOTE_REQUIRE_RELAY_PROTO,
-    DIRVOTE_REQUIRE_CLIENT_PROTO,
+    protover_get_recommended_client_protocols(),
+    protover_get_recommended_relay_protocols(),
+    protover_get_required_client_protocols(),
+    protover_get_required_relay_protocols(),
   };
   unsigned u;
   smartlist_t *votes = smartlist_new();
