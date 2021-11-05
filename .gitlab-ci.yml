@@ -111,6 +111,14 @@ debian-minimal:
   script:
     - ./scripts/ci/ci-driver.sh
 
+# Minmal check on debian/i386: just make, make check.
+#
+debian-i386-minimal:
+  image: i386/debian:buster
+  <<: *debian-template
+  script:
+    - ./scripts/ci/ci-driver.sh
+
 #####
 # Run "make check" with a hardened clang on debian stable.  This takes
 # care of a hardening check, and a compile-with-clang check.
