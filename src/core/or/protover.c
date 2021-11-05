@@ -376,6 +376,10 @@ protocol_list_supports_protocol_or_later(const char *list,
   return contains;
 }
 
+/*
+ * XXX START OF HAZARDOUS ZONE XXX
+ */
+
 /** Return the canonical string containing the list of protocols
  * that we support.
  **/
@@ -383,25 +387,37 @@ protocol_list_supports_protocol_or_later(const char *list,
 const char *
 protover_get_supported_protocols(void)
 {
+
   /*
-   * WARNING!
+   * XXX: WARNING!
    *
    * Be EXTREMELY CAREFUL when *removing* versions from this list.  If you
    * remove an entry while it still appears as "recommended" in the consensus,
-   * you'll cause all the instances without it to warn.  If you remove an entry
-   * while it still appears as "required" in the consensus, you'll cause
-   * all the instances without it to refuse to connect to the network, and
-   * shut down.
+   * you'll cause all the instances without it to warn.
    *
-   * If you need to remove a version from this list, you need to make sure
-   * that it is not listed in the _current consensuses_: just removing it from
-   * the required list in dirvote.c is NOT ENOUGH.  You need to remove it from
-   * the required list dirvote.c, and THEN let the authorities update and vote
-   * on new consensuses without it.  Only once those consensuses are out is
-   * it safe to remove from this list.
+   * If you remove an entry while it still appears as "required" in the
+   * consensus, you'll cause all the instances without it to refuse to connect
+   * to the network, and shut down.
    *
-   * WARNING!
+   * If you need to remove a version from this list, you need to make sure that
+   * it is not listed in the _current consensuses_: just removing it from the
+   * required list below is NOT ENOUGH.  You need to remove it from the
+   * required list, and THEN let the authorities update and vote on new
+   * consensuses without it. Only once those consensuses are out is it safe to
+   * remove from this list.
+   *
+   * One concrete example of a very dangerous race that could occur:
+   *
+   * If the client required protocol "HSDir=1-2" is then changed in the code
+   * and released to "HSDir=2" while the consensus stills lists "HSDir=1-2",
+   * then these clients, even very recent ones, will shutdown because they
+   * don't support "HSDir=1".
+   *
+   * And so, changes need to be done in lockstep as described above.
+   *
+   * XXX: WARNING!
    */
+
   return
     "Cons=1-2 "
     "Desc=1-2 "
@@ -418,6 +434,73 @@ protover_get_supported_protocols(void)
     "Microdesc=1-2 "
     "Relay=1-2";
 }
+
+/*
+ * XXX: WARNING!
+ *
+ * The recommended and required values are hardwired, to avoid disaster. Voting
+ * on the wrong subprotocols here has the potential to take down the network.
+ *
+ * In particular, you need to be EXTREMELY CAREFUL before adding new versions
+ * to the required protocol list.  Doing so will cause every relay or client
+ * that doesn't support those versions to refuse to connect to the network and
+ * shut down.
+ *
+ * Note that this applies to versions, not just protocols!  If you say that
+ * Foobar=8-9 is required, and the client only has Foobar=9, it will shut down.
+ *
+ * It is okay to do this only for SUPER OLD relays that are not supported on
+ * the network anyway.  For clients, we really shouldn't kick them off the
+ * network unless their presence is causing serious active harm.
+ *
+ * The following required and recommended lists MUST be changed BEFORE the
+ * supported list above is changed in order for those lists to appear in the
+ * consensus BEFORE.
+ *
+ * Please, see the warning in protocol_get_supported_versions().
+ *
+ * XXX: WARNING!
+ */
+
+/** Return the recommended client protocols list that directory authorities
+ * put in the consensus. */
+const char *
+protover_get_recommended_client_protocols(void)
+{
+  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+         "Link=4 Microdesc=1-2 Relay=2";
+}
+
+/** Return the recommended relay protocols list that directory authorities
+ * put in the consensus. */
+const char *
+protover_get_recommended_relay_protocols(void)
+{
+  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+         "Link=4 Microdesc=1-2 Relay=2";
+}
+
+/** Return the required client protocols list that directory authorities
+ * put in the consensus. */
+const char *
+protover_get_required_client_protocols(void)
+{
+  return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+         "Link=4 Microdesc=1-2 Relay=2";
+}
+
+/** Return the required relay protocols list that directory authorities
+ * put in the consensus. */
+const char *
+protover_get_required_relay_protocols(void)
+{
+  return "Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+         "Link=3-4 Microdesc=1 Relay=1-2";
+}
+
+/*
+ * XXX END OF HAZARDOUS ZONE XXX
+ */
 
 /** The protocols from protover_get_supported_protocols(), as parsed into a
  * list of proto_entry_t values. Access this via
