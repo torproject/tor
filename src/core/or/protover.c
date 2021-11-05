@@ -462,6 +462,13 @@ protover_get_supported_protocols(void)
  * XXX: WARNING!
  */
 
+/*
+ * NOTE: A keen observer will notice that "LinkAuth" is not recommended nor
+ * required.  This is due to the HAVE_WORKING_TOR_TLS_GET_TLSSECRETS define
+ * that can either set "1" or "1,3" and so we can't enforce one or the other
+ * due to this uncertainty on how tor was built.
+ */
+
 /** Return the recommended client protocols list that directory authorities
  * put in the consensus. */
 const char *
