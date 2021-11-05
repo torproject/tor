@@ -180,7 +180,7 @@ format_protocols_lines_for_vote(const networkstatus_t *v3_ns)
   char *required_relay_protocols_line = NULL;
   char *required_client_protocols_line = NULL;
 
-  recommended_relay_protocols_line =
+   recommended_relay_protocols_line =
     format_line_if_present("recommended-relay-protocols",
                            v3_ns->recommended_relay_protocols);
   recommended_client_protocols_line =
@@ -4577,7 +4577,29 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   v3_out->client_versions = client_versions;
   v3_out->server_versions = server_versions;
 
-  /* These are hardwired, to avoid disaster. */
+  /*
+   * WARNING!
+   *
+   * These values are hardwired, to avoid disaster. Voting on the wrong
+   * subprotocols here has the potential to take down the network.
+   *
+   * In particular, you need to be EXTREMELY CAREFUL before adding new
+   * versions to the required protocol list.  Doing so will cause every relay
+   * or client that doesn't support those versions to refuse to connect to the
+   * network and shut down.
+   *
+   * Note that this applies to versions, not just protocols!  If you say that
+   * Foobar=8-9 is required, and the client only has Foobar=9, it will shut
+   * down.
+   *
+   * It is okay to do this only for SUPER OLD relays that are not supported on
+   * the network anyway.  For clients, we really shouldn't kick them off the
+   * network unless their presence is causing serious active harm.
+   *
+   * See also the warning in protocol_get_supported_versions().
+   *
+   * WARNING!
+   */
   v3_out->recommended_relay_protocols =
     tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
                "Link=4 Microdesc=1-2 Relay=2");

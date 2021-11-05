@@ -377,11 +377,31 @@ protocol_list_supports_protocol_or_later(const char *list,
 }
 
 /** Return the canonical string containing the list of protocols
- * that we support. */
+ * that we support.
+ **/
 /// C_RUST_COUPLED: src/rust/protover/protover.rs `SUPPORTED_PROTOCOLS`
 const char *
 protover_get_supported_protocols(void)
 {
+  /*
+   * WARNING!
+   *
+   * Be EXTREMELY CAREFUL when *removing* versions from this list.  If you
+   * remove an entry while it still appears as "recommended" in the consensus,
+   * you'll cause all the instances without it to warn.  If you remove an entry
+   * while it still appears as "required" in the consensus, you'll cause
+   * all the instances without it to refuse to connect to the network, and
+   * shut down.
+   *
+   * If you need to remove a version from this list, you need to make sure
+   * that it is not listed in the _current consensuses_: just removing it from
+   * the required list in dirvote.c is NOT ENOUGH.  You need to remove it from
+   * the required list dirvote.c, and THEN let the authorities update and vote
+   * on new consensuses without it.  Only once those consensuses are out is
+   * it safe to remove from this list.
+   *
+   * WARNING!
+   */
   return
     "Cons=1-2 "
     "Desc=1-2 "
