@@ -402,18 +402,19 @@ protover_get_supported_protocols(void)
    * If you need to remove a version from this list, you need to make sure that
    * it is not listed in the _current consensuses_: just removing it from the
    * required list below is NOT ENOUGH.  You need to remove it from the
-   * required list, and THEN let the authorities update and vote on new
+   * required list, and THEN let the authorities upgrade and vote on new
    * consensuses without it. Only once those consensuses are out is it safe to
    * remove from this list.
    *
    * One concrete example of a very dangerous race that could occur:
    *
-   * If the client required protocol "HSDir=1-2" is then changed in the code
-   * and released to "HSDir=2" while the consensus stills lists "HSDir=1-2",
-   * then these clients, even very recent ones, will shutdown because they
+   * Suppose that the client supports protocols "HsDir=1-2" and the consensus
+   * requires protocols "HsDir=1-2.  If the client supported protocol list is
+   * then changed to "HSDir=2", while the consensus stills lists "HSDir=1-2",
+   * then these clients, even very recent ones, will shut down because they
    * don't support "HSDir=1".
    *
-   * And so, changes need to be done in lockstep as described above.
+   * And so, changes need to be done in strict sequence as described above.
    *
    * XXX: WARNING!
    */
@@ -454,8 +455,8 @@ protover_get_supported_protocols(void)
  * network unless their presence is causing serious active harm.
  *
  * The following required and recommended lists MUST be changed BEFORE the
- * supported list above is changed in order for those lists to appear in the
- * consensus BEFORE.
+ * supported list above is changed, so that these lists appear in the
+ * consensus BEFORE clients need them.
  *
  * Please, see the warning in protocol_get_supported_versions().
  *
