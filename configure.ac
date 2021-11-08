@@ -1116,7 +1116,7 @@ dnl warnings.
 AC_MSG_CHECKING([for OpenSSL >= 3.0.0])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
-#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER <= 0x30000000L
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x30000000L
 #error "you_have_version_3"
 #endif
    ]], [[]])],
@@ -1133,6 +1133,18 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
    ]], [[]])],
    [ AC_MSG_RESULT([no]) ],
    [ AC_MSG_ERROR([OpenSSL is too old. We require 1.0.1 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
+
+AC_MSG_CHECKING([whether LibreSSL TLS 1.3 APIs are busted])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <openssl/opensslv.h>
+#if defined(LIBRESSL_VERSION_NUMBER) && \
+     LIBRESSL_VERSION_NUMBER >= 0x3020100fL && \
+     LIBRESSL_VERSION_NUMBER < 0x3040100fL
+#error "oh no"
+#endif
+   ]], [[]])],
+   [ AC_MSG_RESULT([no]) ],
+   [ AC_MSG_ERROR([This version of LibreSSL won't work with Tor. Please upgrade to LibreSSL 3.4.1 or later. (Or downgrade to 3.2.0 if you really must.)]) ])
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
