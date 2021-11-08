@@ -945,7 +945,7 @@ dnl warnings.
 AC_MSG_CHECKING([for OpenSSL >= 3.0.0])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
-#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER <= 0x30000000L
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x30000000L
 #error "you_have_version_3"
 #endif
    ]], [[]])],
