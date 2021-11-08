@@ -689,6 +689,7 @@ AC_CHECK_FUNCS(
 	readpassphrase \
 	rint \
 	sigaction \
+	snprintf \
 	socketpair \
 	statvfs \
 	strncasecmp \
@@ -706,7 +707,8 @@ AC_CHECK_FUNCS(
 	uname \
 	usleep \
 	vasprintf \
-	_vscprintf
+	_vscprintf \
+	vsnprintf
 )
 
 # Apple messed up when they added some functions: they
