@@ -1924,11 +1924,9 @@ routerlist_remove_old_routers(void)
     retain = digestset_new(n_max_retain);
   }
 
-  cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   /* Retain anything listed in the consensus. */
   if (consensus) {
     SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
-        if (rs->published_on >= cutoff)
           digestset_add(retain, rs->descriptor_digest));
   }
 
