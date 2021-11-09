@@ -390,7 +390,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     rsf = routerstatus_format_entry(&vrs->status,
                                     vrs->version, vrs->protocols,
                                     NS_V3_VOTE,
-                                    vrs);
+                                    vrs,
+                                    -1);
     if (rsf)
       smartlist_add(chunks, rsf);
 
@@ -618,8 +619,8 @@ compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
    * the descriptor digests matched, so somebody is making SHA1 collisions.
    */
 #define CMP_FIELD(utype, itype, field) do {                             \
-    utype aval = (utype) (itype) a->status.field;                       \
-    utype bval = (utype) (itype) b->status.field;                       \
+    utype aval = (utype) (itype) a->field;                              \
+    utype bval = (utype) (itype) b->field;                              \
     utype u = bval - aval;                                              \
     itype r2 = (itype) u;                                               \
     if (r2 < 0) {                                                       \
@@ -638,8 +639,8 @@ compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
                             CMP_EXACT))) {
     return r;
   }
-  CMP_FIELD(unsigned, int, ipv4_orport);
-  CMP_FIELD(unsigned, int, ipv4_dirport);
+  CMP_FIELD(unsigned, int, status.ipv4_orport);
+  CMP_FIELD(unsigned, int, status.ipv4_dirport);
 
   return 0;
 }
@@ -692,10 +693,10 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
     } else {
       if (cur && (cur_n > most_n ||
                   (cur_n == most_n &&
-                   cur->status.published_on > most_published))) {
+                   cur->published_on > most_published))) {
         most = cur;
         most_n = cur_n;
-        most_published = cur->status.published_on;
+        most_published = cur->published_on;
       }
       cur_n = 1;
       cur = rs;
@@ -703,7 +704,7 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   } SMARTLIST_FOREACH_END(rs);
 
   if (cur_n > most_n ||
-      (cur && cur_n == most_n && cur->status.published_on > most_published)) {
+      (cur && cur_n == most_n && cur->published_on > most_published)) {
     most = cur;
     // most_n = cur_n; // unused after this point.
     // most_published = cur->status.published_on; // unused after this point.
@@ -2047,7 +2048,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       memcpy(rs_out.descriptor_digest, rs->status.descriptor_digest,
              DIGEST_LEN);
       tor_addr_copy(&rs_out.ipv4_addr, &rs->status.ipv4_addr);
-      rs_out.published_on = rs->status.published_on;
+      time_t published_on = rs->published_on;
       rs_out.ipv4_dirport = rs->status.ipv4_dirport;
       rs_out.ipv4_orport = rs->status.ipv4_orport;
       tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
@@ -2276,7 +2277,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
         buf = routerstatus_format_entry(&rs_out, NULL, NULL,
-                                        rs_format, NULL);
+                                        rs_format, NULL, published_on);
         if (buf)
           smartlist_add(chunks, buf);
       }
@@ -4745,6 +4746,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
       dirauth_set_routerstatus_from_routerinfo(rs, node, ri, now,
                                                list_bad_exits,
                                                list_middle_only);
+      vrs->published_on = ri->cache_info.published_on;
 
       if (ri->cache_info.signing_key_cert) {
         memcpy(vrs->ed25519_id,

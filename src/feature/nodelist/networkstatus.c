@@ -2364,7 +2364,7 @@ char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
   return routerstatus_format_entry(rs, NULL, NULL, NS_CONTROL_PORT,
-                                   NULL);
+                                   NULL, -1);
 }
 
 /**
@@ -2396,7 +2396,6 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_hs_dir = node->is_hs_dir;
   rs->is_named = rs->is_unnamed = 0;
 
-  rs->published_on = ri->cache_info.published_on;
   memcpy(rs->identity_digest, node->identity, DIGEST_LEN);
   memcpy(rs->descriptor_digest, ri->cache_info.signed_descriptor_digest,
          DIGEST_LEN);
