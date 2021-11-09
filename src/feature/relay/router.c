@@ -2554,8 +2554,6 @@ mark_my_descriptor_dirty_if_too_old(time_t now)
     rs = networkstatus_vote_find_entry(ns, server_identitykey_digest);
     if (rs == NULL)
       retry_fast_reason = "not listed in consensus";
-    else if (rs->published_on < slow_cutoff)
-      retry_fast_reason = "version listed in consensus is quite old";
     else if (rs->is_staledesc && ns->valid_after > desc_clean_since)
       retry_fast_reason = "listed as stale in consensus";
   }
