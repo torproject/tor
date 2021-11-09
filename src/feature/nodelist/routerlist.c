@@ -2719,17 +2719,20 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         continue; /* We would never use it ourself. */
       }
       if (is_vote && source) {
-        char time_bufnew[ISO_TIME_LEN+1];
-        char time_bufold[ISO_TIME_LEN+1];
+        char old_digest_buf[HEX_DIGEST_LEN+1];
+        const char *old_digest = "none";
         const routerinfo_t *oldrouter;
         oldrouter = router_get_by_id_digest(rs->identity_digest);
-        format_iso_time(time_bufnew, rs->published_on);
-        if (oldrouter)
-          format_iso_time(time_bufold, oldrouter->cache_info.published_on);
+        if (oldrouter) {
+          base16_encode(old_digest_buf, sizeof(old_digest_buf),
+                        oldrouter->cache_info.signed_descriptor_digest,
+                        DIGEST_LEN);
+          old_digest = old_digest_buf;
+        }
         log_info(LD_DIR, "Learned about %s (%s vs %s) from %s's vote (%s)",
                  routerstatus_describe(rs),
-                 time_bufnew,
-                 oldrouter ? time_bufold : "none",
+                 hex_str(rs->descriptor_digest, DIGEST_LEN),
+                 old_digest,
                  source->nickname, oldrouter ? "known" : "unknown");
       }
       smartlist_add(downloadable, rs->descriptor_digest);
