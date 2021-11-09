@@ -1613,7 +1613,6 @@ routerstatus_has_visibly_changed(const routerstatus_t *a,
          a->is_hs_dir != b->is_hs_dir ||
          a->is_staledesc != b->is_staledesc ||
          a->has_bandwidth != b->has_bandwidth ||
-         a->published_on != b->published_on ||
          a->ipv6_orport != b->ipv6_orport ||
          a->is_v2_dir != b->is_v2_dir ||
          a->bandwidth_kb != b->bandwidth_kb ||
