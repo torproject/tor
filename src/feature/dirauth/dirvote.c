@@ -2048,13 +2048,27 @@ networkstatus_compute_consensus(smartlist_t *votes,
       memcpy(rs_out.descriptor_digest, rs->status.descriptor_digest,
              DIGEST_LEN);
       tor_addr_copy(&rs_out.ipv4_addr, &rs->status.ipv4_addr);
-      time_t published_on = rs->published_on;
       rs_out.ipv4_dirport = rs->status.ipv4_dirport;
       rs_out.ipv4_orport = rs->status.ipv4_orport;
       tor_addr_copy(&rs_out.ipv6_addr, &alt_orport.addr);
       rs_out.ipv6_orport = alt_orport.port;
       rs_out.has_bandwidth = 0;
       rs_out.has_exitsummary = 0;
+
+      time_t published_on = rs->published_on;
+
+      /* Starting with this consensus method, we no longer include a
+         meaningful published_on time for microdescriptor consensuses.  This
+         makes their diffs smaller and more compressible.
+
+         We need to keep including a meaningful published_on time for NS
+         consensuses, however, until 035 relays are all obsolete. (They use
+         it for a purpose similar to the current StaleDesc flag.)
+      */
+      if (consensus_method >= MIN_METHOD_TO_SUPPRESS_MD_PUBLISHED &&
+          flavor == FLAV_MICRODESC) {
+        published_on = -1;
+      }
 
       if (chosen_name && !naming_conflict) {
         strlcpy(rs_out.nickname, chosen_name, sizeof(rs_out.nickname));

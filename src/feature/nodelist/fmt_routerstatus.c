@@ -58,7 +58,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
   char digest64[BASE64_DIGEST_LEN+1];
   smartlist_t *chunks = smartlist_new();
 
-  if (declared_publish_time != -1) {
+  if (declared_publish_time >= 0) {
     format_iso_time(published, declared_publish_time);
   } else if (vrs) {
     format_iso_time(published, vrs->published_on);
