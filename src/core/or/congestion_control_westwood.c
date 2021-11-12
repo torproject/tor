@@ -64,10 +64,10 @@ congestion_control_westwood_set_params(congestion_control_t *cc)
 }
 
 /**
- * Return the RTT threshhold that signals congestion.
+ * Return the RTT threshold that signals congestion.
  *
  * Computed from the threshold parameter that specifies a
- * percent between the min and max RTT obseved so far.
+ * percent between the min and max RTT observed so far.
  */
 static inline uint64_t
 westwood_rtt_signal(const congestion_control_t *cc)
@@ -110,7 +110,7 @@ westwood_is_congested(const congestion_control_t *cc)
       westwood_rtt_signal(cc) - cc->min_rtt_usec < USEC_ONE_MS)
     return false;
 
-  /* If the EWMA-smoothed RTT exceeds the westwood RTT threshhold,
+  /* If the EWMA-smoothed RTT exceeds the westwood RTT threshold,
    * then it is congestion. */
   if (cc->ewma_rtt_usec > westwood_rtt_signal(cc))
     return true;
@@ -122,11 +122,11 @@ westwood_is_congested(const congestion_control_t *cc)
  * Process a SENDME and update the congestion window according to the
  * rules specified in TOR_WESTWOOD of Proposal #324.
  *
- * Essentially, this algorithm uses a threshhold of 'rtt_thresh', which
+ * Essentially, this algorithm uses a threshold of 'rtt_thresh', which
  * is a midpoint between the min and max RTT. If the RTT exceeds this
- * threshhold, then queue delay due to congestion is assumed to be present,
- * and the algirithm reduces the congestion window. If the RTT is below the
- * threshhold, the circuit is not congested (ie: queue delay is low), and we
+ * threshold, then queue delay due to congestion is assumed to be present,
+ * and the algorithm reduces the congestion window. If the RTT is below the
+ * threshold, the circuit is not congested (ie: queue delay is low), and we
  * increase the congestion window.
  *
  * The congestion window is updated only once every congestion window worth of

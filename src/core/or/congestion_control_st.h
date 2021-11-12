@@ -19,12 +19,12 @@ typedef enum {
   CC_ALG_SENDME = 0,
 
   /**
-   * Prop#324 TOR_WESTWOOD - Deliberately agressive. Westwood may not even
+   * Prop#324 TOR_WESTWOOD - Deliberately aggressive. Westwood may not even
    * converge to fairness in some cases because max RTT will also increase
-   * on congesgtion, which boosts the Westwood RTT congestion threshhold. So it
+   * on congestion, which boosts the Westwood RTT congestion threshold. So it
    * can cause runaway queue bloat, which may or may not lead to a robot
    * uprising... Ok that's Westworld, not Westwood. Still, we need to test
-   * Vegas and NOLA against something more agressive to ensure they do not
+   * Vegas and NOLA against something more aggressive to ensure they do not
    * starve in the presence of cheaters. We also need to make sure cheaters
    * trigger the oomkiller in those cases.
    */
@@ -32,7 +32,7 @@ typedef enum {
 
   /**
    * Prop#324 TOR_VEGAS - TCP Vegas-style BDP tracker. Because Vegas backs off
-   * whenever it detects queue delay, it can be beaten out by more agressive
+   * whenever it detects queue delay, it can be beaten out by more aggressive
    * algs. However, in live network testing, it seems to do just fine against
    * current SENDMEs. It outperforms Westwood and does not stall. */
   CC_ALG_VEGAS = 2,
@@ -40,7 +40,7 @@ typedef enum {
   /**
    * Prop#324: TOR_NOLA - NOLA looks the BDP right in the eye and uses it
    * immediately as CWND. No slow start, no other congestion signals, no delay,
-   * no bullshit. Like TOR_VEGAS, it also uses agressive BDP estimates, to
+   * no bullshit. Like TOR_VEGAS, it also uses aggressive BDP estimates, to
    * avoid out-competition. It seems a bit better throughput than Vegas,
    * but its agressive BDP and rapid updates may lead to more queue latency. */
   CC_ALG_NOLA = 3,
@@ -147,7 +147,7 @@ struct congestion_control_t {
   /**
    * For steady-state: the number of sendme acks until we will acknowledge
    * a congestion event again. It starts out as the number of sendme acks
-   * in a congestion windowm and is decremented each ack. When this reaches
+   * in a congestion window and is decremented each ack. When this reaches
    * 0, it means we should examine our congestion algorithm conditions.
    * In this way, we only react to one congestion event per congestion window.
    *
@@ -193,7 +193,7 @@ struct congestion_control_t {
   bdp_alg_t bdp_alg;
 
   /** Algorithm-specific parameters. The specific struct that is used
-   * depends upon the algoritghm selected by the cc_alg parameter.
+   * depends upon the algorithm selected by the cc_alg parameter.
    * These should not be accessed anywhere other than the algorithm-specific
    * files. */
   union {
@@ -204,7 +204,7 @@ struct congestion_control_t {
 };
 
 /**
- * Returns the number of sendme acks we will recieve before we update cwnd.
+ * Returns the number of sendme acks we will receive before we update cwnd.
  *
  * Congestion control literature recommends only one update of cwnd per
  * cwnd worth of acks. However, we can also tune this to be more frequent

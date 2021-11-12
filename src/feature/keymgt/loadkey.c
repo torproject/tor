@@ -712,7 +712,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 }
 
 /**
- * Create a new signing key and (optionally) certficiate; do not read or write
+ * Create a new signing key and (optionally) certificate; do not read or write
  * from disk.  See ed_key_init_from_file() for more information.
  */
 ed25519_keypair_t *

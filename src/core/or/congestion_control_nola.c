@@ -52,7 +52,7 @@ congestion_control_nola_set_params(congestion_control_t *cc)
 *
 * To handle the case where the local orconn blocks, TOR_NOLA uses
 * the 'piecewise' BDP estimate, which uses more a conservative BDP
-* estimate method when blocking occurrs, but a more aggressive BDP
+* estimate method when blocking occurs, but a more aggressive BDP
 * estimate when there is no local blocking. This minimizes local
 * client queues.
 */

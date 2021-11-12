@@ -376,7 +376,7 @@ congestion_control_new(const circuit_params_t *params, cc_path_t path)
 }
 
 /**
- * Free a congestion control object and its asssociated state.
+ * Free a congestion control object and its associated state.
  */
 void
 congestion_control_free_(congestion_control_t *cc)

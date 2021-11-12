@@ -424,7 +424,7 @@ def bug_html(m):
     try:
         disp_prefix, url_prefix = ISSUE_PREFIX_MAP[prefix]
     except KeyError:
-        print("Can't figure out URL for {}{}".formt(prefix,bugno),
+        print("Can't figure out URL for {}{}".format(prefix,bugno),
               file=sys.stderr)
         return "{} {}{}".format(kind, prefix, bugno)
 
