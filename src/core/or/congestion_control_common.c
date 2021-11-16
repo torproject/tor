@@ -26,6 +26,7 @@
 #include "core/or/trace_probes_cc.h"
 #include "lib/time/compat_time.h"
 #include "feature/nodelist/networkstatus.h"
+#include "app/config/config.h"
 
 /* Consensus parameter defaults.
  *
@@ -34,6 +35,7 @@
 #define CIRCWINDOW_INIT (500)
 #define SENDME_INC_DFLT (50)
 #define CC_ALG_DFLT (CC_ALG_SENDME)
+#define CC_ALG_DFLT_ALWAYS (CC_ALG_VEGAS)
 
 #define CWND_INC_DFLT (50)
 #define CWND_INC_PCT_SS_DFLT (100)
@@ -161,6 +163,7 @@ static void
 congestion_control_init_params(congestion_control_t *cc,
                                const circuit_params_t *params)
 {
+  const or_options_t *opts = get_options();
   cc->sendme_inc = params->sendme_inc_cells;
 
 #define CWND_INIT_MIN 100
@@ -219,13 +222,14 @@ congestion_control_init_params(congestion_control_t *cc,
         BWE_SENDME_MIN_MIN,
         BWE_SENDME_MIN_MAX);
 
-#define CC_ALG_MIN 0
-#define CC_ALG_MAX (NUM_CC_ALGS-1)
-  cc->cc_alg =
-    networkstatus_get_param(NULL, "cc_alg",
-        cc_alg,
-        CC_ALG_MIN,
-        CC_ALG_MAX);
+  /* If the consensus says to use OG sendme, but torrc has
+   * always-enabled, use the default "always" alg (vegas),
+   * else use cached conensus alg. */
+  if (cc_alg == CC_ALG_SENDME && opts->AlwaysCongestionControl) {
+    cc->cc_alg = CC_ALG_DFLT_ALWAYS;
+  } else {
+    cc->cc_alg = cc_alg;
+  }
 
   bdp_alg_t default_bdp_alg = 0;
 
@@ -262,10 +266,36 @@ congestion_control_init_params(congestion_control_t *cc,
 }
 
 /** Returns true if congestion control is enabled in the most recent
- * consensus */
+ * consensus, or if __AlwaysCongestionControl is set to true.
+ *
+ * Note that this function (and many many other functions) should not
+ * be called from the CPU worker threads when handling congestion
+ * control negotiation. Relevant values are marshaled into the
+ * `circuit_params_t` struct, in order to be used in worker threads
+ * without touching global state. Use those values in CPU worker
+ * threads, instead of calling this function.
+ *
+ * The danger is still present, in your time, as it was in ours.
+ */
 bool
 congestion_control_enabled(void)
 {
+  const or_options_t *opts = NULL;
+
+  tor_assert_nonfatal_once(in_main_thread());
+
+  opts = get_options();
+
+  /* If the user has set "__AlwaysCongesttionControl",
+   * then always try to negotiate congestion control, regardless
+   * of consensus param. This is to be used for testing and sbws.
+   *
+   * Note that we do *not* allow disabling congestion control
+   * if the consensus says to use it, as this is bad for queueing
+   * and fairness. */
+  if (opts->AlwaysCongestionControl)
+    return 1;
+
   return cc_alg != CC_ALG_SENDME;
 }
 

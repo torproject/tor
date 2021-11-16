@@ -675,6 +675,7 @@ static const config_var_t option_vars_[] = {
   V(VanguardsLiteEnabled,        AUTOBOOL, "auto"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   OBSOLETE("UseNTorHandshake"),
+  VAR("__AlwaysCongestionControl",  BOOL, AlwaysCongestionControl, "0"),
   V_IMMUTABLE(User,              STRING,   NULL),
   OBSOLETE("UserspaceIOCPBuffers"),
   OBSOLETE("V1AuthoritativeDirectory"),
