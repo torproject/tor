@@ -233,6 +233,10 @@ test_pt_protocol(void *arg)
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
 
+  strlcpy(line,"CMETHOD-ERROR fakename not supported",sizeof(line));
+  handle_proxy_line(line, mp);
+  tt_assert(mp->conf_state == PT_PROTO_ACCEPTING_METHODS);
+
   strlcpy(line,"CMETHODS DONE",sizeof(line));
   handle_proxy_line(line, mp);
   tt_assert(mp->conf_state == PT_PROTO_CONFIGURED);

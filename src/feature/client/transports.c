@@ -843,7 +843,7 @@ handle_methods_done(const managed_proxy_t *mp)
   tor_assert(mp->transports);
 
   if (smartlist_len(mp->transports) == 0)
-    log_notice(LD_GENERAL, "Managed proxy '%s' was spawned successfully, "
+    log_warn(LD_GENERAL, "Managed proxy '%s' was spawned successfully, "
                "but it didn't launch any pluggable transport listeners!",
                mp->argv[0]);
 
@@ -904,13 +904,13 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
       goto err;
 
     parse_client_method_error(line);
-    goto err;
+    return;
   } else if (!strcmpstart(line, PROTO_SMETHOD_ERROR)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
     parse_server_method_error(line);
-    goto err;
+    return;
   } else if (!strcmpstart(line, PROTO_CMETHOD)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
