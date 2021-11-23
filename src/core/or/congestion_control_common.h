@@ -118,6 +118,8 @@ n_count_ewma(uint64_t curr, uint64_t prev, uint64_t N)
  */
 #ifdef TOR_UNIT_TESTS
 
+void congestion_control_set_cc_enabled(void);
+
 #endif /* defined(TOR_UNIT_TESTS) */
 
 #endif /* defined(TOR_CONGESTION_CONTROL_PRIVATE) */

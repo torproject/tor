@@ -78,6 +78,8 @@ static bool congestion_control_update_circuit_bdp(congestion_control_t *,
                                                   const circuit_t *,
                                                   const crypt_path_t *,
                                                   uint64_t, uint64_t);
+/* For unit tests */
+void congestion_control_set_cc_enabled(void);
 
 /* Consensus parameters cached. The non static ones are extern. */
 static uint32_t cwnd_max = CWND_MAX_DFLT;
@@ -297,6 +299,16 @@ congestion_control_enabled(void)
     return 1;
 
   return cc_alg != CC_ALG_SENDME;
+}
+
+/**
+ * For unit tests only: set the cached consensus cc alg to
+ * specified value.
+ */
+void
+congestion_control_set_cc_enabled(void)
+{
+  cc_alg = CC_ALG_VEGAS;
 }
 
 /**
