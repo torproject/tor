@@ -903,12 +903,20 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
+    /* Log the error but do not kill the managed proxy.
+     * A proxy may contain several transports and if one
+     * of them is misconfigured, we still want to use
+     * the other transports. A managed proxy with no usable
+     * transports will log a warning.
+     * See https://gitlab.torproject.org/tpo/core/tor/-/issues/7362
+     * */
     parse_client_method_error(line);
     return;
   } else if (!strcmpstart(line, PROTO_SMETHOD_ERROR)) {
     if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
       goto err;
 
+    /* Log the error but do not kill the managed proxy */
     parse_server_method_error(line);
     return;
   } else if (!strcmpstart(line, PROTO_CMETHOD)) {

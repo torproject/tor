@@ -1,0 +1,4 @@
+  o Minor bugfix (pluggable transport):
+    - Do not kill a managed proxy if one of its transport configurations
+      emits a method error. Instead log a warning and continue processing
+      method arguments. Closes ticket 7362.
