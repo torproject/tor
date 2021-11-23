@@ -350,6 +350,127 @@ test_onion_queues(void *arg)
   tor_free(onionskin);
 }
 
+/**
+ * Test onion queue priority, separation, and resulting
+ * ordering.
+ *
+ * create and add a mix of TAP, NTOR2, and NTORv3. Ensure
+ * they all end up in the right queue. In particular, ntorv2
+ * and ntorv3 should share a queue, but TAP should be separate,
+ * and lower prioritt.
+ *
+ * We test this by way of adding TAP first, and then an interleaving
+ * order of ntor2 and ntor3, and check that the ntor2 and ntor3 are
+ * still interleaved, but TAP comes last. */
+static void
+test_onion_queue_order(void *arg)
+{
+  uint8_t buf_tap[TAP_ONIONSKIN_CHALLENGE_LEN] = {0};
+  uint8_t buf_ntor[NTOR_ONIONSKIN_LEN] = {0};
+  uint8_t buf_ntor3[CELL_PAYLOAD_SIZE] = {0};
+
+  or_circuit_t *circ_tap = or_circuit_new(0, NULL);
+  or_circuit_t *circ_ntor = or_circuit_new(0, NULL);
+  or_circuit_t *circ_ntor3 = or_circuit_new(0, NULL);
+
+  create_cell_t *onionskin = NULL;
+  create_cell_t *create_tap1 = tor_malloc_zero(sizeof(create_cell_t));
+  create_cell_t *create_ntor1 = tor_malloc_zero(sizeof(create_cell_t));
+  create_cell_t *create_ntor2 = tor_malloc_zero(sizeof(create_cell_t));
+  create_cell_t *create_v3ntor1 = tor_malloc_zero(sizeof(create_cell_t));
+  create_cell_t *create_v3ntor2 = tor_malloc_zero(sizeof(create_cell_t));
+  (void)arg;
+
+  create_cell_init(create_tap1, CELL_CREATE, ONION_HANDSHAKE_TYPE_TAP,
+                   TAP_ONIONSKIN_CHALLENGE_LEN, buf_tap);
+  create_cell_init(create_ntor1, CELL_CREATE, ONION_HANDSHAKE_TYPE_NTOR,
+                   NTOR_ONIONSKIN_LEN, buf_ntor);
+  create_cell_init(create_ntor2, CELL_CREATE, ONION_HANDSHAKE_TYPE_NTOR,
+                   NTOR_ONIONSKIN_LEN, buf_ntor);
+  create_cell_init(create_v3ntor1, CELL_CREATE2, ONION_HANDSHAKE_TYPE_NTOR_V3,
+                   NTOR_ONIONSKIN_LEN, buf_ntor3);
+  create_cell_init(create_v3ntor2, CELL_CREATE2, ONION_HANDSHAKE_TYPE_NTOR_V3,
+                   NTOR_ONIONSKIN_LEN, buf_ntor3);
+
+  /* sanity check queue init */
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+
+  /* Add tap first so we can ensure it comes out last */
+  tt_int_op(0,OP_EQ, onion_pending_add(circ_tap, create_tap1));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+
+  /* Now add interleaving ntor2 and ntor3, to ensure they share
+   * the same queue and come out in this order */
+  tt_int_op(0,OP_EQ, onion_pending_add(circ_ntor, create_ntor1));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+
+  tt_int_op(0,OP_EQ, onion_pending_add(circ_ntor3, create_v3ntor1));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(2,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(2,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+
+  tt_int_op(0,OP_EQ, onion_pending_add(circ_ntor, create_ntor2));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(3,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(3,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+
+  tt_int_op(0,OP_EQ, onion_pending_add(circ_ntor3, create_v3ntor2));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(4,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(4,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+
+  /* Now remove 5 tasks, ensuring order and queue sizes */
+  tt_ptr_op(circ_ntor, OP_EQ, onion_next_task(&onionskin));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(3,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(3,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+  tt_ptr_op(onionskin, OP_EQ, create_ntor1);
+
+  tt_ptr_op(circ_ntor3, OP_EQ, onion_next_task(&onionskin));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(2,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(2,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+  tt_ptr_op(onionskin, OP_EQ, create_v3ntor1);
+
+  tt_ptr_op(circ_ntor, OP_EQ, onion_next_task(&onionskin));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+  tt_ptr_op(onionskin, OP_EQ, create_ntor2);
+
+  tt_ptr_op(circ_ntor3, OP_EQ, onion_next_task(&onionskin));
+  tt_int_op(1,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+  tt_ptr_op(onionskin, OP_EQ, create_v3ntor2);
+
+  tt_ptr_op(circ_tap, OP_EQ, onion_next_task(&onionskin));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR_V3));
+  tt_ptr_op(onionskin, OP_EQ, create_tap1);
+
+  clear_pending_onions();
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
+  tt_int_op(0,OP_EQ, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+
+ done:
+  circuit_free_(TO_CIRCUIT(circ_tap));
+  circuit_free_(TO_CIRCUIT(circ_ntor));
+  circuit_free_(TO_CIRCUIT(circ_ntor3));
+  tor_free(create_tap1);
+  tor_free(create_ntor1);
+  tor_free(create_ntor2);
+  tor_free(create_v3ntor1);
+  tor_free(create_v3ntor2);
+}
+
 static int32_t cbtnummodes = 10;
 
 static int32_t
@@ -622,6 +743,7 @@ static struct testcase_t test_array[] = {
   ENT(onion_handshake),
   { "bad_onion_handshake", test_bad_onion_handshake, 0, NULL, NULL },
   ENT(onion_queues),
+  ENT(onion_queue_order),
   { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
   { "fast_handshake", test_fast_handshake, 0, NULL, NULL },
   FORK(circuit_timeout),
