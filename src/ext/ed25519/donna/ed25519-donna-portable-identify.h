@@ -84,7 +84,8 @@
 #endif
 
 /* 64 bit cpu */
-#if defined(CPU_X86_64) || defined(CPU_IA64) || defined(CPU_SPARC64) || defined(__64BIT__) || defined(__LP64__) || defined(_LP64) || (defined(_MIPS_SZLONG) && (_MIPS_SZLONG == 64))
+#if defined(CPU_X86_64) || defined(CPU_IA64) || defined(CPU_SPARC64) || defined(__64BIT__) || defined(__LP64__) || defined(_LP64) || (defined(_MIPS_SZLONG) && (_MIPS_SZLONG == 64)) \
+	(defined(_LOONGARCH_SZLONG) && (_LOONGARCH_SZLONG == 64))
 	#define CPU_64BITS
 #endif
 
