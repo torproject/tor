@@ -122,6 +122,8 @@ subsys_threads_initialize(void)
 const subsys_fns_t sys_threads = {
   .name = "threads",
   .supported = true,
+  /* Threads is used by logging, which is a diagnostic feature, we want it to
+   * init right after low-level error handling and approx time. */
   .level = -95,
   .initialize = subsys_threads_initialize,
 };
