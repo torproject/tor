@@ -339,7 +339,7 @@ record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest)
  * updated once the cell is actually put in the outbuf.
  */
 static bool
-circuit_sendme_cell_is_next(int window, int sendme_inc)
+circuit_sendme_cell_is_next(int deliver_window, int sendme_inc)
 {
   /* Are we at the limit of the increment and if not, we don't expect next
    * cell is a SENDME.
@@ -348,8 +348,13 @@ circuit_sendme_cell_is_next(int window, int sendme_inc)
    * next cell is a SENDME, the window (either package or deliver) hasn't been
    * decremented just yet so when this is called, we are currently processing
    * the "window - 1" cell.
+   *
+   * Because deliver_window starts at CIRCWINDOW_START and counts down,
+   * to get the actual number of received cells for this check, we must
+   * first convert to receieved cells, or the modulus operator will fail.
    */
-  if (((window - 1) % sendme_inc) != 0) {
+  tor_assert(deliver_window <= CIRCWINDOW_START);
+  if (((CIRCWINDOW_START - (deliver_window - 1)) % sendme_inc) != 0) {
     return false;
   }
 
