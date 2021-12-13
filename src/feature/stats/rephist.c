@@ -283,18 +283,6 @@ overload_general_dns_assessment(void)
     return;
   }
 
-  /* Lets see if we can signal a general overload. */
-  double fraction = (double) overload_dns_stats.stats_n_error_timeout /
-                    (double) overload_dns_stats.stats_n_request;
-  if (fraction >= overload_dns_timeout_fraction) {
-    log_notice(LD_HIST, "General overload -> DNS timeouts (%" PRIu64 ") "
-               "fraction %.4f%% is above threshold of %.4f%%",
-               overload_dns_stats.stats_n_error_timeout,
-               fraction * 100.0,
-               overload_dns_timeout_fraction * 100.0);
-    rep_hist_note_overload(OVERLOAD_GENERAL);
-  }
-
  reset:
   /* Reset counters for the next period. */
   overload_dns_stats.stats_n_error_timeout = 0;
