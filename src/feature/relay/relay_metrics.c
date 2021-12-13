@@ -161,7 +161,7 @@ fill_dns_error_values(void)
     { .name = "refused",      .key = DNS_ERR_REFUSED      },
     { .name = "truncated",    .key = DNS_ERR_TRUNCATED    },
     { .name = "unknown",      .key = DNS_ERR_UNKNOWN      },
-    { .name = "timeout",      .key = DNS_ERR_TIMEOUT      },
+    { .name = "tor_timeout",  .key = DNS_ERR_TIMEOUT      },
     { .name = "shutdown",     .key = DNS_ERR_SHUTDOWN     },
     { .name = "cancel",       .key = DNS_ERR_CANCEL       },
     { .name = "nodata",       .key = DNS_ERR_NODATA       },

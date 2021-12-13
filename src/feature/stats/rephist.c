@@ -219,33 +219,6 @@ static uint64_t stats_n_tcp_exhaustion = 0;
 
 /***** DNS statistics *****/
 
-/* We use a scale here so we can represent percentages with decimal points by
- * scaling the value by this factor and so 0.5% becomes a value of 500.
- * Default is 1% and thus min and max range is 0 to 100%. */
-#define OVERLOAD_DNS_TIMEOUT_PERCENT_SCALE 1000.0
-#define OVERLOAD_DNS_TIMEOUT_PERCENT_DEFAULT 1000
-#define OVERLOAD_DNS_TIMEOUT_PERCENT_MIN 0
-#define OVERLOAD_DNS_TIMEOUT_PERCENT_MAX 100000
-
-/** Consensus parameter: indicate what fraction of DNS timeout errors over the
- * total number of DNS requests must be reached before we trigger a general
- * overload signal .*/
-static double overload_dns_timeout_fraction =
-   OVERLOAD_DNS_TIMEOUT_PERCENT_DEFAULT /
-   OVERLOAD_DNS_TIMEOUT_PERCENT_SCALE / 100.0;
-
-/* Number of seconds for the assessment period. Default is 10 minutes (600) and
- * the min max range is within a 32bit value. */
-#define OVERLOAD_DNS_TIMEOUT_PERIOD_SECS_DEFAULT (10 * 60)
-#define OVERLOAD_DNS_TIMEOUT_PERIOD_SECS_MIN 0
-#define OVERLOAD_DNS_TIMEOUT_PERIOD_SECS_MAX INT32_MAX
-
-/** Consensus parameter: Period, in seconds, over which we count the number of
- * DNS requests and timeout errors. After that period, we assess if we trigger
- * an overload or not. */
-static int32_t overload_dns_timeout_period_secs =
-  OVERLOAD_DNS_TIMEOUT_PERIOD_SECS_DEFAULT;
-
 /** Overload DNS statistics. The information in this object is used to assess
  * if, due to DNS errors, we should emit a general overload signal or not.
  *
@@ -259,9 +232,6 @@ typedef struct {
    * successfully or might even be lost by tor. This counter is incremented
    * right before the DNS request is initiated. */
   uint64_t stats_n_request;
-
-  /** Total number of DNS timeout errors. */
-  uint64_t stats_n_error_timeout;
 
   /** When is the next assessment time of the general overload for DNS errors.
    * Once this time is reached, all stats are reset and this time is set to the
@@ -285,7 +255,7 @@ typedef struct {
   /* Total number of DNS errors specific to libevent. */
   uint64_t stats_n_error_truncated; /* 65 */
   uint64_t stats_n_error_unknown;   /* 66 */
-  uint64_t stats_n_error_timeout;   /* 67 */
+  uint64_t stats_n_error_tor_timeout;   /* 67 */
   uint64_t stats_n_error_shutdown;  /* 68 */
   uint64_t stats_n_error_cancel;    /* 69 */
   uint64_t stats_n_error_nodata;    /* 70 */
@@ -337,48 +307,6 @@ get_dns_stats_by_type(const int type)
 }
 #endif
 
-/** Assess the DNS timeout errors and if we have enough to trigger a general
- * overload. */
-static void
-overload_general_dns_assessment(void)
-{
-  /* Initialize the time. Should be done once. */
-  if (overload_dns_stats.next_assessment_time == 0) {
-    goto reset;
-  }
-
-  /* Not the time yet. */
-  if (overload_dns_stats.next_assessment_time > approx_time()) {
-    return;
-  }
-
- reset:
-  /* Reset counters for the next period. */
-  overload_dns_stats.stats_n_error_timeout = 0;
-  overload_dns_stats.stats_n_request = 0;
-  overload_dns_stats.next_assessment_time =
-    approx_time() + overload_dns_timeout_period_secs;
-}
-
-/** Called just before the consensus will be replaced. Update the consensus
- * parameters in case they changed. */
-void
-rep_hist_consensus_has_changed(const networkstatus_t *ns)
-{
-  overload_dns_timeout_fraction =
-    networkstatus_get_param(ns, "overload_dns_timeout_scale_percent",
-                            OVERLOAD_DNS_TIMEOUT_PERCENT_DEFAULT,
-                            OVERLOAD_DNS_TIMEOUT_PERCENT_MIN,
-                            OVERLOAD_DNS_TIMEOUT_PERCENT_MAX) /
-    OVERLOAD_DNS_TIMEOUT_PERCENT_SCALE / 100.0;
-
-  overload_dns_timeout_period_secs =
-    networkstatus_get_param(ns, "overload_dns_timeout_period_secs",
-                            OVERLOAD_DNS_TIMEOUT_PERIOD_SECS_DEFAULT,
-                            OVERLOAD_DNS_TIMEOUT_PERIOD_SECS_MIN,
-                            OVERLOAD_DNS_TIMEOUT_PERIOD_SECS_MAX);
-}
-
 /** Return the DNS error count for the given libevent DNS type and error code.
  * The possible types are: DNS_IPv4_A, DNS_PTR, DNS_IPv6_AAAA. */
 uint64_t
@@ -407,7 +335,7 @@ rep_hist_get_n_dns_error(int type, uint8_t error)
   case DNS_ERR_UNKNOWN:
     return dns_stats->stats_n_error_unknown;
   case DNS_ERR_TIMEOUT:
-    return dns_stats->stats_n_error_timeout;
+    return dns_stats->stats_n_error_tor_timeout;
   case DNS_ERR_SHUTDOWN:
     return dns_stats->stats_n_error_shutdown;
   case DNS_ERR_CANCEL:
@@ -442,16 +370,6 @@ rep_hist_get_n_dns_request(int type)
 void
 rep_hist_note_dns_error(int type, uint8_t error)
 {
-  /* Assess if we need to trigger a general overload with regards to the DNS
-   * errors or not. */
-  overload_general_dns_assessment();
-
-  /* Because of the libevent problem (see note in the function comment), we
-   * disregard the DNS query type and keep track of DNS timeout for the
-   * overload state. */
-  if (error == DNS_ERR_TIMEOUT) {
-    overload_dns_stats.stats_n_error_timeout++;
-  }
   overload_dns_stats.stats_n_request++;
 
   /* Again, the libevent bug (see function comment), for an error that is
@@ -490,7 +408,7 @@ rep_hist_note_dns_error(int type, uint8_t error)
     dns_stats->stats_n_error_unknown++;
     break;
   case DNS_ERR_TIMEOUT:
-    dns_stats->stats_n_error_timeout++;
+    dns_stats->stats_n_error_tor_timeout++;
     break;
   case DNS_ERR_SHUTDOWN:
     dns_stats->stats_n_error_shutdown++;
