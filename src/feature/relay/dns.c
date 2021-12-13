@@ -61,6 +61,7 @@
 #include "core/or/relay.h"
 #include "feature/control/control_events.h"
 #include "feature/relay/dns.h"
+#include "feature/nodelist/networkstatus.h"
 #include "feature/relay/router.h"
 #include "feature/relay/routermode.h"
 #include "feature/stats/rephist.h"
@@ -1353,6 +1354,54 @@ configured_nameserver_address(const size_t idx)
 }
 #endif /* defined(HAVE_EVDNS_BASE_GET_NAMESERVER_ADDR) */
 
+/** Return a pointer to a stack allocated buffer containing the string
+ * representation of the exit_dns_timeout consensus parameter. */
+static const char *
+get_consensus_param_exit_dns_timeout(void)
+{
+  static char str[4];
+
+  /* Get the Exit DNS timeout value from the consensus or default. This is in
+   * milliseconds. */
+#define EXIT_DNS_TIMEOUT_DEFAULT (1000)
+#define EXIT_DNS_TIMEOUT_MIN (1)
+#define EXIT_DNS_TIMEOUT_MAX (120000)
+  int32_t val = networkstatus_get_param(NULL, "exit_dns_timeout",
+                                        EXIT_DNS_TIMEOUT_DEFAULT,
+                                        EXIT_DNS_TIMEOUT_MIN,
+                                        EXIT_DNS_TIMEOUT_MAX);
+  /* NOTE: We convert it to seconds because libevent only supports that. In the
+   * future, if we support different resolver(s), we might want to specialize
+   * this call. */
+
+  /* NOTE: We also don't allow 0 and so we must cap the division to 1 second
+   * else all DNS request would fail if the consensus would ever tell us a
+   * value below 1000 (1 sec). */
+  val = MAX(1, val / 1000);
+
+  tor_snprintf(str, sizeof(str), "%d", val);
+  return str;
+}
+
+/** Return a pointer to a stack allocated buffer containing the string
+ * representation of the exit_dns_num_attempts consensus parameter. */
+static const char *
+get_consensus_param_exit_dns_attempts(void)
+{
+  static char str[4];
+
+  /* Get the Exit DNS number of attempt value from the consensus or default. */
+#define EXIT_DNS_NUM_ATTEMPTS_DEFAULT (2)
+#define EXIT_DNS_NUM_ATTEMPTS_MIN (0)
+#define EXIT_DNS_NUM_ATTEMPTS_MAX (255)
+  int32_t val = networkstatus_get_param(NULL, "exit_dns_num_attempts",
+                                        EXIT_DNS_NUM_ATTEMPTS_DEFAULT,
+                                        EXIT_DNS_NUM_ATTEMPTS_MIN,
+                                        EXIT_DNS_NUM_ATTEMPTS_MAX);
+  tor_snprintf(str, sizeof(str), "%d", val);
+  return str;
+}
+
 /** Configure eventdns nameservers if force is true, or if the configuration
  * has changed since the last time we called this function, or if we failed on
  * our last attempt.  On Unix, this reads from /etc/resolv.conf or
@@ -1489,12 +1538,19 @@ configure_nameservers(int force)
   // of a full queue.
   SET("max-inflight:", "8192");
 
-  // Two retries at 5 and 10 seconds for bind9/named which relies on
-  // clients to handle retries.  Second retry for retried circuits with
-  // extended 15 second timeout.  Superfluous with local-system Unbound
-  // instance--has its own elaborate retry scheme.
-  SET("timeout:", "5");
-  SET("attempts:","3");
+  /* Set timeout to be 1 second. This tells libevent that it shouldn't wait
+   * more than N second to drop a DNS query and consider it "timed out". It is
+   * very important to differentiate here a libevent timeout and a DNS server
+   * timeout. And so, by setting this to N second, libevent sends back
+   * "DNS_ERR_TIMEOUT" if that N second is reached which does NOT indicate that
+   * the query itself timed out in transit. */
+  SET("timeout:", get_consensus_param_exit_dns_timeout());
+
+  /* This tells libevent to attemps up to X times a DNS query if the previous
+   * one failed to complete within N second. We believe that this should be
+   * enough to catch temporary hiccups on the first query. But after that, it
+   * should signal us that it won't be able to resolve it. */
+  SET("attempts:", get_consensus_param_exit_dns_attempts());
 
   if (options->ServerDNSRandomizeCase)
     SET("randomize-case:", "1");
