@@ -12,7 +12,7 @@ never used.
 maint/checkOptionDocs.pl -- Make sure that Tor options are documented in the
 manpage, and that the manpage only documents real Tor options.
 
-maint/checkSpaces.pl -- Style checker for the Tor source code.  Mainly checks
+maint/checkSpace.pl -- Style checker for the Tor source code.  Mainly checks
 whitespace.
 
 maint/findMergedChanges.pl -- Find a set of changes/* files that have been
