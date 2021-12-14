@@ -1,0 +1,22 @@
+/* This file contains the definition for the encrypted payload of a circuit
+ * parameter negotiation request/response portion of the trn_ntorv3 onionskin
+ * handshake. Currently only supports congestion control params. */
+
+/* The following is encoded in the extension format. */
+
+/* Field types. */
+const TRUNNEL_EXT_TYPE_CC_FIELD_REQUEST  = 0x01;
+const TRUNNEL_EXT_TYPE_CC_FIELD_RESPONSE = 0x02;
+
+/*
+ * "Request" is an empty payload signalling that CC is enabled.
+ */
+
+/*
+ * "Response" consists of 1 single byte:
+ *    SENDME_INC -- Min: 0, Max: 255
+ */
+
+struct trn_extension_field_cc {
+  u8 sendme_inc;
+};

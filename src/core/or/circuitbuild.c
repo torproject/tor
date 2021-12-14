@@ -81,7 +81,9 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
-#include "trunnel/circ_params.h"
+
+#include "trunnel/extension.h"
+#include "trunnel/congestion_control.h"
 
 static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
@@ -2607,33 +2609,10 @@ client_circ_negotiation_message(const extend_info_t *ei,
                                 size_t *msg_len_out)
 {
   tor_assert(ei && msg_out && msg_len_out);
-  circ_params_request_t params = {0};
-  ssize_t msg_len = 0;
 
-  if (! ei->exit_supports_congestion_control)
-    return -1;
-
-  circ_params_request_set_version(&params, 0);
-
-  circ_params_request_set_cc_supported(&params,
-                                       congestion_control_enabled());
-
-  msg_len = circ_params_request_encoded_len(&params);
-
-  if (msg_len < 0) {
+  if (!ei->exit_supports_congestion_control) {
     return -1;
   }
 
-  *msg_out = tor_malloc_zero(msg_len);
-
-  msg_len = circ_params_request_encode(*msg_out, msg_len, &params);
-
-  if (msg_len < 0) {
-    tor_free(*msg_out);
-    return -1;
-  }
-
-  *msg_len_out = (size_t)msg_len;
-
-  return 0;
+  return congestion_control_build_ext_request(msg_out, msg_len_out);
 }

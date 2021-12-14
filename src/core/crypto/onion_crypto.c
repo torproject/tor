@@ -47,7 +47,9 @@
 
 #include "core/or/crypt_path_st.h"
 #include "core/or/extend_info_st.h"
-#include "trunnel/circ_params.h"
+
+#include "trunnel/congestion_control.h"
+#include "trunnel/extension.h"
 
 static const uint8_t NTOR3_CIRC_VERIFICATION[] = "circuit extend";
 static const size_t NTOR3_CIRC_VERIFICATION_LEN = 14;
@@ -230,72 +232,29 @@ negotiate_v3_ntor_server_circ_params(const uint8_t *param_request_msg,
                                      uint8_t **resp_msg_out,
                                      size_t *resp_msg_len_out)
 {
-  circ_params_response_t *resp = NULL;
-  circ_params_request_t *param_request = NULL;
-  ssize_t resp_msg_len;
+  int ret;
 
-  if (circ_params_request_parse(&param_request, param_request_msg,
-                                param_request_len) < 0) {
-    return -1;
+  /* Parse request. */
+  ret = congestion_control_parse_ext_request(param_request_msg,
+                                             param_request_len);
+  if (ret < 0) {
+    goto err;
   }
+  params_out->cc_enabled = ret && our_ns_params->cc_enabled;
 
-  /* CC is enabled if the client wants it, and our consensus paramers
-   * allow it. If both are true, its on. If either is false, it's off. */
-  params_out->cc_enabled =
-      circ_params_request_get_cc_supported(param_request) &&
-      our_ns_params->cc_enabled;
-
-  resp = circ_params_response_new();
-
-  if (circ_params_response_set_version(resp, 0) < 0) {
-    circ_params_request_free(param_request);
-    circ_params_response_free(resp);
-    return -1;
+  /* Build the response. */
+  ret = congestion_control_build_ext_response(our_ns_params, params_out,
+                                              resp_msg_out, resp_msg_len_out);
+  if (ret < 0) {
+    goto err;
   }
-
-  /* The relay always chooses its sendme_inc, and sends it to the client */
   params_out->sendme_inc_cells = our_ns_params->sendme_inc_cells;
 
-  if (circ_params_response_set_sendme_inc_cells(resp,
-              our_ns_params->sendme_inc_cells) < 0) {
-    circ_params_request_free(param_request);
-    circ_params_response_free(resp);
-    return -1;
-  }
+  /* Success. */
+  ret = 0;
 
-  /* Use the negotiated cc_enabled value to respond */
-  if (circ_params_response_set_cc_enabled(resp, params_out->cc_enabled) < 0) {
-    circ_params_request_free(param_request);
-    circ_params_response_free(resp);
-    return -1;
-  }
-
-  resp_msg_len = circ_params_response_encoded_len(resp);
-
-  if (resp_msg_len < 0) {
-    circ_params_request_free(param_request);
-    circ_params_response_free(resp);
-    return -1;
-  }
-
-  *resp_msg_out = tor_malloc_zero(resp_msg_len);
-
-  resp_msg_len = circ_params_response_encode(*resp_msg_out, resp_msg_len,
-                                             resp);
-  if (resp_msg_len < 0) {
-    circ_params_request_free(param_request);
-    circ_params_response_free(resp);
-
-    tor_free(*resp_msg_out);
-    return -1;
-  }
-
-  *resp_msg_len_out = (size_t)resp_msg_len;
-
-  circ_params_request_free(param_request);
-  circ_params_response_free(resp);
-
-  return 0;
+ err:
+  return ret;
 }
 
 /* This is the maximum value for keys_out_len passed to
@@ -462,46 +421,29 @@ negotiate_v3_ntor_client_circ_params(const uint8_t *param_response_msg,
                                      size_t param_response_len,
                                      circuit_params_t *params_out)
 {
-  circ_params_response_t *param_response = NULL;
-  bool cc_enabled;
-  uint8_t sendme_inc_cells;
-
-  if (circ_params_response_parse(&param_response, param_response_msg,
-                               param_response_len) < 0) {
+  int ret = congestion_control_parse_ext_response(param_response_msg,
+                                                  param_response_len,
+                                                  params_out);
+  if (ret < 0) {
     return -1;
   }
-
-  cc_enabled =
-      circ_params_response_get_cc_enabled(param_response);
 
   /* If congestion control came back enabled, but we didn't ask for it
-   * because the consensus said no, close the circuit */
-  if (cc_enabled && !congestion_control_enabled()) {
-    circ_params_response_free(param_response);
+   * because the consensus said no, close the circuit.
+   *
+   * This is a fatal error condition for the circuit, because it either
+   * means that congestion control was disabled by the consensus
+   * during the handshake, or the exit decided to send us an unsolicited
+   * congestion control response.
+   *
+   * In either case, we cannot proceed on this circuit, and must try a
+   * new one.
+   */
+  if (ret && !congestion_control_enabled()) {
     return -1;
   }
-  params_out->cc_enabled = cc_enabled;
+  params_out->cc_enabled = ret;
 
-  /* We will only accept this response (and this circuit) if sendme_inc
-   * is within a factor of 2 of our consensus value. We should not need
-   * to change cc_sendme_inc much, and if we do, we can spread out those
-   * changes over smaller increments once every 4 hours. Exits that
-   * violate this range should just not be used. */
-#define MAX_SENDME_INC_NEGOTIATE_FACTOR 2
-
-  sendme_inc_cells =
-      circ_params_response_get_sendme_inc_cells(param_response);
-
-  if (sendme_inc_cells >
-      MAX_SENDME_INC_NEGOTIATE_FACTOR*congestion_control_sendme_inc() ||
-      sendme_inc_cells <
-      congestion_control_sendme_inc()/MAX_SENDME_INC_NEGOTIATE_FACTOR) {
-    circ_params_response_free(param_response);
-    return -1;
-  }
-  params_out->sendme_inc_cells = sendme_inc_cells;
-
-  circ_params_response_free(param_response);
   return 0;
 }
 

@@ -9,6 +9,7 @@
 #ifndef TOR_CONGESTION_CONTROL_COMMON_H
 #define TOR_CONGESTION_CONTROL_COMMON_H
 
+#include "core/crypto/onion_crypto.h"
 #include "core/or/crypt_path_st.h"
 #include "core/or/circuit_st.h"
 
@@ -46,6 +47,18 @@ bool is_monotime_clock_reliable(void);
 void congestion_control_new_consensus_params(const networkstatus_t *ns);
 
 bool congestion_control_enabled(void);
+
+int congestion_control_build_ext_request(uint8_t **msg_out,
+                                         size_t *msg_len_out);
+int congestion_control_parse_ext_request(const uint8_t *msg,
+                                         const size_t msg_len);
+int congestion_control_build_ext_response(const circuit_params_t *our_params,
+                                          const circuit_params_t *circ_params,
+                                          uint8_t **msg_out,
+                                          size_t *msg_len_out);
+int congestion_control_parse_ext_response(const uint8_t *msg,
+                                          const size_t msg_len,
+                                          circuit_params_t *params_out);
 
 /* Ugh, C.. these are private. Use the getter instead, when
  * external to the congestion control code. */
