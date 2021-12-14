@@ -1,0 +1,14 @@
+
+/* The cell extension ABI that is also used within other type of structures
+ * such as the ntorv3 data payload. */
+
+struct trn_extension_field {
+  u8 field_type;
+  u8 field_len;
+  u8 field[field_len];
+};
+
+struct trn_extension {
+  u8 num;
+  struct trn_extension_field fields[num];
+};

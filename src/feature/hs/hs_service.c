@@ -59,7 +59,6 @@
 
 /* Trunnel */
 #include "trunnel/ed25519_cert.h"
-#include "trunnel/hs/cell_common.h"
 #include "trunnel/hs/cell_establish_intro.h"
 
 #ifdef HAVE_SYS_STAT_H

@@ -4,7 +4,7 @@
  * specified in proposal 224 section 3.1.
  */
 
-extern struct trn_cell_extension;
+extern struct trn_extension;
 
 const TRUNNEL_SHA3_256_LEN = 32;
 
@@ -19,7 +19,7 @@ struct trn_cell_establish_intro {
   u8 auth_key[auth_key_len];
 
   /* Extension(s). Reserved fields. */
-  struct trn_cell_extension extensions;
+  struct trn_extension extensions;
   @ptr end_mac_fields;
 
   /* Handshake MAC. */
@@ -37,7 +37,7 @@ struct trn_cell_establish_intro {
  * to version >= 3. */
 struct trn_cell_intro_established {
   /* Extension(s). Reserved fields. */
-  struct trn_cell_extension extensions;
+  struct trn_extension extensions;
 };
 
 /*

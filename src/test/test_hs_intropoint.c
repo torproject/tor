@@ -33,9 +33,9 @@
 #include "core/or/or_circuit_st.h"
 
 /* Trunnel. */
+#include "trunnel/extension.h"
 #include "trunnel/hs/cell_establish_intro.h"
 #include "trunnel/hs/cell_introduce1.h"
-#include "trunnel/hs/cell_common.h"
 
 static size_t
 new_establish_intro_cell(const char *circ_nonce,
@@ -159,8 +159,8 @@ helper_create_introduce1_cell(void)
 
   /* Set the cell extensions to none. */
   {
-    trn_cell_extension_t *ext = trn_cell_extension_new();
-    trn_cell_extension_set_num(ext, 0);
+    trn_extension_t *ext = trn_extension_new();
+    trn_extension_set_num(ext, 0);
     trn_cell_introduce1_set_extensions(cell, ext);
   }
 

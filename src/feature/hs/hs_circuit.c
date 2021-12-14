@@ -35,7 +35,6 @@
 
 /* Trunnel. */
 #include "trunnel/ed25519_cert.h"
-#include "trunnel/hs/cell_common.h"
 #include "trunnel/hs/cell_establish_intro.h"
 
 #include "core/or/cpath_build_state_st.h"

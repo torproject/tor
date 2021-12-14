@@ -5,7 +5,7 @@
  */
 
 /* From cell_common.trunnel. */
-extern struct trn_cell_extension;
+extern struct trn_extension;
 /* From ed25519_cert.trunnel. */
 extern struct link_specifier;
 
@@ -38,7 +38,7 @@ struct trn_cell_introduce1 {
   u8 auth_key[auth_key_len];
 
   /* Extension(s). Reserved fields. */
-  struct trn_cell_extension extensions;
+  struct trn_extension extensions;
 
   /* Variable length, up to the end of cell. */
   u8 encrypted[];
@@ -50,7 +50,7 @@ struct trn_cell_introduce_ack {
   u16 status;
 
   /* Extension(s). Reserved fields. */
-  struct trn_cell_extension extensions;
+  struct trn_extension extensions;
 };
 
 /* Encrypted section of the INTRODUCE1/INTRODUCE2 cell. */
@@ -59,7 +59,7 @@ struct trn_cell_introduce_encrypted {
   u8 rend_cookie[TRUNNEL_REND_COOKIE_LEN];
 
   /* Extension(s). Reserved fields. */
-  struct trn_cell_extension extensions;
+  struct trn_extension extensions;
 
   /* Onion key material. */
   u8 onion_key_type IN [TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR];

@@ -19,7 +19,7 @@
 
 /* Trunnel. */
 #include "trunnel/ed25519_cert.h"
-#include "trunnel/hs/cell_common.h"
+#include "trunnel/extension.h"
 #include "trunnel/hs/cell_establish_intro.h"
 #include "trunnel/hs/cell_introduce1.h"
 #include "trunnel/hs/cell_rendezvous.h"
@@ -379,7 +379,7 @@ introduce1_set_encrypted(trn_cell_introduce1_t *cell,
                          const hs_cell_introduce1_data_t *data)
 {
   trn_cell_introduce_encrypted_t *enc_cell;
-  trn_cell_extension_t *ext;
+  trn_extension_t *ext;
 
   tor_assert(cell);
   tor_assert(data);
@@ -388,9 +388,9 @@ introduce1_set_encrypted(trn_cell_introduce1_t *cell,
   tor_assert(enc_cell);
 
   /* Set extension data. None are used. */
-  ext = trn_cell_extension_new();
+  ext = trn_extension_new();
   tor_assert(ext);
-  trn_cell_extension_set_num(ext, 0);
+  trn_extension_set_num(ext, 0);
   trn_cell_introduce_encrypted_set_extensions(enc_cell, ext);
 
   /* Set the rendezvous cookie. */
@@ -454,20 +454,20 @@ build_establish_intro_dos_param(trn_cell_extension_dos_t *dos_ext,
  * possible if there is a bug.) */
 static int
 build_establish_intro_dos_extension(const hs_service_config_t *service_config,
-                                    trn_cell_extension_t *extensions)
+                                    trn_extension_t *extensions)
 {
   ssize_t ret;
   size_t dos_ext_encoded_len;
   uint8_t *field_array;
-  trn_cell_extension_field_t *field = NULL;
+  trn_extension_field_t *field = NULL;
   trn_cell_extension_dos_t *dos_ext = NULL;
 
   tor_assert(service_config);
   tor_assert(extensions);
 
   /* We are creating a cell extension field of the type DoS. */
-  field = trn_cell_extension_field_new();
-  trn_cell_extension_field_set_field_type(field,
+  field = trn_extension_field_new();
+  trn_extension_field_set_field_type(field,
                                           TRUNNEL_CELL_EXTENSION_TYPE_DOS);
 
   /* Build DoS extension field. We will put in two parameters. */
@@ -490,24 +490,23 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   }
   dos_ext_encoded_len = ret;
   /* Set length field and the field array size length. */
-  trn_cell_extension_field_set_field_len(field, dos_ext_encoded_len);
-  trn_cell_extension_field_setlen_field(field, dos_ext_encoded_len);
+  trn_extension_field_set_field_len(field, dos_ext_encoded_len);
+  trn_extension_field_setlen_field(field, dos_ext_encoded_len);
   /* Encode the DoS extension into the cell extension field. */
-  field_array = trn_cell_extension_field_getarray_field(field);
+  field_array = trn_extension_field_getarray_field(field);
   ret = trn_cell_extension_dos_encode(field_array,
-                 trn_cell_extension_field_getlen_field(field), dos_ext);
+                 trn_extension_field_getlen_field(field), dos_ext);
   if (BUG(ret <= 0)) {
     goto err;
   }
   tor_assert(ret == (ssize_t) dos_ext_encoded_len);
 
   /* Finally, encode field into the cell extension. */
-  trn_cell_extension_add_fields(extensions, field);
+  trn_extension_add_fields(extensions, field);
 
   /* We've just add an extension field to the cell extensions so increment the
    * total number. */
-  trn_cell_extension_set_num(extensions,
-                             trn_cell_extension_get_num(extensions) + 1);
+  trn_extension_set_num(extensions, trn_extension_get_num(extensions) + 1);
 
   /* Cleanup. DoS extension has been encoded at this point. */
   trn_cell_extension_dos_free(dos_ext);
@@ -515,7 +514,7 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
   return 0;
 
  err:
-  trn_cell_extension_field_free(field);
+  trn_extension_field_free(field);
   trn_cell_extension_dos_free(dos_ext);
   return -1;
 }
@@ -526,18 +525,18 @@ build_establish_intro_dos_extension(const hs_service_config_t *service_config,
 
 /** Allocate and build all the ESTABLISH_INTRO cell extension. The given
  * extensions pointer is always set to a valid cell extension object. */
-STATIC trn_cell_extension_t *
+STATIC trn_extension_t *
 build_establish_intro_extensions(const hs_service_config_t *service_config,
                                  const hs_service_intro_point_t *ip)
 {
   int ret;
-  trn_cell_extension_t *extensions;
+  trn_extension_t *extensions;
 
   tor_assert(service_config);
   tor_assert(ip);
 
-  extensions = trn_cell_extension_new();
-  trn_cell_extension_set_num(extensions, 0);
+  extensions = trn_extension_new();
+  trn_extension_set_num(extensions, 0);
 
   /* If the defense has been enabled service side (by the operator with a
    * torrc option) and the intro point does support it. */
@@ -568,7 +567,7 @@ hs_cell_build_establish_intro(const char *circ_nonce,
   ssize_t cell_len = -1;
   uint16_t sig_len = ED25519_SIG_LEN;
   trn_cell_establish_intro_t *cell = NULL;
-  trn_cell_extension_t *extensions;
+  trn_extension_t *extensions;
 
   tor_assert(circ_nonce);
   tor_assert(service_config);
@@ -947,7 +946,7 @@ hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
 {
   ssize_t cell_len;
   trn_cell_introduce1_t *cell;
-  trn_cell_extension_t *ext;
+  trn_extension_t *ext;
 
   tor_assert(data);
   tor_assert(cell_out);
@@ -956,9 +955,9 @@ hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
   tor_assert(cell);
 
   /* Set extension data. None are used. */
-  ext = trn_cell_extension_new();
+  ext = trn_extension_new();
   tor_assert(ext);
-  trn_cell_extension_set_num(ext, 0);
+  trn_extension_set_num(ext, 0);
   trn_cell_introduce1_set_extensions(cell, ext);
 
   /* Set the authentication key. */
