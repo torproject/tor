@@ -151,8 +151,8 @@ test_invalid_service(void *arg)
     setup_full_capture_of_logs(LOG_WARN);
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, -1);
-    expect_log_msg_containing("HiddenServicePort parse error: "
-                              "invalid port mapping");
+    expect_log_msg_containing("HiddenServicePort parse error: export circuit "
+                              "id protocol must be 'haproxy' or 'none'.");
     teardown_capture_of_logs();
   }
 

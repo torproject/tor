@@ -109,6 +109,9 @@ typedef struct hs_ident_edge_conn_t {
    * service, regardless of the internal port forwarding that might have
    * happened on the service-side. */
   uint16_t orig_virtual_port;
+
+  /** The export circuit id protocol that is used in this connection. */
+  hs_circuit_id_protocol_t circuit_id_protocol;
   /* XXX: Client authorization. */
 } hs_ident_edge_conn_t;
 

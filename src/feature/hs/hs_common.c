@@ -640,6 +640,8 @@ hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn)
       /* There is always a connection identifier at this point. Regardless of a
        * Unix or TCP port, note the virtual port. */
       conn->hs_ident->orig_virtual_port = chosen_port->virtual_port;
+      /* Note the export circuit id protocol to the connection. */
+      conn->hs_ident->circuit_id_protocol = chosen_port->circuit_id_protocol;
     }
 
     if (!(chosen_port->is_unix_addr)) {
@@ -677,7 +679,8 @@ hs_port_config_new(const char *socket_path)
  * the provided separator and returns a new hs_port_config_t,
  * or NULL and an optional error string on failure.
  *
- * The format is: VirtualPort SEP (IP|RealPort|IP:RealPort|'socket':path)?
+ * The format is: VirtualPort SEP ((IP|RealPort|IP:RealPort|'socket':path)
+ * SEP (ExportCircuitIdProtocol)?)?
  *
  * IP defaults to 127.0.0.1; RealPort defaults to VirtualPort.
  */
@@ -691,6 +694,7 @@ hs_parse_port_config(const char *string, const char *sep,
   uint16_t p;
   tor_addr_t addr;
   hs_port_config_t *result = NULL;
+  hs_circuit_id_protocol_t circuit_id_protocol = HS_CIRCUIT_ID_PROTOCOL_NONE;
   unsigned int is_unix_addr = 0;
   const char *socket_path = NULL;
   char *err_msg = NULL;
@@ -729,12 +733,6 @@ hs_parse_port_config(const char *string, const char *sep,
       goto err;
     }
 
-    if (rest && strlen(rest)) {
-      err_msg = tor_strdup("HiddenServicePort parse error: invalid port "
-                           "mapping");
-      goto err;
-    }
-
     if (is_unix) {
       socket_path = addrport;
       is_unix_addr = 1;
@@ -757,12 +755,24 @@ hs_parse_port_config(const char *string, const char *sep,
       }
       tor_addr_from_ipv4h(&addr, 0x7F000001u); /* Default to 127.0.0.1 */
     }
+
+    if (rest && strlen(rest)) {
+      int ok;
+      circuit_id_protocol =
+        hs_parse_circuit_id_protocol(rest, &ok);
+      if (!ok) {
+        err_msg = tor_strdup("HiddenServicePort parse error: export circuit "
+                             "id protocol must be 'haproxy' or 'none'.");
+        goto err;
+      }
+    }
   }
 
   /* Allow room for unix_addr */
   result = hs_port_config_new(socket_path);
   result->virtual_port = virtport;
   result->is_unix_addr = is_unix_addr;
+  result->circuit_id_protocol = circuit_id_protocol;
   if (!is_unix_addr) {
     result->real_port = realport;
     tor_addr_copy(&result->real_addr, &addr);
@@ -780,6 +790,33 @@ hs_parse_port_config(const char *string, const char *sep,
   smartlist_free(sl);
 
   return result;
+}
+
+/** Given a configuration string, parse the value as a
+ * hs_circuit_id_protocol_t. On success, ok is set to 1 and ret is
+ * the parse value. On error, ok is set to 0 and the "none"
+ * hs_circuit_id_protocol_t is returned. */
+hs_circuit_id_protocol_t
+hs_parse_circuit_id_protocol(const char *protocol_str, int *ok)
+{
+  tor_assert(protocol_str);
+  tor_assert(ok);
+
+  hs_circuit_id_protocol_t ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
+  *ok = 0;
+
+  if (! strcasecmp(protocol_str, "haproxy")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
+  } else if (! strcasecmp(protocol_str, "none")) {
+    *ok = 1;
+    ret = HS_CIRCUIT_ID_PROTOCOL_NONE;
+  } else {
+    goto err;
+  }
+
+ err:
+  return ret;
 }
 
 /** Release all storage held in a hs_port_config_t. */

@@ -3998,6 +3998,12 @@ hs_service_set_conn_addr_port(const origin_circuit_t *circ,
     goto err_no_close;
   }
 
+  /* If the the export circuit id protocol is none, looks at
+   * the HiddenServiceExportCircuitID config instead. */
+  if (conn->hs_ident->circuit_id_protocol == HS_CIRCUIT_ID_PROTOCOL_NONE) {
+    conn->hs_ident->circuit_id_protocol = service->config.circuit_id_protocol;
+  }
+
   /* Success. */
   return 0;
  err_close:
@@ -4006,19 +4012,6 @@ hs_service_set_conn_addr_port(const origin_circuit_t *circ,
  err_no_close:
   /* Indicate the caller to NOT close the circuit. */
   return -1;
-}
-
-/** Does the service with identity pubkey <b>pk</b> export the circuit IDs of
- *  its clients?  */
-hs_circuit_id_protocol_t
-hs_service_exports_circuit_id(const ed25519_public_key_t *pk)
-{
-  hs_service_t *service = find_service(hs_service_map, pk);
-  if (!service) {
-    return HS_CIRCUIT_ID_PROTOCOL_NONE;
-  }
-
-  return service->config.circuit_id_protocol;
 }
 
 /** Add to file_list every filename used by a configured hidden service, and to

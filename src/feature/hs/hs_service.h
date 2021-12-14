@@ -190,15 +190,6 @@ typedef struct hs_service_authorized_client_t {
   curve25519_public_key_t client_pk;
 } hs_service_authorized_client_t;
 
-/** Which protocol to use for exporting HS client circuit ID. */
-typedef enum {
-  /** Don't expose the circuit id. */
-  HS_CIRCUIT_ID_PROTOCOL_NONE,
-
-  /** Use the HAProxy proxy protocol. */
-  HS_CIRCUIT_ID_PROTOCOL_HAPROXY
-} hs_circuit_id_protocol_t;
-
 /** Service configuration. The following are set from the torrc options either
  * set by the configuration file or by the control port. Nothing else should
  * change those values. */
@@ -379,9 +370,6 @@ void hs_service_upload_desc_to_dir(const char *encoded_desc,
                                    const ed25519_public_key_t *identity_pk,
                                    const ed25519_public_key_t *blinded_pk,
                                    const routerstatus_t *hsdir_rs);
-
-hs_circuit_id_protocol_t
-hs_service_exports_circuit_id(const ed25519_public_key_t *pk);
 
 void hs_service_dump_stats(int severity);
 void hs_service_circuit_cleanup_on_close(const circuit_t *circ);

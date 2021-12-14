@@ -2109,13 +2109,7 @@ test_export_client_circuit_id(void *arg)
 
   /* Create service */
   hs_service_t *service = helper_create_service();
-  /* Check that export circuit ID detection works */
-  service->config.circuit_id_protocol = HS_CIRCUIT_ID_PROTOCOL_NONE;
-  tt_int_op(0, OP_EQ,
-            hs_service_exports_circuit_id(&service->keys.identity_pk));
   service->config.circuit_id_protocol = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
-  tt_int_op(1, OP_EQ,
-            hs_service_exports_circuit_id(&service->keys.identity_pk));
 
   /* Create client connection */
   conn = test_conn_get_connection(AP_CONN_STATE_CIRCUIT_WAIT, CONN_TYPE_AP, 0);

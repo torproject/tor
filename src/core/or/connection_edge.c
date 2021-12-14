@@ -3881,9 +3881,7 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
   /* If it's an onion service connection, we might want to include the proxy
    * protocol header: */
   if (conn->hs_ident) {
-    hs_circuit_id_protocol_t circuit_id_protocol =
-      hs_service_exports_circuit_id(&conn->hs_ident->identity_pk);
-    export_hs_client_circuit_id(conn, circuit_id_protocol);
+    export_hs_client_circuit_id(conn, conn->hs_ident->circuit_id_protocol);
   }
 
   /* Connect tor to the hidden service destination. */
