@@ -721,7 +721,7 @@ test_overload_stats(void *arg)
   stats_str = rep_hist_get_overload_stats_lines();
   tt_assert(!stats_str);
 
-  /* Note a overload */
+  /* Note an overload */
   rep_hist_note_overload(OVERLOAD_GENERAL);
 
   /* Move the time forward one hour */
@@ -742,7 +742,7 @@ test_overload_stats(void *arg)
 
   /* Now the time should be 2002-01-07 00:00:00 */
 
-  /* Note a overload */
+  /* Note an overload */
   rep_hist_note_overload(OVERLOAD_GENERAL);
 
   stats_str = rep_hist_get_overload_general_line();
