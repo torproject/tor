@@ -721,7 +721,7 @@ test_overload_stats(void *arg)
   stats_str = rep_hist_get_overload_stats_lines();
   tt_assert(!stats_str);
 
-  /* Note a DNS overload */
+  /* Note a overload */
   rep_hist_note_overload(OVERLOAD_GENERAL);
 
   /* Move the time forward one hour */
@@ -742,7 +742,7 @@ test_overload_stats(void *arg)
 
   /* Now the time should be 2002-01-07 00:00:00 */
 
-  /* Note a DNS overload */
+  /* Note a overload */
   rep_hist_note_overload(OVERLOAD_GENERAL);
 
   stats_str = rep_hist_get_overload_general_line();
@@ -760,7 +760,7 @@ test_overload_stats(void *arg)
   tt_str_op("overload-fd-exhausted 1 2002-01-07 00:00:00\n", OP_EQ, stats_str);
   tor_free(stats_str);
 
-  /* Move the time forward. Register DNS overload. See that the time changed */
+  /* Move the time forward. Register overload. See that the time changed */
   current_time += 3600*2;
   update_approx_time(current_time);
 
@@ -867,81 +867,6 @@ test_overload_stats(void *arg)
   tor_free(stats_str);
 }
 
-/** Test the overload stats logic. */
-static void
-test_overload_dns_timeout(void *arg)
-{
-  char *stats_str = NULL;
-  (void) arg;
-
-  /* Lets simulate a series of timeouts but below our default 1% threshold. */
-
-  for (int i = 0; i < 1000; i++) {
-    /* This should trigger 9 timeouts which is just below 1% (10) */
-    if (i > 0 && !(i % 100)) {
-      rep_hist_note_dns_query(0, DNS_ERR_TIMEOUT);
-    } else {
-      rep_hist_note_dns_query(0, DNS_ERR_NONE);
-    }
-  }
-
-  /* No overload yet. */
-  stats_str = rep_hist_get_overload_general_line();
-  tt_assert(!stats_str);
-
-  /* Move it 10 minutes in the future and see if we get a general overload. */
-  update_approx_time(approx_time() + (10 * 60));
-
-  /* This query should NOT trigger the general overload because we are below
-   * our default of 1%. */
-  rep_hist_note_dns_query(0, DNS_ERR_NONE);
-  stats_str = rep_hist_get_overload_general_line();
-  tt_assert(!stats_str);
-
-  /* We'll now go above our 1% threshold. */
-  for (int i = 0; i < 1000; i++) {
-    /* This should trigger 10 timeouts which is our threshold of 1% (10) */
-    if (!(i % 10)) {
-      rep_hist_note_dns_query(0, DNS_ERR_TIMEOUT);
-    } else {
-      rep_hist_note_dns_query(0, DNS_ERR_NONE);
-    }
-  }
-
-  /* Move it 10 minutes in the future and see if we get a general overload. */
-  update_approx_time(approx_time() + (10 * 60));
-
-  /* This query should trigger the general overload because we are above 1%. */
-  rep_hist_note_dns_query(0, DNS_ERR_NONE);
-  stats_str = rep_hist_get_overload_general_line();
-  tt_assert(stats_str);
-  tor_free(stats_str);
-
-  /* Move 72h in the future, we should NOT get an overload anymore. */
-  update_approx_time(approx_time() + (72 * 3600));
-
-  stats_str = rep_hist_get_overload_general_line();
-  tt_assert(!stats_str);
-
-  /* This query should NOT trigger the general overload. */
-  rep_hist_note_dns_query(0, DNS_ERR_TIMEOUT);
-  stats_str = rep_hist_get_overload_general_line();
-  tt_assert(!stats_str);
-
-  /* Move it 10 minutes in the future and see if we get a general overload. We
-   * have now 100% of requests timing out. */
-  update_approx_time(approx_time() + (10 * 60));
-
-  /* This query should trigger the general overload with 50% of timeouts. */
-  rep_hist_note_dns_query(0, DNS_ERR_NONE);
-  stats_str = rep_hist_get_overload_general_line();
-  tt_assert(stats_str);
-  tor_free(stats_str);
-
- done:
-  tor_free(stats_str);
-}
-
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -958,7 +883,6 @@ struct testcase_t stats_tests[] = {
   FORK(rephist_v3_onions),
   FORK(load_stats_file),
   FORK(overload_stats),
-  FORK(overload_dns_timeout),
 
   END_OF_TESTCASES
 };
