@@ -89,8 +89,6 @@ uint64_t rep_hist_get_n_dns_request(int type);
 void rep_hist_note_dns_request(int type);
 void rep_hist_note_dns_error(int type, uint8_t error);
 
-void rep_hist_consensus_has_changed(const networkstatus_t *ns);
-
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
 #ifdef TOR_UNIT_TESTS
