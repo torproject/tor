@@ -2,6 +2,113 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+INSERT SUMMARY BLURP
+
+Changes in version 0.4.7.3-alpha - 2021-12-15
+  o Major bugfixes (bridges):
+    - Make Tor work reliably again when you have multiple bridges
+      configured and one or more of them are unreachable. The problem
+      came because we require that we have bridge descriptors for both
+      of our first two bridges (else we refuse to try to connect), but
+      in some cases we would wait three hours before trying to fetch
+      these missing descriptors, and/or never recover when we do try to
+      fetch them. Fixes bugs 40396 and 40495; bugfix on 0.3.0.5-rc
+      and 0.3.2.1-alpha.
+
+  o Major bugfixes (relay, overload):
+    - Change the MetricsPort DNS "timeout" label to be "tor_timeout" in
+      order to indicate that this was a DNS timeout from tor perspective
+      and not the DNS server itself.
+    - Deprecate overload_dns_timeout_period_secs and
+      overload_dns_timeout_scale_percent consensus parameters as well.
+      They were used to assess the overload state which is no more now.
+    - Don't make Tor DNS timeout trigger an overload general state.
+      These timeouts are different from DNS server timeout. They have to
+      be seen as timeout related to UX and not because of a network
+      problem. Fixes bug 40527; bugfix on 0.4.6.1-alpha.
+
+  o Minor feature (reproducible build):
+    - The repository can now build reproducible tarballs which adds the
+      build command "make dist-reprod" for that purpose. Closes
+      ticket 26299.
+
+  o Minor features (compilation):
+    - Give an error message if trying to build with a version of
+      LibreSSL known not to work with Tor. (There's an incompatibility
+      with LibreSSL versions 3.2.1 through 3.4.0 inclusive because of
+      their incompatibility with OpenSSL 1.1.1's TLSv1.3 APIs.) Closes
+      ticket 40511.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on December 15, 2021.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2021/12/15.
+
+  o Minor features (portability):
+    - Try to prevent a compiler warning about printf arguments that
+      could sometimes occur on MSYS2 depending on the configuration.
+      Closes ticket 40355.
+
+  o Minor bugfix (pluggable transport):
+    - Do not kill a managed proxy if one of its transport configurations
+      emits a method error. Instead log a warning and continue processing
+      method arguments. Fixes bug 7362; bugfix on 0.2.3.6-alpha.
+
+  o Minor bugfixes (bridges):
+    - When we don't yet have a descriptor for one of our bridges,
+      disable the entry guard retry schedule on that bridge. The entry
+      guard retry schedule and the bridge descriptor retry schedule can
+      conflict, e.g. where we mark a bridge as "maybe up" yet we don't
+      try to fetch its descriptor yet, leading Tor to wait (refusing to
+      do anything) until it becomes time to fetch the descriptor. Fixes
+      bug 40497; bugfix on 0.3.0.3-alpha.
+
+  o Minor bugfixes (compilation):
+    - Fix our configuration logic to detect whether we had OpenSSL 3:
+      previously, our logic was reversed. This has no other effect than
+      to change whether we suppress deprecated API warnings. Fixes bug
+      40429; bugfix on 0.3.5.13.
+
+  o Minor bugfixes (controller, path bias):
+    - When a circuit's path is specified, in full or in part, from the
+      controller API, do not count that circuit towards our path-bias
+      calculations. (Doing so was incorrect, since we cannot tell
+      whether the controller is selecting relays randomly.) Resolves a
+      "Bug" warning. Fixes bug 40515; bugfix on 0.2.4.10-alpha.
+
+  o Minor bugfixes (logging):
+    - When we no longer have enough directory information to use the
+      network, we would log a notice-level message -- but we would not
+      reliably log a message when we recovered and resumed using the
+      network. Now make sure there is always a corresponding message
+      about recovering. Fixes bug 40496; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (performance, DoS):
+    - Fix one case of a not-especially viable denial-of-service attack
+      found by OSS-Fuzz in our consensus-diff parsing code. This attack
+      causes a lot small of memory allocations and then immediately
+      frees them: this is only slow when running with all the sanitizers
+      enabled. Fixes one case of bug 40472; bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Reject IPv6-only DirPorts. Our reachability self-test forces
+      DirPorts to be IPv4, but our configuration parser allowed them to
+      be IPv6-only, which led to an assertion failure. Fixes bug 40494;
+      bugfix on 0.4.5.1-alpha.
+
+  o Minor bugfixes (sandbox):
+    - Fix the sandbox on i386 by modifying it to allow the
+      "clock_gettime64" and "statx" system calls and to filter the
+      "chown32" and "stat64" system calls in place of "chown" and
+      "stat", respectively. Fixes bug 40505; bugfix on 0.2.5.4-alpha.
+
+  o Documentation (man, relay):
+    - Missing "OverloadStatistics" in tor.1 manpage. Fixes bug 40504;
+      bugfix on 0.4.6.1-alpha.
+
+
 Changes in version 0.4.6.8 - 2021-10-26
   This version fixes several bugs from earlier versions of Tor. One
   highlight is a fix on how we track DNS timeouts to report general

@@ -1,9 +1,0 @@
-  o Major bugfixes (bridges):
-    - Make Tor work reliably again when you have multiple bridges
-      configured and one or more of them are unreachable. The problem
-      came because we require that we have bridge descriptors for both
-      of our first two bridges (else we refuse to try to connect), but
-      in some cases we would wait three hours before trying to fetch
-      these missing descriptors, and/or never recover when we do try
-      to fetch them. Fixes bugs 40396 and 40495; bugfix on 0.3.0.5-rc
-      and 0.3.2.1-alpha.

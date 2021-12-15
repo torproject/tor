@@ -1,6 +1,0 @@
-  o Minor features (compilation):
-    - Give an error message if trying to build with a version of LibreSSL
-      known not to work with Tor.  (There's an incompatibility with
-      LibreSSL versions 3.2.1 through 3.4.0 inclusive because of their
-      incompatibility with OpenSSL 1.1.1's TLSv1.3 APIs.)
-      Closes ticket 40511.

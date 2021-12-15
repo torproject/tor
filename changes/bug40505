@@ -1,5 +1,0 @@
-  o Minor bugfixes (sandbox):
-    - Fix the sandbox on i386 by modifying it to allow the
-      "clock_gettime64" and "statx" system calls and to filter the
-      "chown32" and "stat64" system calls in place of "chown" and
-      "stat", respectively.  Fixes bug 40505; bugfix on 0.2.5.4-alpha.

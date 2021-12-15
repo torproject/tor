@@ -1,4 +1,0 @@
-  o Minor features (portability):
-    - Try to prevent a compiler warning about printf arguments that could
-      sometimes occur on MSYS2 depending on the configuration.
-      Closes ticket 40355.
