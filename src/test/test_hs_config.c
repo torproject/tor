@@ -156,6 +156,20 @@ test_invalid_service(void *arg)
     teardown_capture_of_logs();
   }
 
+  /* Bad export circuit id protocol. */
+  {
+    const char *conf =
+      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs1\n"
+      "HiddenServiceVersion 3\n"
+      "HiddenServicePort 80 127.0.0.1 badprotocol\n";
+    setup_full_capture_of_logs(LOG_WARN);
+    ret = helper_config_service(conf, 1);
+    tt_int_op(ret, OP_EQ, -1);
+    expect_log_msg_containing("HiddenServicePort parse error: export circuit "
+                              "id protocol must be 'haproxy' or 'none'.");
+    teardown_capture_of_logs();
+  }
+
   /* Out of order directives. */
   {
     const char *conf =
@@ -186,6 +200,24 @@ test_valid_service(void *arg)
       "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
       "HiddenServiceVersion 3\n"
       "HiddenServicePort 81\n";
+    ret = helper_config_service(conf, 1);
+    tt_int_op(ret, OP_EQ, 0);
+  }
+
+  {
+    const char *conf =
+      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
+      "HiddenServiceVersion 3\n"
+      "HiddenServicePort 81 127.0.0.1:81 haproxy\n";
+    ret = helper_config_service(conf, 1);
+    tt_int_op(ret, OP_EQ, 0);
+  }
+
+  {
+    const char *conf =
+      "HiddenServiceDir /tmp/tor-test-hs-RANDOM/hs2\n"
+      "HiddenServiceVersion 3\n"
+      "HiddenServicePort 81 127.0.0.1:81 none\n";
     ret = helper_config_service(conf, 1);
     tt_int_op(ret, OP_EQ, 0);
   }

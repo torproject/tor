@@ -366,24 +366,28 @@ test_hs_parse_port_config(void *arg)
   /* Test "VIRTPORT" only. */
   cfg = hs_parse_port_config("80", sep, &err_msg);
   tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_NONE);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test "VIRTPORT,TARGET" (Target is port). */
   hs_port_config_free(cfg);
   cfg = hs_parse_port_config("80,8080", sep, &err_msg);
   tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_NONE);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test "VIRTPORT,TARGET" (Target is IPv4:port). */
   hs_port_config_free(cfg);
   cfg = hs_parse_port_config("80,192.0.2.1:8080", sep, &err_msg);
   tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_NONE);
   tt_ptr_op(err_msg, OP_EQ, NULL);
 
   /* Test "VIRTPORT,TARGET" (Target is IPv6:port). */
   hs_port_config_free(cfg);
   cfg = hs_parse_port_config("80,[2001:db8::1]:8080", sep, &err_msg);
   tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_NONE);
   tt_ptr_op(err_msg, OP_EQ, NULL);
   hs_port_config_free(cfg);
   cfg = NULL;
@@ -411,6 +415,7 @@ test_hs_parse_port_config(void *arg)
   cfg = hs_parse_port_config("100 unix:\"/tmp/foo bar\"",
                                        " ", &err_msg);
   tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_NONE);
   tt_ptr_op(err_msg, OP_EQ, NULL);
   hs_port_config_free(cfg);
   cfg = NULL;
@@ -420,6 +425,7 @@ test_hs_parse_port_config(void *arg)
   cfg = hs_parse_port_config("100 unix:\"/tmp/foo bar\"",
                                        " ", &err_msg);
   tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_NONE);
   tt_ptr_op(err_msg, OP_EQ, NULL);
   hs_port_config_free(cfg);
   cfg = NULL;
@@ -449,6 +455,29 @@ test_hs_parse_port_config(void *arg)
   tt_str_op(err_msg, OP_EQ, "Unparseable or out-of-range port \"99999\" "
             "in hidden service port configuration.");
   tor_free(err_msg);
+
+  /* bad export circuit id protocol */
+  cfg = hs_parse_port_config("100 1000 badprotocol", " ", &err_msg);
+  tt_ptr_op(cfg, OP_EQ, NULL);
+  tt_str_op(err_msg, OP_EQ, "HiddenServicePort parse error: export circuit "
+                            "id protocol must be 'haproxy' or 'none'.");
+  tor_free(err_msg);
+
+  /* none export circuit id protocol */
+  cfg = hs_parse_port_config("100 1000 none", " ", &err_msg);
+  tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_NONE);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
+  hs_port_config_free(cfg);
+  cfg = NULL;
+
+  /* haproxy export circuit id protocol */
+  cfg = hs_parse_port_config("100 1000 haproxy", " ", &err_msg);
+  tt_assert(cfg);
+  tt_int_op(cfg->circuit_id_protocol, OP_EQ, HS_CIRCUIT_ID_PROTOCOL_HAPROXY);
+  tt_ptr_op(err_msg, OP_EQ, NULL);
+  hs_port_config_free(cfg);
+  cfg = NULL;
 
   /* Wrong target address and port separation */
   cfg = hs_parse_port_config("80,127.0.0.1 1234", sep,
