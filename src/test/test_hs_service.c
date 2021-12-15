@@ -144,6 +144,12 @@ mock_relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
   return 0;
 }
 
+static void
+mock_connection_exit_connect(edge_connection_t *edge_conn)
+{
+  tor_assert(edge_conn);
+}
+
 static unsigned int num_intro_points = 0;
 static unsigned int
 mock_count_desc_circuit_established(const hs_service_descriptor_t *desc)
@@ -2097,6 +2103,7 @@ static void
 test_export_client_circuit_id(void *arg)
 {
   origin_circuit_t *or_circ = NULL;
+  int retval;
   size_t sz;
   char *cp1=NULL, *cp2=NULL;
   connection_t *conn = NULL;
@@ -2104,71 +2111,255 @@ test_export_client_circuit_id(void *arg)
   (void) arg;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
+  MOCK(connection_exit_connect, mock_connection_exit_connect);
 
   hs_service_init();
 
   /* Create service */
   hs_service_t *service = helper_create_service();
-  service->config.circuit_id_protocol = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
-
-  /* Create client connection */
-  conn = test_conn_get_connection(AP_CONN_STATE_CIRCUIT_WAIT, CONN_TYPE_AP, 0);
-
-  /* Create client edge conn hs_ident */
-  edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-  edge_conn->hs_ident = hs_ident_edge_conn_new(&service->keys.identity_pk);
-  edge_conn->hs_ident->orig_virtual_port = 42;
+  /* Add HiddenServicePort directives */
+  smartlist_add(service->config.ports,
+                hs_parse_port_config("8000 8000", " ", NULL));
+  smartlist_add(service->config.ports,
+                hs_parse_port_config("8001 8001 none", " ", NULL));
+  smartlist_add(service->config.ports,
+                hs_parse_port_config("8002 8002 haproxy", " ", NULL));
 
   /* Create rend circuit */
   or_circ = origin_circuit_new();
-  or_circ->base_.purpose = CIRCUIT_PURPOSE_C_REND_JOINED;
-  edge_conn->on_circuit = TO_CIRCUIT(or_circ);
+  or_circ->base_.purpose = CIRCUIT_PURPOSE_S_CONNECT_REND;
+  or_circ->hs_ident = hs_ident_circuit_new(&service->keys.identity_pk);
   or_circ->global_identifier = 666;
 
-  /* Export circuit ID */
-  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
+  /* Setup the circuit: do the ntor key exchange */
+  uint8_t ntor_key_seed[DIGEST256_LEN] = {2};
+  retval = hs_circuit_setup_e2e_rend_circ(or_circ, ntor_key_seed,
+                                          sizeof(ntor_key_seed), 1);
+  tt_int_op(retval, OP_EQ, 0);
 
-  /* Check contents */
-  cp1 = buf_get_contents(conn->outbuf, &sz);
-  tt_str_op(cp1, OP_EQ,
-            "PROXY TCP6 fc00:dead:beef:4dad::0:29a ::1 666 42\r\n");
+  /* Has HiddenServiceExportCircuitID set to none. The export circuit id
+   * protocol will be determined only by HiddenServicePort directives. */
+  {
+    service->config.circuit_id_protocol = HS_CIRCUIT_ID_PROTOCOL_NONE;
 
-  /* Change circ GID and see that the reported circuit ID also changes */
-  or_circ->global_identifier = 22;
+    /* Unspecified protocol in HiddenServiceDir */
+    {
+      conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+                                      EXIT_PURPOSE_CONNECT);
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      /* Connect to the virtual port 8000 */
+      edge_conn->base_.port = 8000;
 
-  /* check changes */
-  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
-  cp2 = buf_get_contents(conn->outbuf, &sz);
-  tt_str_op(cp1, OP_NE, cp2);
-  tor_free(cp1);
+      handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
 
-  /* Check that GID with UINT32_MAX works. */
-  or_circ->global_identifier = UINT32_MAX;
+      /* Check contents */
+      cp1 = buf_get_contents(conn->outbuf, &sz);
+      tt_str_op(cp1, OP_EQ, "");
 
-  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
-  cp1 = buf_get_contents(conn->outbuf, &sz);
-  tt_str_op(cp1, OP_EQ,
-            "PROXY TCP6 fc00:dead:beef:4dad::ffff:ffff ::1 65535 42\r\n");
-  tor_free(cp1);
+      connection_free_minimal(conn);
+      conn = NULL;
+      tor_free(cp1);
+    }
 
-  /* Check that GID with UINT16_MAX works. */
-  or_circ->global_identifier = UINT16_MAX;
+    /* None protocol in HiddenServiceDir */
+    {
+      conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+                                      EXIT_PURPOSE_CONNECT);
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      /* Connect to the virtual port 8000 */
+      edge_conn->base_.port = 8001;
 
-  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
-  cp1 = buf_get_contents(conn->outbuf, &sz);
-  tt_str_op(cp1, OP_EQ,
-            "PROXY TCP6 fc00:dead:beef:4dad::0:ffff ::1 65535 42\r\n");
-  tor_free(cp1);
+      handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
 
-  /* Check that GID with UINT16_MAX + 7 works. */
-  or_circ->global_identifier = UINT16_MAX + 7;
+      /* Check contents */
+      cp1 = buf_get_contents(conn->outbuf, &sz);
+      tt_str_op(cp1, OP_EQ, "");
 
-  export_hs_client_circuit_id(edge_conn, service->config.circuit_id_protocol);
-  cp1 = buf_get_contents(conn->outbuf, &sz);
-  tt_str_op(cp1, OP_EQ, "PROXY TCP6 fc00:dead:beef:4dad::1:6 ::1 6 42\r\n");
+      connection_free_minimal(conn);
+      conn = NULL;
+      tor_free(cp1);
+    }
+
+    /* HAProxy protocol in HiddenServiceDir */
+    {
+      conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+                                      EXIT_PURPOSE_CONNECT);
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      /* Connect to the virtual port 8000 */
+      edge_conn->base_.port = 8002;
+
+      handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+      /* Check contents */
+      cp1 = buf_get_contents(conn->outbuf, &sz);
+      tt_str_op(cp1, OP_EQ,
+                "PROXY TCP6 fc00:dead:beef:4dad::0:29a ::1 666 8002\r\n");
+
+      connection_free_minimal(conn);
+      conn = NULL;
+      tor_free(cp1);
+    }
+  }
+
+  /* Has HiddenServiceExportCircuitID set to none. The export circuit id
+   * protocol will be determined only by HiddenServicePort directives. */
+  {
+    service->config.circuit_id_protocol = HS_CIRCUIT_ID_PROTOCOL_HAPROXY;
+
+    /* Unspecified protocol in HiddenServiceDir */
+    {
+      conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+                                      EXIT_PURPOSE_CONNECT);
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      /* Connect to the virtual port 8000 */
+      edge_conn->base_.port = 8000;
+
+      handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+      /* Check contents */
+      cp1 = buf_get_contents(conn->outbuf, &sz);
+      tt_str_op(cp1, OP_EQ,
+                "PROXY TCP6 fc00:dead:beef:4dad::0:29a ::1 666 8000\r\n");
+
+      connection_free_minimal(conn);
+      conn = NULL;
+      tor_free(cp1);
+    }
+
+    /* None protocol in HiddenServiceDir */
+    {
+      conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+                                      EXIT_PURPOSE_CONNECT);
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      /* Connect to the virtual port 8000 */
+      edge_conn->base_.port = 8001;
+
+      handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+      /* Check contents */
+      cp1 = buf_get_contents(conn->outbuf, &sz);
+      tt_str_op(cp1, OP_EQ,
+                "PROXY TCP6 fc00:dead:beef:4dad::0:29a ::1 666 8001\r\n");
+
+      connection_free_minimal(conn);
+      conn = NULL;
+      tor_free(cp1);
+    }
+
+    /* HAProxy protocol in HiddenServiceDir */
+    {
+      conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+                                      EXIT_PURPOSE_CONNECT);
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      /* Connect to the virtual port 8000 */
+      edge_conn->base_.port = 8002;
+
+      handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+      /* Check contents */
+      cp1 = buf_get_contents(conn->outbuf, &sz);
+      tt_str_op(cp1, OP_EQ,
+                "PROXY TCP6 fc00:dead:beef:4dad::0:29a ::1 666 8002\r\n");
+
+      connection_free_minimal(conn);
+      conn = NULL;
+      tor_free(cp1);
+    }
+  }
+
+  /* Edge cases for circuit ids */
+
+  /* Change circuit id */
+  {
+    or_circ->global_identifier = 22;
+
+    conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+        EXIT_PURPOSE_CONNECT);
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    /* Connect to the virtual port 8000 */
+    edge_conn->base_.port = 8002;
+
+    handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+    /* Check contents */
+    cp1 = buf_get_contents(conn->outbuf, &sz);
+    tt_str_op(cp1, OP_EQ,
+        "PROXY TCP6 fc00:dead:beef:4dad::0:16 ::1 22 8002\r\n");
+
+    connection_free_minimal(conn);
+    conn = NULL;
+    tor_free(cp1);
+  }
+
+  /* Circuit id of UINT32_MAX */
+  {
+    or_circ->global_identifier = UINT32_MAX;
+
+    conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+        EXIT_PURPOSE_CONNECT);
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    /* Connect to the virtual port 8000 */
+    edge_conn->base_.port = 8002;
+
+    handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+    /* Check contents */
+    cp1 = buf_get_contents(conn->outbuf, &sz);
+    tt_str_op(cp1, OP_EQ,
+        "PROXY TCP6 fc00:dead:beef:4dad::ffff:ffff ::1 65535 8002\r\n");
+
+    connection_free_minimal(conn);
+    conn = NULL;
+    tor_free(cp1);
+  }
+
+  /* Circuit id of UINT16_MAX */
+  {
+    or_circ->global_identifier = UINT16_MAX;
+
+    conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+        EXIT_PURPOSE_CONNECT);
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    /* Connect to the virtual port 8000 */
+    edge_conn->base_.port = 8002;
+
+    handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+    /* Check contents */
+    cp1 = buf_get_contents(conn->outbuf, &sz);
+    tt_str_op(cp1, OP_EQ,
+        "PROXY TCP6 fc00:dead:beef:4dad::0:ffff ::1 65535 8002\r\n");
+
+    connection_free_minimal(conn);
+    conn = NULL;
+    tor_free(cp1);
+  }
+
+  /* Circuit id of UINT16_MAX + 7*/
+  {
+    or_circ->global_identifier = UINT16_MAX + 7;
+
+    conn = test_conn_get_connection(EXIT_CONN_STATE_OPEN, CONN_TYPE_EXIT,
+        EXIT_PURPOSE_CONNECT);
+    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    /* Connect to the virtual port 8000 */
+    edge_conn->base_.port = 8002;
+
+    handle_hs_exit_conn(TO_CIRCUIT(or_circ), edge_conn);
+
+    /* Check contents */
+    cp1 = buf_get_contents(conn->outbuf, &sz);
+    tt_str_op(cp1, OP_EQ,
+        "PROXY TCP6 fc00:dead:beef:4dad::1:6 ::1 6 8002\r\n");
+
+    connection_free_minimal(conn);
+    conn = NULL;
+    tor_free(cp1);
+  }
 
  done:
   UNMOCK(connection_write_to_buf_impl_);
+  UNMOCK(connection_exit_connect);
   circuit_free_(TO_CIRCUIT(or_circ));
   connection_free_minimal(conn);
   hs_service_free(service);
