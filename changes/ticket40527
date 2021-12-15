@@ -1,5 +1,0 @@
-  o Major bugfixes (relay, overload):
-    - Don't make Tor DNS timeout trigger an overload general state. These
-      timeouts are different from DNS server timeout. They have to be seen as
-      timeout related to UX and not because of a network problem. Fixes bug
-      40527; bugfix on 0.4.6.1-alpha.

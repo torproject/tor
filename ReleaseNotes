@@ -2,6 +2,51 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+INSERT SUMMARY BLURP
+
+Changes in version 0.4.6.9 - 2021-12-15
+  o Major bugfixes (relay, overload):
+    - Don't make Tor DNS timeout trigger an overload general state.
+      These timeouts are different from DNS server timeout. They have to
+      be seen as timeout related to UX and not because of a network
+      problem. Fixes bug 40527; bugfix on 0.4.6.1-alpha.
+
+  o Minor feature (reproducible build):
+    - The repository can now build reproducible tarballs which adds the
+      build command "make dist-reprod" for that purpose. Closes
+      ticket 26299.
+
+  o Minor features (compilation):
+    - Give an error message if trying to build with a version of
+      LibreSSL known not to work with Tor. (There's an incompatibility
+      with LibreSSL versions 3.2.1 through 3.4.0 inclusive because of
+      their incompatibility with OpenSSL 1.1.1's TLSv1.3 APIs.) Closes
+      ticket 40511.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on December 15, 2021.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2021/12/15.
+
+  o Minor bugfixes (compilation):
+    - Fix our configuration logic to detect whether we had OpenSSL 3:
+      previously, our logic was reversed. This has no other effect than
+      to change whether we suppress deprecated API warnings. Fixes bug
+      40429; bugfix on 0.3.5.13.
+
+  o Minor bugfixes (relay):
+    - Reject IPv6-only DirPorts. Our reachability self-test forces
+      DirPorts to be IPv4, but our configuration parser allowed them to
+      be IPv6-only, which led to an assertion failure. Fixes bug 40494;
+      bugfix on 0.4.5.1-alpha.
+
+  o Documentation (man, relay):
+    - Missing "OverloadStatistics" in tor.1 manpage. Fixes bug 40504;
+      bugfix on 0.4.6.1-alpha.
+
+
 Changes in version 0.4.6.8 - 2021-10-26
   This version fixes several bugs from earlier versions of Tor. One
   highlight is a fix on how we track DNS timeouts to report general

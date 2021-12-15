@@ -1,3 +1,0 @@
-  o Documentation (man, relay):
-    - Missing "OverloadStatistics" in tor.1 manpage. Fixes bug 40504; bugfix on
-      0.4.6.1-alpha.
