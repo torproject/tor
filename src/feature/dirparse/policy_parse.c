@@ -192,6 +192,10 @@ router_parse_addr_policy_private(directory_token_t *tok)
   uint16_t port_min, port_max;
   addr_policy_t result;
 
+  /* Safeguard: always flag non canonical because it is a stack allocated
+   * object and thus should not be considered a copy stored in a map. */
+  result.is_canonical = 0;
+
   arg = tok->args[0];
   if (strcmpstart(arg, "private"))
     return NULL;
