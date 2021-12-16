@@ -6,7 +6,7 @@ pipeline.
 
 Before we begin, first rule is to make sure:
 
-   - Our CI pass for each version to release
+   - Our CIs (*nix and Windows) pass for each version to release
    - Coverity has no new alerts
 
 ## 0. Security Release
@@ -20,7 +20,7 @@ prior to the release:
 
 ## 1. Preliminaries
 
-The following must be done 2 days at the very least prior to the release:
+The following must be done **2 days** at the very least prior to the release:
 
    1. Add the version(s) in the dirauth-conf git repository as the
       RecommendedVersion and RequiredVersion so they can be approved by the
@@ -62,10 +62,15 @@ reproducible way using:
 
    https://gitlab.torproject.org/tpo/core/tor-ci-reproducible
 
-Simply run the `./build.sh` which will commit interactively the signature for
-you. You then only need to git push.
+Steps are:
 
-Once all signatures have been committed:
+   1. Run `./build.sh` which will download everything you need, including the
+      latest tarballs from the release CI, and auto-commit the signatures if
+      the checksum match. You will need to confim the commits.
+
+   2. If all is good, `git push origin main` your signatures.
+
+Once all signatures from all selected developers have been committed:
 
    1. Manually trigger the `signature` job in the `Post-process` stage of the
       CI release pipeline.
