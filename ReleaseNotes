@@ -2,9 +2,11 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-INSERT SUMMARY BLURP
-
 Changes in version 0.4.6.9 - 2021-12-15
+  This version fixes several bugs from earlier versions of Tor. One important
+  piece is the removal of DNS timeout metric from the overload general signal.
+  See below for more details.
+
   o Major bugfixes (relay, overload):
     - Don't make Tor DNS timeout trigger an overload general state.
       These timeouts are different from DNS server timeout. They have to
