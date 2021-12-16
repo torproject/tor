@@ -2,9 +2,11 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-INSERT SUMMARY BLURP
-
 Changes in version 0.4.7.3-alpha - 2021-12-15
+  This third alpha release of the 0.4.7.x series fixes several bugs including
+  two major ones affecting Bridges and Relays (see below). If you are running
+  an earlier 0.4.7.x version, you should upgrade to this version.
+
   o Major bugfixes (bridges):
     - Make Tor work reliably again when you have multiple bridges
       configured and one or more of them are unreachable. The problem
