@@ -112,6 +112,10 @@ do the following:
       If possible, mention in which Tor Browser version (with dates) the
       release will be in. This usually only applies to the latest stable.
 
+   4. Inform `tor-talk@lists.torproject.org` with the releasing pointing to
+      the Forum. Append the ChangeLog there. We do this until we can automate
+      such post from the forum directly.
+
 ### New Stable
 
    1. Create the `maint-x.y.z` and `release-x.y.z` branches and update the
