@@ -100,19 +100,27 @@ Once all signatures from all selected developers have been committed:
 Once the tarballs have been uploaded and are ready to be announced, we need to
 do the following:
 
-   1. Merge upstream the artifacts from the `patches` job in the
+   1. Tag versions (main and maint) using `git tag -s tor-0.x.y.z-<status>`
+      and then push the tags: `git push origin --tags`
+
+   2. Merge upstream the artifacts from the `patches` job in the
       `Post-process` stage of the CI release pipeline.
 
-   2. Write and post the release announcement for the `forum.torproject.net`
+   3. Write and post the release announcement for the `forum.torproject.net`
       in the `News -> Tor Release Announcement` category.
 
-      Mention in which Tor Browser version (with dates) the release will be
-      in. This usually only applies to the latest stable.
+      If possible, mention in which Tor Browser version (with dates) the
+      release will be in. This usually only applies to the latest stable.
 
 ### New Stable
 
    1. Create the `maint-x.y.z` and `release-x.y.z` branches and update the
       `./scripts/git/git-list-tor-branches.sh` with the new version.
+
+   2. Add the new version in `./scripts/ci/ci-driver.sh`.
+
+   3. Forward port the ChangeLog and ReleaseNotes into main branch. Remove any
+      change logs of stable releases in ReleaseNotes.
 
 
 ## Appendix: An alternative means to notify packagers
