@@ -1,0 +1,3 @@
+  o Minor bugfixes (compiler warnings):
+    - Fix couple compiler warnings on latest Ubuntu Jammy. Fixes bug 40516;
+      bugfix on 0.3.5.1-alpha.

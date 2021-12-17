@@ -254,6 +254,10 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
   if (ei) {
     const char *family_name = fmt_af_family(family);
     const tor_addr_port_t *ap = extend_info_get_orport(ei, family);
+    if (BUG(!ap)) {
+      /* Not much we can do here to recover apart from screaming loudly. */
+      return;
+    }
     log_info(LD_CIRC, "Testing %s of my %s ORPort: %s.",
              !orport_reachable ? "reachability" : "bandwidth",
              family_name, fmt_addrport_ap(ap));
