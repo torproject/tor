@@ -172,7 +172,7 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
   for (i=0; i < n_fds; ++i)
     backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
 
-  abort();
+  tor_raw_abort_();
 }
 
 /** Write a backtrace to all of the emergency-error fds. */
