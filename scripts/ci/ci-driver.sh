@@ -86,6 +86,7 @@ function error()
 {
     echo "${T_BOLD}${T_RED}ERROR:${T_RESET} $*" 1>&2
 }
+
 function die()
 {
     echo "${T_BOLD}${T_RED}FATAL ERROR:${T_RESET} $*" 1>&2
@@ -158,27 +159,27 @@ function show_git_version()
 if [[ "${ON_GITLAB}" == "yes" ]]; then
     function start_section()
     {
-	local label="$1"
-	local stamp
-	stamp=$(date +%s)
-	printf "section_start:%s:%s\r\e[0K" "$stamp" "$label"
-	echo "${T_BOLD}${T_GREEN}========= $label${T_RESET}"
+        local label="$1"
+        local stamp
+        stamp=$(date +%s)
+        printf "section_start:%s:%s\r\e[0K" "$stamp" "$label"
+        echo "${T_BOLD}${T_GREEN}========= $label${T_RESET}"
     }
     function end_section()
     {
-	local label="$1"
-	local stamp
-	stamp=$(date +%s)
-	printf "section_end:%s:%s\r\e[0K" "$stamp" "$label"
+        local label="$1"
+        local stamp
+        stamp=$(date +%s)
+        printf "section_end:%s:%s\r\e[0K" "$stamp" "$label"
     }
 else
     function start_section()
     {
-	true
+        true
     }
     function end_section()
     {
-	true
+        true
     }
 fi
 
@@ -349,18 +350,18 @@ if [[ "$RUN_STAGE_CONFIGURE" = "yes" ]]; then
 
     start_section "Configure"
     if ! runcmd "${CI_SRCDIR}"/configure "${configure_options[@]}" ; then
-	error "Here is the end of config.log:"
-	runcmd tail config.log
-	die "Unable to continue"
+        error "Here is the end of config.log:"
+        runcmd tail config.log
+        die "Unable to continue"
     fi
     end_section "Configure"
 else
     debug "Skipping configure stage. Making sure that ${CI_BUILDDIR}/config.log exists."
     if [[ ! -d "${CI_BUILDDIR}" ]]; then
-	die "Build directory ${CI_BUILDDIR} did not exist!";
+        die "Build directory ${CI_BUILDDIR} did not exist!"
     fi
     if [[ ! -f "${CI_BUILDDIR}/config.log" ]]; then
-	die "Tor was not configured in ${CI_BUILDDIR}!";
+        die "Tor was not configured in ${CI_BUILDDIR}!"
     fi
 
     cp config.log "${CI_SRCDIR}"/artifacts
@@ -374,26 +375,26 @@ fi
 
 if [[ "$RUN_STAGE_BUILD" = "yes" ]] ; then
     if [[ "$DISTCHECK" = "no" ]]; then
-	start_section "Build"
-	runcmd make "${make_options[@]}" all
+        start_section "Build"
+        runcmd make "${make_options[@]}" all
         cp src/app/tor "${CI_SRCDIR}"/artifacts
-	end_section "Build"
+        end_section "Build"
     else
-	export DISTCHECK_CONFIGURE_FLAGS="${configure_options[*]}"
-	# XXXX Set make options?
-	start_section Distcheck
-	if runcmd make "${make_options[@]}" distcheck ; then
+        export DISTCHECK_CONFIGURE_FLAGS="${configure_options[*]}"
+        # XXXX Set make options?
+        start_section Distcheck
+        if runcmd make "${make_options[@]}" distcheck ; then
             hooray "Distcheck was successful. Nothing further will be done."
             # We have to exit early here, since we can't do any other tests.
             cp tor-*.tar.gz "${CI_SRCDIR}"/artifacts
             exit 0
-	else
+        else
             error "Diagnostics:"
             runcmd make show-distdir-testlog || true
             runcmd make show-distdir-core || true
             die "Unable to continue."
-	fi
-	end_section Distcheck
+        fi
+        end_section Distcheck
     fi
 fi
 
@@ -411,9 +412,9 @@ if [[ "${DOXYGEN}" = 'yes' ]]; then
     start_section Doxygen
     if [[ "${TOR_VER_AT_LEAST_043}" = 'yes' ]]; then
         if runcmd make doxygen; then
-	    hooray "make doxygen has succeeded."
+            hooray "make doxygen has succeeded."
         else
-	    FAILED_TESTS="${FAILED_TESTS} doxygen"
+            FAILED_TESTS="${FAILED_TESTS} doxygen"
         fi
     else
         skipping "make doxygen: doxygen is broken for Tor < 0.4.3"
@@ -464,36 +465,36 @@ if [[ "${CHUTNEY}" = "yes" ]]; then
 fi
 
 if [[ "${STEM}" = "yes" ]]; then
-   start_section "Stem"
-   # 0.3.5 and onward have now disabled onion service v2 so we need to exclude
-   # these Stem tests from now on.
-   EXCLUDE_TESTS="--exclude-test control.controller.test_ephemeral_hidden_services_v2 --exclude-test control.controller.test_hidden_services_conf --exclude-test control.controller.test_with_ephemeral_hidden_services_basic_auth --exclude-test control.controller.test_without_ephemeral_hidden_services --exclude-test control.controller.test_with_ephemeral_hidden_services_basic_auth_no_credentials"
-   if [[ "${TOR_VER_AT_LEAST_044}" = 'yes' ]]; then
-     # XXXX This should probably be part of some test-stem make target.
+    start_section "Stem"
+    # 0.3.5 and onward have now disabled onion service v2 so we need to exclude
+    # these Stem tests from now on.
+    EXCLUDE_TESTS="--exclude-test control.controller.test_ephemeral_hidden_services_v2 --exclude-test control.controller.test_hidden_services_conf --exclude-test control.controller.test_with_ephemeral_hidden_services_basic_auth --exclude-test control.controller.test_without_ephemeral_hidden_services --exclude-test control.controller.test_with_ephemeral_hidden_services_basic_auth_no_credentials"
+    if [[ "${TOR_VER_AT_LEAST_044}" = 'yes' ]]; then
+        # XXXX This should probably be part of some test-stem make target.
 
-     # Disable the check around EXCLUDE_TESTS that requires double quote. We
-     # need it to be expanded.
-     # shellcheck disable=SC2086
-     if runcmd timelimit -p -t 520 -s USR1 -T 30 -S ABRT \
-           python3 "${STEM_PATH}/run_tests.py" \
-           --tor src/app/tor \
-           --integ --test control.controller \
-           $EXCLUDE_TESTS \
-           --test control.base_controller \
-           --test process \
-           --log TRACE \
-           --log-file stem.log ; then
-         hooray "Stem tests have succeeded"
-     else
-       error "Stem output:"
-       runcmd tail -1000 "${STEM_PATH}"/test/data/tor_log
-       runcmd grep -v "SocketClosed" stem.log | tail -1000
-       FAILED_TESTS="${FAILED_TESTS} stem"
-     fi
-   else
-       skipping "Stem: broken with <= 0.4.3. See bug tor#40077"
-   fi
-   end_section "Stem"
+        # Disable the check around EXCLUDE_TESTS that requires double quote. We
+        # need it to be expanded.
+        # shellcheck disable=SC2086
+        if runcmd timelimit -p -t 520 -s USR1 -T 30 -S ABRT \
+            python3 "${STEM_PATH}/run_tests.py" \
+            --tor src/app/tor \
+            --integ --test control.controller \
+            $EXCLUDE_TESTS \
+            --test control.base_controller \
+            --test process \
+            --log TRACE \
+            --log-file stem.log ; then
+            hooray "Stem tests have succeeded"
+        else
+            error "Stem output:"
+            runcmd tail -1000 "${STEM_PATH}"/test/data/tor_log
+            runcmd grep -v "SocketClosed" stem.log | tail -1000
+            FAILED_TESTS="${FAILED_TESTS} stem"
+        fi
+    else
+        skipping "Stem: broken with <= 0.4.3. See bug tor#40077"
+    fi
+    end_section "Stem"
 fi
 
 # TODO: Coverage
