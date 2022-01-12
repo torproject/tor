@@ -62,12 +62,15 @@ static uint32_t xon_rate_bytes;
 static inline const congestion_control_t *
 edge_get_ccontrol(const edge_connection_t *edge)
 {
-  if (edge->cpath_layer)
-    return edge->cpath_layer->ccontrol;
-  else if (edge->on_circuit)
-    return edge->on_circuit->ccontrol;
-  else
-    return NULL;
+  congestion_control_t *ccontrol = NULL;
+
+  if (edge->on_circuit && edge->on_circuit->ccontrol) {
+    ccontrol = edge->on_circuit->ccontrol;
+  } else if (edge->cpath_layer && edge->cpath_layer->ccontrol) {
+    ccontrol = edge->cpath_layer->ccontrol;
+  }
+
+  return ccontrol;
 }
 
 /**
