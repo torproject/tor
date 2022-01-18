@@ -565,8 +565,8 @@ log_new_relay_greeting(void)
   tor_log(LOG_NOTICE, LD_GENERAL, "You are running a new relay. "
          "Thanks for helping the Tor network! If you wish to know "
          "what will happen in the upcoming weeks regarding its usage, "
-         "have a look at https://blog.torproject.org/blog/lifecycle-of"
-         "-a-new-relay");
+         "have a look at https://blog.torproject.org/lifecycle-of-a"
+         "-new-relay");
 
   already_logged = 1;
 }
