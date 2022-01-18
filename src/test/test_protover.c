@@ -340,7 +340,7 @@ test_protover_supports_version(void *arg)
 
 /* HSv2 Rend and HSDir protocol versions. */
 #define PROTOVER_HS_RENDEZVOUS_POINT_V2 1
-#define PROTOVER_HSDIR_V2 1
+#define PROTOVER_HSDIR_V2 2
 
 /* DirCache, Desc, Microdesc, and Cons protocol versions. */
 #define PROTOVER_DIRCACHE_V1 1
