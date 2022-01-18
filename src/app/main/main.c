@@ -594,7 +594,7 @@ tor_init(int argc, char *argv[])
 
     log_notice(LD_GENERAL, "Tor can't help you if you use it wrong! "
                "Learn how to be safe at "
-               "https://www.torproject.org/download/download#warning");
+               "https://support.torproject.org/faq/staying-anonymous/");
 
     if (strstr(version, "alpha") || strstr(version, "beta"))
       log_notice(LD_GENERAL, "This version is not a stable Tor release. "
