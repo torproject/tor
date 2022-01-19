@@ -82,6 +82,7 @@
 #include "feature/nodelist/routerinfo.h"
 #include "feature/nodelist/routerlist.h"
 #include "feature/nodelist/torcert.h"
+#include "feature/relay/dns.h"
 #include "feature/relay/routermode.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -1706,6 +1707,7 @@ notify_after_networkstatus_changes(void)
   congestion_control_new_consensus_params(c);
   flow_control_new_consensus_params(c);
   hs_service_new_consensus_params(c);
+  dns_new_consensus_params(c);
 
   /* Maintenance of our L2 guard list */
   maintain_layer2_guards();

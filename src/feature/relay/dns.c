@@ -213,6 +213,19 @@ evdns_log_cb(int warn, const char *msg)
   tor_log(severity, LD_EXIT, "eventdns: %s", msg);
 }
 
+/** New consensus just appeared, take appropriate actions if need be. */
+void
+dns_new_consensus_params(const networkstatus_t *ns)
+{
+  (void) ns;
+
+  /* Consensus has parameters for the Exit relay DNS side and so we only reset
+   * the DNS nameservers if we are in server mode. */
+  if (server_mode(get_options())) {
+    dns_reset();
+  }
+}
+
 /** Initialize the DNS subsystem; called by the OR process. */
 int
 dns_init(void)
