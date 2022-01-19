@@ -256,6 +256,7 @@ router_do_orport_reachability_checks(const routerinfo_t *me,
     const tor_addr_port_t *ap = extend_info_get_orport(ei, family);
     if (BUG(!ap)) {
       /* Not much we can do here to recover apart from screaming loudly. */
+      extend_info_free(ei);
       return;
     }
     log_info(LD_CIRC, "Testing %s of my %s ORPort: %s.",
