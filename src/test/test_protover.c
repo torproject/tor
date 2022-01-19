@@ -348,9 +348,6 @@ test_protover_supports_version(void *arg)
 /* Deprecated HSIntro versions */
 #define PROTOVER_HS_INTRO_DEPRECATED_1 1
 #define PROTOVER_HS_INTRO_DEPRECATED_2 2
-/* Highest supported HSv2 introduce protocol version.
- * It's not clear if we actually support version 2, see #25068. */
-#define PROTOVER_HS_INTRO_V2 3
 
 /* HSv2 Rend and HSDir protocol versions. */
 #define PROTOVER_HS_RENDEZVOUS_POINT_V2 1
@@ -433,12 +430,6 @@ test_protover_supported_protocols(void *arg)
   tt_assert(!protocol_list_supports_protocol(supported_protocols,
                                             PRT_HSINTRO,
                                             PROTOVER_HS_INTRO_DEPRECATED_2));
-  /* We could test legacy HSIntro by calling rend_service_update_descriptor(),
-   * and checking the protocols field. But that's unlikely to change, so
-   * we just use a hard-coded value. */
-  tt_assert(protocol_list_supports_protocol(supported_protocols,
-                                            PRT_HSINTRO,
-                                            PROTOVER_HS_INTRO_V2));
   /* Test for HSv3 HSIntro */
   tt_assert(protocol_list_supports_protocol(supported_protocols,
                                             PRT_HSINTRO,
