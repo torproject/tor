@@ -115,7 +115,7 @@ struct nola_params_t {
 };
 
 /** Fields common to all congestion control algorithms */
-typedef struct congestion_control_t {
+struct congestion_control_t {
   /**
    * Smartlist of uint64_t monotime usec timestamps of when we sent a data
    * cell that is pending a sendme. FIFO queue that is managed similar to
@@ -209,7 +209,7 @@ typedef struct congestion_control_t {
     struct vegas_params_t vegas_params;
     struct nola_params_t nola_params;
   };
-} congestion_control_t;
+};
 
 /**
  * Returns the number of sendme acks we will recieve before we update cwnd.
@@ -221,7 +221,7 @@ typedef struct congestion_control_t {
  * If this returns 0 due to high cwnd_inc_rate, the calling code will
  * update every sendme ack.
  */
-static inline uint64_t CWND_UPDATE_RATE(const congestion_control_t *cc)
+static inline uint64_t CWND_UPDATE_RATE(const struct congestion_control_t *cc)
 {
   /* We add cwnd_inc_rate*sendme_inc/2 to round to nearest integer number
    * of acks */
@@ -241,7 +241,7 @@ static inline uint64_t CWND_UPDATE_RATE(const congestion_control_t *cc)
  * allows us to specify the percent of the current consensus window
  * to update by.
  */
-static inline uint64_t CWND_INC_SS(const congestion_control_t *cc)
+static inline uint64_t CWND_INC_SS(const struct congestion_control_t *cc)
 {
   return (cc->cwnd_inc_pct_ss*cc->cwnd/100);
 }

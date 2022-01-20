@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Resume being able to build on old / esoteric gcc versions. Fixes
+      bug 40550; bugfix on 0.4.7.1-alpha.
