@@ -19,6 +19,7 @@
 #include "core/or/channel.h"
 #include "core/or/circuit_st.h"
 #include "core/or/circuitlist.h"
+#include "core/or/congestion_control_common.h"
 #include "core/or/congestion_control_st.h"
 #include "core/or/connection_st.h"
 #include "core/or/edge_connection_st.h"
