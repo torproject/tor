@@ -13,6 +13,10 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/circuit_st.h"
 
+/* The maximum whole number of cells that can fit in a
+ * full TLS record. This is 31. */
+#define TLS_RECORD_MAX_CELLS ((16 * 1024) / CELL_MAX_NETWORK_SIZE)
+
 typedef struct congestion_control_t congestion_control_t;
 
 /** Wrapper for the free function, set the CC pointer to NULL after free */

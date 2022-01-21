@@ -116,7 +116,7 @@ flow_control_new_consensus_params(const networkstatus_t *ns)
       CC_XON_RATE_BYTES_MAX)*RELAY_PAYLOAD_SIZE;
 
 #define CC_XON_EWMA_CNT_DFLT (2)
-#define CC_XON_EWMA_CNT_MIN (1)
+#define CC_XON_EWMA_CNT_MIN (2)
 #define CC_XON_EWMA_CNT_MAX (100)
   xon_ewma_cnt = networkstatus_get_param(ns, "cc_xon_ewma_cnt",
       CC_XON_EWMA_CNT_DFLT,

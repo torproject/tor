@@ -23,11 +23,13 @@
 #include "core/or/channel.h"
 #include "feature/nodelist/networkstatus.h"
 
-#define VEGAS_GAMMA(cc)   (6*(cc)->sendme_inc)
-#define VEGAS_ALPHA(cc)   (3*(cc)->sendme_inc)
-#define VEGAS_BETA(cc)    (6*(cc)->sendme_inc)
+#define OUTBUF_CELLS (2*TLS_RECORD_MAX_CELLS)
 
-#define VEGAS_BDP_MIX_PCT       0
+#define VEGAS_ALPHA(cc)   (3*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
+#define VEGAS_BETA(cc)    (3*OUTBUF_CELLS)
+#define VEGAS_GAMMA(cc)   (3*OUTBUF_CELLS)
+
+#define VEGAS_BDP_MIX_PCT       100
 
 /**
  * The original TCP Vegas used only a congestion window BDP estimator. We

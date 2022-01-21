@@ -35,16 +35,18 @@
  *
  * More details for each of the parameters can be found in proposal 324,
  * section 6.5 including tuning notes. */
-#define CIRCWINDOW_INIT (500)
-#define SENDME_INC_DFLT (50)
+#define SENDME_INC_DFLT (TLS_RECORD_MAX_CELLS)
+#define CIRCWINDOW_INIT (4*SENDME_INC_DFLT)
+
 #define CC_ALG_DFLT (CC_ALG_SENDME)
 #define CC_ALG_DFLT_ALWAYS (CC_ALG_VEGAS)
 
-#define CWND_INC_DFLT (50)
-#define CWND_INC_PCT_SS_DFLT (100)
+#define CWND_INC_DFLT (TLS_RECORD_MAX_CELLS)
+#define CWND_INC_PCT_SS_DFLT (50)
 #define CWND_INC_RATE_DFLT (1)
+
+#define CWND_MIN_DFLT (SENDME_INC_DFLT)
 #define CWND_MAX_DFLT (INT32_MAX)
-#define CWND_MIN_DFLT (MAX(100, SENDME_INC_DFLT))
 
 #define BWE_SENDME_MIN_DFLT (5)
 #define EWMA_CWND_COUNT_DFLT (2)
@@ -138,8 +140,8 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
         CWND_MAX_MIN,
         CWND_MAX_MAX);
 
-#define SENDME_INC_MIN 10
-#define SENDME_INC_MAX (1000)
+#define SENDME_INC_MIN 1
+#define SENDME_INC_MAX (255)
   cc_sendme_inc =
     networkstatus_get_param(NULL, "cc_sendme_inc",
         SENDME_INC_DFLT,
@@ -171,7 +173,7 @@ congestion_control_init_params(congestion_control_t *cc,
   const or_options_t *opts = get_options();
   cc->sendme_inc = params->sendme_inc_cells;
 
-#define CWND_INIT_MIN 100
+#define CWND_INIT_MIN SENDME_INC_DFLT
 #define CWND_INIT_MAX (10000)
   cc->cwnd =
     networkstatus_get_param(NULL, "cc_cwnd_init",
@@ -203,7 +205,7 @@ congestion_control_init_params(congestion_control_t *cc,
         CWND_INC_RATE_MIN,
         CWND_INC_RATE_MAX);
 
-#define CWND_MIN_MIN 20
+#define CWND_MIN_MIN SENDME_INC_DFLT
 #define CWND_MIN_MAX (1000)
   cc->cwnd_min =
     networkstatus_get_param(NULL, "cc_cwnd_min",
