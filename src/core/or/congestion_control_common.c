@@ -937,21 +937,26 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
       timestamp_usec = peek_timestamp(cc->sendme_arrival_timestamps);
       uint64_t delta = now_usec - timestamp_usec;
 
-      /* The acked data is in sendme_cnt-1 chunks, because we are counting the
-       * data that is processed by the other endpoint *between* all of these
-       * sendmes. There's one less gap between the sendmes than the number
-       * of sendmes. */
-      uint64_t cells = (sendme_cnt-1)*cc->sendme_inc;
+      /* In Shadow, the time delta between acks can be 0 if there is no
+       * network activity between them. Only update BDP if the delta is
+       * non-zero. */
+      if (delta > 0) {
+        /* The acked data is in sendme_cnt-1 chunks, because we are counting
+         * the data that is processed by the other endpoint *between* all of
+         * these sendmes. There's one less gap between the sendmes than the
+         * number of sendmes. */
+        uint64_t cells = (sendme_cnt-1)*cc->sendme_inc;
 
-      /* The bandwidth estimate is cells/delta, which when multiplied
-       * by min RTT obtains the BDP. However, we multiply first to
-       * avoid precision issues with the RTT being close to delta in size. */
-      sendme_rate_bdp = cells*cc->min_rtt_usec/delta;
+        /* The bandwidth estimate is cells/delta, which when multiplied
+         * by min RTT obtains the BDP. However, we multiply first to
+         * avoid precision issues with the RTT being close to delta in size. */
+        sendme_rate_bdp = cells*cc->min_rtt_usec/delta;
 
-      /* Calculate BDP_EWMA_COUNT N-EWMA */
-      cc->bdp[BDP_ALG_SENDME_RATE] =
-                 n_count_ewma(sendme_rate_bdp, cc->bdp[BDP_ALG_SENDME_RATE],
-                              cc->ewma_cwnd_cnt*sendme_acks_per_cwnd(cc));
+        /* Calculate BDP_EWMA_COUNT N-EWMA */
+        cc->bdp[BDP_ALG_SENDME_RATE] =
+                   n_count_ewma(sendme_rate_bdp, cc->bdp[BDP_ALG_SENDME_RATE],
+                                cc->ewma_cwnd_cnt*sendme_acks_per_cwnd(cc));
+      }
     }
 
     /* In-flight BDP will cause the cwnd to drift down when underutilized.
