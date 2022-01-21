@@ -698,7 +698,7 @@ static bool
 time_delta_stalled_or_jumped(const congestion_control_t *cc,
                              uint64_t old_delta, uint64_t new_delta)
 {
-#define DELTA_DISCREPENCY_RATIO_MAX 100
+#define DELTA_DISCREPENCY_RATIO_MAX 5000
   /* If we have a 0 new_delta, that is definitely a monotime stall */
   if (new_delta == 0) {
     static ratelim_t stall_info_limit = RATELIM_INIT(60);
