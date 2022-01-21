@@ -206,7 +206,8 @@ struct congestion_control_t {
  *
  * Congestion control literature recommends only one update of cwnd per
  * cwnd worth of acks. However, we can also tune this to be more frequent
- * by increasing the 'cc_cwnd_inc_rate' consensus parameter.
+ * by increasing the 'cc_cwnd_inc_rate' consensus parameter. This tuning
+ * only applies after slow start.
  *
  * If this returns 0 due to high cwnd_inc_rate, the calling code will
  * update every sendme ack.
@@ -215,8 +216,13 @@ static inline uint64_t CWND_UPDATE_RATE(const struct congestion_control_t *cc)
 {
   /* We add cwnd_inc_rate*sendme_inc/2 to round to nearest integer number
    * of acks */
-  return ((cc->cwnd + cc->cwnd_inc_rate*cc->sendme_inc/2)
+
+  if (cc->in_slow_start) {
+    return ((cc->cwnd + cc->sendme_inc/2)/cc->sendme_inc);
+  } else {
+    return ((cc->cwnd + cc->cwnd_inc_rate*cc->sendme_inc/2)
            / (cc->cwnd_inc_rate*cc->sendme_inc));
+  }
 }
 
 /**
