@@ -96,6 +96,16 @@ uint8_t cc_sendme_inc = SENDME_INC_DFLT;
 static cc_alg_t cc_alg = CC_ALG_DFLT;
 
 /**
+ * Number of cwnd worth of sendme acks to smooth RTT and BDP with,
+ * using N_EWMA */
+static uint8_t ewma_cwnd_cnt;
+
+/**
+ * Minimum number of sendmes before we begin BDP estimates
+ */
+static uint8_t bwe_sendme_min;
+
+/**
  * Update global congestion control related consensus parameter values,
  * every consensus update.
  */
@@ -155,6 +165,23 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
         CC_ALG_DFLT,
         CC_ALG_MIN,
         CC_ALG_MAX);
+
+#define BWE_SENDME_MIN_MIN 2
+#define BWE_SENDME_MIN_MAX (20)
+  bwe_sendme_min =
+    networkstatus_get_param(NULL, "cc_bwe_min",
+        BWE_SENDME_MIN_DFLT,
+        BWE_SENDME_MIN_MIN,
+        BWE_SENDME_MIN_MAX);
+
+#define EWMA_CWND_COUNT_MIN 1
+#define EWMA_CWND_COUNT_MAX (100)
+  ewma_cwnd_cnt =
+    networkstatus_get_param(NULL, "cc_ewma_cwnd_cnt",
+        EWMA_CWND_COUNT_DFLT,
+        EWMA_CWND_COUNT_MIN,
+        EWMA_CWND_COUNT_MAX);
+
 }
 
 /**
@@ -213,22 +240,6 @@ congestion_control_init_params(congestion_control_t *cc,
         CWND_MIN_DFLT,
         CWND_MIN_MIN,
         CWND_MIN_MAX);
-
-#define EWMA_CWND_COUNT_MIN 1
-#define EWMA_CWND_COUNT_MAX (100)
-  cc->ewma_cwnd_cnt =
-    networkstatus_get_param(NULL, "cc_ewma_cwnd_cnt",
-        EWMA_CWND_COUNT_DFLT,
-        EWMA_CWND_COUNT_MIN,
-        EWMA_CWND_COUNT_MAX);
-
-#define BWE_SENDME_MIN_MIN 2
-#define BWE_SENDME_MIN_MAX (20)
-  cc->bwe_sendme_min =
-    networkstatus_get_param(NULL, "cc_bwe_min",
-        BWE_SENDME_MIN_DFLT,
-        BWE_SENDME_MIN_MIN,
-        BWE_SENDME_MIN_MAX);
 
   /* If the consensus says to use OG sendme, but torrc has
    * always-enabled, use the default "always" alg (vegas),
@@ -804,7 +815,7 @@ congestion_control_update_circuit_rtt(congestion_control_t *cc,
     return 0;
   }
 
-  ewma_cnt = cc->ewma_cwnd_cnt*sendme_acks_per_cwnd(cc);
+  ewma_cnt = ewma_cwnd_cnt*sendme_acks_per_cwnd(cc);
   ewma_cnt = MAX(ewma_cnt, 2); // Use at least 2
 
   cc->ewma_rtt_usec = n_count_ewma(rtt, cc->ewma_rtt_usec, ewma_cnt);
@@ -921,12 +932,12 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
      */
     enqueue_timestamp(cc->sendme_arrival_timestamps, now_usec);
 
-    if (smartlist_len(cc->sendme_arrival_timestamps) >= cc->bwe_sendme_min) {
+    if (smartlist_len(cc->sendme_arrival_timestamps) >= bwe_sendme_min) {
       /* If we have more sendmes than fit in a cwnd, trim the list.
        * Those are not acurrately measuring throughput, if cwnd is
        * currently smaller than BDP */
       while (smartlist_len(cc->sendme_arrival_timestamps) >
-             cc->bwe_sendme_min &&
+             bwe_sendme_min &&
              (uint64_t)smartlist_len(cc->sendme_arrival_timestamps) >
                        sendme_acks_per_cwnd(cc)) {
         (void)dequeue_timestamp(cc->sendme_arrival_timestamps);
@@ -955,7 +966,7 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
         /* Calculate BDP_EWMA_COUNT N-EWMA */
         cc->bdp[BDP_ALG_SENDME_RATE] =
                    n_count_ewma(sendme_rate_bdp, cc->bdp[BDP_ALG_SENDME_RATE],
-                                cc->ewma_cwnd_cnt*sendme_acks_per_cwnd(cc));
+                                ewma_cwnd_cnt*sendme_acks_per_cwnd(cc));
       }
     }
 

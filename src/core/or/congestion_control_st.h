@@ -178,16 +178,6 @@ struct congestion_control_t {
   uint8_t cwnd_inc_rate;
 
   /**
-   * Number of cwnd worth of sendme acks to smooth RTT and BDP with,
-   * using N_EWMA */
-  uint8_t ewma_cwnd_cnt;
-
-  /**
-   * Minimum number of sendmes before we begin BDP estimates
-   */
-  uint8_t bwe_sendme_min;
-
-  /**
    * Number of cells to ack with every sendme. Taken from consensus parameter
    * and negotiation during circuit setup. */
   uint8_t sendme_inc;
