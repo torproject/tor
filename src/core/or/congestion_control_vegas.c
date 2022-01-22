@@ -206,8 +206,8 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
     if (cc->in_slow_start) {
       if (queue_use < cc->vegas_params.gamma && !cc->blocked_chan) {
         /* Grow to BDP immediately, then exponential growth until
-         * congestion signal */
-        cc->cwnd = MAX(cc->cwnd + CWND_INC_SS(cc),
+         * congestion signal. Increment by at least 2 sendme's worth. */
+        cc->cwnd = MAX(cc->cwnd + MAX(CWND_INC_SS(cc), 2*cc->sendme_inc),
                        vegas_bdp_mix(cc));
       } else {
         /* Congestion signal: Fall back to Vegas equilibrium (BDP) */
