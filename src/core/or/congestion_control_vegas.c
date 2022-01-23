@@ -210,8 +210,8 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
         cc->cwnd = MAX(cc->cwnd + MAX(CWND_INC_SS(cc), 2*cc->sendme_inc),
                        vegas_bdp_mix(cc));
       } else {
-        /* Congestion signal: Fall back to Vegas equilibrium (BDP) */
-        cc->cwnd = vegas_bdp_mix(cc);
+        /* Congestion signal: Set cwnd to gamma threshhold */
+        cc->cwnd = vegas_bdp_mix(cc) + cc->vegas_params.gamma;
         cc->in_slow_start = 0;
         log_info(LD_CIRC, "CC: TOR_VEGAS exiting slow start");
       }
