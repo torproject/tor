@@ -84,12 +84,17 @@ Once all signatures from all selected developers have been committed:
 
    3. Put them on `dist.torproject.org`:
 
-      Upload the tarball and its sig to the dist website, i.e.
-      `/srv/dist-master.torproject.org/htdocs/` on dist-master. Run
-      "static-update-component dist.torproject.org" on dist-master.
+      Upload the tarball and its sig to the dist website:
 
-      In the `project/web/tpo.git` repository, update `databags/versions.ini`
-      to note the new version. Push these changes to `master`.
+         `rsync -avP tor-0.3.5.18.tar.gz{,.asc} dist-master.torproject.org:/srv/dist-master.torproject.org/htdocs/`
+
+      Then, on dist-master.torproject.org, run:
+
+         `static-update-component dist.torproject.org`
+
+      For an alpha or latest stable, open an MR in
+      https://gitlab.torproject.org/tpo/web/tpo that updates the
+      `databags/versions.ini` to note the new version.
 
       (NOTE: Due to #17805, there can only be one stable version listed at once.
       Nonetheless, do not call your version "alpha" if it is stable, or people
@@ -105,8 +110,8 @@ Once the tarballs have been uploaded and are ready to be announced, we need to
 do the following:
 
    1. Tag versions (`main` branch or `release` branch as appropriate) using
-      `git tag -s tor-0.x.y.z-<status>`
-      and then push the tags: `git push origin --tags`
+      `git tag -s tor-0.x.y.z-<status>` and then push the tags:
+      `git push origin --tags`
 
       (This should be the `main` or `release` branch because that is the one
       from which the tarballs are built.  We want our tags to match our
