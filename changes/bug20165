@@ -1,0 +1,5 @@
+  o Minor bugfixes (self-testing):
+    - Relays now only mark their OR ports as reachable when they get
+      a circuit on an incoming connection _to the right address_.  Previously,
+      any incoming connection would make the port count as reachable.
+      Fixes bug 20165; bugfix on 0.1.0.1-rc.
