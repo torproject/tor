@@ -1,3 +1,0 @@
-  o Minor feature (reproducible build):
-    - The repository can now build reproducible tarballs which adds the build
-      command "make dist-reprod" for that purpose. Closes ticket 26299.

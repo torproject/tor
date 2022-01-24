@@ -1,3 +1,39 @@
+Changes in version 0.3.5.18 - 2022-01-24
+  This is the very last version of the 0.3.5.x series as it is end of
+  life on February 1st, 2022. This version fixes some minor bugs
+  including a build warning about LibreSSL incompatibility with
+  OpenSSL TLSv1.3.
+
+  Godspeed 0.3.5, we won't miss you.
+
+  o Minor feature (reproducible build):
+    - The repository can now build reproducible tarballs which adds the
+      build command "make dist-reprod" for that purpose. Closes
+      ticket 26299.
+
+  o Minor features (compilation):
+    - Give an error message if trying to build with a version of
+      LibreSSL known not to work with Tor. (There's an incompatibility
+      with LibreSSL versions 3.2.1 through 3.4.0 inclusive because of
+      their incompatibility with OpenSSL 1.1.1's TLSv1.3 APIs.) Closes
+      ticket 40511.
+
+  o Minor bugfix (logging):
+    - Update a log notice dead URL to a working one. Fixes bug 40544;
+      bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfix (relay):
+    - Remove the HSDir and HSIntro onion service v2 protocol versions so
+      relay stop advertising that they support them. Fixes bug 40509;
+      bugfix on 0.3.5.17.
+
+  o Minor bugfixes (compilation):
+    - Fix our configuration logic to detect whether we had OpenSSL 3:
+      previously, our logic was reversed. This has no other effect than
+      to change whether we suppress deprecated API warnings. Fixes bug
+      40429; bugfix on 0.3.5.13.
+
+
 Changes in version 0.3.5.17 - 2021-10-26
   The major change in this version is that v2 onion services are now
   disabled at the client, service, and relay: any Tor nodes running this

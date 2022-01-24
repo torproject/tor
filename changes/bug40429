@@ -1,5 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix our configuration logic to detect whether we had OpenSSL 3:
-      previously, our logic was reversed. This has no other effect than to
-      change whether we suppress deprecated API warnings. Fixes
-      bug 40429; bugfix on 0.3.5.13.
