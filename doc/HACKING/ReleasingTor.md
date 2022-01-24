@@ -49,10 +49,14 @@ been merged upstream.
 
    1. Download the generated patches from the `Patches` stage.
 
+      Apply these patches to the `main` or `release` branch as appropriate.
+      (Version bumps apply to `maint`; anything touching the changelog should
+      apply only to `main` or `release`.)
+
    2. For the ChangeLog and ReleaseNotes, you need to write a blurb at the top
       explaining a bit the release.
 
-   3. Review, modify if needed, and merged them upstream.
+   3. Review, modify if needed, and merge them upstream.
 
    4. Manually trigger the `maintained` job in the `Build` stage so the CI can
       build the tarballs without errors.
@@ -100,8 +104,13 @@ Once all signatures from all selected developers have been committed:
 Once the tarballs have been uploaded and are ready to be announced, we need to
 do the following:
 
-   1. Tag versions (main and maint) using `git tag -s tor-0.x.y.z-<status>`
+   1. Tag versions (`main` branch or `release` branch as appropriate) using
+      `git tag -s tor-0.x.y.z-<status>`
       and then push the tags: `git push origin --tags`
+
+      (This should be the `main` or `release` branch because that is the one
+      from which the tarballs are built.  We want our tags to match our
+      tarballs.)
 
    2. Merge upstream the artifacts from the `patches` job in the
       `Post-process` stage of the CI release pipeline.
