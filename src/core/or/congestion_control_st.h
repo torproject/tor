@@ -103,6 +103,8 @@ struct vegas_params_t {
     uint16_t alpha;
     /** The queue use above which we decrement cwnd */
     uint16_t beta;
+    /** The queue use at which we cap cwnd in steady state */
+    uint16_t delta;
     /** Weighted average (percent) between cwnd estimator and
      * piecewise estimator. */
     uint8_t bdp_mix_pct;
