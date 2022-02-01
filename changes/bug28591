@@ -1,0 +1,4 @@
+  o Minor bugfixes (client, bootstrap):
+    - When Tor's clock is behind the clocks on the authorities, allow Tor to
+      bootstrap successfully. Fixes bug 28591; bugfix on 0.2.0.9-alpha.
+
