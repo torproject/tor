@@ -17,6 +17,8 @@
 #include "core/or/relay.h"
 #include "core/or/crypt_path.h"
 #include "core/or/extendinfo.h"
+#include "core/or/congestion_control_common.h"
+#include "core/crypto/onion_crypto.h"
 #include "feature/client/circpathbias.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
@@ -408,6 +410,14 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
     tor_assert(circ->hs_ident);
   }
 
+  if (data->cc_enabled) {
+    circuit_params_t circ_params = {
+      .cc_enabled = data->cc_enabled,
+      .sendme_inc_cells = congestion_control_sendme_inc(),
+    };
+    TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params);
+  }
+
  end:
   extend_info_free(info);
 }
@@ -503,6 +513,14 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
   new_circ->build_state->failure_count = bstate->failure_count+1;
   new_circ->build_state->expiry_time = bstate->expiry_time;
   new_circ->hs_ident = hs_ident_circuit_dup(circ->hs_ident);
+
+  if (TO_CIRCUIT(circ)->ccontrol != NULL) {
+    circuit_params_t circ_params = {
+      .cc_enabled = 1,
+      .sendme_inc_cells = TO_CIRCUIT(circ)->ccontrol->sendme_inc,
+    };
+    TO_CIRCUIT(new_circ)->ccontrol = congestion_control_new(&circ_params);
+  }
 
  done:
   return;
