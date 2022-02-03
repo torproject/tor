@@ -242,10 +242,12 @@
 
 void tor_assertion_failed_(const char *fname, unsigned int line,
                            const char *func, const char *expr,
-                           const char *fmt, ...);
+                           const char *fmt, ...)
+    CHECK_PRINTF(5,6);
 void tor_bug_occurred_(const char *fname, unsigned int line,
                        const char *func, const char *expr,
-                       int once, const char *fmt, ...);
+                       int once, const char *fmt, ...)
+  CHECK_PRINTF(6,7);
 
 void tor_abort_(void) ATTR_NORETURN;
 
