@@ -37,6 +37,7 @@
 #include "trunnel/ed25519_cert.h"
 #include "trunnel/hs/cell_establish_intro.h"
 
+#include "core/or/congestion_control_st.h"
 #include "core/or/cpath_build_state_st.h"
 #include "core/or/crypt_path_st.h"
 #include "feature/nodelist/node_st.h"
@@ -549,6 +550,7 @@ setup_introduce1_data(const hs_desc_intro_point_t *ip,
     /* We can't rendezvous without the curve25519 onion key. */
     goto end;
   }
+
   /* Success, we have valid introduce data. */
   ret = 0;
 
@@ -1070,6 +1072,12 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
     log_info(LD_REND, "Unable to setup INTRODUCE1 data. The chosen rendezvous "
                       "point is unusable. Closing circuit.");
     goto close;
+  }
+
+  /* If the rend circ was set up for congestion control, add that to the
+   * intro data, to signal it in an extension */
+  if (TO_CIRCUIT(rend_circ)->ccontrol) {
+    intro1_data.cc_enabled = 1;
   }
 
   /* Final step before we encode a cell, we setup the circuit identifier which

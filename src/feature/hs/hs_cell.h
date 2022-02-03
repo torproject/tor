@@ -40,6 +40,8 @@ typedef struct hs_cell_introduce1_data_t {
   const curve25519_keypair_t *client_kp;
   /** Rendezvous point link specifiers. */
   smartlist_t *link_specifiers;
+  /** Congestion control parameters. */
+  unsigned int cc_enabled : 1;
 } hs_cell_introduce1_data_t;
 
 /** This data structure contains data that we need to parse an INTRODUCE2 cell

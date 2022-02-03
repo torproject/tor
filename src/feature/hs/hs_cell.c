@@ -18,6 +18,7 @@
 #include "core/or/origin_circuit_st.h"
 
 /* Trunnel. */
+#include "trunnel/congestion_control.h"
 #include "trunnel/ed25519_cert.h"
 #include "trunnel/extension.h"
 #include "trunnel/hs/cell_establish_intro.h"
@@ -372,6 +373,26 @@ introduce1_encrypt_and_encode(trn_cell_introduce1_t *cell,
   tor_free(encrypted);
 }
 
+/** Build and set the INTRODUCE congestion control extension in the given
+ * extensions. */
+static void
+build_introduce_cc_extension(trn_extension_t *extensions)
+{
+  trn_extension_field_t *field = NULL;
+
+  /* Build CC request extension. */
+  field = trn_extension_field_new();
+  trn_extension_field_set_field_type(field,
+                                     TRUNNEL_EXT_TYPE_CC_FIELD_REQUEST);
+
+  /* No payload indicating a request to use congestion control. */
+  trn_extension_field_set_field_len(field, 0);
+
+  /* Build final extension. */
+  trn_extension_add_fields(extensions, field);
+  trn_extension_set_num(extensions, trn_extension_get_num(extensions) + 1);
+}
+
 /** Using the INTRODUCE1 data, setup the ENCRYPTED section in cell. This means
  * set it, encrypt it and encode it. */
 static void
@@ -387,10 +408,13 @@ introduce1_set_encrypted(trn_cell_introduce1_t *cell,
   enc_cell = trn_cell_introduce_encrypted_new();
   tor_assert(enc_cell);
 
-  /* Set extension data. None are used. */
+  /* Setup extension(s) if any. */
   ext = trn_extension_new();
   tor_assert(ext);
-  trn_extension_set_num(ext, 0);
+  /* Build congestion control extension is enabled. */
+  if (data->cc_enabled) {
+    build_introduce_cc_extension(ext);
+  }
   trn_cell_introduce_encrypted_set_extensions(enc_cell, ext);
 
   /* Set the rendezvous cookie. */
