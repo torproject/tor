@@ -258,6 +258,7 @@ main(int c, const char **v)
   int i, i_out;
   int loglevel = LOG_ERR;
   int accel_crypto = 0;
+  int opt_forked = 0;
 
   /* We must initialise logs before we call tor_assert() */
   init_logging(1);
@@ -281,6 +282,7 @@ main(int c, const char **v)
   unsigned num=1, den=1;
 
   for (i_out = i = 1; i < c; ++i) {
+    /* Consume these arguments */
     if (!strcmp(v[i], "--warn")) {
       loglevel = LOG_WARN;
     } else if (!strcmp(v[i], "--notice")) {
@@ -305,6 +307,11 @@ main(int c, const char **v)
         printf("--fraction expects a valid fraction as an input.\n");
       }
     } else {
+      /* Pass these arguments, and unknown arguments,
+       * through to tinytest_main() */
+      if (!strcmp(v[i], "--RUNNING-FORKED")) {
+        opt_forked = 1;
+      }
       v[i_out++] = v[i];
     }
   }
@@ -330,6 +337,13 @@ main(int c, const char **v)
   init_protocol_warning_severity_level();
 
   options->command = CMD_RUN_UNITTESTS;
+
+  /* Only print this in the main process on Windows, not any of the
+   * "forked" processes. */
+  if (!opt_forked) {
+    printf("Unit tests for %s\n", get_library_versions());
+  }
+
   if (crypto_global_init(accel_crypto, NULL, NULL)) {
     printf("Can't initialize crypto subsystem; exiting.\n");
     return 1;
