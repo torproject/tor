@@ -74,8 +74,37 @@ gcd64(uint64_t a, uint64_t b)
 void
 simplify_fraction64(uint64_t *numer, uint64_t *denom)
 {
+  raw_assert(numer);
   raw_assert(denom);
+  raw_assert(*denom > 0);
+
   uint64_t gcd = gcd64(*numer, *denom);
+  *numer /= gcd;
+  *denom /= gcd;
+}
+
+/* Helper: return greatest common divisor of a,b */
+static uint32_t
+gcd32(uint32_t a, uint32_t b)
+{
+  while (b) {
+    uint32_t t = b;
+    b = a % b;
+    a = t;
+  }
+  return a;
+}
+
+/* Given a fraction *<b>numer</b> / *<b>denom</b>, simplify it.
+ * Requires that the denominator is greater than 0. */
+void
+simplify_fraction32(uint32_t *numer, uint32_t *denom)
+{
+  raw_assert(numer);
+  raw_assert(denom);
+  raw_assert(*denom > 0);
+
+  uint32_t gcd = gcd32(*numer, *denom);
   *numer /= gcd;
   *denom /= gcd;
 }
