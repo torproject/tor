@@ -1312,6 +1312,30 @@ congestion_control_build_ext_response(const circuit_params_t *our_params,
   return (int)ret;
 }
 
+/** Return true iff the given sendme increment is within the acceptable
+ * margins. */
+bool
+congestion_control_validate_sendme_increment(uint8_t sendme_inc)
+{
+  /* We will only accept this response (and this circuit) if sendme_inc
+   * is within a factor of 2 of our consensus value. We should not need
+   * to change cc_sendme_inc much, and if we do, we can spread out those
+   * changes over smaller increments once every 4 hours. Exits that
+   * violate this range should just not be used. */
+#define MAX_SENDME_INC_NEGOTIATE_FACTOR 2
+
+  if (sendme_inc == 0)
+    return false;
+
+  if (sendme_inc >
+      MAX_SENDME_INC_NEGOTIATE_FACTOR * congestion_control_sendme_inc() ||
+      sendme_inc <
+      congestion_control_sendme_inc() / MAX_SENDME_INC_NEGOTIATE_FACTOR) {
+    return false;
+  }
+  return true;
+}
+
 /** Return 1 if CC is enabled which also will set the SENDME increment into our
  * params_out. Return 0 if CC is disabled. Else, return -1 on error. */
 int

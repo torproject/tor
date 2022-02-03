@@ -59,6 +59,7 @@ int congestion_control_build_ext_response(const circuit_params_t *our_params,
 int congestion_control_parse_ext_response(const uint8_t *msg,
                                           const size_t msg_len,
                                           circuit_params_t *params_out);
+bool congestion_control_validate_sendme_increment(uint8_t sendme_inc);
 
 /* Ugh, C.. these are private. Use the getter instead, when
  * external to the congestion control code. */
