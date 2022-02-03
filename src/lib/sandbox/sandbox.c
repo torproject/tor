@@ -275,6 +275,9 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(recvfrom),
     SCMP_SYS(sendto),
     SCMP_SYS(unlink),
+#ifdef __NR_unlinkat
+    SCMP_SYS(unlinkat),
+#endif
     SCMP_SYS(poll)
 };
 
