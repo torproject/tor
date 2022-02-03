@@ -11,12 +11,15 @@
 #include "core/or/or.h"
 #include "app/config/config.h"
 #include "core/crypto/hs_ntor.h"
+#include "core/crypto/onion_crypto.h"
 #include "core/mainloop/connection.h"
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
 #include "core/or/connection_edge.h"
+#include "core/or/congestion_control_common.h"
 #include "core/or/extendinfo.h"
+#include "core/or/protover.h"
 #include "core/or/reasons.h"
 #include "feature/client/circpathbias.h"
 #include "feature/dirclient/dirclient.h"
@@ -756,6 +759,39 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
   connection_ap_attach_pending(1);
 }
 
+/** Setup the congestion control parameters on the given rendezvous circuit.
+ * This looks at the service descriptor flow control line (if any). */
+static void
+setup_rendezvous_circ_congestion_control(origin_circuit_t *circ)
+{
+  circuit_params_t circ_params = {0};
+
+  tor_assert(circ);
+
+  /* Setup congestion control parameters on the circuit. */
+  const hs_descriptor_t *desc =
+    hs_cache_lookup_as_client(&circ->hs_ident->identity_pk);
+  if (BUG(desc == NULL)) {
+    /* This should really never happened but in case, scream and stop. */
+    return;
+  }
+
+  /* Check if the service lists support for congestion control in its
+   * descriptor. If not, we don't setup congestion control. */
+  if (!desc->encrypted_data.flow_control_pv ||
+      !protocol_list_supports_protocol(desc->encrypted_data.flow_control_pv,
+                                       PRT_FLOWCTRL, PROTOVER_FLOWCTRL_CC)) {
+    return;
+  }
+
+  /* Take values from the consensus. */
+  circ_params.cc_enabled = congestion_control_enabled();
+  if (circ_params.cc_enabled) {
+    circ_params.sendme_inc_cells = desc->encrypted_data.sendme_inc;
+    TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params);
+  }
+}
+
 /** Called when a rendezvous circuit has opened. */
 static void
 client_rendezvous_circ_has_opened(origin_circuit_t *circ)
@@ -784,6 +820,9 @@ client_rendezvous_circ_has_opened(origin_circuit_t *circ)
 
   log_info(LD_REND, "Rendezvous circuit has opened to %s.",
            safe_str_client(extend_info_describe(rp_ei)));
+
+  /* Setup congestion control parameters on the circuit. */
+  setup_rendezvous_circ_congestion_control(circ);
 
   /* Ignore returned value, nothing we can really do. On failure, the circuit
    * will be marked for close. */
