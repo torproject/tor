@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation, rust):
+    - Use the build.rs script when building the "protover"and "external"
+      Rust modules, so that their doctests can access functions from C.
+      Fixes bug 28247; bugfix on 0.3.5.1-alpha.
