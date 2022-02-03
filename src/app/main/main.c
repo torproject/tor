@@ -988,6 +988,9 @@ sandbox_init_filter(void)
 #define OPEN(name)                              \
   sandbox_cfg_allow_open_filename(&cfg, tor_strdup(name))
 
+#define OPENDIR(dir)                            \
+  sandbox_cfg_allow_opendir_dirname(&cfg, tor_strdup(dir))
+
 #define OPEN_DATADIR(name)                      \
   sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname(name))
 
@@ -1004,8 +1007,10 @@ sandbox_init_filter(void)
     OPEN_DATADIR2(name, name2 suffix);                  \
   } while (0)
 
+// KeyDirectory is a directory, but it is only opened in check_private_dir
+// which calls open instead of opendir
 #define OPEN_KEY_DIRECTORY() \
-  sandbox_cfg_allow_open_filename(&cfg, tor_strdup(options->KeyDirectory))
+  OPEN(options->KeyDirectory)
 #define OPEN_CACHEDIR(name)                      \
   sandbox_cfg_allow_open_filename(&cfg, get_cachedir_fname(name))
 #define OPEN_CACHEDIR_SUFFIX(name, suffix) do {  \
@@ -1019,6 +1024,8 @@ sandbox_init_filter(void)
     OPEN_KEYDIR(name suffix);                    \
   } while (0)
 
+  // DataDirectory is a directory, but it is only opened in check_private_dir
+  // which calls open instead of opendir
   OPEN(options->DataDirectory);
   OPEN_KEY_DIRECTORY();
 
@@ -1066,7 +1073,11 @@ sandbox_init_filter(void)
   }
 
   SMARTLIST_FOREACH(options->FilesOpenedByIncludes, char *, f, {
-    OPEN(f);
+    if (file_status(f) == FN_DIR) {
+      OPENDIR(f);
+    } else {
+      OPEN(f);
+    }
   });
 
 #define RENAME_SUFFIX(name, suffix)        \
@@ -1179,7 +1190,7 @@ sandbox_init_filter(void)
      * directory that holds it. */
     char *dirname = tor_strdup(port->unix_addr);
     if (get_parent_directory(dirname) == 0) {
-      OPEN(dirname);
+      OPENDIR(dirname);
     }
     tor_free(dirname);
     sandbox_cfg_allow_chmod_filename(&cfg, tor_strdup(port->unix_addr));
