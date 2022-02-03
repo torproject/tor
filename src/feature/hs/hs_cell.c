@@ -14,6 +14,7 @@
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_ob.h"
 #include "core/crypto/hs_ntor.h"
+#include "core/or/congestion_control_common.h"
 
 #include "core/or/origin_circuit_st.h"
 
@@ -783,6 +784,31 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
   return intro_keys_result;
 }
 
+/** Parse the given INTRODUCE cell extension. Update the data object
+ * accordingly depending on the extension. */
+static void
+parse_introduce_cell_extension(hs_cell_introduce2_data_t *data,
+                               const trn_extension_field_t *field)
+{
+  trn_extension_field_cc_t *cc_field = NULL;
+
+  tor_assert(data);
+  tor_assert(field);
+
+  switch (trn_extension_field_get_field_type(field)) {
+  case TRUNNEL_EXT_TYPE_CC_FIELD_REQUEST:
+    /* CC requests, enable it. */
+    data->cc_enabled = 1;
+    data->pv.protocols_known = 1;
+    data->pv.supports_congestion_control = data->cc_enabled;
+    break;
+  default:
+    break;
+  }
+
+  trn_extension_field_cc_free(cc_field);
+}
+
 /** Parse the INTRODUCE2 cell using data which contains everything we need to
  * do so and contains the destination buffers of information we extract and
  * compute from the cell. Return 0 on success else a negative value. The
@@ -909,6 +935,21 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
       goto done;
     }
     smartlist_add(data->link_specifiers, lspec_dup);
+  }
+
+  /* Extract any extensions. */
+  const trn_extension_t *extensions =
+    trn_cell_introduce_encrypted_get_extensions(enc_cell);
+  if (extensions != NULL) {
+    for (size_t idx = 0; idx < trn_extension_get_num(extensions); idx++) {
+      const trn_extension_field_t *field =
+        trn_extension_getconst_fields(extensions, idx);
+      if (BUG(field == NULL)) {
+        /* The number of extensions should match the number of fields. */
+        break;
+      }
+      parse_introduce_cell_extension(data, field);
+    }
   }
 
   /* Success. */

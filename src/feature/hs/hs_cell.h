@@ -84,6 +84,10 @@ typedef struct hs_cell_introduce2_data_t {
   smartlist_t *link_specifiers;
   /** Replay cache of the introduction point. */
   replaycache_t *replay_cache;
+  /** Flow control negotiation parameters. */
+  protover_summary_flags_t pv;
+  /** Congestion control parameters. */
+  unsigned int cc_enabled : 1;
 } hs_cell_introduce2_data_t;
 
 /* Build cell API. */
