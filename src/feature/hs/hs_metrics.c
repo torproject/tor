@@ -32,12 +32,16 @@ port_to_str(const uint16_t port)
 /** Return a static buffer pointer that contains a formatted label on the form
  * of key=value.
  *
+ * NOTE: Important, label values MUST NOT contain double quotes else, in the
+ * case of Prometheus, it will fail with a malformed line because we force the
+ * label value to be enclosed in double quotes.
+ *
  * Subsequent call to this function invalidates the previous buffer. */
 static const char *
 format_label(const char *key, const char *value)
 {
   static char buf[128];
-  tor_snprintf(buf, sizeof(buf), "%s=%s", key, value);
+  tor_snprintf(buf, sizeof(buf), "%s=\"%s\"", key, value);
   return buf;
 }
 
