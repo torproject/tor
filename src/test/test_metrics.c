@@ -30,8 +30,8 @@
 
 #define TEST_METRICS_ENTRY_NAME    "entryA"
 #define TEST_METRICS_ENTRY_HELP    "Description of entryA"
-#define TEST_METRICS_ENTRY_LABEL_1 "label=farfadet"
-#define TEST_METRICS_ENTRY_LABEL_2 "label=ponki"
+#define TEST_METRICS_ENTRY_LABEL_1 "label=\"farfadet\""
+#define TEST_METRICS_ENTRY_LABEL_2 "label=\"ponki\""
 
 static void
 set_metrics_port(or_options_t *options)
