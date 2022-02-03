@@ -24,6 +24,9 @@
 #include "test/log_test_helpers.h"
 #include "test/rng_test_helpers.h"
 
+#define TOR_CONGESTION_CONTROL_PRIVATE
+#include "core/or/congestion_control_common.h"
+
 #ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 DISABLE_GCC_WARNING("-Woverlength-strings")
 /* We allow huge string constants in the unit tests, but not in the code
@@ -246,6 +249,8 @@ test_decode_descriptor(void *arg)
   hs_subcredential_t subcredential;
 
   (void) arg;
+
+  congestion_control_set_cc_enabled();
 
   ret = ed25519_keypair_generate(&signing_kp, 0);
   tt_int_op(ret, OP_EQ, 0);

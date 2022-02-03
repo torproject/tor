@@ -54,6 +54,9 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 
+#define TOR_CONGESTION_CONTROL_PRIVATE
+#include "core/or/congestion_control_common.h"
+
 static int
 mock_connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
 {
@@ -771,6 +774,7 @@ test_desc_has_arrived_cleanup(void *arg)
   (void) arg;
 
   hs_init();
+  congestion_control_set_cc_enabled();
 
   MOCK(networkstatus_get_reasonably_live_consensus,
        mock_networkstatus_get_reasonably_live_consensus);
