@@ -788,7 +788,19 @@ setup_rendezvous_circ_congestion_control(origin_circuit_t *circ)
   circ_params.cc_enabled = congestion_control_enabled();
   if (circ_params.cc_enabled) {
     circ_params.sendme_inc_cells = desc->encrypted_data.sendme_inc;
-    TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params);
+
+    if (desc->encrypted_data.single_onion_service) {
+      TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
+                                                          CC_PATH_ONION_SOS);
+    } else {
+      if (get_options()->HSLayer3Nodes) {
+        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
+                                                            CC_PATH_ONION_VG);
+      } else {
+        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
+                                                            CC_PATH_ONION);
+      }
+    }
   }
 }
 

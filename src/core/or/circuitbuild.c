@@ -1275,7 +1275,21 @@ circuit_finish_handshake(origin_circuit_t *circ,
   }
 
   if (params.cc_enabled) {
-    hop->ccontrol = congestion_control_new(&params);
+    int circ_len = circuit_get_cpath_len(circ);
+
+    if (circ_len == DEFAULT_ROUTE_LEN &&
+        circuit_get_cpath_hop(circ, DEFAULT_ROUTE_LEN) == hop) {
+      hop->ccontrol = congestion_control_new(&params, CC_PATH_EXIT);
+    } else if (circ_len == SBWS_ROUTE_LEN &&
+               circuit_get_cpath_hop(circ, SBWS_ROUTE_LEN) == hop) {
+      hop->ccontrol = congestion_control_new(&params, CC_PATH_SBWS);
+    } else {
+      static ratelim_t cc_path_limit = RATELIM_INIT(600);
+      log_fn_ratelim(&cc_path_limit, LOG_WARN, LD_CIRC,
+                     "Unexpected path length %d for circuit",
+                     circ_len);
+      hop->ccontrol = congestion_control_new(&params, CC_PATH_EXIT);
+    }
   }
 
   hop->state = CPATH_STATE_OPEN;

@@ -604,6 +604,9 @@ struct or_options_t {
   /** Boolean: Switch to override consensus to enable congestion control */
   int AlwaysCongestionControl;
 
+  /** Boolean: Switch to specify this is an sbws measurement exit */
+  int SbwsExit;
+
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
   /** Should we always fetch our dir info on the mirror schedule (which
    * means directly from the authorities) no matter our other config? */

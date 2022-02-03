@@ -391,7 +391,13 @@ cpuworker_onion_handshake_replyfn(void *work_)
   /* If the client asked for congestion control, if our consensus parameter
    * allowed it to negotiate as enabled, allocate a congestion control obj. */
   if (rpl.circ_params.cc_enabled) {
-    TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&rpl.circ_params);
+    if (get_options()->SbwsExit) {
+      TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&rpl.circ_params,
+                                                          CC_PATH_SBWS);
+    } else {
+      TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&rpl.circ_params,
+                                                          CC_PATH_EXIT);
+    }
   }
 
   if (onionskin_answer(circ,

@@ -415,7 +415,20 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
       .cc_enabled = data->cc_enabled,
       .sendme_inc_cells = congestion_control_sendme_inc(),
     };
-    TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params);
+
+    /* Initialize ccontrol for appropriate path type */
+    if (service->config.is_single_onion) {
+      TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
+                                                          CC_PATH_ONION_SOS);
+    } else {
+      if (get_options()->HSLayer3Nodes) {
+        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
+                                                            CC_PATH_ONION_VG);
+      } else {
+        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
+                                                            CC_PATH_ONION);
+      }
+    }
   }
 
  end:
@@ -519,7 +532,16 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
       .cc_enabled = 1,
       .sendme_inc_cells = TO_CIRCUIT(circ)->ccontrol->sendme_inc,
     };
-    TO_CIRCUIT(new_circ)->ccontrol = congestion_control_new(&circ_params);
+
+    /* As per above, in this case, we are a full 3 hop rend, even if we're a
+     * single-onion service */
+    if (get_options()->HSLayer3Nodes) {
+      TO_CIRCUIT(new_circ)->ccontrol = congestion_control_new(&circ_params,
+                                        CC_PATH_ONION_VG);
+    } else {
+      TO_CIRCUIT(new_circ)->ccontrol = congestion_control_new(&circ_params,
+                                        CC_PATH_ONION_SOS);
+    }
   }
 
  done:

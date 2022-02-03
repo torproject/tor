@@ -25,9 +25,31 @@
 
 #define OUTBUF_CELLS (2*TLS_RECORD_MAX_CELLS)
 
-#define VEGAS_ALPHA(cc)   (3*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
-#define VEGAS_BETA(cc)    (3*OUTBUF_CELLS)
-#define VEGAS_GAMMA(cc)   (3*OUTBUF_CELLS)
+/* sbws circs are two hops, so params are based on 2 outbufs of cells */
+#define VEGAS_ALPHA_SBWS_DFLT (2*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
+#define VEGAS_BETA_SBWS_DFLT (2*OUTBUF_CELLS)
+#define VEGAS_GAMMA_SBWS_DFLT (2*OUTBUF_CELLS)
+
+/* Exits are three hops, so params are based on 3 outbufs of cells */
+#define VEGAS_ALPHA_EXIT_DFLT (3*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
+#define VEGAS_BETA_EXIT_DFLT (3*OUTBUF_CELLS)
+#define VEGAS_GAMMA_EXIT_DFLT (3*OUTBUF_CELLS)
+
+/* Onion rends are six hops, so params are based on 6 outbufs of cells */
+#define VEGAS_ALPHA_ONION_DFLT (6*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
+#define VEGAS_BETA_ONION_DFLT (6*OUTBUF_CELLS)
+#define VEGAS_GAMMA_ONION_DFLT (6*OUTBUF_CELLS)
+
+/* Single Onions are three hops, so params are based on 3 outbufs of cells */
+#define VEGAS_ALPHA_SOS_DFLT (3*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
+#define VEGAS_BETA_SOS_DFLT (3*OUTBUF_CELLS)
+#define VEGAS_GAMMA_SOS_DFLT (3*OUTBUF_CELLS)
+
+/* Vanguard Onions are 7 hops (or 8 if both sides use vanguards, but that
+ * should be rare), so params are based on 7 outbufs of cells */
+#define VEGAS_ALPHA_VG_DFLT (7*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
+#define VEGAS_BETA_VG_DFLT (7*OUTBUF_CELLS)
+#define VEGAS_GAMMA_VG_DFLT (7*OUTBUF_CELLS)
 
 #define VEGAS_BDP_MIX_PCT       100
 
@@ -54,25 +76,74 @@ vegas_bdp_mix(const congestion_control_t *cc)
  * Cache Vegas consensus parameters.
  */
 void
-congestion_control_vegas_set_params(congestion_control_t *cc)
+congestion_control_vegas_set_params(congestion_control_t *cc,
+                                    cc_path_t path)
 {
   tor_assert(cc->cc_alg == CC_ALG_VEGAS);
+  const char *alpha_str = NULL, *beta_str = NULL, *gamma_str = NULL;
+  int alpha, beta, gamma;
 
-  cc->vegas_params.gamma =
-   networkstatus_get_param(NULL, "cc_vegas_gamma",
-      VEGAS_GAMMA(cc),
-      0,
-      1000);
+  switch (path) {
+    case CC_PATH_SBWS:
+      alpha_str = "cc_vegas_alpha_sbws";
+      beta_str = "cc_vegas_beta_sbws";
+      gamma_str = "cc_vegas_gamma_sbws";
+      alpha = VEGAS_ALPHA_SBWS_DFLT;
+      beta = VEGAS_BETA_SBWS_DFLT;
+      gamma = VEGAS_GAMMA_SBWS_DFLT;
+      break;
+    case CC_PATH_EXIT:
+      alpha_str = "cc_vegas_alpha_exit";
+      beta_str = "cc_vegas_beta_exit";
+      gamma_str = "cc_vegas_gamma_exit";
+      alpha = VEGAS_ALPHA_EXIT_DFLT;
+      beta = VEGAS_BETA_EXIT_DFLT;
+      gamma = VEGAS_GAMMA_EXIT_DFLT;
+      break;
+    case CC_PATH_ONION:
+      alpha_str = "cc_vegas_alpha_onion";
+      beta_str = "cc_vegas_beta_onion";
+      gamma_str = "cc_vegas_gamma_onion";
+      alpha = VEGAS_ALPHA_ONION_DFLT;
+      beta = VEGAS_BETA_ONION_DFLT;
+      gamma = VEGAS_GAMMA_ONION_DFLT;
+      break;
+    case CC_PATH_ONION_SOS:
+      alpha_str = "cc_vegas_alpha_sos";
+      beta_str = "cc_vegas_beta_sos";
+      gamma_str = "cc_vegas_gamma_sos";
+      alpha = VEGAS_ALPHA_SOS_DFLT;
+      beta = VEGAS_BETA_SOS_DFLT;
+      gamma = VEGAS_GAMMA_SOS_DFLT;
+      break;
+    case CC_PATH_ONION_VG:
+      alpha_str = "cc_vegas_alpha_vg";
+      beta_str = "cc_vegas_beta_vg";
+      gamma_str = "cc_vegas_gamma_vg";
+      alpha = VEGAS_ALPHA_VG_DFLT;
+      beta = VEGAS_BETA_VG_DFLT;
+      gamma = VEGAS_GAMMA_VG_DFLT;
+      break;
+    default:
+      tor_assert(0);
+      break;
+  }
 
   cc->vegas_params.alpha =
-   networkstatus_get_param(NULL, "cc_vegas_alpha",
-      VEGAS_ALPHA(cc),
+   networkstatus_get_param(NULL, alpha_str,
+      alpha,
       0,
       1000);
 
   cc->vegas_params.beta =
-   networkstatus_get_param(NULL, "cc_vegas_beta",
-      VEGAS_BETA(cc),
+   networkstatus_get_param(NULL, beta_str,
+      beta,
+      0,
+      1000);
+
+  cc->vegas_params.gamma =
+   networkstatus_get_param(NULL, gamma_str,
+      gamma,
       0,
       1000);
 

@@ -168,7 +168,8 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
  */
 static void
 congestion_control_init_params(congestion_control_t *cc,
-                               const circuit_params_t *params)
+                               const circuit_params_t *params,
+                               cc_path_t path)
 {
   const or_options_t *opts = get_options();
   cc->sendme_inc = params->sendme_inc_cells;
@@ -266,7 +267,7 @@ congestion_control_init_params(congestion_control_t *cc,
   if (cc->cc_alg == CC_ALG_WESTWOOD) {
     congestion_control_westwood_set_params(cc);
   } else if (cc->cc_alg == CC_ALG_VEGAS) {
-    congestion_control_vegas_set_params(cc);
+    congestion_control_vegas_set_params(cc, path);
   } else if (cc->cc_alg == CC_ALG_NOLA) {
     congestion_control_nola_set_params(cc);
   }
@@ -326,24 +327,25 @@ congestion_control_set_cc_enabled(void)
  */
 static void
 congestion_control_init(congestion_control_t *cc,
-                        const circuit_params_t *params)
+                        const circuit_params_t *params,
+                        cc_path_t path)
 {
   cc->sendme_pending_timestamps = smartlist_new();
   cc->sendme_arrival_timestamps = smartlist_new();
 
   cc->in_slow_start = 1;
-  congestion_control_init_params(cc, params);
+  congestion_control_init_params(cc, params, path);
 
   cc->next_cc_event = CWND_UPDATE_RATE(cc);
 }
 
 /** Allocate and initialize a new congestion control object */
 congestion_control_t *
-congestion_control_new(const circuit_params_t *params)
+congestion_control_new(const circuit_params_t *params, cc_path_t path)
 {
   congestion_control_t *cc = tor_malloc_zero(sizeof(congestion_control_t));
 
-  congestion_control_init(cc, params);
+  congestion_control_init(cc, params, path);
 
   return cc;
 }

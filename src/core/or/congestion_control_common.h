@@ -19,6 +19,21 @@
 
 typedef struct congestion_control_t congestion_control_t;
 
+/**
+ * Specifies the path type to help choose congestion control
+ * parameters. Since these paths are different lengths, they
+ * will need different queue parameters. */
+typedef enum {
+  CC_PATH_EXIT = 0,
+  CC_PATH_ONION = 1,
+  CC_PATH_ONION_SOS = 2,
+  CC_PATH_ONION_VG = 3,
+  CC_PATH_SBWS = 4,
+} cc_path_t;
+
+/** The length of a path for sbws measurement */
+#define SBWS_ROUTE_LEN 2
+
 /** Wrapper for the free function, set the CC pointer to NULL after free */
 #define congestion_control_free(cc) \
     FREE_AND_NULL(congestion_control_t, congestion_control_free_, cc)
@@ -27,7 +42,8 @@ void congestion_control_free_(congestion_control_t *cc);
 
 struct circuit_params_t;
 congestion_control_t *congestion_control_new(
-                                    const struct circuit_params_t *params);
+                                    const struct circuit_params_t *params,
+                                    cc_path_t path);
 
 int congestion_control_dispatch_cc_alg(congestion_control_t *cc,
                                        const circuit_t *circ,
