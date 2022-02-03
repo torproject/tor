@@ -1,0 +1,3 @@
+  o Minor bugfixes (MetricsPort, Prometheus):
+    - Add double quotes to the label values of the onion service metrics. Fixes
+      bug 40552; bugfix on 0.4.5.1-alpha.
