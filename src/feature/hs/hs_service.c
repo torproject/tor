@@ -16,6 +16,7 @@
 #include "core/or/circuitbuild.h"
 #include "core/or/circuitlist.h"
 #include "core/or/circuituse.h"
+#include "core/or/congestion_control_common.h"
 #include "core/or/extendinfo.h"
 #include "core/or/relay.h"
 #include "feature/client/circpathbias.h"
@@ -3688,6 +3689,34 @@ hs_service_map_has_changed(void)
    * the HS service main loop event. If we changed to having no services, we
    * need to disable the event. */
   rescan_periodic_events(get_options());
+}
+
+/** Called when a new consensus has arrived and has been set globally. The new
+ * consensus is pointed by ns. */
+void
+hs_service_new_consensus_params(const networkstatus_t *ns)
+{
+  tor_assert(ns);
+
+  /* This value is the new value from the consensus. */
+  uint8_t current_sendme_inc = congestion_control_sendme_inc();
+
+  if (!hs_service_map)
+    return;
+
+  /* Check each service and look if their descriptor contains a different
+   * sendme increment. If so, nuke all intro points by forcing an expiration
+   * which will lead to rebuild and reupload with the new value. */
+  FOR_EACH_SERVICE_BEGIN(service) {
+    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+      if (desc->desc &&
+          desc->desc->encrypted_data.sendme_inc != current_sendme_inc) {
+        /* Passing the maximum time_t will force expiration of all intro points
+         * and thus will lead to a rebuild of the descriptor. */
+        cleanup_intro_points(service, LONG_MAX);
+      }
+    } FOR_EACH_DESCRIPTOR_END;
+  } FOR_EACH_SERVICE_END;
 }
 
 /** Upload an encoded descriptor in encoded_desc of the given version. This

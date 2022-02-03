@@ -1704,6 +1704,7 @@ notify_after_networkstatus_changes(void)
   router_new_consensus_params(c);
   congestion_control_new_consensus_params(c);
   flow_control_new_consensus_params(c);
+  hs_service_new_consensus_params(c);
 
   /* Maintenance of our L2 guard list */
   maintain_layer2_guards();
