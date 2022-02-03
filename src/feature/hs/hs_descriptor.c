@@ -2347,6 +2347,23 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
     desc_encrypted_out->single_onion_service = 1;
   }
 
+  /* Get flow control if any. */
+  tok = find_opt_by_keyword(tokens, R3_FLOW_CONTROL);
+  if (tok) {
+    int ok;
+
+    tor_asprintf(&desc_encrypted_out->flow_control_pv, "FlowCtrl=%s",
+                 tok->args[0]);
+    uint8_t sendme_inc =
+      (uint8_t) tor_parse_uint64(tok->args[1], 10, 0, UINT8_MAX, &ok, NULL);
+    if (!ok || !congestion_control_validate_sendme_increment(sendme_inc)) {
+      log_warn(LD_REND, "Service descriptor flow control sendme "
+                        "value is invalid");
+      goto err;
+    }
+    desc_encrypted_out->sendme_inc = sendme_inc;
+  }
+
   /* Initialize the descriptor's introduction point list before we start
    * decoding. Having 0 intro point is valid. Then decode them all. */
   desc_encrypted_out->intro_points = smartlist_new();
@@ -2757,6 +2774,7 @@ hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
                       hs_desc_intro_point_free(ip));
     smartlist_free(desc->intro_points);
   }
+  tor_free(desc->flow_control_pv);
   memwipe(desc, 0, sizeof(*desc));
 }
 

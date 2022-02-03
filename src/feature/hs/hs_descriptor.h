@@ -167,6 +167,10 @@ typedef struct hs_desc_encrypted_data_t {
   /** Is this descriptor a single onion service? */
   unsigned int single_onion_service : 1;
 
+  /** Flow control protocol version line. */
+  char *flow_control_pv;
+  uint8_t sendme_inc;
+
   /** A list of intro points. Contains hs_desc_intro_point_t objects. */
   smartlist_t *intro_points;
 } hs_desc_encrypted_data_t;

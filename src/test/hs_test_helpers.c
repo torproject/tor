@@ -4,6 +4,7 @@
 #define HS_CLIENT_PRIVATE
 
 #include "core/or/or.h"
+#include "core/or/versions.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 #include "test/test.h"
 #include "feature/nodelist/torcert.h"
@@ -186,6 +187,7 @@ hs_helper_build_hs_desc_impl(unsigned int no_ip,
   desc->encrypted_data.create2_ntor = 1;
   desc->encrypted_data.intro_auth_types = smartlist_new();
   desc->encrypted_data.single_onion_service = 1;
+  desc->encrypted_data.flow_control_pv = tor_strdup("FlowCtrl=1-2");
   smartlist_add(desc->encrypted_data.intro_auth_types, tor_strdup("ed25519"));
   desc->encrypted_data.intro_points = smartlist_new();
   if (!no_ip) {
@@ -332,6 +334,10 @@ hs_helper_desc_equal(const hs_descriptor_t *desc1,
   /* Encrypted data section. */
   tt_uint_op(desc1->encrypted_data.create2_ntor, OP_EQ,
              desc2->encrypted_data.create2_ntor);
+  tt_uint_op(desc1->encrypted_data.single_onion_service, OP_EQ,
+             desc2->encrypted_data.single_onion_service);
+  tt_str_op(desc1->encrypted_data.flow_control_pv, OP_EQ,
+            desc2->encrypted_data.flow_control_pv);
 
   /* Authentication type. */
   tt_int_op(!!desc1->encrypted_data.intro_auth_types, OP_EQ,

@@ -355,6 +355,9 @@ test_protover_supports_version(void *arg)
 #define PROTOVER_PADDING_V1 1
 
 #define PROTOVER_FLOWCTRL_V1 1
+#define PROTOVER_FLOWCTRL_V2 2
+
+#define PROTOVER_RELAY_NTOR_V3 4
 
 /* Make sure we haven't forgotten any supported protocols */
 static void
@@ -644,7 +647,8 @@ test_protover_vote_roundtrip_ours(void *args)
             "supports_establish_intro_dos_extension: %d,\n" \
             "supports_v3_hsdir: %d,\n" \
             "supports_v3_rendezvous_point: %d,\n" \
-            "supports_hs_setup_padding: %d.", \
+            "supports_hs_setup_padding: %d,\n" \
+            "supports_congestion_control: %d.", \
             (flags).protocols_known, \
             (flags).supports_extend2_cells, \
             (flags).supports_accepting_ipv6_extends, \
@@ -656,7 +660,8 @@ test_protover_vote_roundtrip_ours(void *args)
             (flags).supports_establish_intro_dos_extension, \
             (flags).supports_v3_hsdir, \
             (flags).supports_v3_rendezvous_point, \
-            (flags).supports_hs_setup_padding); \
+            (flags).supports_hs_setup_padding, \
+            (flags).supports_congestion_control); \
     STMT_END
 
 /* Test that the proto_string version version_macro sets summary_flag. */
@@ -698,6 +703,22 @@ test_protover_summarize_flags(void *args)
   tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
 
   /* Now check version exceptions */
+
+  /* Congestion control. */
+  memset(&flags, 0, sizeof(flags));
+  summarize_protover_flags(&flags,
+                           PROTOVER("FlowCtrl", PROTOVER_FLOWCTRL_V2),
+                           NULL);
+  summarize_protover_flags(&flags,
+                           PROTOVER("Relay", PROTOVER_RELAY_NTOR_V3),
+                           NULL);
+  DEBUG_PROTOVER(flags);
+  tt_int_op(flags.protocols_known, OP_EQ, 1);
+  tt_int_op(flags.supports_congestion_control, OP_EQ, 1);
+  /* Now clear those flags, and check the rest are zero */
+  flags.protocols_known = 0;
+  flags.supports_congestion_control = 0;
+  tt_mem_op(&flags, OP_EQ, &zero_flags, sizeof(flags));
 
   /* EXTEND2 cell support */
   memset(&flags, 0, sizeof(flags));
