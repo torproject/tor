@@ -1,3 +1,28 @@
+Changes in version 0.4.6.10 - 2022-02-04
+  This version contains minor bugfixes but one in particular is that relays
+  don't advertise onion service v2 support at the protocol version level.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on February 04, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/02/04.
+
+  o Minor bugfix (logging):
+    - Update a log notice dead URL to a working one. Fixes bug 40544;
+      bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfix (relay):
+    - Remove the HSDir and HSIntro onion service v2 protocol versions so
+      relay stop advertising that they support them. Fixes bug 40509;
+      bugfix on 0.3.5.17.
+
+  o Minor bugfixes (MetricsPort, Prometheus):
+    - Add double quotes to the label values of the onion service
+      metrics. Fixes bug 40552; bugfix on 0.4.5.1-alpha.
+
+
 Changes in version 0.4.6.9 - 2021-12-15
   This version fixes several bugs from earlier versions of Tor. One important
   piece is the removal of DNS timeout metric from the overload general signal.
