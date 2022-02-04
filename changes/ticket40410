@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix a compilation error when trying to build Tor with a compiler that
-      does not support expanding statitically initialized const values in
-      macro's. Fixes bug 40410; bugfix on 0.4.5.1-alpha
