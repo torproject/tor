@@ -186,7 +186,7 @@ EXTRA_DIST+= \
 	INSTALL								\
 	LICENSE								\
 	Makefile.nmake							\
-	README								\
+	README.md								\
 	ReleaseNotes							\
 	scripts/build/combine_libs					\
 	scripts/maint/checkIncludes.py					\
@@ -584,7 +584,7 @@ check-typos:
 			$(top_srcdir)/doc \
 			$(top_srcdir)/contrib \
 			$(top_srcdir)/scripts \
-			$(top_srcdir)/README \
+			$(top_srcdir)/README.md \
 			$(top_srcdir)/ChangeLog \
 			$(top_srcdir)/INSTALL \
 			$(top_srcdir)/ReleaseNotes \
