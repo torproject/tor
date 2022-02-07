@@ -1,0 +1,5 @@
+  o Documentation:
+    - Provide an improved version of the tor-exit-notice.html file for
+      exit relays to use as a landing page.  The text is unchanged,
+      but the page design and layout are significantly modernized, and
+      several links are fixed.  Patch from "n_user"; closes ticket 40529.
