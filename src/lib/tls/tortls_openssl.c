@@ -701,6 +701,12 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   /* let us realloc bufs that we're writing from */
   SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
+#ifdef SSL_OP_TLSEXT_PADDING
+  /* Adds a padding extension to ensure the ClientHello size is never between
+   * 256 and 511 bytes in length. */
+  SSL_CTX_set_options(result->ctx, SSL_OP_TLSEXT_PADDING);
+#endif
+
   return result;
 
  error:
