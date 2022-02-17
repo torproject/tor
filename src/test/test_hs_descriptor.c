@@ -840,6 +840,44 @@ test_build_authorized_client(void *arg)
   testing_disable_prefilled_rng();
 }
 
+static void
+test_validate_sendme(void *arg)
+{
+  (void)arg;
+
+  /* Test basic operation: factors of 2X in either direction are OK */
+  cc_sendme_inc = 31;
+  tt_assert(congestion_control_validate_sendme_increment(15));
+  tt_assert(congestion_control_validate_sendme_increment(62));
+
+  /* Test basic operation: Exceeding 2X fails */
+  cc_sendme_inc = 31;
+  tt_assert(!congestion_control_validate_sendme_increment(14));
+  tt_assert(!congestion_control_validate_sendme_increment(63));
+
+  /* Test potential overflow conditions */
+  cc_sendme_inc = 129;
+  tt_assert(congestion_control_validate_sendme_increment(255));
+  tt_assert(congestion_control_validate_sendme_increment(64));
+  tt_assert(!congestion_control_validate_sendme_increment(63));
+
+  cc_sendme_inc = 127;
+  tt_assert(!congestion_control_validate_sendme_increment(255));
+  tt_assert(congestion_control_validate_sendme_increment(254));
+
+  cc_sendme_inc = 255;
+  tt_assert(congestion_control_validate_sendme_increment(255));
+  tt_assert(congestion_control_validate_sendme_increment(127));
+  tt_assert(!congestion_control_validate_sendme_increment(126));
+
+  /* Test 0 case */
+  cc_sendme_inc = 1;
+  tt_assert(!congestion_control_validate_sendme_increment(0));
+
+done:
+  ;
+}
+
 struct testcase_t hs_descriptor[] = {
   /* Encoding tests. */
   { "cert_encoding", test_cert_encoding, TT_FORK,
@@ -859,6 +897,8 @@ struct testcase_t hs_descriptor[] = {
   { "decode_plaintext", test_decode_plaintext, TT_FORK,
     NULL, NULL },
   { "decode_bad_signature", test_decode_bad_signature, TT_FORK,
+    NULL, NULL },
+  { "validate_sendme", test_validate_sendme, TT_FORK,
     NULL, NULL },
 
   /* Misc. */
