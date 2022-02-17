@@ -348,6 +348,30 @@ test_package_payload_len(void *arg)
   tor_free(c);
 }
 
+/* Check that circuit_sendme_is_next works with a window of 1000,
+ * and a sendme_inc of 100 (old school tor compat) */
+static void
+test_sendme_is_next1000(void *arg)
+{
+ (void)arg;
+ tt_int_op(circuit_sendme_cell_is_next(1000, 100), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(999, 100), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(901, 100), OP_EQ, 1);
+
+ tt_int_op(circuit_sendme_cell_is_next(900, 100), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(899, 100), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(801, 100), OP_EQ, 1);
+
+ tt_int_op(circuit_sendme_cell_is_next(101, 100), OP_EQ, 1);
+ tt_int_op(circuit_sendme_cell_is_next(100, 100), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(99, 100), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(1, 100), OP_EQ, 1);
+ tt_int_op(circuit_sendme_cell_is_next(0, 100), OP_EQ, 0);
+
+done:
+ ;
+}
+
 struct testcase_t sendme_tests[] = {
   { "v1_record_digest", test_v1_record_digest, TT_FORK,
     NULL, NULL },
@@ -360,6 +384,7 @@ struct testcase_t sendme_tests[] = {
   { "cell_version_validation", test_cell_version_validation, TT_FORK,
     NULL, NULL },
   { "package_payload_len", test_package_payload_len, 0, NULL, NULL },
+  { "sendme_is_next1000", test_sendme_is_next1000, 0, NULL, NULL },
 
   END_OF_TESTCASES
 };

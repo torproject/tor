@@ -338,7 +338,7 @@ record_cell_digest_on_circ(circuit_t *circ, const uint8_t *sendme_digest)
  * low in the stack when decrypting or encrypting a cell. The window is only
  * updated once the cell is actually put in the outbuf.
  */
-static bool
+STATIC bool
 circuit_sendme_cell_is_next(int deliver_window, int sendme_inc)
 {
   /* Are we at the limit of the increment and if not, we don't expect next

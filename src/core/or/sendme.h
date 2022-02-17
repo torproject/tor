@@ -73,6 +73,8 @@ STATIC ssize_t build_cell_payload_v1(const uint8_t *cell_digest,
 STATIC bool sendme_is_valid(const circuit_t *circ,
                             const uint8_t *cell_payload,
                             size_t cell_payload_len);
+STATIC bool circuit_sendme_cell_is_next(int deliver_window,
+                                        int sendme_inc);
 
 #endif /* defined(TOR_UNIT_TESTS) */
 
