@@ -372,6 +372,26 @@ done:
  ;
 }
 
+/* Check that circuit_sendme_is_next works with a window of 31 */
+static void
+test_sendme_is_next(void *arg)
+{
+ (void)arg;
+ tt_int_op(circuit_sendme_cell_is_next(1000, 31), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(970, 31), OP_EQ, 1);
+ tt_int_op(circuit_sendme_cell_is_next(969, 31), OP_EQ, 0);
+
+ /* deliver_window should never get this low, but test anyway */
+ tt_int_op(circuit_sendme_cell_is_next(9, 31), OP_EQ, 1);
+ tt_int_op(circuit_sendme_cell_is_next(8, 31), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(7, 31), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(1, 31), OP_EQ, 0);
+ tt_int_op(circuit_sendme_cell_is_next(0, 31), OP_EQ, 0);
+
+ done:
+  ;
+}
+
 struct testcase_t sendme_tests[] = {
   { "v1_record_digest", test_v1_record_digest, TT_FORK,
     NULL, NULL },
@@ -385,6 +405,7 @@ struct testcase_t sendme_tests[] = {
     NULL, NULL },
   { "package_payload_len", test_package_payload_len, 0, NULL, NULL },
   { "sendme_is_next1000", test_sendme_is_next1000, 0, NULL, NULL },
+  { "sendme_is_next", test_sendme_is_next, 0, NULL, NULL },
 
   END_OF_TESTCASES
 };
