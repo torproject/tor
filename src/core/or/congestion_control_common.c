@@ -1303,6 +1303,7 @@ congestion_control_build_ext_response(const circuit_params_t *our_params,
 
     ret = trn_extension_field_cc_encoded_len(cc_field);
     if (BUG(ret <= 0)) {
+      trn_extension_field_free(field);
       goto err;
     }
     size_t field_len = ret;
@@ -1313,6 +1314,7 @@ congestion_control_build_ext_response(const circuit_params_t *our_params,
     ret = trn_extension_field_cc_encode(field_array,
               trn_extension_field_getlen_field(field), cc_field);
     if (BUG(ret <= 0)) {
+      trn_extension_field_free(field);
       goto err;
     }
 
@@ -1340,11 +1342,7 @@ congestion_control_build_ext_response(const circuit_params_t *our_params,
   ret = 0;
 
  err:
-  if (ext) {
-    trn_extension_free(ext);
-  } else {
-    trn_extension_field_free(field);
-  }
+  trn_extension_free(ext);
   trn_extension_field_cc_free(cc_field);
   return (int)ret;
 }
