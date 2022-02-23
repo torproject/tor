@@ -1316,6 +1316,13 @@ note_or_connect_failed(const or_connection_t *or_conn)
 
   tor_assert(or_conn);
 
+  if (or_conn->potentially_used_for_bootstrapping) {
+    /* Don't cache connection failures for connections we initiated ourself.
+     * If these direct connections fail, we're supposed to recognize that
+     * the destination is down and stop trying. See ticket 40499. */
+    return;
+  }
+
   ocf = or_connect_failure_find(or_conn);
   if (ocf == NULL) {
     ocf = or_connect_failure_new(or_conn);

@@ -1,0 +1,7 @@
+  o Major bugfixes (client):
+    - Stop caching TCP connect failures to relays/bridges when we
+      initiated the connection as a client. Now we only cache connect
+      failures as a relay or bridge when we initiated them because
+      of an EXTEND request. Declining to re-attempt the client-based
+      connections could cause problems when we lose connectivity and
+      try to reconnect. Fixes bug 40499; bugfix on 0.3.3.4-alpha.

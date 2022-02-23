@@ -826,6 +826,7 @@ test_failed_orconn_tracker(void *arg)
 
   /* Prepare the OR connection that will be used in this test */
   or_connection_t or_conn;
+  memset(&or_conn, 0, sizeof(or_conn));
   tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.canonical_orport.addr,
                                           "18.0.0.1"));
   tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&or_conn.base_.addr, "18.0.0.1"));
