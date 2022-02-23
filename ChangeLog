@@ -78,6 +78,7 @@ Changes in version 0.4.5.12 - 2022-02-04
       be IPv6-only, which led to an assertion failure. Fixes bug 40494;
       bugfix on 0.4.5.1-alpha.
 
+
 Changes in version 0.4.7.3-alpha - 2021-12-15
   This third alpha release of the 0.4.7.x series fixes several bugs including
   two major ones affecting Bridges and Relays (see below). If you are running
@@ -185,6 +186,7 @@ Changes in version 0.4.7.3-alpha - 2021-12-15
   o Documentation (man, relay):
     - Missing "OverloadStatistics" in tor.1 manpage. Fixes bug 40504;
       bugfix on 0.4.6.1-alpha.
+
 
 Changes in version 0.4.6.9 - 2021-12-15
   This version fixes several bugs from earlier versions of Tor. One important
@@ -1876,7 +1878,7 @@ Changes in version 0.3.5.13 - 2020-02-03
   o Major feature (exit, backport from 0.4.5.5-rc):
     - Re-entry into the network is now denied at the Exit level to all
       relays' ORPorts and authorities' ORPorts and DirPorts. This change
-      should help mitgate a set of denial-of-service attacks. Closes
+      should help mitigate a set of denial-of-service attacks. Closes
       ticket 2667.
 
   o Minor feature (build system, backport from 0.4.5.4-rc):
@@ -4941,7 +4943,7 @@ Changes in version 0.4.1.7 - 2019-12-09
       uses mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
     - Disable backtrace signal handlers when shutting down tor. Fixes
       bug 31614; bugfix on 0.2.5.2-alpha.
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -5244,7 +5246,7 @@ Changes in version 0.4.0.6 - 2019-12-09
       on 0.1.1.10-alpha.
 
   o Minor bugfixes (logging, backport from 0.4.2.2-alpha):
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -5278,7 +5280,7 @@ Changes in version 0.4.0.6 - 2019-12-09
 
   o Minor bugfixes (onion services, backport from 0.4.1.1-alpha):
     - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
-      implemenation) when failing to load an onion service client
+      implementation) when failing to load an onion service client
       authorization file. Fixes bug 30475; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (out-of-memory handler, backport from 0.4.1.2-alpha):
@@ -5670,7 +5672,7 @@ Changes in version 0.3.5.9 - 2019-12-09
       on 0.1.1.10-alpha.
 
   o Minor bugfixes (logging, backport from 0.4.2.2-alpha):
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -5708,7 +5710,7 @@ Changes in version 0.3.5.9 - 2019-12-09
 
   o Minor bugfixes (onion services, backport from 0.4.1.1-alpha):
     - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
-      implemenation) when failing to load an onion service client
+      implementation) when failing to load an onion service client
       authorization file. Fixes bug 30475; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (out-of-memory handler, backport from 0.4.1.2-alpha):
@@ -6088,7 +6090,7 @@ Changes in version 0.4.2.2-alpha - 2019-10-07
       uses mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
     - Disable backtrace signal handlers when shutting down tor. Fixes
       bug 31614; bugfix on 0.2.5.2-alpha.
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -7162,7 +7164,7 @@ Changes in version 0.4.1.1-alpha - 2019-05-22
 
   o Minor bugfixes (onion services):
     - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
-      implemenation) when failing to load an onion service client
+      implementation) when failing to load an onion service client
       authorization file. Fixes bug 30475; bugfix on 0.3.5.1-alpha.
     - When refusing to launch a controller's HSFETCH request because of
       rate-limiting, respond to the controller with a new response,

@@ -2,6 +2,31 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.6.10 - 2022-02-04
+  This version contains minor bugfixes but one in particular is that relays
+  don't advertise onion service v2 support at the protocol version level.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on February 04, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/02/04.
+
+  o Minor bugfix (logging):
+    - Update a log notice dead URL to a working one. Fixes bug 40544;
+      bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfix (relay):
+    - Remove the HSDir and HSIntro onion service v2 protocol versions so
+      relay stop advertising that they support them. Fixes bug 40509;
+      bugfix on 0.3.5.17.
+
+  o Minor bugfixes (MetricsPort, Prometheus):
+    - Add double quotes to the label values of the onion service
+      metrics. Fixes bug 40552; bugfix on 0.4.5.1-alpha.
+
+
 Changes in version 0.4.6.9 - 2021-12-15
   This version fixes several bugs from earlier versions of Tor. One important
   piece is the removal of DNS timeout metric from the overload general signal.
@@ -6122,14 +6147,6 @@ Changes in version 0.4.0.5 - 2019-05-02
       handshake with one another when these ciphersuites were enabled.
       Fixes bug 29241; bugfix on 0.3.5.1-alpha.
 
-  o Major bugfixes (windows, startup):
-    - When reading a consensus file from disk, detect whether it was
-      written in text mode, and re-read it in text mode if so. Always
-      write consensus files in binary mode so that we can map them into
-      memory later. Previously, we had written in text mode, which
-      confused us when we tried to map the file on windows. Fixes bug
-      28614; bugfix on 0.4.0.1-alpha.
-
   o Minor features (address selection):
     - Treat the subnet 100.64.0.0/10 as public for some purposes;
       private for others. This subnet is the RFC 6598 (Carrier Grade
@@ -6366,8 +6383,6 @@ Changes in version 0.4.0.5 - 2019-05-02
       on 0.3.0.1-alpha.
 
   o Minor bugfixes (compilation):
-    - Fix compilation warnings in test_circuitpadding.c. Fixes bug
-      29169; bugfix on 0.4.0.1-alpha.
     - Silence a compiler warning in test-memwipe.c on OpenBSD. Fixes bug
       29145; bugfix on 0.2.9.3-alpha. Patch from Kris Katterjohn.
     - Compile correctly on OpenBSD; previously, we were missing some
@@ -6407,10 +6422,6 @@ Changes in version 0.4.0.5 - 2019-05-02
       IPv6 socket was bound using an address family of AF_INET instead
       of AF_INET6. Fixes bug 28995; bugfix on 0.3.5.1-alpha. Patch from
       Kris Katterjohn.
-
-  o Minor bugfixes (linux seccomp sandbox):
-    - Fix startup crash when experimental sandbox support is enabled.
-      Fixes bug 29150; bugfix on 0.4.0.1-alpha. Patch by Peter Gerber.
 
   o Minor bugfixes (logging):
     - Correct a misleading error message when IPv4Only or IPv6Only is
@@ -6495,11 +6506,6 @@ Changes in version 0.4.0.5 - 2019-05-02
       of our circuit scheduling code. Fixes bug 29508; bugfix
       on 0.3.2.10.
 
-  o Minor bugfixes (shellcheck):
-    - Look for scripts in their correct locations during "make
-      shellcheck". Previously we had looked in the wrong place during
-      out-of-tree builds. Fixes bug 30263; bugfix on 0.4.0.1-alpha.
-
   o Minor bugfixes (single onion services):
     - Allow connections to single onion services to remain idle without
       being disconnected. Previously, relays acting as rendezvous points
@@ -6527,14 +6533,6 @@ Changes in version 0.4.0.5 - 2019-05-02
       29530; bugfix on 0.3.5.8.
     - Fix our gcov wrapper script to look for object files at the
       correct locations. Fixes bug 29435; bugfix on 0.3.5.1-alpha.
-    - Decrease the false positive rate of stochastic probability
-      distribution tests. Fixes bug 29693; bugfix on 0.4.0.1-alpha.
-    - Fix intermittent failures on an adaptive padding test. Fixes one
-      case of bug 29122; bugfix on 0.4.0.1-alpha.
-    - Disable an unstable circuit-padding test that was failing
-      intermittently because of an ill-defined small histogram. Such
-      histograms will be allowed again after 29298 is implemented. Fixes
-      a second case of bug 29122; bugfix on 0.4.0.1-alpha.
     - Detect and suppress "bug" warnings from the util/time test on
       Windows. Fixes bug 29161; bugfix on 0.2.9.3-alpha.
     - Do not log an error-level message if we fail to find an IPv6
@@ -6544,8 +6542,6 @@ Changes in version 0.4.0.5 - 2019-05-02
       objects in test_build_descriptors(), we now deallocate them one by
       one. This lets Coverity know that we are not leaking memory there
       and fixes CID 1442277. Fixes bug 28989; bugfix on 0.3.5.1-alpha.
-    - Check the time in the "Expires" header using approx_time(). Fixes
-      bug 30001; bugfix on 0.4.0.4-rc.
 
   o Minor bugfixes (TLS protocol):
     - When classifying a client's selection of TLS ciphers, if the
@@ -6555,10 +6551,6 @@ Changes in version 0.4.0.5 - 2019-05-02
       client only supported the ancient V1 link protocol. This, in turn,
       was causing Stem integration tests to stall in some cases. Fixes
       bug 30021; bugfix on 0.2.4.8-alpha.
-
-  o Minor bugfixes (UI):
-    - Lower log level of unlink() errors during bootstrap. Fixes bug
-      29930; bugfix on 0.4.0.1-alpha.
 
   o Minor bugfixes (usability):
     - Stop saying "Your Guard ..." in pathbias_measure_{use,close}_rate().
