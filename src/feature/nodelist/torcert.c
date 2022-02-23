@@ -13,7 +13,7 @@
  * contents themselves may be another Ed25519 key, a digest of a
  * RSA key, or some other material.
  *
- * In this module there is also support for a crooss-certification of
+ * In this module there is also support for a cross-certification of
  * Ed25519 identities using (older) RSA1024 identities.
  *
  * Tor uses other types of certificate too, beyond those described in this
