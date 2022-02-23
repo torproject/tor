@@ -2330,6 +2330,7 @@ test_intro2_handling(void *arg)
   intro_circ->cpath->prev = intro_circ->cpath;
   intro_circ->hs_ident = tor_malloc_zero(sizeof(*intro_circ->hs_ident));
   origin_circuit_t rend_circ;
+  TO_CIRCUIT(&rend_circ)->ccontrol = NULL;
   rend_circ.hs_ident = tor_malloc_zero(sizeof(*rend_circ.hs_ident));
   curve25519_keypair_generate(&rend_circ.hs_ident->rendezvous_client_kp, 0);
   memset(rend_circ.hs_ident->rendezvous_cookie, 'r', HS_REND_COOKIE_LEN);
