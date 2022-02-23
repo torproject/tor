@@ -952,6 +952,12 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     }
   }
 
+  /* If the client asked for congestion control, but we don't support it,
+   * that's a failure. It should not have asked, based on our descriptor. */
+  if (data->cc_enabled && !congestion_control_enabled()) {
+    goto done;
+  }
+
   /* Success. */
   ret = 0;
   log_info(LD_REND, "Valid INTRODUCE2 cell. Launching rendezvous circuit.");
