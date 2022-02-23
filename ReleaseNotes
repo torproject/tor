@@ -4170,7 +4170,7 @@ Changes in version 0.4.2.5 - 2019-12-09
       uses mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
     - Disable backtrace signal handlers when shutting down tor. Fixes
       bug 31614; bugfix on 0.2.5.2-alpha.
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -4515,7 +4515,7 @@ Changes in version 0.4.1.7 - 2019-12-09
       uses mutexes. Fixes bug 31614; bugfix on 0.2.5.2-alpha.
     - Disable backtrace signal handlers when shutting down tor. Fixes
       bug 31614; bugfix on 0.2.5.2-alpha.
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -4818,7 +4818,7 @@ Changes in version 0.4.0.6 - 2019-12-09
       on 0.1.1.10-alpha.
 
   o Minor bugfixes (logging, backport from 0.4.2.2-alpha):
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -4852,7 +4852,7 @@ Changes in version 0.4.0.6 - 2019-12-09
 
   o Minor bugfixes (onion services, backport from 0.4.1.1-alpha):
     - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
-      implemenation) when failing to load an onion service client
+      implementation) when failing to load an onion service client
       authorization file. Fixes bug 30475; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (out-of-memory handler, backport from 0.4.1.2-alpha):
@@ -5245,7 +5245,7 @@ Changes in version 0.3.5.9 - 2019-12-09
       on 0.1.1.10-alpha.
 
   o Minor bugfixes (logging, backport from 0.4.2.2-alpha):
-    - Rate-limit our the logging message about the obsolete .exit
+    - Rate-limit the logging message about the obsolete .exit
       notation. Previously, there was no limit on this warning, which
       could potentially be triggered many times by a hostile website.
       Fixes bug 31466; bugfix on 0.2.2.1-alpha.
@@ -5283,7 +5283,7 @@ Changes in version 0.3.5.9 - 2019-12-09
 
   o Minor bugfixes (onion services, backport from 0.4.1.1-alpha):
     - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
-      implemenation) when failing to load an onion service client
+      implementation) when failing to load an onion service client
       authorization file. Fixes bug 30475; bugfix on 0.3.5.1-alpha.
 
   o Minor bugfixes (out-of-memory handler, backport from 0.4.1.2-alpha):
@@ -5892,7 +5892,7 @@ Changes in version 0.4.1.5 - 2019-08-20
 
   o Minor bugfixes (onion services):
     - Avoid a GCC 9.1.1 warning (and possible crash depending on libc
-      implemenation) when failing to load an onion service client
+      implementation) when failing to load an onion service client
       authorization file. Fixes bug 30475; bugfix on 0.3.5.1-alpha.
     - When refusing to launch a controller's HSFETCH request because of
       rate-limiting, respond to the controller with a new response,
