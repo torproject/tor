@@ -996,6 +996,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   data.payload_len = payload_len;
   data.link_specifiers = smartlist_new();
   data.replay_cache = ip->replay_cache;
+  data.cc_enabled = 0;
 
   if (get_subcredential_for_handling_intro2_cell(service,
                                                  &data, subcredential)) {
