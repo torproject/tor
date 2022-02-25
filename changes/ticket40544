@@ -1,3 +1,0 @@
-  o Minor bugfix (logging):
-    - Update a log notice dead URL to a working one. Fixes bug 40544; bugfix on
-      0.3.5.1-alpha.

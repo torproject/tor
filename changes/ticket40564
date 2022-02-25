@@ -1,4 +1,0 @@
-  o Major bugfixes (relay, overload):
-    - Do not trigger a general overload on DNS timeout. Even after fixing
-      40527, some code remained that triggered the overload. Fixes bug 40564;
-      bugfix on 0.4.7.1-alpha.

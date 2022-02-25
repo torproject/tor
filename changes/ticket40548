@@ -1,4 +1,0 @@
-  o Minor bugfixes (cell scheduling):
-    - Don't attempt to write 0 bytes after a cell scheduling loop. No empty
-      payload was put on the wire. Fixes bug 40548; bugfix on 0.3.5.1-alpha.
-    - Avoid writing empty payload with NSS write.

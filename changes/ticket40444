@@ -1,5 +1,0 @@
-  o Major features (relay, client, onion services):
-    - Implement RTT-based congestion control for exits and onion services,
-      from Proposal 324. Disabled by default. Enabled by the 'cc_alg'
-      consensus parameter. Closes ticket 40444.
-
