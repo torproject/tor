@@ -182,8 +182,10 @@ connection_or_set_identity_digest(or_connection_t *conn,
   const int ed_changed = ed_id_was_set &&
     (!ed_id || !ed25519_pubkey_eq(ed_id, &chan->ed25519_identity));
 
-  tor_assert(!rsa_changed || !rsa_id_was_set);
-  tor_assert(!ed_changed || !ed_id_was_set);
+  if (BUG(rsa_changed && rsa_id_was_set))
+    return;
+  if (BUG(ed_changed && ed_id_was_set))
+    return;
 
   if (!rsa_changed && !ed_changed)
     return;
