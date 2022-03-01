@@ -179,8 +179,9 @@ connection_or_set_identity_digest(or_connection_t *conn,
     chan && !ed25519_public_key_is_zero(&chan->ed25519_identity);
   const int rsa_changed =
     tor_memneq(conn->identity_digest, rsa_digest, DIGEST_LEN);
-  const int ed_changed = ed_id_was_set &&
-    (!ed_id || !ed25519_pubkey_eq(ed_id, &chan->ed25519_identity));
+  const int ed_changed = (!ed_id_was_set && ed_id) ||
+    (ed_id_was_set && ed_id && chan &&
+     !ed25519_pubkey_eq(ed_id, &chan->ed25519_identity));
 
   if (BUG(rsa_changed && rsa_id_was_set))
     return;
