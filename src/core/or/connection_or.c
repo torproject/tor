@@ -165,6 +165,9 @@ connection_or_set_identity_digest(or_connection_t *conn,
   if (conn->chan)
     chan = TLS_CHAN_TO_BASE(conn->chan);
 
+  if (BUG(ed_id && ed25519_public_key_is_zero(ed_id)))
+    ed_id = NULL;
+
   log_info(LD_HANDSHAKE, "Set identity digest for %s at %p: %s %s.",
            connection_describe(TO_CONN(conn)),
            conn,
