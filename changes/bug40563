@@ -1,0 +1,8 @@
+  o Major bugfixes (relay):
+    - When opening a channel because of a circuit request that did not
+      include an Ed25519 identity, record the Ed25519 identity that we
+      actually received, so that we can use the channel for other circuit
+      requests that _do_ list an Ed25519 identity.
+      (Previously we had code to record this identity, but a logic bug
+      caused it to be disabled.) Fixes bug 40563; bugfix on 0.3.0.1-alpha.
+      Patch from "cypherpunks".
