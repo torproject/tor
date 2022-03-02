@@ -165,9 +165,6 @@ connection_or_set_identity_digest(or_connection_t *conn,
   if (conn->chan)
     chan = TLS_CHAN_TO_BASE(conn->chan);
 
-  if (BUG(ed_id && ed25519_public_key_is_zero(ed_id)))
-    ed_id = NULL;
-
   log_info(LD_HANDSHAKE, "Set identity digest for %s at %p: %s %s.",
            connection_describe(TO_CONN(conn)),
            conn,
@@ -180,10 +177,12 @@ connection_or_set_identity_digest(or_connection_t *conn,
   const int rsa_id_was_set = ! tor_digest_is_zero(conn->identity_digest);
   const int ed_id_was_set =
     chan && !ed25519_public_key_is_zero(&chan->ed25519_identity);
+  const int new_ed_id_is_set =
+    (ed_id && !ed25519_public_key_is_zero(ed_id));
   const int rsa_changed =
     tor_memneq(conn->identity_digest, rsa_digest, DIGEST_LEN);
-  const int ed_changed = (!ed_id_was_set && ed_id) ||
-    (ed_id_was_set && ed_id && chan &&
+  const int ed_changed = bool_neq(ed_id_was_set, new_ed_id_is_set) ||
+    (ed_id_was_set && new_ed_id_is_set && chan &&
      !ed25519_pubkey_eq(ed_id, &chan->ed25519_identity));
 
   if (BUG(rsa_changed && rsa_id_was_set))
@@ -204,8 +203,7 @@ connection_or_set_identity_digest(or_connection_t *conn,
   memcpy(conn->identity_digest, rsa_digest, DIGEST_LEN);
 
   /* If we're initializing the IDs to zero, don't add a mapping yet. */
-  if (tor_digest_is_zero(rsa_digest) &&
-      (!ed_id || ed25519_public_key_is_zero(ed_id)))
+  if (tor_digest_is_zero(rsa_digest) && !new_ed_id_is_set)
     return;
 
   /* Deal with channels */
