@@ -166,8 +166,6 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
       RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
     if (onionskin->handshake_type == ONION_HANDSHAKE_TYPE_NTOR) {
       char *m;
-      /* Note this ntor onionskin drop as an overload */
-      rep_hist_note_overload(OVERLOAD_GENERAL);
       if ((m = rate_limit_log(&last_warned, approx_time()))) {
         log_warn(LD_GENERAL,
                  "Your computer is too slow to handle this many circuit "

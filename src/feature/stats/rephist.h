@@ -58,6 +58,7 @@ time_t rep_hist_desc_stats_write(time_t now);
 
 void rep_hist_note_circuit_handshake_requested(uint16_t type);
 void rep_hist_note_circuit_handshake_assigned(uint16_t type);
+void rep_hist_note_circuit_handshake_dropped(uint16_t type);
 void rep_hist_log_circuit_handshake_stats(time_t now);
 
 MOCK_DECL(int, rep_hist_get_circuit_handshake_requested, (uint16_t type));
@@ -79,7 +80,16 @@ void rep_hist_free_all(void);
 void rep_hist_note_negotiated_link_proto(unsigned link_proto,
                                          int started_here);
 void rep_hist_log_link_protocol_counts(void);
+
+uint64_t rep_hist_get_n_dns_error(int type, uint8_t error);
+uint64_t rep_hist_get_n_dns_request(int type);
+void rep_hist_note_dns_request(int type);
+void rep_hist_note_dns_error(int type, uint8_t error);
+
 void rep_hist_consensus_has_changed(const networkstatus_t *ns);
+
+/** We have 3 stat types: tap, fast, and ntor. The max type is ntor (2) */
+#define MAX_ONION_STAT_TYPE   ONION_HANDSHAKE_TYPE_NTOR
 
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
