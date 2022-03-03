@@ -22,6 +22,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/channel.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/control/control_events.h"
 
 #define OUTBUF_CELLS (2*TLS_RECORD_MAX_CELLS)
 
@@ -236,6 +237,14 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
         cc->cwnd = vegas_bdp_mix(cc) + cc->vegas_params.gamma;
         cc->in_slow_start = 0;
         log_info(LD_CIRC, "CC: TOR_VEGAS exiting slow start");
+
+        /* We need to report that slow start has exited ASAP,
+         * for sbws bandwidth measurement. */
+        if (CIRCUIT_IS_ORIGIN(circ)) {
+          /* We must discard const here because the event modifies fields :/ */
+          control_event_circ_bandwidth_used_for_circ(
+                  TO_ORIGIN_CIRCUIT((circuit_t*)circ));
+        }
       }
     } else {
       if (queue_use > cc->vegas_params.delta) {

@@ -22,6 +22,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/channel.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/control/control_events.h"
 
 #define NOLA_BDP_OVERSHOOT    100
 
@@ -70,8 +71,19 @@ congestion_control_nola_process_sendme(congestion_control_t *cc,
   /* If we get a congestion event, the only thing NOLA
    * does is note this as if we exited slow-start
    * (which for NOLA just means we finished our ICW). */
-  if (cc->next_cc_event == 0)
-    cc->in_slow_start = 0;
+  if (cc->next_cc_event == 0) {
+    if (cc->in_slow_start) {
+      cc->in_slow_start = 0;
+
+      /* We need to report that slow start has exited ASAP,
+       * for sbws bandwidth measurement. */
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        /* We must discard const here because the event modifies fields :/ */
+        control_event_circ_bandwidth_used_for_circ(
+                TO_ORIGIN_CIRCUIT((circuit_t*)circ));
+      }
+    }
+  }
 
   /* If we did not successfully update BDP, we must return. Otherwise,
    * NOLA can drift downwards */
