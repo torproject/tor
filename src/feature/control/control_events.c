@@ -21,6 +21,7 @@
 #include "core/or/command.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/congestion_control_common.h"
 #include "core/or/reasons.h"
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
@@ -1075,10 +1076,12 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
 
   tor_gettimeofday(&now);
   format_iso_time_nospace_usec(tbuf, &now);
+
+  char *ccontrol_buf = congestion_control_get_control_port_fields(ocirc);
   send_control_event(EVENT_CIRC_BANDWIDTH_USED,
                      "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu TIME=%s "
                      "DELIVERED_READ=%lu OVERHEAD_READ=%lu "
-                     "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
+                     "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu%s\r\n",
                      ocirc->global_identifier,
                      (unsigned long)ocirc->n_read_circ_bw,
                      (unsigned long)ocirc->n_written_circ_bw,
@@ -1086,10 +1089,15 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
                      (unsigned long)ocirc->n_delivered_read_circ_bw,
                      (unsigned long)ocirc->n_overhead_read_circ_bw,
                      (unsigned long)ocirc->n_delivered_written_circ_bw,
-                     (unsigned long)ocirc->n_overhead_written_circ_bw);
+                     (unsigned long)ocirc->n_overhead_written_circ_bw,
+                     ccontrol_buf ? ccontrol_buf : "");
+
   ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
   ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
   ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
+
+  if (ccontrol_buf)
+    tor_free(ccontrol_buf);
 
   return 0;
 }

@@ -1442,3 +1442,45 @@ congestion_control_parse_ext_response(const uint8_t *msg,
 
   return (int)ret;
 }
+
+/**
+ * Returns a formatted string of fields containing congestion
+ * control information, for the CIRC_BW control port event.
+ *
+ * An origin circuit can have a ccontrol object directly on it,
+ * if it is an onion service, or onion client. Exit-bound clients
+ * will have the ccontrol on the cpath associated with their exit
+ * (the last one in the cpath list).
+ *
+ * WARNING: This function does not support leaky-pipe topology. It
+ * is to be used for control port information only.
+ */
+char *
+congestion_control_get_control_port_fields(const origin_circuit_t *circ)
+{
+  const congestion_control_t *ccontrol = NULL;
+  char *ret = NULL;
+  int len;
+
+  if (TO_CIRCUIT(circ)->ccontrol) {
+    ccontrol = TO_CIRCUIT(circ)->ccontrol;
+  } else if (circ->cpath && circ->cpath->prev->ccontrol) {
+    /* Get ccontrol for last hop (exit) if it exists */
+    ccontrol = circ->cpath->prev->ccontrol;
+  }
+
+  if (!ccontrol)
+    return NULL;
+
+  len = tor_asprintf(&ret,
+                     " SS=%d CWND=%"PRIu64" RTT=%"PRIu64" MIN_RTT=%"PRIu64,
+                     ccontrol->in_slow_start, ccontrol->cwnd,
+                     ccontrol->ewma_rtt_usec/1000,
+                     ccontrol->min_rtt_usec/1000);
+  if (len < 0) {
+    log_warn(LD_BUG, "Unable to format event for controller.");
+    return NULL;
+  }
+
+  return ret;
+}
