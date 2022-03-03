@@ -474,12 +474,14 @@ sendme_process_circuit_level(crypt_path_t *layer_hint,
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 
+  /* origin circuits need to count valid sendmes as valid protocol data */
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_payload_len);
+  }
+
   // Get CC
   if (layer_hint) {
     cc = layer_hint->ccontrol;
-
-    /* origin circuits need to count valid sendmes as valid protocol data */
-    circuit_read_valid_data(TO_ORIGIN_CIRCUIT(circ), cell_payload_len);
   } else {
     cc = circ->ccontrol;
   }
