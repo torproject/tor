@@ -127,7 +127,7 @@ Changes in version 0.4.5.12 - 2022-02-04
 
   o Minor bugfixes (compilation):
     - Fix a compilation error when trying to build Tor with a compiler
-      that does not support expanding statitically initialized const
+      that does not support expanding statically initialized const
       values in macro's. Fixes bug 40410; bugfix on 0.4.5.1-alpha
     - Fix our configuration logic to detect whether we had OpenSSL 3:
       previously, our logic was reversed. This has no other effect than
