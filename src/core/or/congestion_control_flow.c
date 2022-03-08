@@ -22,6 +22,7 @@
 #include "core/or/trace_probes_cc.h"
 #include "feature/nodelist/networkstatus.h"
 #include "trunnel/flow_control_cells.h"
+#include "feature/control/control_events.h"
 
 #include "core/or/connection_st.h"
 #include "core/or/cell_st.h"
@@ -147,6 +148,13 @@ circuit_send_stream_xoff(edge_connection_t *stream)
   if (connection_edge_send_command(stream, RELAY_COMMAND_XOFF,
                                (char*)payload, (size_t)xoff_size) == 0) {
     stream->xoff_sent = true;
+
+    /* If this is an entry conn, notify control port */
+    if (TO_CONN(stream)->type == CONN_TYPE_AP) {
+      control_event_stream_status(TO_ENTRY_CONN(TO_CONN(stream)),
+                                  STREAM_EVENT_XOFF_SENT,
+                                  0);
+    }
   }
 }
 
@@ -213,6 +221,13 @@ circuit_send_stream_xon(edge_connection_t *stream)
                                    (size_t)xon_size) == 0) {
     /* Revert the xoff sent status, so we can send another one if need be */
     stream->xoff_sent = false;
+
+    /* If it's an entry conn, notify control port */
+    if (TO_CONN(stream)->type == CONN_TYPE_AP) {
+      control_event_stream_status(TO_ENTRY_CONN(TO_CONN(stream)),
+                                  STREAM_EVENT_XON_SENT,
+                                  0);
+    }
   }
 }
 
@@ -298,6 +313,13 @@ circuit_process_stream_xoff(edge_connection_t *conn,
   log_info(LD_EDGE, "Got XOFF!");
   connection_stop_reading(TO_CONN(conn));
   conn->xoff_received = true;
+
+  /* If this is an entry conn, notify control port */
+  if (TO_CONN(conn)->type == CONN_TYPE_AP) {
+    control_event_stream_status(TO_ENTRY_CONN(TO_CONN(conn)),
+                                STREAM_EVENT_XOFF_RECV,
+                                0);
+  }
 
   return retval;
 }
@@ -401,6 +423,13 @@ circuit_process_stream_xon(edge_connection_t *conn,
      * start and stop reading normally */
     conn->xoff_received = false;
     connection_start_reading(TO_CONN(conn));
+  }
+
+  /* If this is an entry conn, notify control port */
+  if (TO_CONN(conn)->type == CONN_TYPE_AP) {
+    control_event_stream_status(TO_ENTRY_CONN(TO_CONN(conn)),
+                                STREAM_EVENT_XON_RECV,
+                                0);
   }
 
   xon_cell_free(xon);
