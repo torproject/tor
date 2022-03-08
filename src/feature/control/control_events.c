@@ -820,6 +820,10 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
     case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
     case STREAM_EVENT_REMAP: status = "REMAP"; break;
     case STREAM_EVENT_CONTROLLER_WAIT: status = "CONTROLLER_WAIT"; break;
+    case STREAM_EVENT_XOFF_SENT: status = "XOFF_SENT"; break;
+    case STREAM_EVENT_XOFF_RECV: status = "XOFF_RECV"; break;
+    case STREAM_EVENT_XON_SENT: status = "XON_SENT"; break;
+    case STREAM_EVENT_XON_RECV: status = "XON_RECV"; break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       return 0;
