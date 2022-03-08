@@ -1,0 +1,4 @@
+  o Minor bugfixes (metrics port, onion service):
+    - Fix the metrics with a port label to be unique. Before this, all ports of
+      an onion service would be on the same line which violates the Prometheus
+      rules of unique labels. Fixes bug 40581; bugfix on 0.4.5.1-alpha.
