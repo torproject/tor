@@ -624,6 +624,16 @@ send_introduce1(origin_circuit_t *intro_circ,
     goto tran_err;
   }
 
+  /* Check if the rendevous circuit was setup WITHOUT congestion control but if
+   * it is enabled and the service supports it. This can happen, see
+   * setup_rendezvous_circ_congestion_control() and so close rendezvous circuit
+   * so another one can be created. */
+  if (TO_CIRCUIT(rend_circ)->ccontrol == NULL && congestion_control_enabled()
+      && hs_desc_supports_congestion_control(desc)) {
+    circuit_mark_for_close(TO_CIRCUIT(rend_circ), END_CIRC_REASON_INTERNAL);
+    goto tran_err;
+  }
+
   /* We need to find which intro point in the descriptor we are connected to
    * on intro_circ. */
   ip = find_desc_intro_point_by_ident(intro_circ->hs_ident, desc);
@@ -760,7 +770,14 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
 }
 
 /** Setup the congestion control parameters on the given rendezvous circuit.
- * This looks at the service descriptor flow control line (if any). */
+ * This looks at the service descriptor flow control line (if any).
+ *
+ * It is possible that we are unable to set congestion control on the circuit
+ * if the descriptor can't be found. In that case, the introduction circuit
+ * can't be opened without it so a fetch will be triggered.
+ *
+ * However, if the descriptor asks for congestion control but the RP circuit
+ * doesn't have it, it will be closed and a new circuit will be opened. */
 static void
 setup_rendezvous_circ_congestion_control(origin_circuit_t *circ)
 {
@@ -771,16 +788,16 @@ setup_rendezvous_circ_congestion_control(origin_circuit_t *circ)
   /* Setup congestion control parameters on the circuit. */
   const hs_descriptor_t *desc =
     hs_cache_lookup_as_client(&circ->hs_ident->identity_pk);
-  if (BUG(desc == NULL)) {
-    /* This should really never happened but in case, scream and stop. */
+  if (desc == NULL) {
+    /* This is possible because between launching the circuit and the circuit
+     * ending in opened state, the descriptor could have been removed from the
+     * cache. In this case, we just can't setup congestion control. */
     return;
   }
 
   /* Check if the service lists support for congestion control in its
    * descriptor. If not, we don't setup congestion control. */
-  if (!desc->encrypted_data.flow_control_pv ||
-      !protocol_list_supports_protocol(desc->encrypted_data.flow_control_pv,
-                                       PRT_FLOWCTRL, PROTOVER_FLOWCTRL_CC)) {
+  if (!hs_desc_supports_congestion_control(desc)) {
     return;
   }
 

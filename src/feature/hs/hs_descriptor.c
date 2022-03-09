@@ -2987,3 +2987,16 @@ hs_descriptor_clear_intro_points(hs_descriptor_t *desc)
     smartlist_clear(ips);
   }
 }
+
+/** Return true iff we support the given descriptor congestion control
+ * parameters. */
+bool
+hs_desc_supports_congestion_control(const hs_descriptor_t *desc)
+{
+  tor_assert(desc);
+
+  /* Validate that we support the protocol version in the descriptor. */
+  return desc->encrypted_data.flow_control_pv &&
+         protocol_list_supports_protocol(desc->encrypted_data.flow_control_pv,
+                                         PRT_FLOWCTRL, PROTOVER_FLOWCTRL_CC);
+}
