@@ -23,7 +23,7 @@ make install
 
 ## Releases
 
-The tarballs, checksums and signatures can be found: https://dist.torproject.org
+The tarballs, checksums and signatures can be found here: https://dist.torproject.org
 
 - Checksum: `<tarball-name>.sha256sum`
 - Signatures: `<tarball-name>.sha256sum.asc`
