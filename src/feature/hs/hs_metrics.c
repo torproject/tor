@@ -59,19 +59,26 @@ init_store(hs_service_t *service)
   store = service->metrics.store;
 
   for (size_t i = 0; i < base_metrics_size; ++i) {
-    metrics_store_entry_t *entry =
-      metrics_store_add(store, base_metrics[i].type, base_metrics[i].name,
-                        base_metrics[i].help);
-
-    /* Add labels to the entry. */
-    metrics_store_entry_add_label(entry,
-                        format_label("onion", service->onion_address));
+    /* Add entries with port as label. We need one metric line per port. */
     if (base_metrics[i].port_as_label && service->config.ports) {
       SMARTLIST_FOREACH_BEGIN(service->config.ports,
                               const hs_port_config_t *, p) {
+        metrics_store_entry_t *entry =
+          metrics_store_add(store, base_metrics[i].type, base_metrics[i].name,
+                            base_metrics[i].help);
+
+        /* Add labels to the entry. */
         metrics_store_entry_add_label(entry,
-                      format_label("port", port_to_str(p->virtual_port)));
+                format_label("onion", service->onion_address));
+        metrics_store_entry_add_label(entry,
+                format_label("port", port_to_str(p->virtual_port)));
       } SMARTLIST_FOREACH_END(p);
+    } else {
+      metrics_store_entry_t *entry =
+        metrics_store_add(store, base_metrics[i].type, base_metrics[i].name,
+                          base_metrics[i].help);
+      metrics_store_entry_add_label(entry,
+              format_label("onion", service->onion_address));
     }
   }
 }
