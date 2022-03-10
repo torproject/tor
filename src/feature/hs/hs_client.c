@@ -37,6 +37,7 @@
 #include "lib/crypt_ops/crypto_format.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/evloop/compat_libevent.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "feature/dircommon/dir_connection_st.h"
@@ -45,11 +46,30 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
 
+#include "trunnel/hs/cell_introduce1.h"
+
+/** This event is activated when we are notified that directory information has
+ * changed. It must be done asynchronous from the call due to possible
+ * recursion from the caller of that notification. See #40579. */
+static struct mainloop_event_t *dir_info_changed_ev = NULL;
+
 /** Client-side authorizations for hidden services; map of service identity
  * public key to hs_client_service_authorization_t *. */
 static digest256map_t *client_auths = NULL;
 
-#include "trunnel/hs/cell_introduce1.h"
+/** Mainloop callback. Scheduled to run when we are notified of a directory
+ * info change. See hs_client_dir_info_changed(). */
+static void
+dir_info_changed_callback(mainloop_event_t *event, void *arg)
+{
+  (void) event;
+  (void) arg;
+
+  /* We have possibly reached the minimum directory information or new
+   * consensus so retry all pending SOCKS connection in
+   * AP_CONN_STATE_RENDDESC_WAIT state in order to fetch the descriptor. */
+  retry_all_socks_conn_waiting_for_desc();
+}
 
 /** Return a human-readable string for the client fetch status code. */
 static const char *
@@ -2550,6 +2570,9 @@ hs_client_free_all(void)
   /* Purge the hidden service request cache. */
   hs_purge_last_hid_serv_requests();
   client_service_authorization_free_all();
+
+  /* This is NULL safe. */
+  mainloop_event_free(dir_info_changed_ev);
 }
 
 /** Purge all potentially remotely-detectable state held in the hidden
@@ -2572,14 +2595,27 @@ hs_client_purge_state(void)
   log_info(LD_REND, "Hidden service client state has been purged.");
 }
 
-/** Called when our directory information has changed. */
+/** Called when our directory information has changed.
+ *
+ * The work done in that function has to either be kept within the HS subsystem
+ * or else scheduled as a mainloop event. In other words, this function can't
+ * call outside to another subsystem to avoid risking recursion problems. */
 void
 hs_client_dir_info_changed(void)
 {
-  /* We have possibly reached the minimum directory information or new
-   * consensus so retry all pending SOCKS connection in
-   * AP_CONN_STATE_RENDDESC_WAIT state in order to fetch the descriptor. */
-  retry_all_socks_conn_waiting_for_desc();
+  /* Make sure the mainloop has been initialized. Code path exist that reaches
+   * this before it is. */
+  if (!tor_libevent_is_initialized()) {
+    return;
+  }
+
+  /* Lazily create the event. HS Client subsystem doesn't have an init function
+   * and so we do it here before activating it. */
+  if (!dir_info_changed_ev) {
+    dir_info_changed_ev = mainloop_event_new(dir_info_changed_callback, NULL);
+  }
+  /* Activate it to run immediately. */
+  mainloop_event_activate(dir_info_changed_ev);
 }
 
 #ifdef TOR_UNIT_TESTS
