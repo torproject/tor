@@ -1,0 +1,5 @@
+  o Minor bugfixes (onion service congestion control):
+    - Avoid a non fatal assert in case we can't setup congestion control on the
+      rendezvous circuit after opening. Fixes bug 40576; bugfix on
+      0.4.7.4-alpha.
+

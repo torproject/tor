@@ -319,6 +319,8 @@ void hs_desc_superencrypted_data_free_contents(
                                         hs_desc_superencrypted_data_t *desc);
 void hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc);
 
+bool hs_desc_supports_congestion_control(const hs_descriptor_t *desc);
+
 #ifdef HS_DESCRIPTOR_PRIVATE
 
 /* Encoding. */
