@@ -80,6 +80,7 @@ int congestion_control_parse_ext_response(const uint8_t *msg,
                                           const size_t msg_len,
                                           circuit_params_t *params_out);
 bool congestion_control_validate_sendme_increment(uint8_t sendme_inc);
+char *congestion_control_get_control_port_fields(const origin_circuit_t *);
 
 /* Ugh, C.. these are private. Use the getter instead, when
  * external to the congestion control code. */

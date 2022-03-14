@@ -22,6 +22,7 @@
 #include "core/or/origin_circuit_st.h"
 #include "core/or/channel.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/control/control_events.h"
 
 #define USEC_ONE_MS (1000)
 
@@ -179,6 +180,14 @@ congestion_control_westwood_process_sendme(congestion_control_t *cc,
 
       log_info(LD_CIRC, "CC: TOR_WESTWOOD congestion. New max RTT: %"PRIu64,
                  cc->max_rtt_usec/1000);
+
+      /* We need to report that slow start has exited ASAP,
+       * for sbws bandwidth measurement. */
+      if (CIRCUIT_IS_ORIGIN(circ)) {
+        /* We must discard const here because the event modifies fields :/ */
+        control_event_circ_bandwidth_used_for_circ(
+                TO_ORIGIN_CIRCUIT((circuit_t*)circ));
+      }
     }
 
     /* cwnd can never fall below 1 increment */

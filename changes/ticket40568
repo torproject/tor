@@ -1,0 +1,3 @@
+  o Minor features (control port):
+    - Provide congestion control fields on CIRC_BW and STREAM control
+      port events, for use by sbws. Closes ticket 40568.

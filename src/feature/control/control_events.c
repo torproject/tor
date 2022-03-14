@@ -21,6 +21,7 @@
 #include "core/or/command.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/congestion_control_common.h"
 #include "core/or/reasons.h"
 #include "feature/control/control.h"
 #include "feature/control/control_events.h"
@@ -819,6 +820,10 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
     case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
     case STREAM_EVENT_REMAP: status = "REMAP"; break;
     case STREAM_EVENT_CONTROLLER_WAIT: status = "CONTROLLER_WAIT"; break;
+    case STREAM_EVENT_XOFF_SENT: status = "XOFF_SENT"; break;
+    case STREAM_EVENT_XOFF_RECV: status = "XOFF_RECV"; break;
+    case STREAM_EVENT_XON_SENT: status = "XON_SENT"; break;
+    case STREAM_EVENT_XON_RECV: status = "XON_RECV"; break;
     default:
       log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
       return 0;
@@ -1075,10 +1080,12 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
 
   tor_gettimeofday(&now);
   format_iso_time_nospace_usec(tbuf, &now);
+
+  char *ccontrol_buf = congestion_control_get_control_port_fields(ocirc);
   send_control_event(EVENT_CIRC_BANDWIDTH_USED,
                      "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu TIME=%s "
                      "DELIVERED_READ=%lu OVERHEAD_READ=%lu "
-                     "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu\r\n",
+                     "DELIVERED_WRITTEN=%lu OVERHEAD_WRITTEN=%lu%s\r\n",
                      ocirc->global_identifier,
                      (unsigned long)ocirc->n_read_circ_bw,
                      (unsigned long)ocirc->n_written_circ_bw,
@@ -1086,10 +1093,15 @@ control_event_circ_bandwidth_used_for_circ(origin_circuit_t *ocirc)
                      (unsigned long)ocirc->n_delivered_read_circ_bw,
                      (unsigned long)ocirc->n_overhead_read_circ_bw,
                      (unsigned long)ocirc->n_delivered_written_circ_bw,
-                     (unsigned long)ocirc->n_overhead_written_circ_bw);
+                     (unsigned long)ocirc->n_overhead_written_circ_bw,
+                     ccontrol_buf ? ccontrol_buf : "");
+
   ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
   ocirc->n_overhead_written_circ_bw = ocirc->n_overhead_read_circ_bw = 0;
   ocirc->n_delivered_written_circ_bw = ocirc->n_delivered_read_circ_bw = 0;
+
+  if (ccontrol_buf)
+    tor_free(ccontrol_buf);
 
   return 0;
 }
