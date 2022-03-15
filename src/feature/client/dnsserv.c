@@ -65,6 +65,9 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
 
   log_info(LD_APP, "Got a new DNS request!");
 
+  /* Receiving a request on the DNSPort counts as user activity. */
+  note_user_activity(approx_time());
+
   req->flags |= 0x80; /* set RA */
 
   /* First, check whether the requesting address matches our SOCKSPolicy. */
