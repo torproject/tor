@@ -1,0 +1,5 @@
+  o Minor bugfixes (relay, overload):
+    - Use a fraction and assessment period of ntor handshake drops for the
+      overload general signal. Before that, a single drop could trigger an
+      overload state which was far from useful. Fixes bug 40560; bugfix on
+      0.4.7.1-alpha.
