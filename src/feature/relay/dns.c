@@ -111,6 +111,7 @@ static int answer_is_wildcarded(const char *ip);
 static int evdns_err_is_transient(int err);
 static void inform_pending_connections(cached_resolve_t *resolve);
 static void make_pending_resolve_cached(cached_resolve_t *cached);
+static void configure_libevent_options(void);
 
 #ifdef DEBUG_DNS_CACHE
 static void assert_cache_ok_(void);
@@ -222,7 +223,7 @@ dns_new_consensus_params(const networkstatus_t *ns)
   /* Consensus has parameters for the Exit relay DNS side and so we only reset
    * the DNS nameservers if we are in server mode. */
   if (server_mode(get_options())) {
-    dns_reset();
+    configure_libevent_options();
   }
 }
 
@@ -1415,6 +1416,60 @@ get_consensus_param_exit_dns_attempts(void)
   return str;
 }
 
+/** Configure the libevent options. This can be called after initialization.
+ * This should never be called without the evdns base pointer initialized. */
+static void
+configure_libevent_options(void)
+{
+  if (BUG(!the_evdns_base)) {
+    return;
+  }
+
+#define SET(k,v)  evdns_base_set_option(the_evdns_base, (k), (v))
+
+  // If we only have one nameserver, it does not make sense to back off
+  // from it for a timeout. Unfortunately, the value for max-timeouts is
+  // currently clamped by libevent to 255, but it does not hurt to set
+  // it higher in case libevent gets a patch for this.  Higher-than-
+  // default maximum of 3 with multiple nameservers to avoid spuriously
+  // marking one down on bursts of timeouts resulting from scans/attacks
+  // against non-responding authoritative DNS servers.
+  if (evdns_base_count_nameservers(the_evdns_base) == 1) {
+    SET("max-timeouts:", "1000000");
+  } else {
+    SET("max-timeouts:", "10");
+  }
+
+  // Elongate the queue of maximum inflight dns requests, so if a bunch
+  // remain pending at the resolver (happens commonly with Unbound) we won't
+  // stall every other DNS request. This potentially means some wasted
+  // CPU as there's a walk over a linear queue involved, but this is a
+  // much better tradeoff compared to just failing DNS requests because
+  // of a full queue.
+  SET("max-inflight:", "8192");
+
+  /* Set timeout to be 1 second. This tells libevent that it shouldn't wait
+   * more than N second to drop a DNS query and consider it "timed out". It is
+   * very important to differentiate here a libevent timeout and a DNS server
+   * timeout. And so, by setting this to N second, libevent sends back
+   * "DNS_ERR_TIMEOUT" if that N second is reached which does NOT indicate that
+   * the query itself timed out in transit. */
+  SET("timeout:", get_consensus_param_exit_dns_timeout());
+
+  /* This tells libevent to attemps up to X times a DNS query if the previous
+   * one failed to complete within N second. We believe that this should be
+   * enough to catch temporary hiccups on the first query. But after that, it
+   * should signal us that it won't be able to resolve it. */
+  SET("attempts:", get_consensus_param_exit_dns_attempts());
+
+  if (get_options()->ServerDNSRandomizeCase)
+    SET("randomize-case:", "1");
+  else
+    SET("randomize-case:", "0");
+
+#undef SET
+}
+
 /** Configure eventdns nameservers if force is true, or if the configuration
  * has changed since the last time we called this function, or if we failed on
  * our last attempt.  On Unix, this reads from /etc/resolv.conf or
@@ -1528,50 +1583,10 @@ configure_nameservers(int force)
   }
 #endif /* defined(_WIN32) */
 
-#define SET(k,v)  evdns_base_set_option(the_evdns_base, (k), (v))
+  /* Setup libevent options. */
+  configure_libevent_options();
 
-  // If we only have one nameserver, it does not make sense to back off
-  // from it for a timeout. Unfortunately, the value for max-timeouts is
-  // currently clamped by libevent to 255, but it does not hurt to set
-  // it higher in case libevent gets a patch for this.  Higher-than-
-  // default maximum of 3 with multiple nameservers to avoid spuriously
-  // marking one down on bursts of timeouts resulting from scans/attacks
-  // against non-responding authoritative DNS servers.
-  if (evdns_base_count_nameservers(the_evdns_base) == 1) {
-    SET("max-timeouts:", "1000000");
-  } else {
-    SET("max-timeouts:", "10");
-  }
-
-  // Elongate the queue of maximum inflight dns requests, so if a bunch
-  // remain pending at the resolver (happens commonly with Unbound) we won't
-  // stall every other DNS request. This potentially means some wasted
-  // CPU as there's a walk over a linear queue involved, but this is a
-  // much better tradeoff compared to just failing DNS requests because
-  // of a full queue.
-  SET("max-inflight:", "8192");
-
-  /* Set timeout to be 1 second. This tells libevent that it shouldn't wait
-   * more than N second to drop a DNS query and consider it "timed out". It is
-   * very important to differentiate here a libevent timeout and a DNS server
-   * timeout. And so, by setting this to N second, libevent sends back
-   * "DNS_ERR_TIMEOUT" if that N second is reached which does NOT indicate that
-   * the query itself timed out in transit. */
-  SET("timeout:", get_consensus_param_exit_dns_timeout());
-
-  /* This tells libevent to attemps up to X times a DNS query if the previous
-   * one failed to complete within N second. We believe that this should be
-   * enough to catch temporary hiccups on the first query. But after that, it
-   * should signal us that it won't be able to resolve it. */
-  SET("attempts:", get_consensus_param_exit_dns_attempts());
-
-  if (options->ServerDNSRandomizeCase)
-    SET("randomize-case:", "1");
-  else
-    SET("randomize-case:", "0");
-
-#undef SET
-
+  /* Relaunch periodical DNS check event. */
   dns_servers_relaunch_checks();
 
   nameservers_configured = 1;
