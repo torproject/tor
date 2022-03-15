@@ -867,6 +867,65 @@ test_overload_stats(void *arg)
   tor_free(stats_str);
 }
 
+/** Test the overload stats logic. */
+static void
+test_overload_onionskin_ntor(void *arg)
+{
+  char *stats_str = NULL;
+  (void) arg;
+  uint16_t type = ONION_HANDSHAKE_TYPE_NTOR_V3;
+
+  /* Lets simulate a series of timeouts but below our default 1% threshold. */
+
+  for (int i = 0; i < 1000; i++) {
+    rep_hist_note_circuit_handshake_requested(type);
+    /* This should trigger 9 drop which is just below 1% (10) */
+    if (i > 0 && !(i % 100)) {
+      rep_hist_note_circuit_handshake_dropped(type);
+    }
+  }
+
+  /* No overload yet. */
+  stats_str = rep_hist_get_overload_general_line();
+  tt_assert(!stats_str);
+
+  /* Move it 6 hours in the future and see if we get a general overload. */
+  update_approx_time(approx_time() + 21600);
+
+  /* This request should NOT trigger the general overload because we are below
+   * our default of 1%. */
+  rep_hist_note_circuit_handshake_requested(type);
+  stats_str = rep_hist_get_overload_general_line();
+  tt_assert(!stats_str);
+
+  /* We'll now go above our 1% threshold. */
+  for (int i = 0; i < 1000; i++) {
+    rep_hist_note_circuit_handshake_requested(type);
+    /* This should trigger 10 timeouts which is our threshold of 1% (10) */
+    if (!(i % 10)) {
+      rep_hist_note_circuit_handshake_dropped(type);
+    }
+  }
+
+  /* Move it 6 hours in the future and see if we get a general overload. */
+  update_approx_time(approx_time() + 21600);
+
+  /* This request should trigger the general overload because above 1%. */
+  rep_hist_note_circuit_handshake_requested(type);
+  stats_str = rep_hist_get_overload_general_line();
+  tt_assert(stats_str);
+  tor_free(stats_str);
+
+  /* Move 72h in the future, we should NOT get an overload anymore. */
+  update_approx_time(approx_time() + (72 * 3600));
+
+  stats_str = rep_hist_get_overload_general_line();
+  tt_assert(!stats_str);
+
+ done:
+  tor_free(stats_str);
+}
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -883,6 +942,7 @@ struct testcase_t stats_tests[] = {
   FORK(rephist_v3_onions),
   FORK(load_stats_file),
   FORK(overload_stats),
+  FORK(overload_onionskin_ntor),
 
   END_OF_TESTCASES
 };
