@@ -568,6 +568,8 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
   prefixlen = strlen(prefix);
   resultlen = prefixlen + strlen(suffix) + randlen + 16;
 
+  /* (x+(n-1))/n is an idiom for dividing x by n, rounding up to the nearest
+   * integer and thus why this construction. */
   rand_bytes_len = ((randlen*5)+7)/8;
   if (rand_bytes_len % 5)
     rand_bytes_len += 5 - (rand_bytes_len%5);
