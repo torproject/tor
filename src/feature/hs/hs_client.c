@@ -826,6 +826,11 @@ setup_rendezvous_circ_congestion_control(origin_circuit_t *circ)
   if (circ_params.cc_enabled) {
     circ_params.sendme_inc_cells = desc->encrypted_data.sendme_inc;
 
+    /* It is setup on the circuit in order to indicate that congestion control
+     * is enabled. It will be transferred to the RP crypt_path_t once the
+     * handshake is finalized in finalize_rend_circuit() because the final hop
+     * is not available until then. */
+
     if (desc->encrypted_data.single_onion_service) {
       TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
                                                           CC_PATH_ONION_SOS);

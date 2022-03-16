@@ -131,6 +131,12 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
    * so we can actually use it. */
   circ->hs_circ_has_timed_out = 0;
 
+  /* If congestion control, transfer ccontrol onto the cpath. */
+  if (TO_CIRCUIT(circ)->ccontrol) {
+    hop->ccontrol = TO_CIRCUIT(circ)->ccontrol;
+    TO_CIRCUIT(circ)->ccontrol = NULL;
+  }
+
   /* Append the hop to the cpath of this circuit */
   cpath_extend_linked_list(&circ->cpath, hop);
 
@@ -416,6 +422,11 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
       .sendme_inc_cells = congestion_control_sendme_inc(),
     };
 
+    /* It is setup on the circuit in order to indicate that congestion control
+     * is enabled. It will be transferred to the RP crypt_path_t once the
+     * handshake is finalized in finalize_rend_circuit() because the final hop
+     * is not available until then. */
+
     /* Initialize ccontrol for appropriate path type */
     if (service->config.is_single_onion) {
       TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
@@ -532,6 +543,11 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
       .cc_enabled = 1,
       .sendme_inc_cells = TO_CIRCUIT(circ)->ccontrol->sendme_inc,
     };
+
+    /* It is setup on the circuit in order to indicate that congestion control
+     * is enabled. It will be transferred to the RP crypt_path_t once the
+     * handshake is finalized in finalize_rend_circuit() because the final hop
+     * is not available until then. */
 
     /* As per above, in this case, we are a full 3 hop rend, even if we're a
      * single-onion service */

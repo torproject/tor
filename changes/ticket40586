@@ -1,0 +1,5 @@
+  o Major bugfixes (onion service, congestion control):
+    - Fix the onion service upload case where the congestion control parameters
+      were not added to the right object. Fixes bug 40586; bugfix on
+      0.4.7.4-alpha.
+
