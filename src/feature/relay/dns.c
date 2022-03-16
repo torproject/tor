@@ -1416,12 +1416,15 @@ get_consensus_param_exit_dns_attempts(void)
   return str;
 }
 
-/** Configure the libevent options. This can be called after initialization.
- * This should never be called without the evdns base pointer initialized. */
+/** Configure the libevent options. This can safely be called after
+ * initialization or even if the evdns base is not set. */
 static void
 configure_libevent_options(void)
 {
-  if (BUG(!the_evdns_base)) {
+  /* This is possible because we can get called when a new consensus is set
+   * while the DNS subsystem is not initialized just yet. It should be
+   * harmless. */
+  if (!the_evdns_base) {
     return;
   }
 
