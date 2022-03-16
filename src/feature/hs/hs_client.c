@@ -801,8 +801,6 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
 static void
 setup_rendezvous_circ_congestion_control(origin_circuit_t *circ)
 {
-  circuit_params_t circ_params = {0};
-
   tor_assert(circ);
 
   /* Setup congestion control parameters on the circuit. */
@@ -821,29 +819,13 @@ setup_rendezvous_circ_congestion_control(origin_circuit_t *circ)
     return;
   }
 
-  /* Take values from the consensus. */
-  circ_params.cc_enabled = congestion_control_enabled();
-  if (circ_params.cc_enabled) {
-    circ_params.sendme_inc_cells = desc->encrypted_data.sendme_inc;
-
-    /* It is setup on the circuit in order to indicate that congestion control
-     * is enabled. It will be transferred to the RP crypt_path_t once the
-     * handshake is finalized in finalize_rend_circuit() because the final hop
-     * is not available until then. */
-
-    if (desc->encrypted_data.single_onion_service) {
-      TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
-                                                          CC_PATH_ONION_SOS);
-    } else {
-      if (get_options()->HSLayer3Nodes) {
-        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
-                                                            CC_PATH_ONION_VG);
-      } else {
-        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
-                                                            CC_PATH_ONION);
-      }
-    }
+  /* If network doesn't enable it, do not setup. */
+  if (!congestion_control_enabled()) {
+    return;
   }
+
+  hs_circ_setup_congestion_control(circ, desc->encrypted_data.sendme_inc,
+                                   desc->encrypted_data.single_onion_service);
 }
 
 /** Called when a rendezvous circuit has opened. */

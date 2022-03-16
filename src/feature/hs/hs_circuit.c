@@ -416,30 +416,10 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
     tor_assert(circ->hs_ident);
   }
 
+  /* Setup congestion control if asked by the client from the INTRO cell. */
   if (data->cc_enabled) {
-    circuit_params_t circ_params = {
-      .cc_enabled = data->cc_enabled,
-      .sendme_inc_cells = congestion_control_sendme_inc(),
-    };
-
-    /* It is setup on the circuit in order to indicate that congestion control
-     * is enabled. It will be transferred to the RP crypt_path_t once the
-     * handshake is finalized in finalize_rend_circuit() because the final hop
-     * is not available until then. */
-
-    /* Initialize ccontrol for appropriate path type */
-    if (service->config.is_single_onion) {
-      TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
-                                                          CC_PATH_ONION_SOS);
-    } else {
-      if (get_options()->HSLayer3Nodes) {
-        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
-                                                            CC_PATH_ONION_VG);
-      } else {
-        TO_CIRCUIT(circ)->ccontrol = congestion_control_new(&circ_params,
-                                                            CC_PATH_ONION);
-      }
-    }
+    hs_circ_setup_congestion_control(circ, congestion_control_sendme_inc(),
+                                     service->config.is_single_onion);
   }
 
  end:
@@ -538,26 +518,13 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
   new_circ->build_state->expiry_time = bstate->expiry_time;
   new_circ->hs_ident = hs_ident_circuit_dup(circ->hs_ident);
 
-  if (TO_CIRCUIT(circ)->ccontrol != NULL) {
-    circuit_params_t circ_params = {
-      .cc_enabled = 1,
-      .sendme_inc_cells = TO_CIRCUIT(circ)->ccontrol->sendme_inc,
-    };
-
-    /* It is setup on the circuit in order to indicate that congestion control
-     * is enabled. It will be transferred to the RP crypt_path_t once the
-     * handshake is finalized in finalize_rend_circuit() because the final hop
-     * is not available until then. */
-
+  /* Setup congestion control if asked by the client from the INTRO cell. */
+  if (TO_CIRCUIT(circ)->ccontrol) {
     /* As per above, in this case, we are a full 3 hop rend, even if we're a
-     * single-onion service */
-    if (get_options()->HSLayer3Nodes) {
-      TO_CIRCUIT(new_circ)->ccontrol = congestion_control_new(&circ_params,
-                                        CC_PATH_ONION_VG);
-    } else {
-      TO_CIRCUIT(new_circ)->ccontrol = congestion_control_new(&circ_params,
-                                        CC_PATH_ONION_SOS);
-    }
+     * single-onion service. */
+    hs_circ_setup_congestion_control(new_circ,
+                                     TO_CIRCUIT(circ)->ccontrol->sendme_inc,
+                                     false);
   }
 
  done:
@@ -645,6 +612,41 @@ cleanup_on_free_client_circ(circuit_t *circ)
 /* ========== */
 /* Public API */
 /* ========== */
+
+/** Setup on the given circuit congestion control with the given parameters.
+ *
+ * This function assumes that congestion control is enabled on the network and
+ * so it is the caller responsability to make sure of it. */
+void
+hs_circ_setup_congestion_control(origin_circuit_t *origin_circ,
+                                 uint8_t sendme_inc, bool is_single_onion)
+{
+  circuit_t *circ = NULL;
+  circuit_params_t circ_params = {0};
+
+  tor_assert(origin_circ);
+
+  /* Ease our lives */
+  circ = TO_CIRCUIT(origin_circ);
+
+  circ_params.cc_enabled = true;
+  circ_params.sendme_inc_cells = sendme_inc;
+
+  /* It is setup on the circuit in order to indicate that congestion control is
+   * enabled. It will be transferred to the RP crypt_path_t once the handshake
+   * is finalized in finalize_rend_circuit() for both client and service
+   * because the final hop is not available until then. */
+
+  if (is_single_onion) {
+    circ->ccontrol = congestion_control_new(&circ_params, CC_PATH_ONION_SOS);
+  } else {
+    if (get_options()->HSLayer3Nodes) {
+      circ->ccontrol = congestion_control_new(&circ_params, CC_PATH_ONION_VG);
+    } else {
+      circ->ccontrol = congestion_control_new(&circ_params, CC_PATH_ONION);
+    }
+  }
+}
 
 /** Return an introduction point circuit matching the given intro point object.
  * NULL is returned is no such circuit can be found. */
