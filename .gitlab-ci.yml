@@ -242,3 +242,22 @@ debian-nss:
     NSS: "yes"
   script:
     - ./scripts/ci/ci-driver.sh
+
+#####
+# Debian packaging triggers for maintenance branches
+debian-packaging-0.4.5:
+  stage: deploy
+  trigger:
+    project: tpo/core/debian/tor
+    branch: debian-0.4.5
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "tpo/core" &&
+          $CI_COMMIT_BRANCH == "maint-0.4.5"
+debian-packaging-0.4.6:
+  stage: deploy
+  trigger:
+    project: tpo/core/debian/tor
+    branch: debian-0.4.6
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "tpo/core" &&
+          $CI_COMMIT_BRANCH == "maint-0.4.6"
