@@ -30,7 +30,7 @@
  * Flow Control
  */
 
-/* Emitted everytime the flow_control_decide_xon() function is called. */
+/* Emitted every time the flow_control_decide_xon() function is called. */
 TRACEPOINT_EVENT(tor_cc, flow_decide_xon,
   TP_ARGS(const edge_connection_t *, stream, size_t, n_written),
   TP_FIELDS(

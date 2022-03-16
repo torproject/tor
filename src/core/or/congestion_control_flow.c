@@ -235,7 +235,7 @@ circuit_send_stream_xon(edge_connection_t *stream)
  * Process a stream XOFF, parsing it, and then stopping reading on
  * the edge connection.
  *
- * Record that we have recieved an xoff, so we know not to resume
+ * Record that we have received an xoff, so we know not to resume
  * reading on this edge conn until we get an XON.
  *
  * Returns false if the XOFF did not validate; true if it does.

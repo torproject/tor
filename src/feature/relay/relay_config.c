@@ -190,7 +190,7 @@ describe_relay_port(const port_cfg_t *port)
 
 /** Return true iff port p1 is equal to p2.
  *
- * This does a field by field comparaison. */
+ * This does a field by field comparison. */
 static bool
 port_cfg_eq(const port_cfg_t *p1, const port_cfg_t *p2)
 {

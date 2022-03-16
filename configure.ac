@@ -457,7 +457,7 @@ AM_CONDITIONAL(BUILD_HTML_DOCS, [test "x$enable_html_manual" != "xno"])
 AM_PROG_CC_C_O
 
 dnl Before autoconf 2.70, AC_PROG_CC_C99 is supposedly necessary for some
-dnl compilers if you wan't C99 support. Starting with 2.70, it is obsolete and
+dnl compilers if you want C99 support. Starting with 2.70, it is obsolete and
 dnl forbidden.
 m4_version_prereq([2.70], [:], [AC_PROG_CC_C99])
 

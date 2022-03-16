@@ -513,7 +513,7 @@ conn_update_on_connect(conn_client_stats_t *stats, const tor_addr_t *addr)
 
   /* Assess connect counter. Mark it if counter is down to 0 and we haven't
    * marked it before or it was reset. This is to avoid to re-mark it over and
-   * over again extending continously the blocked time. */
+   * over again extending continuously the blocked time. */
   if (token_bucket_ctr_get(&stats->connect_count) == 0 &&
       stats->marked_until_ts == 0) {
     conn_mark_client(stats);

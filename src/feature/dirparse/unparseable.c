@@ -403,7 +403,7 @@ dump_desc_compare_fifo_entries(const void **a_v, const void **b_v)
       }
     } else {
       /*
-       * We shouldn't see this, but what the hell, NULLs precede everythin
+       * We shouldn't see this, but what the hell, NULLs precede everything
        * else
        */
       return 1;

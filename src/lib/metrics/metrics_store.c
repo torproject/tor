@@ -60,7 +60,7 @@ get_output(const metrics_store_t *store, buf_t *data, fmt_driver_fn_t fmt)
   tor_assert(fmt);
 
   STRMAP_FOREACH(store->entries, key, const smartlist_t *, entries) {
-    /* Indicate that we've formatted the coment already for the entries. */
+    /* Indicate that we've formatted the comment already for the entries. */
     bool comment_formatted = false;
     SMARTLIST_FOREACH_BEGIN(entries, const metrics_store_entry_t *, entry) {
       fmt(entry, data, comment_formatted);

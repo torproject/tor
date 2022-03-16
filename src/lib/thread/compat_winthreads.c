@@ -146,7 +146,7 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *lock_, const struct timeval *tv)
 {
   // recursive SRW locks are not supported because they need extra logic for
   // acquiring and releasing but SleepConditionVariableSRW will use the OS
-  // lock relase function which lacks our extra logic
+  // lock release function which lacks our extra logic
   tor_assert(lock_->type == NON_RECURSIVE);
   SRWLOCK *lock = &lock_->mutex;
   DWORD ms = INFINITE;

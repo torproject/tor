@@ -32,7 +32,7 @@ typedef struct half_edge_t {
   int data_pending;
 
   /**
-   * Monotime timestamp of when the other end should have successfuly
+   * Monotime timestamp of when the other end should have successfully
    * shut down the stream and stop sending data, based on the larger
    * of circuit RTT and CBT. Used if 'used_ccontrol' is true, to expire
    * the half_edge at this monotime timestamp. */

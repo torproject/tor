@@ -108,7 +108,7 @@ struct edge_connection_t {
 
   /**
    * The following fields are used to count the total bytes sent on this
-   * stream, and compare them to the number of XON and XOFFs recieved, so
+   * stream, and compare them to the number of XON and XOFFs received, so
    * that clients can check rate limits of XOFF/XON to prevent dropmark
    * attacks. */
   uint32_t total_bytes_xmit;
