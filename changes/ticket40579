@@ -1,3 +1,4 @@
   o Minor bugfixes (onion service, client):
-    - Fix a fatal assert due to a guard subsystem recursion triggered by the
+    - Fix a rare but fatal assertion failure due to a guard subsystem
+      recursion triggered by the
       onion service client. Fixes bug 40579; bugfix on 0.3.5.1-alpha.
