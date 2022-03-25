@@ -1,3 +1,0 @@
-  o Minor bugfixes (DNSPort, dormant mode):
-    - A request on the DNSPort now wakes up a dormant tor. Fixes bug 40577;
-      bugfix on 0.3.5.1-alpha.

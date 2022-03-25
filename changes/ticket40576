@@ -1,5 +1,0 @@
-  o Minor bugfixes (onion service congestion control):
-    - Avoid a non-fatal assertion failure in the case where we fail to set up
-      congestion control on a rendezvous circuit. This could happen naturally
-      if a cache entry expired at an unexpected time. Fixes bug 40576; bugfix
-      on 0.4.7.4-alpha.

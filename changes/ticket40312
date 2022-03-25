@@ -1,6 +1,0 @@
-  o Major bugfixes (relay, DNS):
-    - Lower the DNS timeout from 3 attempts at 5 seconds each to 2 attempts at
-      1 seconds each. Two new consensus parameters were added to control these
-      values. This change should improve observed performance under DNS load;
-      see ticket for more details. Fixes bug 40312; bugfix on
-      0.3.5.1-alpha.

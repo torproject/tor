@@ -1,5 +1,0 @@
-  o Minor bugfixes (relay, overload):
-    - Decide whether to signal overload based on a fraction and
-      assessment period of ntor handshake drops. Previously, a single
-      drop could trigger an overload state, which caused many false
-      positives. Fixes bug 40560; bugfix on 0.4.7.1-alpha.
