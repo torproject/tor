@@ -442,7 +442,7 @@ if [[ "${CHUTNEY}" = "yes" ]]; then
         runcmd "${CHUTNEY_PATH}"/tools/diagnostics.sh || true
         # XXXX These next two should be part of a make target.
         runcmd ls test_network_log || true
-        runcmd cat test_network_log || true
+        runcmd head -n -0 test_network_log/* || true
         FAILED_TESTS="${FAILED_TESTS} chutney"
     fi
     end_section "Chutney"
