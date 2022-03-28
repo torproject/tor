@@ -1,0 +1,3 @@
+  o Minor features (linux seccomp2 sandbox):
+    - Permit the clone3 syscall, which is apparently used in glibc-2.34 and
+      later. Closes ticket 40590.
