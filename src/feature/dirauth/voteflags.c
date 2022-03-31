@@ -457,7 +457,26 @@ dirserv_get_flag_thresholds_line(void)
   return result;
 }
 
-/* DOCDOC running_long_enough_to_decide_unreachable */
+/** Directory authorities should avoid expressing an opinion on the
+ * Running flag if their own uptime is too low for the opinion to be
+ * accurate. They implement this step by not listing Running on the
+ * "known-flags" line in their vote.
+ *
+ * The default threshold is 30 minutes, because authorities do a full
+ * reachability sweep of the ID space every 10*128=1280 seconds
+ * (see REACHABILITY_TEST_CYCLE_PERIOD).
+ *
+ * For v3 dir auths, as long as some authorities express an opinion about
+ * Running, it's fine if a few authorities don't. There's an explicit
+ * check, when making the consensus, to abort if *no* authorities list
+ * Running as a known-flag.
+ *
+ * For the bridge authority, if it doesn't vote about Running, the
+ * resulting networkstatus file simply won't list any bridges as Running.
+ * That means the supporting tools, like bridgedb/rdsys and onionoo, need
+ * to be able to handle getting a bridge networkstatus document with no
+ * Running flags. For more details, see
+ * https://bugs.torproject.org/tpo/anti-censorship/rdsys/102 */
 int
 running_long_enough_to_decide_unreachable(void)
 {
