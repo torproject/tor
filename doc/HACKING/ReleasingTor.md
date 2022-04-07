@@ -86,7 +86,7 @@ Once all signatures from all selected developers have been committed:
 
       Upload the tarball and its sig to the dist website:
 
-         `rsync -avP tor-0.3.5.18.tar.gz{,.asc} dist-master.torproject.org:/srv/dist-master.torproject.org/htdocs/`
+         `rsync -avP tor-*.gz{,.asc} dist-master.torproject.org:/srv/dist-master.torproject.org/htdocs/`
 
       Then, on dist-master.torproject.org, run:
 
@@ -110,8 +110,8 @@ Once the tarballs have been uploaded and are ready to be announced, we need to
 do the following:
 
    1. Tag versions (`main` branch or `release` branch as appropriate) using
-      `git tag -s tor-0.x.y.z-<status>` and then push the tags:
-      `git push origin --tags`
+      `git tag -s tor-0.x.y.z-<status>` and then push the tag(s):
+      `git push origin tor-0.x.y.z-<status>`
 
       (This should be the `main` or `release` branch because that is the one
       from which the tarballs are built.  We want our tags to match our
