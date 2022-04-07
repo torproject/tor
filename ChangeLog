@@ -1,3 +1,21 @@
+Changes in version 0.4.7.6-rc - 2022-04-07
+  This is the first release candidate of the 0.4.7.x series. Only one minor
+  bugfix went in since the last alpha couple weeks ago. We strongly recommend
+  anyone running an alpha version to upgrade to this version. Unless major
+  problems are found, the next release will finally be the stable!
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on April 07, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/04/07.
+
+  o Minor features (linux seccomp2 sandbox):
+    - Permit the clone3 syscall, which is apparently used in glibc-2.34
+      and later. Closes ticket 40590.
+
+
 Changes in version 0.4.7.5-alpha - 2022-03-25
   This version contains, of what we hope, the final work for congestion
   control paving the way to the stable version. We expect this to be the last
