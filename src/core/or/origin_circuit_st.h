@@ -180,6 +180,12 @@ struct origin_circuit_t {
   unsigned first_hop_from_controller : 1;
 
   /**
+   * If true, this circuit's path has been chosen, in full or in part,
+   * by the controller API, and it's okay to ignore checks that we'd
+   * usually do on the path as whole. */
+  unsigned int any_hop_from_controller : 1;
+
+  /**
    * Tristate variable to guard against pathbias miscounting
    * due to circuit purpose transitions changing the decision
    * of pathbias_should_count(). This variable is informational
