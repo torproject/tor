@@ -1128,7 +1128,7 @@ consdiff_get_digests(const smartlist_t *diff,
   {
     const cdline_t *line2 = smartlist_get(diff, 1);
     char *h = tor_memdup_nulterm(line2->s, line2->len);
-    smartlist_split_string(hash_words, h, " ", 0, 0);
+    smartlist_split_string(hash_words, h, " ", 0, 4);
     tor_free(h);
   }
 
