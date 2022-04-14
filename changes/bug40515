@@ -1,0 +1,6 @@
+  o Minor bugfixes (controller, path bias):
+    - When a circuit's path is specified, in full or in part, from the
+      controller API, do not count that circuit towards our path-bias
+      calculations. (Doing so was incorrect, since we cannot tell whether
+      the controller is selecting relays randomly.)  Resolves a "Bug"
+      warning. Fixes bug 40515; bugfix on 0.2.4.10-alpha.

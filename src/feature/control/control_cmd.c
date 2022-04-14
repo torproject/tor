@@ -817,6 +817,8 @@ handle_control_extendcircuit(control_connection_t *conn,
     circ->first_hop_from_controller = 1;
   }
 
+  circ->any_hop_from_controller = 1;
+
   /* now circ refers to something that is ready to be extended */
   first_node = zero_circ;
   SMARTLIST_FOREACH(nodes, const node_t *, node,
