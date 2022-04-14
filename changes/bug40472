@@ -1,0 +1,6 @@
+  o Minor bugfixes (performance, DoS):
+    - Fix one case of a not-especially viable denial-of-service attack found
+      by OSS-Fuzz in our consensus-diff parsing code. This attack causes a
+      lot small of memory allocations and then immediately frees them: this
+      is only slow when running with all the sanitizers enabled.  Fixes one
+      case of bug 40472; bugfix on 0.3.1.1-alpha.
