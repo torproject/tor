@@ -1284,11 +1284,28 @@ circuit_finish_handshake(origin_circuit_t *circ,
                circuit_get_cpath_hop(circ, SBWS_ROUTE_LEN) == hop) {
       hop->ccontrol = congestion_control_new(&params, CC_PATH_SBWS);
     } else {
-      static ratelim_t cc_path_limit = RATELIM_INIT(600);
-      log_fn_ratelim(&cc_path_limit, LOG_WARN, LD_CIRC,
-                     "Unexpected path length %d for circuit",
-                     circ_len);
-      hop->ccontrol = congestion_control_new(&params, CC_PATH_EXIT);
+      if (circ_len > DEFAULT_ROUTE_LEN) {
+        /* This can happen for unknown reasons; cannibalization codepaths
+         * don't seem able to do it, so there is some magic way that hops can
+         * still get added. Perhaps some cases of circuit pre-build that change
+         * purpose? */
+        static ratelim_t cc_path_limit = RATELIM_INIT(600);
+        log_fn_ratelim(&cc_path_limit, LOG_NOTICE, LD_CIRC,
+                   "Unexpected path length %d for exit circuit %d, purpose %d",
+                    circ_len, circ->global_identifier,
+                    TO_CIRCUIT(circ)->purpose);
+        hop->ccontrol = congestion_control_new(&params, CC_PATH_EXIT);
+      } else {
+        /* This is likely directory requests, which should block on orconn
+         * before congestion control, but lets give them the lower sbws
+         * param set anyway just in case. */
+        log_info(LD_CIRC,
+                 "Unexpected path length %d for exit circuit %d, purpose %d",
+                 circ_len, circ->global_identifier,
+                 TO_CIRCUIT(circ)->purpose);
+
+        hop->ccontrol = congestion_control_new(&params, CC_PATH_SBWS);
+      }
     }
   }
 
