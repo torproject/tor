@@ -132,14 +132,17 @@ do the following:
 
 ### New Stable
 
-   1. Create the `maint-x.y.z` and `release-x.y.z` branches and update the
-      `./scripts/git/git-list-tor-branches.sh` with the new version.
+   1. Create the `maint-x.y.z` and `release-x.y.z` branches at the version
+      tag. Then update the `./scripts/git/git-list-tor-branches.sh` with the
+      new version.
 
-   2. Add the new version in `./scripts/ci/ci-driver.sh`.
+   2. Update `./scripts/git/git-list-tor-branches.sh` and
+      `./scripts/ci/ci-driver.sh` with the new version in `maint-x.y.z` and
+      then merge forward into main. (If you haven't pushed remotely the new
+      branches, merge the local branch).
 
-   3. Forward port the ChangeLog and ReleaseNotes into main branch. Remove any
-      change logs of stable releases in ReleaseNotes.
-
+   3. In `main`, bump version to the next series: `tor-x.y.0-alpha-dev` and
+      then tag it: `git tag -s tor-x.y.0-alpha-dev`
 
 ## Appendix: An alternative means to notify packagers
 
