@@ -185,7 +185,6 @@ EXTRA_DIST+= \
 	CODE_OF_CONDUCT							\
 	INSTALL								\
 	LICENSE								\
-	Makefile.nmake							\
 	README.md								\
 	ReleaseNotes							\
 	scripts/build/combine_libs					\
