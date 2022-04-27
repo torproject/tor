@@ -1,5 +1,0 @@
-  o Minor bugfixes (congestion control, client side logs):
-    - Demote a warn about 1-hop circuits using congestion control down to
-      info; Demote the 4-hop case to notice. Fixes bug 40598; bugfix on
-      0.4.5-alpha.
-

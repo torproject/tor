@@ -1,3 +1,27 @@
+Changes in version 0.4.7.7 - 2022-04-27
+  This is the first stable version of the 0.4.7.x series. This series includes
+  several major bugfixes from previous series and one massive new feature:
+  congestion control.
+
+  Congestion control should improve traffic speed and stability on the network
+  once a majority of Exit upgrade. You can find more details about it in
+  proposal 324 in the torspec.git repository.
+
+  For a complete list of changes since 0.4.6.10, see the ReleaseNotes file.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on April 27, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/04/27.
+
+  o Minor bugfixes (congestion control, client side logs):
+    - Demote a warn about 1-hop circuits using congestion control down to
+      info; Demote the 4-hop case to notice. Fixes bug 40598; bugfix on
+      0.4.5-alpha.
+
+
 Changes in version 0.4.7.6-rc - 2022-04-07
   This is the first release candidate of the 0.4.7.x series. Only one minor
   bugfix went in since the last alpha couple weeks ago. We strongly recommend
