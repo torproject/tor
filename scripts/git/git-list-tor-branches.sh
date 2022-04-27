@@ -149,6 +149,9 @@ branch release-0.4.5
 branch maint-0.4.6
 branch release-0.4.6
 
+branch maint-0.4.7
+branch release-0.4.7
+
 branch main
 
 finish
