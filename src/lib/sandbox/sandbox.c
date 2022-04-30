@@ -614,6 +614,32 @@ sb_chmod(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return 0;
 }
 
+static int
+sb_fchmodat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  sandbox_cfg_t *elem = NULL;
+
+  // for each dynamic parameter filters
+  for (elem = filter; elem != NULL; elem = elem->next) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 && param->syscall
+        == SCMP_SYS(fchmodat)) {
+      rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fchmodat),
+          SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+          SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add fchmodat syscall, received "
+            "libseccomp error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+
 #ifdef __i386__
 static int
 sb_chown32(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
@@ -666,6 +692,32 @@ sb_chown(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 #endif /* defined(__i386__) */
 
+static int
+sb_fchownat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  sandbox_cfg_t *elem = NULL;
+
+  // for each dynamic parameter filters
+  for (elem = filter; elem != NULL; elem = elem->next) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 && param->syscall
+        == SCMP_SYS(fchownat)) {
+      rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fchownat),
+          SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+          SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add fchownat syscall, received "
+            "libseccomp error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+
 /**
  * Function responsible for setting up the rename syscall for
  * the seccomp filter sandbox.
@@ -688,6 +740,39 @@ sb_rename(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
             SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value2));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add rename syscall, received "
+            "libseccomp error %d", rc);
+        return rc;
+      }
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Function responsible for setting up the renameat syscall for
+ * the seccomp filter sandbox.
+ */
+static int
+sb_renameat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  sandbox_cfg_t *elem = NULL;
+
+  // for each dynamic parameter filters
+  for (elem = filter; elem != NULL; elem = elem->next) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 &&
+        param->syscall == SCMP_SYS(renameat)) {
+
+      rc = seccomp_rule_add_4(ctx, SCMP_ACT_ALLOW, SCMP_SYS(renameat),
+            SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+            SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value),
+            SCMP_CMP_NEG(2, SCMP_CMP_EQ, AT_FDCWD),
+            SCMP_CMP_STR(3, SCMP_CMP_EQ, param->value2));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add renameat syscall, received "
             "libseccomp error %d", rc);
         return rc;
       }
@@ -1317,7 +1402,9 @@ static sandbox_filter_func_t filter_func[] = {
 #else
     sb_chown,
 #endif
+    sb_fchownat,
     sb_chmod,
+    sb_fchmodat,
     sb_open,
     sb_openat,
     sb_opendir,
@@ -1325,6 +1412,7 @@ static sandbox_filter_func_t filter_func[] = {
     sb_ptrace,
 #endif
     sb_rename,
+    sb_renameat,
 #ifdef __NR_fcntl64
     sb_fcntl64,
 #endif
@@ -1592,8 +1680,22 @@ new_element(int syscall, char *value)
 
 #ifdef __i386__
 #define SCMP_chown SCMP_SYS(chown32)
+#elif defined(__aarch64__) && defined(__LP64__)
+#define SCMP_chown SCMP_SYS(fchownat)
 #else
 #define SCMP_chown SCMP_SYS(chown)
+#endif
+
+#if defined(__aarch64__) && defined(__LP64__)
+#define SCMP_chmod SCMP_SYS(fchmodat)
+#else
+#define SCMP_chmod SCMP_SYS(chmod)
+#endif
+
+#if defined(__aarch64__) && defined(__LP64__)
+#define SCMP_rename SCMP_SYS(renameat)
+#else
+#define SCMP_rename SCMP_SYS(rename)
 #endif
 
 #ifdef __NR_stat64
@@ -1633,7 +1735,7 @@ sandbox_cfg_allow_chmod_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(chmod), file);
+  elem = new_element(SCMP_chmod, file);
 
   elem->next = *cfg;
   *cfg = elem;
@@ -1659,7 +1761,7 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element2(SCMP_SYS(rename), file1, file2);
+  elem = new_element2(SCMP_rename, file1, file2);
 
   elem->next = *cfg;
   *cfg = elem;
