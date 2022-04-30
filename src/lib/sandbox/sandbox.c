@@ -518,7 +518,12 @@ libc_uses_openat_for_opendir(void)
 static int
 libc_negative_constant_needs_cast(void)
 {
+#if defined(__aarch64__) && defined(__LP64__)
+  /* Existing glibc versions always sign-extend to 64 bits on AArch64. */
+  return 0;
+#else
   return is_libc_at_least(2, 27);
+#endif
 }
 
 /** Allow a single file to be opened.  If <b>use_openat</b> is true,
