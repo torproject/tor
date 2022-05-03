@@ -1,0 +1,3 @@
+  o Minor features (tests):
+    - Avoid needless key reinitialization with OpenSSL during unit tests,
+      saving significant time.  Patch from Alex Xu.
