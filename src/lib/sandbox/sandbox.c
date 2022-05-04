@@ -141,10 +141,12 @@ static sandbox_cfg_t *filter_dynamic = NULL;
  * the high bits of the value might get masked out improperly. */
 #define SCMP_CMP_MASKED(a,b,c) \
   SCMP_CMP4((a), SCMP_CMP_MASKED_EQ, ~(scmp_datum_t)(b), (c))
-/* For negative constants, the rule to add depends on the glibc version. */
-#define SCMP_CMP_NEG(a,op,b) (libc_negative_constant_needs_cast() ? \
-                              (SCMP_CMP((a), (op), (unsigned int)(b))) : \
-                              (SCMP_CMP_STR((a), (op), (b))))
+/* Negative constants aren't consistently sign extended or zero extended.
+ * Different compilers, libc, and architectures behave differently. For cases
+ * where the kernel ABI uses a 32 bit integer, this macro can be used to
+ * mask-compare only the lower 32 bits of the value. */
+#define SCMP_CMP_LOWER32_EQ(a,b) \
+  SCMP_CMP4((a), SCMP_CMP_MASKED_EQ, 0xFFFFFFFF, (unsigned int)(b))
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
@@ -513,19 +515,6 @@ libc_uses_openat_for_opendir(void)
          (is_libc_at_least(2, 15) && !is_libc_at_least(2, 22));
 }
 
-/* Return true if we think we're running with a libc that needs to cast
- * negative arguments like AT_FDCWD for seccomp rules. */
-static int
-libc_negative_constant_needs_cast(void)
-{
-#if defined(__aarch64__) && defined(__LP64__)
-  /* Existing glibc versions always sign-extend to 64 bits on AArch64. */
-  return 0;
-#else
-  return is_libc_at_least(2, 27);
-#endif
-}
-
 /** Allow a single file to be opened.  If <b>use_openat</b> is true,
  * we're using a libc that remaps all the opens into openats. */
 static int
@@ -533,7 +522,7 @@ allow_file_open(scmp_filter_ctx ctx, int use_openat, const char *file)
 {
   if (use_openat) {
     return seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat),
-                              SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+                              SCMP_CMP_LOWER32_EQ(0, AT_FDCWD),
                               SCMP_CMP_STR(1, SCMP_CMP_EQ, file));
   } else {
     return seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open),
@@ -627,7 +616,7 @@ sb_fchmodat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     if (param != NULL && param->prot == 1 && param->syscall
         == SCMP_SYS(fchmodat)) {
       rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fchmodat),
-          SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+          SCMP_CMP_LOWER32_EQ(0, AT_FDCWD),
           SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add fchmodat syscall, received "
@@ -705,7 +694,7 @@ sb_fchownat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     if (param != NULL && param->prot == 1 && param->syscall
         == SCMP_SYS(fchownat)) {
       rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(fchownat),
-          SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+          SCMP_CMP_LOWER32_EQ(0, AT_FDCWD),
           SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add fchownat syscall, received "
@@ -767,9 +756,9 @@ sb_renameat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
         param->syscall == SCMP_SYS(renameat)) {
 
       rc = seccomp_rule_add_4(ctx, SCMP_ACT_ALLOW, SCMP_SYS(renameat),
-            SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+            SCMP_CMP_LOWER32_EQ(0, AT_FDCWD),
             SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value),
-            SCMP_CMP_NEG(2, SCMP_CMP_EQ, AT_FDCWD),
+            SCMP_CMP_LOWER32_EQ(2, AT_FDCWD),
             SCMP_CMP_STR(3, SCMP_CMP_EQ, param->value2));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add renameat syscall, received "
@@ -799,7 +788,7 @@ sb_openat(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     if (param != NULL && param->prot == 1 && param->syscall
         == SCMP_SYS(openat)) {
       rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(openat),
-          SCMP_CMP_NEG(0, SCMP_CMP_EQ, AT_FDCWD),
+          SCMP_CMP_LOWER32_EQ(0, AT_FDCWD),
           SCMP_CMP_STR(1, SCMP_CMP_EQ, param->value),
           SCMP_CMP(2, SCMP_CMP_EQ, O_RDONLY|O_NONBLOCK|O_LARGEFILE|O_DIRECTORY|
               O_CLOEXEC));
