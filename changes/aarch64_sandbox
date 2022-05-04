@@ -1,0 +1,5 @@
+  o Minor bugfixes (sandbox):
+    - Fix sandbox support on AArch64 systems. More "*at" variants of syscalls
+      are now supported. Signed 32 bit syscall parameters are checked more
+      precisely, which should lead to lower likelihood of breakages with future
+      compiler and libc releases. Fixes bug 40599; bugfix on 0.4.4.3-alpha.
