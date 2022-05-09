@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Allow the rseq system call in the sandbox. This solves a crash issue with
+      glibc 2.35 on Linux.  Patch from pmu-ipf. Fixes bug 40601; bugfix on
+      0.3.5.11. 
