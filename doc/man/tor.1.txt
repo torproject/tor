@@ -3506,7 +3506,7 @@ Service side:
   configured, the service will be accessible to anyone with the onion address.
 
   Revoking a client can be done by removing their ".auth" file, however the
-  revocation will be in effect only after the tor process gets restarted even if
+  revocation will be in effect only after the tor process gets restarted or if
   a SIGHUP takes place.
 
 Client side:
