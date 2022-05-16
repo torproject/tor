@@ -1,0 +1,12 @@
+  o Minor features (directory authority):
+    - Add a new consensus method in which the "published" times on router
+      entries in a microdesc consensus are all set to a meaningless fixed
+      date.  Doing this will make the download size for compressed microdesc
+      consensus diffs much smaller.
+      Part of ticket 40130; implements proposal 275.
+
+  o Minor features (network documents):
+    - Clients and relays no longer track the "published on" time declared
+      for relays in any consensus documents.  When reporting this time on
+      the control port, they instead report a fixed date in the future.
+      Part of ticket 40130.
