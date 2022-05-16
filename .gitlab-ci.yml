@@ -113,7 +113,7 @@ debian-minimal:
   script:
     - ./scripts/ci/ci-driver.sh
 
-# Minmal check on debian/i386: just make, make check.
+# Minimal check on debian/i386: just make, make check.
 #
 debian-i386-minimal:
   image: i386/debian:buster
