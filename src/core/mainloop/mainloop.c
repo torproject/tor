@@ -274,16 +274,8 @@ connection_add_impl(connection_t *conn, int is_connecting)
 void
 connection_unregister_events(connection_t *conn)
 {
-  if (conn->read_event) {
-    if (event_del(conn->read_event))
-      log_warn(LD_BUG, "Error removing read event for %d", (int)conn->s);
-    tor_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    if (event_del(conn->write_event))
-      log_warn(LD_BUG, "Error removing write event for %d", (int)conn->s);
-    tor_free(conn->write_event);
-  }
+  tor_event_free(conn->read_event);
+  tor_event_free(conn->write_event);
   if (conn->type == CONN_TYPE_AP_DNS_LISTENER) {
     dnsserv_close_listener(conn);
   }
