@@ -1,0 +1,4 @@
+  o Minor features (relays):
+    - Trigger OOS when bind fails with EADDRINUSE. This improves fairness when
+      a large number of exit connections are requested, and properly signals
+      exhaustion to the network. Fixes issue 40597; patch by Alex Xu (Hello71).

@@ -2224,20 +2224,26 @@ connection_connect_sockaddr,(connection_t *conn,
              tor_socket_strerror(errno));
   }
 
-  /*
-   * We've got the socket open; give the OOS handler a chance to check
-   * against configured maximum socket number, but tell it no exhaustion
-   * failure.
-   */
-  connection_check_oos(get_n_open_sockets(), 0);
-
   if (bindaddr && bind(s, bindaddr, bindaddr_len) < 0) {
     *socket_error = tor_socket_errno(s);
-    log_warn(LD_NET,"Error binding network socket: %s",
-             tor_socket_strerror(*socket_error));
+    if (ERRNO_IS_EADDRINUSE(*socket_error)) {
+      socket_failed_from_resource_exhaustion();
+      connection_check_oos(get_n_open_sockets(), 1);
+    } else {
+      log_warn(LD_NET,"Error binding network socket: %s",
+               tor_socket_strerror(*socket_error));
+      connection_check_oos(get_n_open_sockets(), 0);
+    }
     tor_close_socket(s);
     return -1;
   }
+
+  /*
+   * We've got the socket open and bound; give the OOS handler a chance to
+   * check against configured maximum socket number, but tell it no exhaustion
+   * failure.
+   */
+  connection_check_oos(get_n_open_sockets(), 0);
 
   tor_assert(options);
   if (options->ConstrainedSockets)
