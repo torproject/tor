@@ -129,8 +129,3 @@ update_file(P("contrib/win32build/tor-mingw.nsi.in"),
             re.compile(r'!define VERSION .*'),
             u'!define VERSION "{}"'.format(version),
             encoding="iso-8859-1")
-
-# In src/win32/orconfig.h, we replace the definition of VERSION.
-update_file(P("src/win32/orconfig.h"),
-            re.compile(r'#define VERSION .*'),
-            u'#define VERSION "{}"'.format(version))
