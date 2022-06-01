@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build:
+  build-image:
 
     runs-on: ubuntu-latest
 
@@ -16,3 +16,16 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag tor:$(date +%s)
+
+
+  build-route-len-images:
+    strategy:
+        matrix:
+          routelen: [1, 2, 3, 4, 5, 8, 13, 21, 34, 55, 89]
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker images for routelen
+      run: docker build . --file Dockerfile --tag tor:route${{ matrix.routelen }}$(date +%s) --tag tor:route${{ matrix.routelen }} --build-arg DEFAULT_ROUTE_LEN=${{ matrix.routelen }}
