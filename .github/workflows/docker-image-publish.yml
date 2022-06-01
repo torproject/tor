@@ -1,0 +1,99 @@
+name: Docker Multi Arch Image CI
+
+on:
+  push:
+    branches: [ main, dev, docker, automerge ]
+
+jobs:
+
+  build-image:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag tor:$(date +%s) --tag tor:latest
+
+    - 
+      name: Install and Run Dive
+      timeout-minutes: 2
+      run: |
+            pushd /tmp
+            wget --no-verbose https://github.com/wagoodman/dive/releases/download/v0.10.0/dive_0.10.0_linux_amd64.deb
+            sudo apt install --quiet -y ./dive_0.10.0_linux_amd64.deb
+            popd
+            CI=true dive --ci-config "${{ github.workspace }}/.dive-ci" tor:latest
+
+  build-route-len-images:
+    strategy:
+        matrix:
+          routelen: [1, 2, 3, 4, 5, 8, 13, 21, 34, 55, 89]
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # https://github.com/docker/setup-qemu-action
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+    # https://github.com/docker/setup-buildx-action
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Build dockerfile
+      if: success() && github.ref != 'refs/heads/main'
+      timeout-minutes: 360
+      run: |
+            set -x
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            docker buildx build \
+            --platform=linux/amd64,linux/arm/v7,linux/arm64/v8,linux/arm/v6,linux/ppc64le,linux/s390x,linux/riscv64,linux/386 \
+            --output "type=image,push=true" \
+            --file ./Dockerfile . \
+            --tag ghcr.io/${{ github.repository_owner }}/tor/tor-testing-hop${{ matrix.routelen }}:latest \
+            --tag ghcr.io/${{ github.repository_owner }}/tor/tor-testing:hop${{ matrix.routelen }} \
+            --build-arg DEFAULT_ROUTE_LEN=${{ matrix.routelen }}
+
+            docker create -ti --platform linux/amd64 --name dummy_amd64 ghcr.io/${{ github.repository_owner }}/tor/tor-testing-hop${{ matrix.routelen }}:latest sh
+            docker cp dummy_amd64:/usr/bin/tor tor_linux_amd64
+
+            docker create -ti --platform linux/arm/v7 --name dummy_armv7 ghcr.io/${{ github.repository_owner }}/tor/tor-testing-hop${{ matrix.routelen }}:latest sh
+            docker cp dummy_armv7:/usr/bin/tor tor_linux_armv7
+
+            docker create -ti --platform linux/arm64/v8 --name dummy_arm64 ghcr.io/${{ github.repository_owner }}/tor/tor-testing-hop${{ matrix.routelen }}:latest sh
+            docker cp dummy_arm64:/usr/bin/tor tor_linux_arm64
+
+    - name: Build dockerfile
+      if: success() && github.ref == 'refs/heads/main'
+      timeout-minutes: 360
+      run: |
+            set -x
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            docker buildx build \
+            --platform=linux/amd64,linux/arm/v7,linux/arm64/v8,linux/arm/v6,linux/ppc64le \
+            --output "type=image,push=true" \
+            --file ./Dockerfile . \
+            --tag ghcr.io/${{ github.repository_owner }}/tor/tor-hop${{ matrix.routelen }}:latest \
+            --tag ghcr.io/${{ github.repository_owner }}/tor/tor:hop${{ matrix.routelen }} \
+            --tag ghcr.io/${{ github.repository_owner }}/tor/tor-hop${{ matrix.routelen }}:$(date +%s) \
+            --build-arg DEFAULT_ROUTE_LEN=${{ matrix.routelen }}
+
+            docker create -ti --platform linux/amd64 --name dummy_amd64 ghcr.io/${{ github.repository_owner }}/tor/tor-hop${{ matrix.routelen }}:latest sh
+            docker cp dummy_amd64:/usr/bin/tor tor_linux_amd64
+
+            docker create -ti --platform linux/arm/v7 --name dummy_armv7 ghcr.io/${{ github.repository_owner }}/tor/tor-hop${{ matrix.routelen }}:latest sh
+            docker cp dummy_armv7:/usr/bin/tor tor_linux_armv7
+
+            docker create -ti --platform linux/arm64/v8 --name dummy_arm64 ghcr.io/${{ github.repository_owner }}/tor/tor-hop${{ matrix.routelen }}:latest sh
+            docker cp dummy_arm64:/usr/bin/tor tor_linux_arm64
+    
+    - name: Create artifact
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: tor_linux_hop${{ matrix.routelen }}
+        path: tor_linux_*

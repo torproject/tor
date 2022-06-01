@@ -12,7 +12,7 @@ apk add --no-cache --virtual .torbuild build-base libcap-dev libseccomp-dev libe
 sed -i "s/#define[[:space:]]\+DEFAULT_ROUTE_LEN[[:space:]]\+[[:digit:]]\+/#define DEFAULT_ROUTE_LEN $DEFAULT_ROUTE_LEN/gw orhchanges.txt" "src/core/or/or.h" && \
 cat orhchanges.txt && \
 ./autogen.sh && \
-./configure  --disable-asciidoc --enable-static-tor --enable-static-libevent --enable-static-openssl --enable-static-zlib --disable-module-relay --disable-module-dirauth --disable-html-manual --disable-unittests --with-libevent-dir=/usr/lib --with-zlib-dir=/lib --with-openssl-dir=/usr/lib && \
+./configure --disable-asciidoc --enable-static-tor --enable-static-libevent --enable-static-openssl --enable-static-zlib --disable-module-relay --disable-module-dirauth --disable-html-manual --disable-unittests --with-libevent-dir=/usr/lib --with-zlib-dir=/lib --with-openssl-dir=/usr/lib && \
 make && \
 make install && \
 apk del .torbuild && \
