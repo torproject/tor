@@ -1,0 +1,22 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ main, automerge ]
+  pull_request:
+    branches: [ main, automerge ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - run: sudo apt-get update
+    - run: sudo apt-get install --fix-missing libevent-dev asciidoc libzstd-dev zlib1g-dev
+    - run: ./autogen.sh
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
