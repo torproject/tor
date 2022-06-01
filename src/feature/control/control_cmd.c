@@ -990,12 +990,6 @@ handle_control_attachstream(control_connection_t *conn,
                            "Can't attach stream to non-open origin circuit");
     return 0;
   }
-  /* Is this a single hop circuit? */
-  if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
-    control_write_endreply(conn, 551,
-                           "Can't attach stream to this one-hop circuit.");
-    return 0;
-  }
 
   if (circ && hop>0) {
     /* find this hop in the circuit, and set cpath */
