@@ -891,7 +891,7 @@ typedef struct or_state_t or_state_t;
 /********************************* circuitbuild.c **********************/
 
 /** How many hops does a general-purpose circuit have by default? */
-#define DEFAULT_ROUTE_LEN 3
+#define DEFAULT_ROUTE_LEN 2
 
 /* Circuit Build Timeout "public" structures. */
 
