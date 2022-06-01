@@ -1,0 +1,19 @@
+version: 2
+updates:
+- package-ecosystem: "github-actions"
+  directory: "/"
+  open-pull-requests-limit: 10
+  schedule:
+    interval: "daily"
+
+- package-ecosystem: "docker"
+  directory: "/"
+  open-pull-requests-limit: 10
+  schedule:
+    interval: "daily"
+
+- package-ecosystem: "gitsubmodule"
+  directory: "/"
+  open-pull-requests-limit: 10
+  schedule:
+    interval: "daily"
