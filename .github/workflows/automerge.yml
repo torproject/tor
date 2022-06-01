@@ -1,0 +1,35 @@
+name: Automerge
+
+on:
+  push:
+    branches: [ main, dev ]
+  workflow_dispatch:
+  schedule:
+    # You can setup schedule here
+    - cron: '0 0 * * *'
+
+env:
+  # replace "github.com/username/repo.git" with your GitHub repo path
+  # do NOT replace ${{secrets.GITHUB_TOKEN}}, GitHub will take care of it
+  MY_REPO: https://${{ github.actor }}:${{secrets.GITHUB_TOKEN}}@github.com/${{ github.actor }}/tor.git
+  MERGE_BRANCH: automerge
+
+  TOR_REPO: https://github.com/torproject/tor.git
+
+  # replace "master" with your master branch name
+  MASTER_BRANCH: main
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Merge with tor/main
+      run: |
+        git clone ${{env.MY_REPO}} -b ${{env.MERGE_BRANCH}} tmp
+        cd tmp
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions"
+        #git config pull.rebase false
+        git pull --commit --no-ff --stat ${{env.TOR_REPO}} ${{env.MASTER_BRANCH}}
+        git push
