@@ -26,7 +26,10 @@ jobs:
             CI=true dive --ci-config "${{ github.workspace }}/.dive-ci" tor:latest
 
   build-route-len-images:
+    continue-on-error: true
     strategy:
+        max-parallel: 3
+        fail-fast: false
         matrix:
           routelen: [1, 2, 3, 4, 5, 8, 13, 21, 34, 55, 89]
 

@@ -20,6 +20,7 @@ jobs:
 
   build-route-len-images:
     strategy:
+        max-parallel: 4
         matrix:
           routelen: [1, 2, 3, 4, 5, 8, 13, 21, 34, 55, 89]
 
