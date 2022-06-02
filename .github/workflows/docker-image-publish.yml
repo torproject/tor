@@ -4,6 +4,10 @@ on:
   push:
     branches: [ main, dev, docker, automerge ]
 
+concurrency:
+   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+   cancel-in-progress: true
+
 jobs:
 
   build-image:

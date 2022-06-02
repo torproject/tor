@@ -6,7 +6,12 @@ on:
   workflow_dispatch:
   schedule:
     # You can setup schedule here
-    - cron: '0 0 * * *'
+    - cron: '11 12 * * *'
+
+
+concurrency:
+   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+   cancel-in-progress: true
 
 env:
   # replace "github.com/username/repo.git" with your GitHub repo path
