@@ -1,0 +1,3 @@
+  o Minor bugfixes (relay, logging):
+    - Demote a harmless XOFF log message to from notice level to info level.
+      Fixes bug 40620; bugfix on 0.4.7.5-alpha.
