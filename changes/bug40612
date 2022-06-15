@@ -1,0 +1,5 @@
+  o Minor bugfixes (logging):
+    - Demote a notice log message about "Unexpected path length" to info
+      level. These cases seem to happen arbitrarily, and we likely will
+      never find all of them before the switch to arti. Fixes bug 40612;
+      bugfix on 0.4.7.5-alpha.
