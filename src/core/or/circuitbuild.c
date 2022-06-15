@@ -2520,8 +2520,19 @@ onion_extend_cpath(origin_circuit_t *circ)
   }
 
   if (!info) {
-    log_warn(LD_CIRC,"Failed to find node for hop #%d of our path. Discarding "
-             "this circuit.", cur_len+1);
+    /* This can happen on first startup, possibly due to insufficient relays
+     * downloaded to pick vanguards-lite layer2 nodes, or other ephemeral
+     * reasons. It only happens briefly, is hard to reproduce, and then goes
+     * away for ever. :/ */
+    if (!router_have_minimum_dir_info()) {
+       log_info(LD_CIRC,
+                "Failed to find node for hop #%d of our path. Discarding "
+                "this circuit.", cur_len+1);
+    } else {
+       log_notice(LD_CIRC,
+                 "Failed to find node for hop #%d of our path. Discarding "
+                 "this circuit.", cur_len+1);
+    }
     return -1;
   }
 
