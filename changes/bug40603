@@ -1,0 +1,5 @@
+  o Minor bugfixes (logging):
+    - Demote a harmless warn log message about finding a second hop to from
+      warn level to info level, if we do not have enough descriptors yet.
+      Leave it at notice level for other cases. Fixes bug 40603;
+      bugfix on 0.4.7.1-alpha.
