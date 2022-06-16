@@ -335,7 +335,7 @@ forward slash (/) in the configuration file and on the command line.
     to mess with it. (Default: -1)
 
 [[ClientTransportPlugin]] **ClientTransportPlugin** __transport__ socks4|socks5 __IP__:__PORT__::
-**ClientTransportPlugin** __transport__ exec __path-to-binary__ [options]::
+[[ClientTransportPlugin-2]] **ClientTransportPlugin** __transport__ exec __path-to-binary__ [options]::
     In its first form, when set along with a corresponding Bridge line, the Tor
     client forwards its traffic to a SOCKS-speaking proxy on "IP:PORT".
     (IPv4 addresses should written as-is; IPv6 addresses should be wrapped in
