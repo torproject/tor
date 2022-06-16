@@ -768,11 +768,11 @@ dns_resolve_impl,(edge_connection_t *exitconn, int is_resolve,
 
     if (!is_reverse || !is_resolve) {
       if (!is_reverse)
-        log_info(LD_EXIT, "Bad .in-addr.arpa address \"%s\"; sending error.",
+        log_info(LD_EXIT, "Bad .in-addr.arpa address %s; sending error.",
                  escaped_safe_str(exitconn->base_.address));
       else if (!is_resolve)
         log_info(LD_EXIT,
-                 "Attempt to connect to a .in-addr.arpa address \"%s\"; "
+                 "Attempt to connect to a .in-addr.arpa address %s; "
                  "sending error.",
                  escaped_safe_str(exitconn->base_.address));
 
