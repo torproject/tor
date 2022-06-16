@@ -3112,7 +3112,7 @@ on the public Tor network.
     is the same as for exit policies, except that you don't need to say
     "accept" or "reject", and ports are not needed.)
 
-[[AuthDirMiddleOnly]] **AuthMiddleOnly** __AddressPattern...__::
+[[AuthDirMiddleOnly]] **AuthDirMiddleOnly** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
     will be listed as middle-only in any network status document this authority
     publishes, if **AuthDirListMiddleOnly** is set. +
