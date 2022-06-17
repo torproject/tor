@@ -1,0 +1,6 @@
+  o Major bugfixes (congestion control, TROVE-2022-001):
+    - Fix a scenario where RTT estimation can become wedged, seriously
+      degrading congestion control performance on all circuits. This impacts
+      clients, onion services, and relays, and can be triggered remotely by a
+      malicious endpoint. Tracked as CVE-2022-33903. Fixes bug 40626; bugfix
+      on 0.4.7.5-alpha.
