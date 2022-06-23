@@ -35,6 +35,7 @@
 #include <math.h>
 
 #include "core/or/or.h"
+#include "core/or/circuit_st.h"
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -382,10 +383,17 @@ ewma_pick_active_circuit(circuitmux_t *cmux,
 
   pol = TO_EWMA_POL_DATA(pol_data);
 
-  if (smartlist_len(pol->active_circuit_pqueue) > 0) {
+  for (int i = 0; i < smartlist_len(pol->active_circuit_pqueue); i++) {
     /* Get the head of the queue */
-    cell_ewma = smartlist_get(pol->active_circuit_pqueue, 0);
+    cell_ewma = smartlist_get(pol->active_circuit_pqueue, i);
     circ = cell_ewma_to_circuit(cell_ewma);
+    /* Don't send back closed circuit. This is possible because the circuit
+     * is detached from the cmux before the circuit gets freed and not when
+     * marked for close. Because of that, there is a window where a closed
+     * circuit can be picked here. See #25312. */
+    if (circ->marked_for_close) {
+      continue;
+    }
   }
 
   return circ;
