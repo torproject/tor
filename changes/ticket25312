@@ -1,3 +1,0 @@
-  o Minor bugfixes (circuit):
-    - Fix a tiny window where a circuit can be chosen as active but is marked
-      for close. Fixes bug 25312; bugfix on 0.2.4.4-alpha.
