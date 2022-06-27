@@ -152,6 +152,7 @@ core.*
 # /src/ext/
 /src/ext/ed25519/ref10/libed25519_ref10.lib
 /src/ext/ed25519/donna/libed25519_donna.lib
+/src/ext/equix/build
 /src/ext/keccak-tiny/libkeccak-tiny.lib
 
 # /src/app

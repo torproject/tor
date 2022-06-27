@@ -1,0 +1,3 @@
+[submodule "hashx"]
+	path = hashx
+	url = https://github.com/tevador/hashx

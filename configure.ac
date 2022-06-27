@@ -31,6 +31,8 @@ tor_incr_n_warnings() {
   tor_ac_n_warnings=`expr $tor_ac_n_warnings + 1`
 }
 
+AC_CONFIG_COMMANDS([equix], [./src/ext/equix/build.sh])
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
 
