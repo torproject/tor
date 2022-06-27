@@ -374,6 +374,79 @@ introduce1_encrypt_and_encode(trn_cell_introduce1_t *cell,
   tor_free(encrypted);
 }
 
+/** Build the PoW cell extension and put it in the given extensions object.
+ * Return 0 on success, -1 on failure. */
+static int
+build_introduce_pow_extension(const hs_pow_solution_t *pow_solution,
+                              trn_extension_t *extensions)
+{
+  ssize_t ret;
+  size_t pow_ext_encoded_len;
+  uint8_t *field_array;
+  trn_extension_field_t *field = NULL;
+  trn_cell_extension_pow_t *pow_ext = NULL;
+
+  tor_assert(pow_solution);
+  tor_assert(extensions);
+
+  /* We are creating a cell extension field of type PoW solution. */
+  field = trn_extension_field_new();
+  trn_extension_field_set_field_type(field, TRUNNEL_CELL_EXTENSION_TYPE_POW);
+
+  /* Build PoW extension field. */
+  pow_ext = trn_cell_extension_pow_new();
+
+  /* Copy PoW solution values into PoW extension cell. */
+
+  /* Equi-X base scheme */
+  trn_cell_extension_pow_set_pow_version(pow_ext, TRUNNEL_POW_EQUIX);
+
+  memcpy(trn_cell_extension_pow_getarray_pow_nonce(pow_ext),
+         &pow_solution->nonce, TRUNNEL_POW_NONCE_LEN);
+
+  trn_cell_extension_pow_set_pow_effort(pow_ext, pow_solution->effort);
+  trn_cell_extension_pow_set_pow_seed(pow_ext, pow_solution->seed_head);
+
+  memcpy(trn_cell_extension_pow_getarray_pow_solution(pow_ext),
+         &pow_solution->equix_solution, TRUNNEL_POW_SOLUTION_LEN);
+
+  /* Set the field with the encoded PoW extension. */
+  ret = trn_cell_extension_pow_encoded_len(pow_ext);
+  if (BUG(ret <= 0)) {
+    goto err;
+  }
+  pow_ext_encoded_len = ret;
+
+  /* Set length field and the field array size length. */
+  trn_extension_field_set_field_len(field, pow_ext_encoded_len);
+  trn_extension_field_setlen_field(field, pow_ext_encoded_len);
+  /* Encode the PoW extension into the cell extension field. */
+  field_array = trn_extension_field_getarray_field(field);
+  ret = trn_cell_extension_pow_encode(field_array,
+                 trn_extension_field_getlen_field(field), pow_ext);
+  if (BUG(ret <= 0)) {
+    goto err;
+  }
+  tor_assert(ret == (ssize_t)pow_ext_encoded_len);
+
+  /* Finally, encode field into the cell extension. */
+  trn_extension_add_fields(extensions, field);
+
+  /* We've just add an extension field to the cell extensions so increment the
+   * total number. */
+  trn_extension_set_num(extensions, trn_extension_get_num(extensions) + 1);
+
+  /* Cleanup. PoW extension has been encoded at this point. */
+  trn_cell_extension_pow_free(pow_ext);
+
+  return 0;
+
+err:
+  trn_extension_field_free(field);
+  trn_cell_extension_pow_free(pow_ext);
+  return -1;
+}
+
 /** Build and set the INTRODUCE congestion control extension in the given
  * extensions. */
 static void
@@ -412,9 +485,13 @@ introduce1_set_encrypted(trn_cell_introduce1_t *cell,
   /* Setup extension(s) if any. */
   ext = trn_extension_new();
   tor_assert(ext);
-  /* Build congestion control extension is enabled. */
+  /* Build congestion control extension if enabled. */
   if (data->cc_enabled) {
     build_introduce_cc_extension(ext);
+  }
+  /* Build PoW extension if present. */
+  if (data->pow_solution) {
+    build_introduce_pow_extension(data->pow_solution, ext);
   }
   trn_cell_introduce_encrypted_set_extensions(enc_cell, ext);
 

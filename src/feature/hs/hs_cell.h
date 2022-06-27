@@ -42,6 +42,8 @@ typedef struct hs_cell_introduce1_data_t {
   smartlist_t *link_specifiers;
   /** Congestion control parameters. */
   unsigned int cc_enabled : 1;
+  /** PoW solution (Can be NULL if disabled). */
+  const hs_pow_solution_t *pow_solution;
 } hs_cell_introduce1_data_t;
 
 /** This data structure contains data that we need to parse an INTRODUCE2 cell
