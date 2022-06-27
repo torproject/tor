@@ -11,6 +11,7 @@
 
 #include "core/or/or.h"
 #include "feature/hs/hs_service.h"
+#include "feature/hs/hs_pow.h"
 
 /** An INTRODUCE1 cell requires at least this amount of bytes (see section
  * 3.2.2 of the specification). Below this value, the cell must be padded. */

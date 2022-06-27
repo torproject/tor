@@ -15,6 +15,7 @@
 #include "trunnel/ed25519_cert.h" /* needed for trunnel */
 #include "feature/nodelist/torcert.h"
 #include "core/crypto/hs_ntor.h" /* for hs_subcredential_t */
+#include "feature/hs/hs_pow.h"
 
 /* Trunnel */
 struct link_specifier_t;
