@@ -403,6 +403,9 @@ AC_DEFUN([ADD_MODULE], [
 m4_foreach_w([module], MODULES, [ADD_MODULE([module])])
 AC_SUBST(TOR_MODULES_ALL_ENABLED)
 
+dnl Blake2 check for Equi-X support.
+PKG_CHECK_MODULES([LIBB2], [libb2])
+
 dnl check for the correct "ar" when cross-compiling.
 dnl   (AM_PROG_AR was new in automake 1.11.2, which we do not yet require,
 dnl    so kludge up a replacement for the case where it isn't there yet.)

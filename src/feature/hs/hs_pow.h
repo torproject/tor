@@ -110,4 +110,13 @@ typedef struct hs_pow_solution_t {
   equix_solution equix_solution;
 } hs_pow_solution_t;
 
+/* API */
+int hs_pow_solve(const hs_pow_desc_params_t *pow_params,
+                 hs_pow_solution_t *pow_solution_out);
+
+int hs_pow_verify(const hs_pow_service_state_t *pow_state,
+                  const hs_pow_solution_t *pow_solution);
+
+void hs_pow_remove_seed_from_cache(uint32_t seed);
+
 #endif /* !defined(TOR_HS_POW_H) */
