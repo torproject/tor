@@ -68,6 +68,7 @@
 #include "feature/dirparse/parsecommon.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_config.h"
+#include "feature/hs/hs_pow.h"
 #include "feature/nodelist/torcert.h" /* tor_cert_encode_ed22519() */
 #include "lib/memarea/memarea.h"
 #include "lib/crypt_ops/crypto_format.h"
@@ -96,6 +97,7 @@
 #define str_ip_legacy_key_cert "legacy-key-cert"
 #define str_intro_point_start "\n" str_intro_point " "
 #define str_flow_control "flow-control"
+#define str_pow_params "pow-params"
 /* Constant string value for the construction to encrypt the encrypted data
  * section. */
 #define str_enc_const_superencryption "hsdir-superencrypted-data"
@@ -113,6 +115,16 @@ static const struct {
   const char *identifier;
 } intro_auth_types[] = {
   { HS_DESC_AUTH_ED25519, "ed25519" },
+  /* Indicate end of array. */
+  { 0, NULL }
+};
+
+/** PoW supported types. */
+static const struct {
+  hs_pow_desc_type_t type;
+  const char *identifier;
+} pow_types[] = {
+  { HS_POW_DESC_V1, "v1"},
   /* Indicate end of array. */
   { 0, NULL }
 };
@@ -143,6 +155,7 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   T01(str_intro_auth_required, R3_INTRO_AUTH_REQUIRED, GE(1), NO_OBJ),
   T01(str_single_onion, R3_SINGLE_ONION_SERVICE, ARGS, NO_OBJ),
   T01(str_flow_control, R3_FLOW_CONTROL, GE(2), NO_OBJ),
+  T01(str_pow_params, R3_POW_PARAMS, GE(3), NO_OBJ),
   END_OF_TABLE
 };
 
@@ -776,6 +789,31 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
       smartlist_add_asprintf(lines, "%s %s %u\n", str_flow_control,
                              protover_get_supported(PRT_FLOWCTRL),
                              congestion_control_sendme_inc());
+    }
+
+    /* Add PoW parameters if present. */
+    if (desc->encrypted_data.pow_params) {
+      /* Base64 the seed */
+      size_t seed_b64_len = base64_encode_size(HS_POW_SEED_LEN, 0) + 1;
+      char *seed_b64 = tor_malloc_zero(seed_b64_len);
+      int ret = base64_encode(seed_b64, seed_b64_len,
+                              (char *)desc->encrypted_data.pow_params->seed,
+                              HS_POW_SEED_LEN, 0);
+      /* Return length doesn't count the NUL byte. */
+      tor_assert((size_t) ret == (seed_b64_len - 1));
+
+      /* Convert the expiration time to space-less ISO format. */
+      char time_buf[ISO_TIME_LEN + 1];
+      format_iso_time_nospace(time_buf,
+                 desc->encrypted_data.pow_params->expiration_time);
+
+      /* Add "pow-params" line to descriptor encoding. */
+      smartlist_add_asprintf(lines, "%s %s %s %u %s\n", str_pow_params,
+                pow_types[desc->encrypted_data.pow_params->type].identifier,
+                seed_b64,
+                desc->encrypted_data.pow_params->suggested_effort,
+                time_buf);
+      tor_free(seed_b64);
     }
   }
 
@@ -2053,6 +2091,70 @@ desc_sig_is_valid(const char *b64_sig,
   return ret;
 }
 
+/** Given the token tok for PoW params, decode it as hs_pow_desc_params_t.
+ * tok->args MUST contain at least 4 elements Return 0 on success else -1 on
+ * failure. */
+static int
+decode_pow_params(const directory_token_t *tok,
+                  hs_pow_desc_params_t *pow_params)
+{
+  int ret = -1;
+
+  tor_assert(tok);
+  tor_assert(tok->n_args >= 4);
+  tor_assert(pow_params);
+
+  /* Find the type of PoW system being used. */
+  int match = 0;
+  for (int idx = 0; pow_types[idx].identifier; idx++) {
+    if (!strncmp(tok->args[0], pow_types[idx].identifier,
+                 strlen(pow_types[idx].identifier))) {
+      pow_params->type = pow_types[idx].type;
+      match = 1;
+      break;
+    }
+  }
+  if (!match) {
+    log_warn(LD_REND, "Unknown PoW type from descriptor.");
+    goto done;
+  }
+
+  if (base64_decode((char *)pow_params->seed, sizeof(pow_params->seed),
+                    tok->args[1], strlen(tok->args[1])) !=
+      sizeof(pow_params->seed)) {
+    log_warn(LD_REND, "Unparseable seed %s in PoW params",
+             escaped(tok->args[1]));
+    goto done;
+  }
+
+  int ok;
+  unsigned long effort =
+      tor_parse_ulong(tok->args[2], 10, 1, UINT32_MAX, &ok, NULL);
+  if (!ok) {
+    log_warn(LD_REND, "Unparseable suggested effort %s in PoW params",
+             escaped(tok->args[2]));
+    goto done;
+  }
+  pow_params->suggested_effort = effort;
+
+  /* Parse the expiration time of the PoW params. */
+  time_t expiration_time = 0;
+  if (parse_iso_time_nospace(tok->args[3], &expiration_time)) {
+    log_warn(LD_REND, "Unparseable expiration time %s in PoW params",
+             escaped(tok->args[3]));
+    goto done;
+  }
+  /* Validation of this time is done in client_desc_has_arrived() so we can
+   * trigger a fetch if expired. */
+  pow_params->expiration_time = expiration_time;
+
+  /* Success. */
+  ret = 0;
+
+ done:
+  return ret;
+}
+
 /** Decode descriptor plaintext data for version 3. Given a list of tokens, an
  * allocated plaintext object that will be populated and the encoded
  * descriptor with its length. The last one is needed for signature
@@ -2362,6 +2464,18 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
       goto err;
     }
     desc_encrypted_out->sendme_inc = sendme_inc;
+  }
+
+  /* Get PoW if any. */
+  tok = find_opt_by_keyword(tokens, R3_POW_PARAMS);
+  if (tok) {
+    hs_pow_desc_params_t *pow_params =
+      tor_malloc_zero(sizeof(hs_pow_desc_params_t));
+    if (decode_pow_params(tok, pow_params)) {
+      tor_free(pow_params);
+      goto err;
+    }
+    desc_encrypted_out->pow_params = pow_params;
   }
 
   /* Initialize the descriptor's introduction point list before we start
@@ -2775,6 +2889,7 @@ hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
     smartlist_free(desc->intro_points);
   }
   tor_free(desc->flow_control_pv);
+  tor_free(desc->pow_params);
   memwipe(desc, 0, sizeof(*desc));
 }
 

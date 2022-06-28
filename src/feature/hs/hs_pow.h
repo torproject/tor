@@ -37,10 +37,15 @@ typedef unsigned __int128 uint128_t;
 #define HS_POW_CHALLENGE_LEN \
   (HS_POW_SEED_LEN + HS_POW_NONCE_LEN + HS_POW_EFFORT_LEN)
 
+/** Type of PoW in the descriptor. */
+typedef enum {
+  HS_POW_DESC_V1 = 1,
+} hs_pow_desc_type_t;
+
 /** Proof-of-Work parameters for DoS defense located in a descriptor. */
 typedef struct hs_pow_desc_params_t {
-  /** Type of PoW system being used, for example "v1". */
-  char *type;
+  /** Type of PoW system being used. */
+  hs_pow_desc_type_t type;
 
   /** Random 32-byte seed used as input the the PoW hash function. Decoded? */
   uint8_t seed[HS_POW_SEED_LEN];

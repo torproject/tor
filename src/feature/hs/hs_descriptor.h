@@ -172,6 +172,9 @@ typedef struct hs_desc_encrypted_data_t {
   char *flow_control_pv;
   uint8_t sendme_inc;
 
+  /** PoW parameters. If NULL, it is not present. */
+  hs_pow_desc_params_t *pow_params;
+
   /** A list of intro points. Contains hs_desc_intro_point_t objects. */
   smartlist_t *intro_points;
 } hs_desc_encrypted_data_t;
