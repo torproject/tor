@@ -613,6 +613,7 @@ send_introduce1(origin_circuit_t *intro_circ,
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   const ed25519_public_key_t *service_identity_pk = NULL;
   const hs_desc_intro_point_t *ip;
+  hs_pow_solution_t *pow_solution = NULL;
 
   tor_assert(rend_circ);
   if (intro_circ_is_ok(intro_circ) < 0) {
@@ -668,9 +669,24 @@ send_introduce1(origin_circuit_t *intro_circ,
     goto perm_err;
   }
 
+  /* If the descriptor contains PoW parameters then the service is
+   * expecting a PoW solution in the INTRODUCE cell, which we solve here. */
+  if (desc->encrypted_data.pow_params) {
+    log_debug(LD_REND, "PoW params present in descriptor.");
+    pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
+    if (hs_pow_solve(desc->encrypted_data.pow_params, pow_solution)) {
+      log_warn(LD_REND, "Haven't solved the PoW yet.");
+      goto tran_err;
+    }
+    /* Set flag to reflect that the HS we are attempting to rendezvous has PoW
+     * defenses enabled, and as such we will need to be more lenient with
+     * timing out while waiting for the circuit to be built. */
+    rend_circ->hs_with_pow_circ = 1;
+  }
+
   /* Send the INTRODUCE1 cell. */
   if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
-                              &desc->subcredential) < 0) {
+                              &desc->subcredential, pow_solution) < 0) {
     if (TO_CIRCUIT(intro_circ)->marked_for_close) {
       /* If the introduction circuit was closed, we were unable to send the
        * cell for some reasons. In any case, the intro circuit has to be
@@ -724,6 +740,7 @@ send_introduce1(origin_circuit_t *intro_circ,
 
  end:
   memwipe(onion_address, 0, sizeof(onion_address));
+  tor_free(pow_solution);
   return status;
 }
 

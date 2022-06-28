@@ -2406,7 +2406,7 @@ test_intro2_handling(void *arg)
   /* Create INTRODUCE1 */
   tt_assert(fast_mem_is_zero(relay_payload, sizeof(relay_payload)));
   retval = hs_circ_send_introduce1(intro_circ, &rend_circ,
-                                   alice_ip, &x_subcred);
+                                   alice_ip, &x_subcred, NULL);
 
   /* Check that the payload was written successfully */
   tt_int_op(retval, OP_EQ, 0);
@@ -2447,7 +2447,7 @@ test_intro2_handling(void *arg)
   /* Create INTRODUCE1 from Alice to X through Z */
   memset(relay_payload, 0, sizeof(relay_payload));
   retval = hs_circ_send_introduce1(intro_circ, &rend_circ,
-                                   alice_ip, &z_subcred);
+                                   alice_ip, &z_subcred, NULL);
 
   /* Check that the payload was written successfully */
   tt_int_op(retval, OP_EQ, 0);
@@ -2484,7 +2484,7 @@ test_intro2_handling(void *arg)
   /* Create INTRODUCE1 from Alice to X using X's subcred. */
   memset(relay_payload, 0, sizeof(relay_payload));
   retval = hs_circ_send_introduce1(intro_circ, &rend_circ,
-                                   alice_ip, &x_subcred);
+                                   alice_ip, &x_subcred, NULL);
 
   /* Check that the payload was written successfully */
   tt_int_op(retval, OP_EQ, 0);
@@ -2577,7 +2577,7 @@ test_intro2_handling(void *arg)
    * service!) */
   memset(relay_payload, 0, sizeof(relay_payload));
   retval = hs_circ_send_introduce1(intro_circ, &rend_circ,
-                                   alice_ip, &y_subcred);
+                                   alice_ip, &y_subcred, NULL);
   tt_int_op(retval, OP_EQ, 0);
 
   /* Check that the payload was written successfully */

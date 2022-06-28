@@ -212,6 +212,12 @@ struct origin_circuit_t {
    * (in host byte order) for response comparison. */
   uint32_t pathbias_probe_nonce;
 
+  /** Set iff this is a hidden-service circuit for a HS with PoW defenses
+   * enabled, so that we know to be more lenient with timing out the
+   * circuit-build to allow the service time to work through the queue of
+   * requests. */
+  unsigned int hs_with_pow_circ : 1;
+
   /** Set iff this circuit has been given a relaxed timeout because
    * no circuits have opened. Used to prevent spamming logs. */
   unsigned int relaxed_timeout : 1;
