@@ -392,6 +392,11 @@ config_service_v3(const hs_opts_t *hs_opts,
     }
   }
 
+  /* Are the PoW anti-DoS defenses enabled? */
+  config->has_pow_defenses_enabled = hs_opts->HiddenServicePoWDefensesEnabled;
+  log_info(LD_REND, "Service PoW defenses are %s.",
+           config->has_pow_defenses_enabled ? "enabled" : "disabled");
+
   /* We do not load the key material for the service at this stage. This is
    * done later once tor can confirm that it is in a running state. */
 

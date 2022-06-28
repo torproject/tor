@@ -123,5 +123,6 @@ int hs_pow_verify(const hs_pow_service_state_t *pow_state,
                   const hs_pow_solution_t *pow_solution);
 
 void hs_pow_remove_seed_from_cache(uint32_t seed);
+void hs_pow_free_service_state(hs_pow_service_state_t *state);
 
 #endif /* !defined(TOR_HS_POW_H) */

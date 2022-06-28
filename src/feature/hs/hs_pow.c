@@ -278,3 +278,15 @@ hs_pow_remove_seed_from_cache(uint32_t seed)
   HT_FOREACH_FN(nonce_cache_table_ht, &nonce_cache_table,
                 nonce_cache_entry_has_seed, &seed);
 }
+
+/** Free a given PoW service state. */
+void
+hs_pow_free_service_state(hs_pow_service_state_t *state)
+{
+  if (state == NULL) {
+    return;
+  }
+  smartlist_free(state->rend_request_pqueue);
+  mainloop_event_free(state->pop_pqueue_ev);
+  tor_free(state);
+}

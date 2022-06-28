@@ -31,5 +31,6 @@ CONF_VAR(HiddenServiceEnableIntroDoSDefense, BOOL, 0, "0")
 CONF_VAR(HiddenServiceEnableIntroDoSRatePerSec, POSINT, 0, "25")
 CONF_VAR(HiddenServiceEnableIntroDoSBurstPerSec, POSINT, 0, "200")
 CONF_VAR(HiddenServiceOnionBalanceInstance, BOOL, 0, "0")
+CONF_VAR(HiddenServicePoWDefensesEnabled, BOOL, 0, "0")
 
 END_CONF_STRUCT(hs_opts_t)
