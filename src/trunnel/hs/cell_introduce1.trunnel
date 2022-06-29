@@ -79,7 +79,7 @@ struct trn_cell_introduce_encrypted {
  */
 
 /* Cell extension type PoW. */
-const TRUNNEL_CELL_EXTENSION_TYPE_POW = 0x01;
+const TRUNNEL_EXT_TYPE_POW = 0x02;
 
 /*
  * HRPR: PoW Solution Extension. Proposal 327.
@@ -88,7 +88,7 @@ const TRUNNEL_CELL_EXTENSION_TYPE_POW = 0x01;
 const TRUNNEL_POW_NONCE_LEN = 16;
 const TRUNNEL_POW_SOLUTION_LEN = 16;
 /* Version 1 is based on Equi-X scheme. */
-const TRUNNEL_POW_EQUIX = 0x01;
+const TRUNNEL_POW_VERSION_EQUIX = 0x01;
 
 struct trn_cell_extension_pow {
   /* Type of PoW system used. */

@@ -2279,12 +2279,14 @@ mock_build_state_get_exit_node(cpath_build_state_t *state)
 
 static void
 mock_launch_rendezvous_point_circuit(const hs_service_t *service,
-                                     const hs_service_intro_point_t *ip,
-                                     const hs_cell_introduce2_data_t *data)
+                             const ed25519_public_key_t *ip_auth_pubkey,
+                             const curve25519_keypair_t *ip_enc_key_kp,
+                             const hs_cell_intro_rdv_data_t *rdv_data)
 {
   (void) service;
-  (void) ip;
-  (void) data;
+  (void) ip_auth_pubkey;
+  (void) ip_enc_key_kp;
+  (void) rdv_data;
   return;
 }
 

@@ -12,7 +12,22 @@
 #include "core/or/or.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
 
+#include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_service.h"
+
+/* HRPR TODO Putting this here for now... */
+typedef struct pending_rend_t {
+  /* Intro point authentication pubkey. */
+  ed25519_public_key_t ip_auth_pubkey;
+  /* Intro point encryption keypair for the "ntor" type. */
+  curve25519_keypair_t ip_enc_key_kp;
+
+  /* Rendezvous data for the circuit. */
+  hs_cell_intro_rdv_data_t rdv_data;
+
+  /** Position of element in the heap */
+  int idx;
+} pending_rend_t;
 
 /* Cleanup function when the circuit is closed or freed. */
 void hs_circ_cleanup_on_close(circuit_t *circ);
@@ -84,11 +99,11 @@ create_rp_circuit_identifier(const hs_service_t *service,
                              const curve25519_public_key_t *server_pk,
                              const struct hs_ntor_rend_cell_keys_t *keys);
 
-struct hs_cell_introduce2_data_t;
 MOCK_DECL(STATIC void,
 launch_rendezvous_point_circuit,(const hs_service_t *service,
-                                 const hs_service_intro_point_t *ip,
-                                const struct hs_cell_introduce2_data_t *data));
+                                 const ed25519_public_key_t *ip_auth_pubkey,
+                                 const curve25519_keypair_t *ip_enc_key_kp,
+                                 const hs_cell_intro_rdv_data_t *rdv_data));
 
 #endif /* defined(HS_CIRCUIT_PRIVATE) */
 

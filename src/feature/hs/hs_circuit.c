@@ -310,8 +310,9 @@ get_service_anonymity_string(const hs_service_t *service)
  * MAX_REND_FAILURES then it will give up. */
 MOCK_IMPL(STATIC void,
 launch_rendezvous_point_circuit,(const hs_service_t *service,
-                                 const hs_service_intro_point_t *ip,
-                                 const hs_cell_introduce2_data_t *data))
+                                 const ed25519_public_key_t *ip_auth_pubkey,
+                                 const curve25519_keypair_t *ip_enc_key_kp,
+                                 const hs_cell_intro_rdv_data_t *rdv_data))
 {
   int circ_needs_uptime;
   time_t now = time(NULL);
@@ -319,15 +320,16 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
   origin_circuit_t *circ;
 
   tor_assert(service);
-  tor_assert(ip);
-  tor_assert(data);
+  tor_assert(ip_auth_pubkey);
+  tor_assert(ip_enc_key_kp);
+  tor_assert(rdv_data);
 
   circ_needs_uptime = hs_service_requires_uptime_circ(service->config.ports);
 
   /* Get the extend info data structure for the chosen rendezvous point
    * specified by the given link specifiers. */
-  info = hs_get_extend_info_from_lspecs(data->rdv_data.link_specifiers,
-                                        &data->rdv_data.onion_pk,
+  info = hs_get_extend_info_from_lspecs(rdv_data->link_specifiers,
+                                        &rdv_data->onion_pk,
                                         service->config.is_single_onion);
   if (info == NULL) {
     /* We are done here, we can't extend to the rendezvous point. */
@@ -375,7 +377,7 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
                     "for %s service %s",
            safe_str_client(extend_info_describe(info)),
            safe_str_client(hex_str((const char *)
-                                   data->rdv_data.rendezvous_cookie,
+                                   rdv_data->rendezvous_cookie,
                                    REND_COOKIE_LEN)),
            get_service_anonymity_string(service),
            safe_str_client(service->onion_address));
@@ -392,10 +394,10 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
      * key will be used for the RENDEZVOUS1 cell that will be sent on the
      * circuit once opened. */
     curve25519_keypair_generate(&ephemeral_kp, 0);
-    if (hs_ntor_service_get_rendezvous1_keys(&ip->auth_key_kp.pubkey,
-                                             &ip->enc_key_kp,
+    if (hs_ntor_service_get_rendezvous1_keys(ip_auth_pubkey,
+                                             ip_enc_key_kp,
                                              &ephemeral_kp,
-                                             &data->rdv_data.client_pk,
+                                             &rdv_data->client_pk,
                                              &keys) < 0) {
       /* This should not really happened but just in case, don't make tor
        * freak out, close the circuit and move on. */
@@ -406,7 +408,7 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
       goto end;
     }
     circ->hs_ident = create_rp_circuit_identifier(service,
-                                       data->rdv_data.rendezvous_cookie,
+                                       rdv_data->rendezvous_cookie,
                                        &ephemeral_kp.pubkey, &keys);
     memwipe(&ephemeral_kp, 0, sizeof(ephemeral_kp));
     memwipe(&keys, 0, sizeof(keys));
@@ -414,7 +416,7 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
   }
 
   /* Setup congestion control if asked by the client from the INTRO cell. */
-  if (data->rdv_data.cc_enabled) {
+  if (rdv_data->cc_enabled) {
     hs_circ_setup_congestion_control(circ, congestion_control_sendme_inc(),
                                      service->config.is_single_onion);
   }
@@ -598,6 +600,102 @@ cleanup_on_free_client_circ(circuit_t *circ)
   }
   /* It is possible the circuit has an HS purpose but no identifier (hs_ident).
    * Thus possible that this passes through. */
+}
+
+/** Return less than 0 if a precedes b, 0 if a equals b and greater than 0 if
+ * b precedes a. */
+static int
+compare_rend_request_by_effort_(const void *_a, const void *_b)
+{
+  const pending_rend_t *a = _a, *b = _b;
+  if (a->rdv_data.pow_effort < b->rdv_data.pow_effort) {
+    return -1;
+  } else if (a->rdv_data.pow_effort == b->rdv_data.pow_effort) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+static void
+handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
+{
+  (void) ev; /* Not using the returned event, make compiler happy. */
+  hs_service_t *service = arg;
+  hs_pow_service_state_t *pow_state = service->state.pow_state;
+
+  /* Pop next request by effort. */
+  pending_rend_t *req =
+    smartlist_pqueue_pop(pow_state->rend_request_pqueue,
+                         compare_rend_request_by_effort_,
+                         offsetof(pending_rend_t, idx));
+
+  log_info(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
+                    "Remaining requests: %u",
+           req->rdv_data.pow_effort,
+           smartlist_len(pow_state->rend_request_pqueue));
+
+  /* Launch the rendezvous circuit. */
+  launch_rendezvous_point_circuit(service, &req->ip_auth_pubkey,
+                                  &req->ip_enc_key_kp, &req->rdv_data);
+
+  /* Clean memory. */
+  link_specifier_smartlist_free(req->rdv_data.link_specifiers);
+  memwipe(req, 0, sizeof(pending_rend_t));
+  tor_free(req);
+
+  /* If there are still some pending rendezvous circuits in the pqueue then
+   * reschedule the event in order to continue handling them. */
+  if (smartlist_len(pow_state->rend_request_pqueue) > 0) {
+    mainloop_event_activate(pow_state->pop_pqueue_ev);
+  }
+}
+
+/** HRPR: Given the information needed to launch a rendezvous circuit and an
+ * effort value, enqueue the rendezvous request in the service's PoW priority
+ * queue with the effort being the priority. */
+static void
+enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
+                     hs_cell_introduce2_data_t *data)
+{
+  hs_pow_service_state_t *pow_state = NULL;
+  pending_rend_t *req = NULL;
+
+  tor_assert(service);
+  tor_assert(ip);
+  tor_assert(data);
+
+  /* Ease our lives */
+  pow_state = service->state.pow_state;
+  req = tor_malloc_zero(sizeof(pending_rend_t));
+
+  /* Copy over the rendezvous request the needed data to launch a circuit. */
+  ed25519_pubkey_copy(&req->ip_auth_pubkey, &ip->auth_key_kp.pubkey);
+  memcpy(&req->ip_enc_key_kp, &ip->enc_key_kp, sizeof(req->ip_enc_key_kp));
+  memcpy(&req->rdv_data, &data->rdv_data, sizeof(req->rdv_data));
+  /* Invalidate the link specifier pointer in the introduce2 data so it
+   * doesn't get freed under us. */
+  data->rdv_data.link_specifiers = NULL;
+  req->idx = -1;
+
+  /* Enqueue the rendezvous request. */
+  smartlist_pqueue_add(pow_state->rend_request_pqueue,
+                       compare_rend_request_by_effort_,
+                       offsetof(pending_rend_t, idx), req);
+
+  log_info(LD_REND, "Enqueued rendezvous request with effort: %u. "
+                    "Remaining requests: %u",
+           req->rdv_data.pow_effort,
+           smartlist_len(pow_state->rend_request_pqueue));
+
+  /* Initialize the priority queue event if it hasn't been done so already. */
+  if (pow_state->pop_pqueue_ev == NULL) {
+    pow_state->pop_pqueue_ev =
+        mainloop_event_new(handle_rend_pqueue_cb, (void *)service);
+  }
+
+  /* Activate event, we just enqueued a rendezvous request. */
+  mainloop_event_activate(pow_state->pop_pqueue_ev);
 }
 
 /* ========== */
@@ -1008,6 +1106,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   data.replay_cache = ip->replay_cache;
   data.rdv_data.link_specifiers = smartlist_new();
   data.rdv_data.cc_enabled = 0;
+  data.rdv_data.pow_effort = 0;
 
   if (get_subcredential_for_handling_intro2_cell(service, &data,
                                                  subcredential)) {
@@ -1045,12 +1144,29 @@ hs_circ_handle_introduce2(const hs_service_t *service,
    * so increment our counter that we've seen one on this intro point. */
   ip->introduce2_count++;
 
+  /* Add the rendezvous request to the priority queue if PoW defenses are
+   * enabled, otherwise rendezvous as usual. */
+  if (service->config.has_pow_defenses_enabled) {
+    log_debug(LD_REND, "Adding introduction request to pqueue with effort: %u",
+              data.rdv_data.pow_effort);
+    enqueue_rend_request(service, ip, &data);
+
+    /* Increase the total effort in valid requests received this period. */
+    service->state.pow_state->total_effort += data.rdv_data.pow_effort;
+
+    /* Successfully added rend circuit to priority queue. */
+    ret = 0;
+    goto done;
+  }
+
   /* Launch rendezvous circuit with the onion key and rend cookie. */
-  launch_rendezvous_point_circuit(service, ip, &data);
+  launch_rendezvous_point_circuit(service, &ip->auth_key_kp.pubkey,
+                                  &ip->enc_key_kp, &data.rdv_data);
   /* Success. */
   ret = 0;
 
  done:
+  /* Note that if PoW defenses are enabled, this is NULL. */
   link_specifier_smartlist_free(data.rdv_data.link_specifiers);
   memwipe(&data, 0, sizeof(data));
   return ret;

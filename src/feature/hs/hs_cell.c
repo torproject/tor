@@ -391,7 +391,7 @@ build_introduce_pow_extension(const hs_pow_solution_t *pow_solution,
 
   /* We are creating a cell extension field of type PoW solution. */
   field = trn_extension_field_new();
-  trn_extension_field_set_field_type(field, TRUNNEL_CELL_EXTENSION_TYPE_POW);
+  trn_extension_field_set_field_type(field, TRUNNEL_EXT_TYPE_POW);
 
   /* Build PoW extension field. */
   pow_ext = trn_cell_extension_pow_new();
@@ -399,7 +399,7 @@ build_introduce_pow_extension(const hs_pow_solution_t *pow_solution,
   /* Copy PoW solution values into PoW extension cell. */
 
   /* Equi-X base scheme */
-  trn_cell_extension_pow_set_pow_version(pow_ext, TRUNNEL_POW_EQUIX);
+  trn_cell_extension_pow_set_pow_version(pow_ext, TRUNNEL_POW_VERSION_EQUIX);
 
   memcpy(trn_cell_extension_pow_getarray_pow_nonce(pow_ext),
          &pow_solution->nonce, TRUNNEL_POW_NONCE_LEN);
@@ -793,6 +793,62 @@ hs_cell_parse_intro_established(const uint8_t *payload, size_t payload_len)
   return ret;
 }
 
+/** Parse the cell PoW solution extension. Return 0 on success and data
+ * structure is updated with the PoW effort. Return -1 on any kind of error
+ * including if PoW couldn't be verified. */
+static int
+handle_introduce2_encrypted_cell_pow_extension(const hs_service_t *service,
+                                 const trn_extension_field_t *field,
+                                 hs_cell_introduce2_data_t *data)
+{
+  int ret = -1;
+  trn_cell_extension_pow_t *pow = NULL;
+  hs_pow_solution_t sol;
+
+  tor_assert(field);
+
+  if (trn_cell_extension_pow_parse(&pow,
+               trn_extension_field_getconstarray_field(field),
+               trn_extension_field_getlen_field(field)) < 0) {
+    goto end;
+  }
+
+  /* There is only one version supported at the moment so validate we at least
+   * have that. */
+  if (trn_cell_extension_pow_get_pow_version(pow) !=
+      TRUNNEL_POW_VERSION_EQUIX) {
+    log_debug(LD_REND, "Unsupported PoW version. Malformed INTRODUCE2");
+    goto end;
+  }
+
+  /* Effort E */
+  sol.effort = trn_cell_extension_pow_get_pow_effort(pow);
+  /* Seed C */
+  sol.seed_head = trn_cell_extension_pow_get_pow_seed(pow);
+  /* Nonce N */
+  memcpy(&sol.nonce, trn_cell_extension_pow_getconstarray_pow_nonce(pow),
+         HS_POW_NONCE_LEN);
+  /* Solution S */
+  memcpy(&sol.equix_solution,
+         trn_cell_extension_pow_getconstarray_pow_solution(pow),
+         HS_POW_EQX_SOL_LEN);
+
+  if (hs_pow_verify(service->state.pow_state, &sol)) {
+    log_info(LD_REND, "PoW INTRODUCE2 request failed to verify.");
+    goto end;
+  }
+
+  log_info(LD_REND, "PoW INTRODUCE2 request successfully verified.");
+  data->rdv_data.pow_effort = sol.effort;
+
+  /* Successfully parsed and verified the PoW solution */
+  ret = 0;
+
+ end:
+  trn_cell_extension_pow_free(pow);
+  return ret;
+}
+
 /** For the encrypted INTRO2 cell in <b>encrypted_section</b>, use the crypto
  * material in <b>data</b> to compute the right ntor keys. Also validate the
  * INTRO2 MAC to ensure that the keys are the right ones.
@@ -862,11 +918,15 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
 }
 
 /** Parse the given INTRODUCE cell extension. Update the data object
- * accordingly depending on the extension. */
-static void
-parse_introduce_cell_extension(hs_cell_introduce2_data_t *data,
+ * accordingly depending on the extension. Return 0 if it validated
+ * correctly, or return -1 if it is malformed (for example because it
+ * includes a PoW that doesn't verify). */
+static int
+parse_introduce_cell_extension(const hs_service_t *service,
+                               hs_cell_introduce2_data_t *data,
                                const trn_extension_field_t *field)
 {
+  int ret = 0;
   trn_extension_field_cc_t *cc_field = NULL;
 
   tor_assert(data);
@@ -879,11 +939,20 @@ parse_introduce_cell_extension(hs_cell_introduce2_data_t *data,
     data->pv.protocols_known = 1;
     data->pv.supports_congestion_control = data->rdv_data.cc_enabled;
     break;
+  case TRUNNEL_EXT_TYPE_POW:
+    /* PoW request. If successful, the effort is put in the data. */
+    if (handle_introduce2_encrypted_cell_pow_extension(service,
+                                                       field, data) < 0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_REND, "Invalid PoW cell extension.");
+      ret = -1;
+    }
+    break;
   default:
     break;
   }
 
   trn_extension_field_cc_free(cc_field);
+  return ret;
 }
 
 /** Parse the INTRODUCE2 cell using data which contains everything we need to
@@ -1026,7 +1095,9 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
         /* The number of extensions should match the number of fields. */
         break;
       }
-      parse_introduce_cell_extension(data, field);
+      if (parse_introduce_cell_extension(service, data, field) < 0) {
+        goto done;
+      }
     }
   }
 

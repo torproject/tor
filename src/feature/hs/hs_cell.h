@@ -60,6 +60,8 @@ typedef struct hs_cell_intro_rdv_data_t {
   smartlist_t *link_specifiers;
   /** Congestion control parameters. */
   unsigned int cc_enabled : 1;
+  /** PoW effort. */
+  uint32_t pow_effort;
 } hs_cell_intro_rdv_data_t;
 
 /** This data structure contains data that we need to parse an INTRODUCE2 cell
