@@ -2419,7 +2419,7 @@ should_remove_intro_point(hs_service_intro_point_t *ip, time_t now)
     goto end;
   }
 
-  /* Pass this point, even though we might be over the retry limit, we check
+  /* Past this point, even though we might be over the retry limit, we check
    * if a circuit (established or pending) exists. In that case, we should not
    * remove it because it might simply be valid and opened at the previous
    * scheduled event for the last retry. */
