@@ -326,8 +326,8 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
 
   /* Get the extend info data structure for the chosen rendezvous point
    * specified by the given link specifiers. */
-  info = hs_get_extend_info_from_lspecs(data->link_specifiers,
-                                        &data->onion_pk,
+  info = hs_get_extend_info_from_lspecs(data->rdv_data.link_specifiers,
+                                        &data->rdv_data.onion_pk,
                                         service->config.is_single_onion);
   if (info == NULL) {
     /* We are done here, we can't extend to the rendezvous point. */
@@ -374,7 +374,8 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
   log_info(LD_REND, "Rendezvous circuit launched to %s with cookie %s "
                     "for %s service %s",
            safe_str_client(extend_info_describe(info)),
-           safe_str_client(hex_str((const char *) data->rendezvous_cookie,
+           safe_str_client(hex_str((const char *)
+                                   data->rdv_data.rendezvous_cookie,
                                    REND_COOKIE_LEN)),
            get_service_anonymity_string(service),
            safe_str_client(service->onion_address));
@@ -393,7 +394,8 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
     curve25519_keypair_generate(&ephemeral_kp, 0);
     if (hs_ntor_service_get_rendezvous1_keys(&ip->auth_key_kp.pubkey,
                                              &ip->enc_key_kp,
-                                             &ephemeral_kp, &data->client_pk,
+                                             &ephemeral_kp,
+                                             &data->rdv_data.client_pk,
                                              &keys) < 0) {
       /* This should not really happened but just in case, don't make tor
        * freak out, close the circuit and move on. */
@@ -404,15 +406,15 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
       goto end;
     }
     circ->hs_ident = create_rp_circuit_identifier(service,
-                                                  data->rendezvous_cookie,
-                                                  &ephemeral_kp.pubkey, &keys);
+                                       data->rdv_data.rendezvous_cookie,
+                                       &ephemeral_kp.pubkey, &keys);
     memwipe(&ephemeral_kp, 0, sizeof(ephemeral_kp));
     memwipe(&keys, 0, sizeof(keys));
     tor_assert(circ->hs_ident);
   }
 
   /* Setup congestion control if asked by the client from the INTRO cell. */
-  if (data->cc_enabled) {
+  if (data->rdv_data.cc_enabled) {
     hs_circ_setup_congestion_control(circ, congestion_control_sendme_inc(),
                                      service->config.is_single_onion);
   }
@@ -1003,9 +1005,9 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   data.enc_kp = &ip->enc_key_kp;
   data.payload = payload;
   data.payload_len = payload_len;
-  data.link_specifiers = smartlist_new();
   data.replay_cache = ip->replay_cache;
-  data.cc_enabled = 0;
+  data.rdv_data.link_specifiers = smartlist_new();
+  data.rdv_data.cc_enabled = 0;
 
   if (get_subcredential_for_handling_intro2_cell(service, &data,
                                                  subcredential)) {
@@ -1022,7 +1024,8 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   /* Check whether we've seen this REND_COOKIE before to detect repeats. */
   if (replaycache_add_test_and_elapsed(
            service->state.replay_cache_rend_cookie,
-           data.rendezvous_cookie, sizeof(data.rendezvous_cookie),
+           data.rdv_data.rendezvous_cookie,
+           sizeof(data.rdv_data.rendezvous_cookie),
            &elapsed)) {
     /* A Tor client will send a new INTRODUCE1 cell with the same REND_COOKIE
      * as its previous one if its intro circ times out while in state
@@ -1048,7 +1051,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   ret = 0;
 
  done:
-  link_specifier_smartlist_free(data.link_specifiers);
+  link_specifier_smartlist_free(data.rdv_data.link_specifiers);
   memwipe(&data, 0, sizeof(data));
   return ret;
 }

@@ -812,7 +812,7 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
                                            data->n_subcredentials,
                                            data->subcredentials,
                                            encrypted_section,
-                                           &data->client_pk);
+                                           &data->rdv_data.client_pk);
   if (intro_keys == NULL) {
     log_info(LD_REND, "Invalid INTRODUCE2 encrypted data. Unable to "
              "compute key material");
@@ -875,9 +875,9 @@ parse_introduce_cell_extension(hs_cell_introduce2_data_t *data,
   switch (trn_extension_field_get_field_type(field)) {
   case TRUNNEL_EXT_TYPE_CC_FIELD_REQUEST:
     /* CC requests, enable it. */
-    data->cc_enabled = 1;
+    data->rdv_data.cc_enabled = 1;
     data->pv.protocols_known = 1;
-    data->pv.supports_congestion_control = data->cc_enabled;
+    data->pv.supports_congestion_control = data->rdv_data.cc_enabled;
     break;
   default:
     break;
@@ -944,7 +944,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
    * guaranteed to exist because of the length check above). We are gonna use
    * the client public key to compute the ntor keys and decrypt the payload:
    */
-  memcpy(&data->client_pk.public_key, encrypted_section,
+  memcpy(&data->rdv_data.client_pk.public_key, encrypted_section,
          CURVE25519_PUBKEY_LEN);
 
   /* Get the right INTRODUCE2 ntor keys and verify the cell MAC */
@@ -960,12 +960,13 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   {
     /* The ENCRYPTED_DATA section starts just after the CLIENT_PK. */
     const uint8_t *encrypted_data =
-      encrypted_section + sizeof(data->client_pk);
+      encrypted_section + sizeof(data->rdv_data.client_pk);
     /* It's symmetric encryption so it's correct to use the ENCRYPTED length
      * for decryption. Computes the length of ENCRYPTED_DATA meaning removing
      * the CLIENT_PK and MAC length. */
     size_t encrypted_data_len =
-      encrypted_section_len - (sizeof(data->client_pk) + DIGEST256_LEN);
+      encrypted_section_len -
+      (sizeof(data->rdv_data.client_pk) + DIGEST256_LEN);
 
     /* This decrypts the ENCRYPTED_DATA section of the cell. */
     decrypted = decrypt_introduce2(intro_keys->enc_key,
@@ -992,12 +993,12 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
 
   /* Extract onion key and rendezvous cookie from the cell used for the
    * rendezvous point circuit e2e encryption. */
-  memcpy(data->onion_pk.public_key,
+  memcpy(data->rdv_data.onion_pk.public_key,
          trn_cell_introduce_encrypted_getconstarray_onion_key(enc_cell),
          CURVE25519_PUBKEY_LEN);
-  memcpy(data->rendezvous_cookie,
+  memcpy(data->rdv_data.rendezvous_cookie,
          trn_cell_introduce_encrypted_getconstarray_rend_cookie(enc_cell),
-         sizeof(data->rendezvous_cookie));
+         sizeof(data->rdv_data.rendezvous_cookie));
 
   /* Extract rendezvous link specifiers. */
   for (size_t idx = 0;
@@ -1011,7 +1012,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     if (BUG(!lspec_dup)) {
       goto done;
     }
-    smartlist_add(data->link_specifiers, lspec_dup);
+    smartlist_add(data->rdv_data.link_specifiers, lspec_dup);
   }
 
   /* Extract any extensions. */
@@ -1031,7 +1032,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
 
   /* If the client asked for congestion control, but we don't support it,
    * that's a failure. It should not have asked, based on our descriptor. */
-  if (data->cc_enabled && !congestion_control_enabled()) {
+  if (data->rdv_data.cc_enabled && !congestion_control_enabled()) {
     goto done;
   }
 

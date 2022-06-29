@@ -47,6 +47,21 @@ typedef struct hs_cell_introduce1_data_t {
   const hs_pow_solution_t *pow_solution;
 } hs_cell_introduce1_data_t;
 
+/** Introduction data needed to launch a rendezvous circuit. This is set after
+ * receiving an INTRODUCE2 valid cell. */
+typedef struct hs_cell_intro_rdv_data_t {
+  /** Onion public key computed using the INTRODUCE2 encrypted section. */
+  curve25519_public_key_t onion_pk;
+  /** Rendezvous cookie taken from the INTRODUCE2 encrypted section. */
+  uint8_t rendezvous_cookie[REND_COOKIE_LEN];
+  /** Client public key from the INTRODUCE2 encrypted section. */
+  curve25519_public_key_t client_pk;
+  /** Link specifiers of the rendezvous point. Contains link_specifier_t. */
+  smartlist_t *link_specifiers;
+  /** Congestion control parameters. */
+  unsigned int cc_enabled : 1;
+} hs_cell_intro_rdv_data_t;
+
 /** This data structure contains data that we need to parse an INTRODUCE2 cell
  * which is used by the INTRODUCE2 cell parsing function. On a successful
  * parsing, the onion_pk and rendezvous_cookie will be populated with the
@@ -77,20 +92,12 @@ typedef struct hs_cell_introduce2_data_t {
 
   /*** Mutable Section: Set upon parsing INTRODUCE2 cell. ***/
 
-  /** Onion public key computed using the INTRODUCE2 encrypted section. */
-  curve25519_public_key_t onion_pk;
-  /** Rendezvous cookie taken from the INTRODUCE2 encrypted section. */
-  uint8_t rendezvous_cookie[REND_COOKIE_LEN];
-  /** Client public key from the INTRODUCE2 encrypted section. */
-  curve25519_public_key_t client_pk;
-  /** Link specifiers of the rendezvous point. Contains link_specifier_t. */
-  smartlist_t *link_specifiers;
+  /** Data needed to launch a rendezvous circuit. */
+  hs_cell_intro_rdv_data_t rdv_data;
   /** Replay cache of the introduction point. */
   replaycache_t *replay_cache;
   /** Flow control negotiation parameters. */
   protover_summary_flags_t pv;
-  /** Congestion control parameters. */
-  unsigned int cc_enabled : 1;
 } hs_cell_introduce2_data_t;
 
 /* Build cell API. */
