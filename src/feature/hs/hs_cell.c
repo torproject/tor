@@ -457,7 +457,7 @@ build_introduce_cc_extension(trn_extension_t *extensions)
   /* Build CC request extension. */
   field = trn_extension_field_new();
   trn_extension_field_set_field_type(field,
-                                     TRUNNEL_EXT_TYPE_CC_FIELD_REQUEST);
+                                     TRUNNEL_EXT_TYPE_CC_REQUEST);
 
   /* No payload indicating a request to use congestion control. */
   trn_extension_field_set_field_len(field, 0);
@@ -933,7 +933,7 @@ parse_introduce_cell_extension(const hs_service_t *service,
   tor_assert(field);
 
   switch (trn_extension_field_get_field_type(field)) {
-  case TRUNNEL_EXT_TYPE_CC_FIELD_REQUEST:
+  case TRUNNEL_EXT_TYPE_CC_REQUEST:
     /* CC requests, enable it. */
     data->rdv_data.cc_enabled = 1;
     data->pv.protocols_known = 1;

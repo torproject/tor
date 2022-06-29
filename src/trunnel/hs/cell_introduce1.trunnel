@@ -78,6 +78,8 @@ struct trn_cell_introduce_encrypted {
  * INTRODUCE1 cell (encrypted section) extensions.
  */
 
+/* Cell extenstion type Congestion Control Request. */
+const TRUNNEL_EXT_TYPE_CC_REQUEST = 0x01;
 /* Cell extension type PoW. */
 const TRUNNEL_EXT_TYPE_POW = 0x02;
 
