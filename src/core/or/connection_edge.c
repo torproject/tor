@@ -1213,7 +1213,10 @@ connection_ap_expire_beginning(void)
      * it here too because controllers that put streams in controller_wait
      * state never ask Tor to attach the circuit. */
     if (AP_CONN_STATE_IS_UNATTACHED(base_conn->state)) {
-      if (seconds_since_born >= options->SocksTimeout) {
+      /* If this is a connection to an HS with PoW defenses enabled, we need to
+       * wait longer than the usual Socks timeout. */
+      if (seconds_since_born >= options->SocksTimeout &&
+          !entry_conn->hs_with_pow_conn) {
         log_fn(severity, LD_APP,
             "Tried for %d seconds to get a connection to %s:%d. "
             "Giving up. (%s)",
@@ -2051,6 +2054,19 @@ connection_ap_handle_onion(entry_connection_t *conn,
     descriptor_is_usable =
       hs_client_any_intro_points_usable(&hs_conn_ident->identity_pk,
                                         cached_desc);
+    /* Check if PoW parameters have expired. If yes, the descriptor is
+     * unusable. */
+    if (cached_desc->encrypted_data.pow_params) {
+      if (cached_desc->encrypted_data.pow_params->expiration_time <
+          approx_time()) {
+        log_info(LD_REND, "Descriptor PoW parameters have expired.");
+        descriptor_is_usable = 0;
+      } else {
+        /* Mark that the connection is to an HS with PoW defenses on. */
+        conn->hs_with_pow_conn = 1;
+      }
+    }
+
     log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
              (descriptor_is_usable) ? "usable" : "unusable",
              safe_str_client(socks->address),

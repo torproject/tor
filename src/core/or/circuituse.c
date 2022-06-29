@@ -564,6 +564,14 @@ circuit_expire_building(void)
       continue;
     }
 
+    /* Ignore circuits that are waiting for an introduction to a service with
+     * PoW enabled, it can take an arbitrary amount of time. They will get
+     * cleaned up if the SOCKS connection is closed. */
+    if (TO_ORIGIN_CIRCUIT(victim)->hs_with_pow_circ &&
+        victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
+      continue;
+    }
+
     build_state = TO_ORIGIN_CIRCUIT(victim)->build_state;
     if (build_state && build_state->onehop_tunnel)
       cutoff = begindir_cutoff;
@@ -2841,8 +2849,10 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
 
   conn_age = (int)(time(NULL) - base_conn->timestamp_created);
 
-  /* Is this connection so old that we should give up on it? */
-  if (conn_age >= get_options()->SocksTimeout) {
+  /* Is this connection so old that we should give up on it? Don't timeout if
+   * this is a connection to an HS with PoW enabled because it can take an
+   * arbitrary amount of time. */
+  if (conn_age >= get_options()->SocksTimeout && !conn->hs_with_pow_conn) {
     int severity = (tor_addr_is_null(&base_conn->addr) && !base_conn->port) ?
       LOG_INFO : LOG_NOTICE;
     log_fn(severity, LD_APP,
