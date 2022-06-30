@@ -1109,7 +1109,8 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
 
   /* Success. */
   ret = 0;
-  log_info(LD_REND, "Valid INTRODUCE2 cell. Launching rendezvous circuit.");
+  log_info(LD_REND,
+           "Valid INTRODUCE2 cell. Willing to launch rendezvous circuit.");
 
  done:
   if (intro_keys) {
