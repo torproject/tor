@@ -630,16 +630,63 @@ compare_rend_request_by_effort_(const void *_a, const void *_b)
   }
 }
 
-/** Remove too old entries from the given rendezvous request priority queue. */
-static void
-trim_rend_pqueue(smartlist_t *pqueue, time_t now)
+/** Return 1 if a request waiting in our service-side pqueue is old
+ * enough that we should just discard it rather than trying to respond,
+ * or 0 if we still like it. As a heuristic, choose half of the total
+ * permitted time interval (so we don't approve trying to respond to
+ * requests when we will then give up on them a moment later).
+ */
+static int
+queued_rend_request_is_too_old(pending_rend_t *req, time_t now)
 {
-  SMARTLIST_FOREACH_BEGIN(pqueue, pending_rend_t *, req) {
-    if ((req->enqueued_ts + MAX_REND_TIMEOUT) < now) {
-      SMARTLIST_DEL_CURRENT_KEEPORDER(pqueue, req);
+  if ((req->enqueued_ts + MAX_REND_TIMEOUT/2) < now)
+    return 1;
+  return 0;
+}
+
+/** Maximum number of rendezvous requests we enqueue per service. We allow the
+ * average amount of INTRODUCE2 that a service can process in a second times
+ * the rendezvous timeout. Then we let it grow to twice that before
+ * discarding the bottom half in trim_rend_pqueue(). */
+#define QUEUED_REND_REQUEST_HIGH_WATER (2 * 180 * MAX_REND_TIMEOUT)
+
+/** Our rendezvous request priority queue is too full; keep the first
+ * QUEUED_REND_REQUEST_HIGH_WATER/2 entries and discard the rest.
+ */
+static void
+trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
+{
+  smartlist_t *old_pqueue = pow_state->rend_request_pqueue;
+  smartlist_t *new_pqueue = pow_state->rend_request_pqueue = smartlist_new();
+
+  log_notice(LD_REND, "Rendezvous request priority queue has "
+                    "reached capacity (%d). Discarding the bottom half.",
+                    smartlist_len(old_pqueue));
+
+  while (smartlist_len(old_pqueue) &&
+         smartlist_len(new_pqueue) < QUEUED_REND_REQUEST_HIGH_WATER/2) {
+    /* while there are still old ones, and the new one isn't full yet */
+    pending_rend_t *req =
+      smartlist_pqueue_pop(old_pqueue,
+                           compare_rend_request_by_effort_,
+                           offsetof(pending_rend_t, idx));
+    if (queued_rend_request_is_too_old(req, now)) {
+      log_info(LD_REND, "While trimming, rend request has been pending "
+                        "for too long; discarding.");
       free_pending_rend(req);
+    } else {
+      smartlist_pqueue_add(new_pqueue,
+                           compare_rend_request_by_effort_,
+                           offsetof(pending_rend_t, idx), req);
     }
+  }
+
+  /* Ok, we have rescued all the entries we want to keep. The rest are
+   * all excess. */
+  SMARTLIST_FOREACH_BEGIN(old_pqueue, pending_rend_t *, req) {
+    free_pending_rend(req);
   } SMARTLIST_FOREACH_END(req);
+  smartlist_free(old_pqueue);
 }
 
 /** How many rendezvous request we handle per mainloop event. Per prop327,
@@ -658,16 +705,8 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 
   (void) ev; /* Not using the returned event, make compiler happy. */
 
-  /* Before we process rendezvous request, trim the list to remove out dated
-   * entries. */
-  trim_rend_pqueue(pow_state->rend_request_pqueue, now);
-
   /* Process rendezvous request until the maximum per mainloop run. */
   while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
-    if (++count == MAX_REND_REQUEST_PER_MAINLOOP) {
-      break;
-    }
-
     /* Pop next request by effort. */
     pending_rend_t *req =
       smartlist_pqueue_pop(pow_state->rend_request_pqueue,
@@ -679,10 +718,21 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
              req->rdv_data.pow_effort,
              smartlist_len(pow_state->rend_request_pqueue));
 
+    if (queued_rend_request_is_too_old(req, now)) {
+      log_info(LD_REND, "Top rend request has been pending for too long; "
+                        "discarding and moving to the next one.");
+      free_pending_rend(req);
+      continue; /* do not increment count, this one's free */
+    }
+
     /* Launch the rendezvous circuit. */
     launch_rendezvous_point_circuit(service, &req->ip_auth_pubkey,
                                     &req->ip_enc_key_kp, &req->rdv_data, now);
     free_pending_rend(req);
+
+    if (++count == MAX_REND_REQUEST_PER_MAINLOOP) {
+      break;
+    }
   }
 
   /* If there are still some pending rendezvous circuits in the pqueue then
@@ -691,11 +741,6 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
     mainloop_event_activate(pow_state->pop_pqueue_ev);
   }
 }
-
-/** Maximum number of rendezvous requests we enqueue per service. We allow the
- * average amount of INTRODUCE2 that a service can process in a second times
- * the rendezvous timeout. */
-#define MAX_REND_REQUEST (180 * MAX_REND_TIMEOUT)
 
 /** Given the information needed to launch a rendezvous circuit and an
  * effort value, enqueue the rendezvous request in the service's PoW priority
@@ -715,12 +760,6 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
 
   /* Ease our lives */
   pow_state = service->state.pow_state;
-
-  if (smartlist_len(pow_state->rend_request_pqueue) >= MAX_REND_REQUEST) {
-    log_info(LD_REND, "Rendezvous request priority queue has "
-                      "reached capacity.");
-    return -1;
-  }
 
   req = tor_malloc_zero(sizeof(pending_rend_t));
 
@@ -752,6 +791,12 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
 
   /* Activate event, we just enqueued a rendezvous request. */
   mainloop_event_activate(pow_state->pop_pqueue_ev);
+
+  /* See if there are so many cells queued that we need to cull. */
+  if (smartlist_len(pow_state->rend_request_pqueue) >=
+        QUEUED_REND_REQUEST_HIGH_WATER) {
+    trim_rend_pqueue(pow_state, now);
+  }
 
   return 0;
 }
