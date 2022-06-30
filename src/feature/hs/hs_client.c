@@ -644,8 +644,8 @@ send_introduce1(origin_circuit_t *intro_circ,
     goto tran_err;
   }
 
-  /* Check if the rendevous circuit was setup WITHOUT congestion control but if
-   * it is enabled and the service supports it. This can happen, see
+  /* Check if the rendezvous circuit was setup WITHOUT congestion control,
+   * but if it is enabled and the service supports it. This can happen, see
    * setup_rendezvous_circ_congestion_control() and so close rendezvous circuit
    * so another one can be created. */
   if (TO_CIRCUIT(rend_circ)->ccontrol == NULL && congestion_control_enabled()
