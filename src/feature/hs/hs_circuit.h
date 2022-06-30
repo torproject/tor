@@ -15,7 +15,7 @@
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_service.h"
 
-/* HRPR TODO Putting this here for now... */
+/** Pending rendezvous request. This is put in a service priority queue. */
 typedef struct pending_rend_t {
   /* Intro point authentication pubkey. */
   ed25519_public_key_t ip_auth_pubkey;
@@ -27,6 +27,9 @@ typedef struct pending_rend_t {
 
   /** Position of element in the heap */
   int idx;
+
+  /** When was this request enqueued. */
+  time_t enqueued_ts;
 } pending_rend_t;
 
 /* Cleanup function when the circuit is closed or freed. */

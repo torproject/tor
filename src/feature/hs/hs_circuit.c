@@ -22,6 +22,7 @@
 #include "feature/client/circpathbias.h"
 #include "feature/hs/hs_cell.h"
 #include "feature/hs/hs_circuit.h"
+#include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ob.h"
 #include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
@@ -44,6 +45,18 @@
 #include "core/or/crypt_path_st.h"
 #include "feature/nodelist/node_st.h"
 #include "core/or/origin_circuit_st.h"
+
+/** Helper: Free a pending rend object. */
+static inline void
+free_pending_rend(pending_rend_t *req)
+{
+  if (!req) {
+    return;
+  }
+  link_specifier_smartlist_free(req->rdv_data.link_specifiers);
+  memwipe(req, 0, sizeof(pending_rend_t));
+  tor_free(req);
+}
 
 /** A circuit is about to become an e2e rendezvous circuit. Check
  * <b>circ_purpose</b> and ensure that it's properly set. Return true iff
@@ -617,6 +630,20 @@ compare_rend_request_by_effort_(const void *_a, const void *_b)
   }
 }
 
+/** Remove too old entries from the given rendezvous request priority queue. */
+static void
+trim_rend_pqueue(smartlist_t *pqueue)
+{
+  time_t now = time(NULL);
+
+  SMARTLIST_FOREACH_BEGIN(pqueue, pending_rend_t *, req) {
+    if ((req->enqueued_ts + MAX_REND_TIMEOUT) < now) {
+      SMARTLIST_DEL_CURRENT_KEEPORDER(pqueue, req);
+      free_pending_rend(req);
+    }
+  } SMARTLIST_FOREACH_END(req);
+}
+
 /** How many rendezvous request we handle per mainloop event. Per prop327,
  * handling an INTRODUCE2 cell takes on average 5.56msec on an average CPU and
  * so it means that launching this max amount of circuits is well below 0.08
@@ -631,6 +658,10 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   hs_pow_service_state_t *pow_state = service->state.pow_state;
 
   (void) ev; /* Not using the returned event, make compiler happy. */
+
+  /* Before we process rendezvous request, trim the list to remove out dated
+   * entries. */
+  trim_rend_pqueue(pow_state->rend_request_pqueue);
 
   /* Process rendezvous request until the maximum per mainloop run. */
   while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
@@ -652,11 +683,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
     /* Launch the rendezvous circuit. */
     launch_rendezvous_point_circuit(service, &req->ip_auth_pubkey,
                                     &req->ip_enc_key_kp, &req->rdv_data);
-
-    /* Clean memory. */
-    link_specifier_smartlist_free(req->rdv_data.link_specifiers);
-    memwipe(req, 0, sizeof(pending_rend_t));
-    tor_free(req);
+    free_pending_rend(req);
   }
 
   /* If there are still some pending rendezvous circuits in the pqueue then
@@ -666,10 +693,17 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   }
 }
 
-/** HRPR: Given the information needed to launch a rendezvous circuit and an
+/** Maximum number of rendezvous requests we enqueue per service. We allow the
+ * average amount of INTRODUCE2 that a service can process in a second times
+ * the rendezvous timeout. */
+#define MAX_REND_REQUEST (180 * MAX_REND_TIMEOUT)
+
+/** Given the information needed to launch a rendezvous circuit and an
  * effort value, enqueue the rendezvous request in the service's PoW priority
- * queue with the effort being the priority. */
-static void
+ * queue with the effort being the priority.
+ *
+ * Return 0 if we successfully enqueued the request else -1. */
+static int
 enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
                      hs_cell_introduce2_data_t *data)
 {
@@ -682,6 +716,13 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
 
   /* Ease our lives */
   pow_state = service->state.pow_state;
+
+  if (smartlist_len(pow_state->rend_request_pqueue) >= MAX_REND_REQUEST) {
+    log_info(LD_REND, "Rendezvous request priority queue has "
+                      "reached capacity.");
+    return -1;
+  }
+
   req = tor_malloc_zero(sizeof(pending_rend_t));
 
   /* Copy over the rendezvous request the needed data to launch a circuit. */
@@ -692,6 +733,7 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
    * doesn't get freed under us. */
   data->rdv_data.link_specifiers = NULL;
   req->idx = -1;
+  req->enqueued_ts = time(NULL);
 
   /* Enqueue the rendezvous request. */
   smartlist_pqueue_add(pow_state->rend_request_pqueue,
@@ -711,6 +753,8 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
 
   /* Activate event, we just enqueued a rendezvous request. */
   mainloop_event_activate(pow_state->pop_pqueue_ev);
+
+  return 0;
 }
 
 /* ========== */
@@ -1164,7 +1208,9 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   if (service->config.has_pow_defenses_enabled) {
     log_debug(LD_REND, "Adding introduction request to pqueue with effort: %u",
               data.rdv_data.pow_effort);
-    enqueue_rend_request(service, ip, &data);
+    if (enqueue_rend_request(service, ip, &data) < 0) {
+      goto done;
+    }
 
     /* Increase the total effort in valid requests received this period. */
     service->state.pow_state->total_effort += data.rdv_data.pow_effort;
