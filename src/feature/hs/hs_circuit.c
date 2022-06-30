@@ -325,10 +325,10 @@ MOCK_IMPL(STATIC void,
 launch_rendezvous_point_circuit,(const hs_service_t *service,
                                  const ed25519_public_key_t *ip_auth_pubkey,
                                  const curve25519_keypair_t *ip_enc_key_kp,
-                                 const hs_cell_intro_rdv_data_t *rdv_data))
+                                 const hs_cell_intro_rdv_data_t *rdv_data,
+                                 time_t now))
 {
   int circ_needs_uptime;
-  time_t now = time(NULL);
   extend_info_t *info = NULL;
   origin_circuit_t *circ;
 
@@ -632,10 +632,8 @@ compare_rend_request_by_effort_(const void *_a, const void *_b)
 
 /** Remove too old entries from the given rendezvous request priority queue. */
 static void
-trim_rend_pqueue(smartlist_t *pqueue)
+trim_rend_pqueue(smartlist_t *pqueue, time_t now)
 {
-  time_t now = time(NULL);
-
   SMARTLIST_FOREACH_BEGIN(pqueue, pending_rend_t *, req) {
     if ((req->enqueued_ts + MAX_REND_TIMEOUT) < now) {
       SMARTLIST_DEL_CURRENT_KEEPORDER(pqueue, req);
@@ -656,12 +654,13 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   int count = 0;
   hs_service_t *service = arg;
   hs_pow_service_state_t *pow_state = service->state.pow_state;
+  time_t now = time(NULL);
 
   (void) ev; /* Not using the returned event, make compiler happy. */
 
   /* Before we process rendezvous request, trim the list to remove out dated
    * entries. */
-  trim_rend_pqueue(pow_state->rend_request_pqueue);
+  trim_rend_pqueue(pow_state->rend_request_pqueue, now);
 
   /* Process rendezvous request until the maximum per mainloop run. */
   while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
@@ -682,7 +681,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 
     /* Launch the rendezvous circuit. */
     launch_rendezvous_point_circuit(service, &req->ip_auth_pubkey,
-                                    &req->ip_enc_key_kp, &req->rdv_data);
+                                    &req->ip_enc_key_kp, &req->rdv_data, now);
     free_pending_rend(req);
   }
 
@@ -705,7 +704,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
  * Return 0 if we successfully enqueued the request else -1. */
 static int
 enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
-                     hs_cell_introduce2_data_t *data)
+                     hs_cell_introduce2_data_t *data, time_t now)
 {
   hs_pow_service_state_t *pow_state = NULL;
   pending_rend_t *req = NULL;
@@ -733,7 +732,7 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
    * doesn't get freed under us. */
   data->rdv_data.link_specifiers = NULL;
   req->idx = -1;
-  req->enqueued_ts = time(NULL);
+  req->enqueued_ts = now;
 
   /* Enqueue the rendezvous request. */
   smartlist_pqueue_add(pow_state->rend_request_pqueue,
@@ -1149,6 +1148,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   int ret = -1;
   time_t elapsed;
   hs_cell_introduce2_data_t data;
+  time_t now = time(NULL);
 
   tor_assert(service);
   tor_assert(circ);
@@ -1208,7 +1208,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   if (service->config.has_pow_defenses_enabled) {
     log_debug(LD_REND, "Adding introduction request to pqueue with effort: %u",
               data.rdv_data.pow_effort);
-    if (enqueue_rend_request(service, ip, &data) < 0) {
+    if (enqueue_rend_request(service, ip, &data, now) < 0) {
       goto done;
     }
 
@@ -1222,7 +1222,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
 
   /* Launch rendezvous circuit with the onion key and rend cookie. */
   launch_rendezvous_point_circuit(service, &ip->auth_key_kp.pubkey,
-                                  &ip->enc_key_kp, &data.rdv_data);
+                                  &ip->enc_key_kp, &data.rdv_data, now);
   /* Success. */
   ret = 0;
 

@@ -2281,12 +2281,14 @@ static void
 mock_launch_rendezvous_point_circuit(const hs_service_t *service,
                              const ed25519_public_key_t *ip_auth_pubkey,
                              const curve25519_keypair_t *ip_enc_key_kp,
-                             const hs_cell_intro_rdv_data_t *rdv_data)
+                             const hs_cell_intro_rdv_data_t *rdv_data,
+                             time_t now)
 {
   (void) service;
   (void) ip_auth_pubkey;
   (void) ip_enc_key_kp;
   (void) rdv_data;
+  (void) now;
   return;
 }
 
