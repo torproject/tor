@@ -678,6 +678,7 @@ send_introduce1(origin_circuit_t *intro_circ,
       log_warn(LD_REND, "Haven't solved the PoW yet.");
       goto tran_err;
     }
+    log_notice(LD_REND, "Got a PoW solution we like! Shipping it!");
     /* Set flag to reflect that the HS we are attempting to rendezvous has PoW
      * defenses enabled, and as such we will need to be more lenient with
      * timing out while waiting for the circuit to be built. */
