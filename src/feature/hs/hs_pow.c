@@ -144,7 +144,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
 
   /* We'll do a maximum of the nonce size iterations here which is the maximum
    * number of nonce we can try in an attempt to find a valid solution. */
-  log_debug(LD_REND, "Solving proof of work");
+  log_notice(LD_REND, "Solving proof of work");
   for (uint64_t i = 0; i < UINT64_MAX; i++) {
     /* Calculate S = equix_solve(C || N || E) */
     if (!equix_solve(ctx, challenge, HS_POW_CHALLENGE_LEN, solution)) {

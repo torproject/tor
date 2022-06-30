@@ -713,13 +713,13 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
                            compare_rend_request_by_effort_,
                            offsetof(pending_rend_t, idx));
 
-    log_info(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
+    log_notice(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
                       "Remaining requests: %u",
              req->rdv_data.pow_effort,
              smartlist_len(pow_state->rend_request_pqueue));
 
     if (queued_rend_request_is_too_old(req, now)) {
-      log_info(LD_REND, "Top rend request has been pending for too long; "
+      log_notice(LD_REND, "Top rend request has been pending for too long; "
                         "discarding and moving to the next one.");
       free_pending_rend(req);
       continue; /* do not increment count, this one's free */
@@ -778,8 +778,8 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
                        compare_rend_request_by_effort_,
                        offsetof(pending_rend_t, idx), req);
 
-  log_info(LD_REND, "Enqueued rendezvous request with effort: %u. "
-                    "Remaining requests: %u",
+  log_notice(LD_REND, "Enqueued rendezvous request with effort: %u. "
+                    "Queued requests: %u",
            req->rdv_data.pow_effort,
            smartlist_len(pow_state->rend_request_pqueue));
 
@@ -1251,7 +1251,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   /* Add the rendezvous request to the priority queue if PoW defenses are
    * enabled, otherwise rendezvous as usual. */
   if (service->config.has_pow_defenses_enabled) {
-    log_debug(LD_REND, "Adding introduction request to pqueue with effort: %u",
+    log_notice(LD_REND, "Adding introduction request to pqueue with effort: %u",
               data.rdv_data.pow_effort);
     if (enqueue_rend_request(service, ip, &data, now) < 0) {
       goto done;
