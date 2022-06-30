@@ -617,32 +617,47 @@ compare_rend_request_by_effort_(const void *_a, const void *_b)
   }
 }
 
+/** How many rendezvous request we handle per mainloop event. Per prop327,
+ * handling an INTRODUCE2 cell takes on average 5.56msec on an average CPU and
+ * so it means that launching this max amount of circuits is well below 0.08
+ * seconds which we believe is negligable on the whole mainloop. */
+#define MAX_REND_REQUEST_PER_MAINLOOP 16
+
 static void
 handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 {
-  (void) ev; /* Not using the returned event, make compiler happy. */
+  int count = 0;
   hs_service_t *service = arg;
   hs_pow_service_state_t *pow_state = service->state.pow_state;
 
-  /* Pop next request by effort. */
-  pending_rend_t *req =
-    smartlist_pqueue_pop(pow_state->rend_request_pqueue,
-                         compare_rend_request_by_effort_,
-                         offsetof(pending_rend_t, idx));
+  (void) ev; /* Not using the returned event, make compiler happy. */
 
-  log_info(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
-                    "Remaining requests: %u",
-           req->rdv_data.pow_effort,
-           smartlist_len(pow_state->rend_request_pqueue));
+  /* Process rendezvous request until the maximum per mainloop run. */
+  while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
+    if (++count == MAX_REND_REQUEST_PER_MAINLOOP) {
+      break;
+    }
 
-  /* Launch the rendezvous circuit. */
-  launch_rendezvous_point_circuit(service, &req->ip_auth_pubkey,
-                                  &req->ip_enc_key_kp, &req->rdv_data);
+    /* Pop next request by effort. */
+    pending_rend_t *req =
+      smartlist_pqueue_pop(pow_state->rend_request_pqueue,
+                           compare_rend_request_by_effort_,
+                           offsetof(pending_rend_t, idx));
 
-  /* Clean memory. */
-  link_specifier_smartlist_free(req->rdv_data.link_specifiers);
-  memwipe(req, 0, sizeof(pending_rend_t));
-  tor_free(req);
+    log_info(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
+                      "Remaining requests: %u",
+             req->rdv_data.pow_effort,
+             smartlist_len(pow_state->rend_request_pqueue));
+
+    /* Launch the rendezvous circuit. */
+    launch_rendezvous_point_circuit(service, &req->ip_auth_pubkey,
+                                    &req->ip_enc_key_kp, &req->rdv_data);
+
+    /* Clean memory. */
+    link_specifier_smartlist_free(req->rdv_data.link_specifiers);
+    memwipe(req, 0, sizeof(pending_rend_t));
+    tor_free(req);
+  }
 
   /* If there are still some pending rendezvous circuits in the pqueue then
    * reschedule the event in order to continue handling them. */
