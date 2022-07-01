@@ -689,6 +689,27 @@ trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
   smartlist_free(old_pqueue);
 }
 
+/** Count up how many pending outgoing (CIRCUIT_PURPOSE_S_CONNECT_REND)
+ * circuits there are for this service. Used in the PoW rate limiting
+ * world to decide whether it's time to launch any new ones.
+ */
+static int
+count_service_rp_circuits_pending(hs_service_t *service)
+{
+  origin_circuit_t *ocirc = NULL;
+  int count = 0;
+  while ((ocirc = circuit_get_next_by_purpose(ocirc,
+                            CIRCUIT_PURPOSE_S_CONNECT_REND))) {
+    /* Count up circuits that are v3 and for this service. */
+    if (ocirc->hs_ident != NULL &&
+        ed25519_pubkey_eq(&ocirc->hs_ident->identity_pk,
+                          &service->keys.identity_pk)) {
+      count++;
+    }
+  }
+  return count;
+}
+
 /** How many rendezvous request we handle per mainloop event. Per prop327,
  * handling an INTRODUCE2 cell takes on average 5.56msec on an average CPU and
  * so it means that launching this max amount of circuits is well below 0.08
@@ -704,6 +725,11 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   time_t now = time(NULL);
 
   (void) ev; /* Not using the returned event, make compiler happy. */
+
+  log_notice(LD_REND, "Considering launching more rendezvous responses. "
+             "%d in-flight, %d pending.",
+             count_service_rp_circuits_pending(service),
+             smartlist_len(pow_state->rend_request_pqueue));
 
   /* Process rendezvous request until the maximum per mainloop run. */
   while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
