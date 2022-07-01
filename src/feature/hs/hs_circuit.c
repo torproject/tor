@@ -710,11 +710,36 @@ count_service_rp_circuits_pending(hs_service_t *service)
   return count;
 }
 
+/** Peek at the top entry on the pending rend pqueue. If its level of
+ * effort is at least what we're suggesting for that service right now,
+ * return 1, else return 0.
+ */
+static int
+top_of_rend_pqueue_is_worthwhile(hs_pow_service_state_t *pow_state)
+{
+  tor_assert(pow_state->rend_request_pqueue);
+  tor_assert(smartlist_len(pow_state->rend_request_pqueue));
+
+  pending_rend_t *req =
+    smartlist_get(pow_state->rend_request_pqueue, 0);
+
+  if (req->rdv_data.pow_effort >= pow_state->suggested_effort)
+    return 1;
+
+  return 0;
+}
+
 /** How many rendezvous request we handle per mainloop event. Per prop327,
  * handling an INTRODUCE2 cell takes on average 5.56msec on an average CPU and
  * so it means that launching this max amount of circuits is well below 0.08
  * seconds which we believe is negligable on the whole mainloop. */
 #define MAX_REND_REQUEST_PER_MAINLOOP 16
+
+/** What is the threshold of in-progress (CIRCUIT_PURPOSE_S_CONNECT_REND)
+ * rendezvous responses above which we won't launch new low-effort rendezvous
+ * responses? (Intro2 cells with suitable PoW effort are not affected
+ * by this threshold.) */
+#define MAX_CHEAP_REND_CIRCUITS_IN_PROGRESS 16
 
 static void
 handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
@@ -723,16 +748,31 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   hs_service_t *service = arg;
   hs_pow_service_state_t *pow_state = service->state.pow_state;
   time_t now = time(NULL);
+  int in_flight = count_service_rp_circuits_pending(service);
 
   (void) ev; /* Not using the returned event, make compiler happy. */
 
   log_notice(LD_REND, "Considering launching more rendezvous responses. "
              "%d in-flight, %d pending.",
-             count_service_rp_circuits_pending(service),
+             in_flight,
              smartlist_len(pow_state->rend_request_pqueue));
 
   /* Process rendezvous request until the maximum per mainloop run. */
   while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
+
+    /* first, peek at the top result to see if we want to pop it */
+    if (in_flight >= MAX_CHEAP_REND_CIRCUITS_IN_PROGRESS &&
+        !top_of_rend_pqueue_is_worthwhile(pow_state)) {
+      /* We have queued requests, but they are all low priority, and also
+       * we have too many in-progress rendezvous responses. Don't launch
+       * any more. Schedule ourselves to reassess in a bit. */
+      log_notice(LD_REND, "Next request to launch is low priority, and "
+                 "%d in-flight already. Waiting to launch more.", in_flight);
+      const struct timeval delay_tv = { 0, 100000 };
+      mainloop_event_schedule(pow_state->pop_pqueue_ev, &delay_tv);
+      return; /* done here! no cleanup needed. */
+    }
+
     /* Pop next request by effort. */
     pending_rend_t *req =
       smartlist_pqueue_pop(pow_state->rend_request_pqueue,
@@ -756,6 +796,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
                                     &req->ip_enc_key_kp, &req->rdv_data, now);
     free_pending_rend(req);
 
+    ++in_flight;
     if (++count == MAX_REND_REQUEST_PER_MAINLOOP) {
       break;
     }
