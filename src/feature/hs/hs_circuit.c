@@ -624,6 +624,11 @@ compare_rend_request_by_effort_(const void *_a, const void *_b)
   if (a->rdv_data.pow_effort > b->rdv_data.pow_effort) {
     return -1;
   } else if (a->rdv_data.pow_effort == b->rdv_data.pow_effort) {
+    /* tie-breaker! use the time it was added to the queue. older better. */
+    if (a->enqueued_ts < b->enqueued_ts)
+      return -1;
+    if (a->enqueued_ts > b->enqueued_ts)
+      return 1;
     return 0;
   } else {
     return 1;
@@ -780,8 +785,10 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
                            offsetof(pending_rend_t, idx));
 
     log_notice(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
+                      "Waited %d. "
                       "Remaining requests: %u",
              req->rdv_data.pow_effort,
+             (int)(now - req->enqueued_ts),
              smartlist_len(pow_state->rend_request_pqueue));
 
     if (queued_rend_request_is_too_old(req, now)) {
