@@ -600,6 +600,10 @@ find_desc_intro_point_by_legacy_id(const char *legacy_id,
   return ret_ip;
 }
 
+/** Set a client-side cap on the highest effort of PoW we will try to
+ * tackle. If asked for higher, we solve it at this cap. */
+#define CLIENT_MAX_POW_EFFORT 500
+
 /** Send an INTRODUCE1 cell along the intro circuit and populate the rend
  * circuit identifier with the needed key material for the e2e encryption.
  * Return 0 on success, -1 if there is a transient error such that an action
@@ -674,6 +678,20 @@ send_introduce1(origin_circuit_t *intro_circ,
   if (desc->encrypted_data.pow_params) {
     log_debug(LD_REND, "PoW params present in descriptor.");
     pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
+
+    /* make sure we can't be tricked into hopeless quests */
+    if (desc->encrypted_data.pow_params->suggested_effort >
+          CLIENT_MAX_POW_EFFORT) {
+      log_notice(LD_REND, "Onion service suggested effort %d which is "
+                 "higher than we want to solve. Solving at %d instead.",
+                 desc->encrypted_data.pow_params->suggested_effort,
+                 CLIENT_MAX_POW_EFFORT);
+
+      /* clobber it in-place. hopefully this won't have bad side effects. */
+      desc->encrypted_data.pow_params->suggested_effort =
+        CLIENT_MAX_POW_EFFORT;
+    }
+
     if (hs_pow_solve(desc->encrypted_data.pow_params, pow_solution)) {
       log_warn(LD_REND, "Haven't solved the PoW yet.");
       goto tran_err;
