@@ -616,12 +616,12 @@ cleanup_on_free_client_circ(circuit_t *circ)
 }
 
 /** Return less than 0 if a precedes b, 0 if a equals b and greater than 0 if
- * b precedes a. */
+ * b precedes a. Note that *higher* effort is *earlier* in the pqueue. */
 static int
 compare_rend_request_by_effort_(const void *_a, const void *_b)
 {
   const pending_rend_t *a = _a, *b = _b;
-  if (a->rdv_data.pow_effort < b->rdv_data.pow_effort) {
+  if (a->rdv_data.pow_effort > b->rdv_data.pow_effort) {
     return -1;
   } else if (a->rdv_data.pow_effort == b->rdv_data.pow_effort) {
     return 0;
