@@ -812,7 +812,7 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
   /* Initialize the priority queue event if it hasn't been done so already. */
   if (pow_state->pop_pqueue_ev == NULL) {
     pow_state->pop_pqueue_ev =
-        mainloop_event_new(handle_rend_pqueue_cb, (void *)service);
+        mainloop_event_postloop_new(handle_rend_pqueue_cb, (void *)service);
   }
 
   /* Activate event, we just enqueued a rendezvous request. */
