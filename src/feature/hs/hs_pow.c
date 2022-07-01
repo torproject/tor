@@ -221,7 +221,7 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
   } else if (get_uint32(pow_state->seed_previous) == pow_solution->seed_head) {
     seed = pow_state->seed_previous;
   } else {
-    log_err(LD_REND, "Seed head didn't match either seed.");
+    log_warn(LD_REND, "Seed head didn't match either seed.");
     goto done;
   }
 
