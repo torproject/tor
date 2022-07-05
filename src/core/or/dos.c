@@ -534,7 +534,7 @@ conn_update_on_close(conn_client_stats_t *stats, const tor_addr_t *addr)
 {
   /* Extra super duper safety. Going below 0 means an underflow which could
    * lead to most likely a false positive. In theory, this should never happen
-   * but lets be extra safe. */
+   * but let's be extra safe. */
   if (BUG(stats->concurrent_count == 0)) {
     return;
   }
