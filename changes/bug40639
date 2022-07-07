@@ -1,0 +1,5 @@
+  o Major bugfixes (vanguards):
+    - We had omitted some checks for whether our vanguards (second layer
+      guards from proposal 333) overlapped or came from the same family.
+      Now make sure to pick each of them to be independent. Fixes bug
+      40639; bugfix on 0.4.7.1-alpha.

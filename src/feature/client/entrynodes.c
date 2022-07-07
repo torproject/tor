@@ -4136,8 +4136,16 @@ maintain_layer2_guards(void)
   log_info(LD_GENERAL, "Adding %d guards to Layer2 routerset",
            new_guards_needed_n);
 
-  /* Add required guards to the list */
+  /* First gather the exclusions based on our current L2 guards */
   smartlist_t *excluded = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(layer2_guards, layer2_guard_t *, g) {
+    /* Exclude existing L2 guard + family so that we don't double-pick. */
+    const node_t *existing = node_get_by_id(g->identity);
+    if (existing)
+      nodelist_add_node_and_family(excluded, existing);
+  } SMARTLIST_FOREACH_END(g);
+
+  /* Add required guards to the list */
   for (int i = 0; i < new_guards_needed_n; i++) {
     const node_t *choice = NULL;
     const or_options_t *options = get_options();
