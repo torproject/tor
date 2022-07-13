@@ -678,6 +678,10 @@ trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
     if (queued_rend_request_is_too_old(req, now)) {
       log_info(LD_REND, "While trimming, rend request has been pending "
                         "for too long; discarding.");
+
+      if (req->rdv_data.pow_effort > pow_state->max_trimmed_effort)
+        pow_state->max_trimmed_effort = req->rdv_data.pow_effort;
+
       free_pending_rend(req);
     } else {
       smartlist_pqueue_add(new_pqueue,
@@ -689,6 +693,9 @@ trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
   /* Ok, we have rescued all the entries we want to keep. The rest are
    * all excess. */
   SMARTLIST_FOREACH_BEGIN(old_pqueue, pending_rend_t *, req) {
+    if (req->rdv_data.pow_effort > pow_state->max_trimmed_effort)
+      pow_state->max_trimmed_effort = req->rdv_data.pow_effort;
+
     free_pending_rend(req);
   } SMARTLIST_FOREACH_END(req);
   smartlist_free(old_pqueue);
@@ -719,7 +726,7 @@ count_service_rp_circuits_pending(hs_service_t *service)
  * effort is at least what we're suggesting for that service right now,
  * return 1, else return 0.
  */
-static int
+int
 top_of_rend_pqueue_is_worthwhile(hs_pow_service_state_t *pow_state)
 {
   tor_assert(pow_state->rend_request_pqueue);
@@ -815,6 +822,15 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
    * reschedule the event in order to continue handling them. */
   if (smartlist_len(pow_state->rend_request_pqueue) > 0) {
     mainloop_event_activate(pow_state->pop_pqueue_ev);
+
+    // XXX: Is this a good threshhold to decide that we have a significant
+    // queue? I just made it up.
+    if (smartlist_len(pow_state->rend_request_pqueue) >
+        2*MAX_REND_REQUEST_PER_MAINLOOP) {
+      /* Note the fact that we had multiple eventloops worth of queue
+       * to service, for effort estimation */
+      pow_state->had_queue = 1;
+    }
   }
 }
 
@@ -1334,8 +1350,10 @@ hs_circ_handle_introduce2(const hs_service_t *service,
       goto done;
     }
 
-    /* Increase the total effort in valid requests received this period. */
-    service->state.pow_state->total_effort += data.rdv_data.pow_effort;
+    /* Increase the total effort in valid requests received this period,
+     * but count 0-effort as min-effort, for estimation purposes. */
+    service->state.pow_state->total_effort += MAX(data.rdv_data.pow_effort,
+                                      service->state.pow_state->min_effort);
 
     /* Successfully added rend circuit to priority queue. */
     ret = 0;

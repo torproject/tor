@@ -2678,21 +2678,42 @@ update_suggested_effort(hs_service_t *service, time_t now)
   /* Make life easier */
   hs_pow_service_state_t *pow_state = service->state.pow_state;
 
-  /* Calculate the new suggested effort. */
-  /* TODO Check for overflow? */
-  pow_state->suggested_effort = (uint32_t)(pow_state->total_effort / pow_state->rend_handled);
+  /* Calculate the new suggested effort, using an additive-increase
+   * multiplicative-decrease estimation scheme. */
+  if (pow_state->max_trimmed_effort > pow_state->suggested_effort) {
+    /* If we trimmed a request above our suggested effort, re-estimate the
+     * effort */
+    pow_state->suggested_effort = (uint32_t)(pow_state->total_effort /
+                                             pow_state->rend_handled);
+  } else if (pow_state->had_queue) {
+    /* If we had a queue during this period, and the current top of queue
+     * is at or above the suggested effort, we should re-estimate the effort.
+     * Otherwise, it can stay the same (no change to effort). */
+    if (top_of_rend_pqueue_is_worthwhile(pow_state)) {
+      pow_state->suggested_effort = (uint32_t)(pow_state->total_effort /
+                                               pow_state->rend_handled);
+    }
+  } else {
+    /* If we were able to keep the queue drained the entire update period,
+     * multiplicative decrease the pow by 2/3. */
+    pow_state->suggested_effort = 2*pow_state->suggested_effort/3;
+  }
 
   log_debug(LD_REND, "Recalculated suggested effort: %u",
             pow_state->suggested_effort);
 
-  /* Set suggested effort to max(min_effort, suggested_effort) */
+  /* If the suggested effort has been decreased below the minimum, set it
+   * to zero: no pow needed again until we queue or trim */
   if (pow_state->suggested_effort < pow_state->min_effort) {
-    pow_state->suggested_effort = pow_state->min_effort;
+    // XXX: Verify this disables pow being done at all.
+    pow_state->suggested_effort = 0;
   }
 
   /* Reset the total effort sum and number of rends for this update period. */
   pow_state->total_effort = 0;
   pow_state->rend_handled = 0;
+  pow_state->max_trimmed_effort = 0;
+  pow_state->had_queue = 0;
   pow_state->next_effort_update = now + HS_UPDATE_PERIOD;
 }
 

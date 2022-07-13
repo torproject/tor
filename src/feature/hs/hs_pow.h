@@ -87,6 +87,9 @@ typedef struct hs_pow_service_state_t {
    * be serviced in a timely manner. */
   uint32_t suggested_effort;
 
+  /* The maximum effort of a request we've had to trim, this update period */
+  uint32_t max_trimmed_effort;
+
   /* The following values are used when calculating and updating the suggested
    * effort every HS_UPDATE_PERIOD seconds. */
 
@@ -96,6 +99,8 @@ typedef struct hs_pow_service_state_t {
   time_t next_effort_update;
   /* Sum of effort of all valid requests received since the last update. */
   uint64_t total_effort;
+  /* Did we have elements waiting in the queue during this period? */
+  bool had_queue;
 } hs_pow_service_state_t;
 
 /* Struct to store a solution to the PoW challenge. */
