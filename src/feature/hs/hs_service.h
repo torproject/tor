@@ -265,7 +265,6 @@ typedef struct hs_service_config_t {
   /** True iff PoW anti-DoS defenses are enabled. */
   unsigned int has_pow_defenses_enabled : 1;
   uint32_t pow_min_effort;
-  uint32_t pow_svc_bottom_capacity;
 
   /** If set, contains the Onion Balance master ed25519 public key (taken from
    * an .onion addresses) that this tor instance serves as backend. */

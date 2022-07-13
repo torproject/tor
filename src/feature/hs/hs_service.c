@@ -265,8 +265,6 @@ set_service_default_config(hs_service_config_t *c,
   /* PoW default options. */
   c->has_dos_defense_enabled = HS_CONFIG_V3_POW_DEFENSES_DEFAULT;
   c->pow_min_effort = HS_CONFIG_V3_POW_DEFENSES_MIN_EFFORT_DEFAULT;
-  c->pow_svc_bottom_capacity =
-    HS_CONFIG_V3_POW_DEFENSES_SVC_BOTTOM_CAPACITY_DEFAULT;
 }
 
 /** Initialize PoW defenses */
@@ -286,7 +284,7 @@ initialize_pow_defenses(hs_service_t *service)
   /* We recalculate and update the suggested effort every HS_UPDATE_PERIOD
    * seconds. */
   pow_state->suggested_effort = HS_POW_SUGGESTED_EFFORT_DEFAULT;
-  pow_state->svc_bottom_capacity = service->config.pow_svc_bottom_capacity;
+  pow_state->rend_handled = 0;
   pow_state->total_effort = 0;
   pow_state->next_effort_update = (time(NULL) + HS_UPDATE_PERIOD);
 
@@ -2677,15 +2675,12 @@ rotate_pow_seeds(hs_service_t *service, time_t now)
 static void
 update_suggested_effort(hs_service_t *service, time_t now)
 {
-  uint64_t denom;
-
   /* Make life easier */
   hs_pow_service_state_t *pow_state = service->state.pow_state;
 
   /* Calculate the new suggested effort. */
-  /* TODO Check for overflow in denominator? */
-  denom = (pow_state->svc_bottom_capacity * HS_UPDATE_PERIOD);
-  pow_state->suggested_effort = (pow_state->total_effort / denom);
+  /* TODO Check for overflow? */
+  pow_state->suggested_effort = (uint32_t)(pow_state->total_effort / pow_state->rend_handled);
 
   log_debug(LD_REND, "Recalculated suggested effort: %u",
             pow_state->suggested_effort);
@@ -2695,8 +2690,9 @@ update_suggested_effort(hs_service_t *service, time_t now)
     pow_state->suggested_effort = pow_state->min_effort;
   }
 
-  /* Reset the total effort sum for this update period. */
+  /* Reset the total effort sum and number of rends for this update period. */
   pow_state->total_effort = 0;
+  pow_state->rend_handled = 0;
   pow_state->next_effort_update = now + HS_UPDATE_PERIOD;
 }
 

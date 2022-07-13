@@ -90,8 +90,8 @@ typedef struct hs_pow_service_state_t {
   /* The following values are used when calculating and updating the suggested
    * effort every HS_UPDATE_PERIOD seconds. */
 
-  /* Number of intro requests the service can handle per second. */
-  uint32_t svc_bottom_capacity;
+  /* Number of intro requests the service handled since last update. */
+  uint32_t rend_handled;
   /* The next time at which to update the suggested effort. */
   time_t next_effort_update;
   /* Sum of effort of all valid requests received since the last update. */

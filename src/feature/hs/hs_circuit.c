@@ -803,7 +803,9 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
                                     &req->ip_enc_key_kp, &req->rdv_data, now);
     free_pending_rend(req);
 
+    ++pow_state->rend_handled;
     ++in_flight;
+
     if (++count == MAX_REND_REQUEST_PER_MAINLOOP) {
       break;
     }
