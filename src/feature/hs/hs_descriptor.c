@@ -2135,7 +2135,7 @@ decode_pow_params(const directory_token_t *tok,
              escaped(tok->args[2]));
     goto done;
   }
-  pow_params->suggested_effort = effort;
+  pow_params->suggested_effort = (uint32_t)effort;
 
   /* Parse the expiration time of the PoW params. */
   time_t expiration_time = 0;
