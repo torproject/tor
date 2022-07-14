@@ -283,7 +283,7 @@ initialize_pow_defenses(hs_service_t *service)
 
   /* We recalculate and update the suggested effort every HS_UPDATE_PERIOD
    * seconds. */
-  pow_state->suggested_effort = HS_POW_SUGGESTED_EFFORT_DEFAULT;
+  pow_state->suggested_effort = 0;
   pow_state->rend_handled = 0;
   pow_state->total_effort = 0;
   pow_state->next_effort_update = (time(NULL) + HS_UPDATE_PERIOD);
