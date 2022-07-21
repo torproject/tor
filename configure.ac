@@ -1022,7 +1022,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 AC_MSG_CHECKING([for OpenSSL < 1.0.1])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
-#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x1000100fL
+#if OPENSSL_VERSION_NUMBER < 0x1000100fL
 #error "too old"
 #endif
    ]], [[]])],
