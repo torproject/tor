@@ -110,7 +110,7 @@ add_rsa_fingerprint_to_dir(const char *fp, authdir_config_t *list,
   tor_strstrip(fingerprint, " ");
   if (base16_decode(d, DIGEST_LEN,
                     fingerprint, strlen(fingerprint)) != DIGEST_LEN) {
-    log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
+    log_warn(LD_DIRSERV, "Couldn't decode fingerprint %s",
              escaped(fp));
     tor_free(fingerprint);
     return -1;

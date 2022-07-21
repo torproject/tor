@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging):
+    - Avoid ""double-quoting"" strings in several log messages.
+      Fixes bug 22723; bugfix on 0.1.2.2-alpha.
