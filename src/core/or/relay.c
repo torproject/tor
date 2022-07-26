@@ -3038,10 +3038,23 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
       streams_blocked = circ->streams_blocked_on_p_chan;
     }
 
-    /* Circuitmux told us this was active, so it should have cells */
-    if (/*BUG(*/ queue->n == 0 /*)*/) {
-      log_warn(LD_BUG, "Found a supposedly active circuit with no cells "
-               "to send. Trying to recover.");
+    /* Circuitmux told us this was active, so it should have cells.
+     *
+     * Note: In terms of logic and coherence, this should never happen but the
+     * cmux dragon is powerful. Reason is that when the OOM is triggered, when
+     * cleaning up circuits, we mark them for close and then clear their cell
+     * queues. And so, we can have a circuit considered active by the cmux
+     * dragon but without cells. The cmux subsystem is only notified of this
+     * when the circuit is freed which leaves a tiny window between close and
+     * free to end up here.
+     *
+     * We are accepting this as an "ok" race else the changes are likely non
+     * trivial to make the mark for close to set the num cells to 0 and change
+     * the free functions to detach the circuit conditionnaly without creating
+     * a chain effect of madness.
+     *
+     * The lesson here is arti will prevail and leave the cmux dragon alone. */
+    if (queue->n == 0) {
       circuitmux_set_num_cells(cmux, circ, 0);
       if (! circ->marked_for_close)
         circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);

@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay):
+    - Remove a "BUG" warning for an acceptable race between a circuit close
+      and considering that circuit active. Fixes bug 40647; bugfix on
+      0.3.5.1-alpha.
