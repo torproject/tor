@@ -1,0 +1,4 @@
+  o Major bugfixes (relay):
+    - Stop sending TRUNCATED cell and instead close the circuits which sends a
+      DESTROY cell so every relay in the circuit path can stop queuing cells.
+      Fixes bug 40623; bugfix on 0.1.0.2-rc.
