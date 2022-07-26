@@ -590,7 +590,6 @@ or_connection_new(int type, int socket_family)
     /* If we aren't told an address for this connection, we should
      * presume it isn't local, and should be rate-limited. */
     TO_CONN(or_conn)->always_rate_limit_as_remote = 1;
-    connection_or_set_ext_or_identifier(or_conn);
   }
 
   return or_conn;
@@ -957,7 +956,6 @@ connection_free_minimal(connection_t *conn)
     connection_or_clear_identity(TO_OR_CONN(conn));
   }
   if (conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR) {
-    tor_free(TO_OR_CONN(conn)->ext_or_conn_id);
     tor_free(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash);
     tor_free(TO_OR_CONN(conn)->ext_or_transport);
   }
