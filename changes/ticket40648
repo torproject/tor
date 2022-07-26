@@ -1,0 +1,3 @@
+  o Code simplification and refactoring (bridges):
+    - Remove unused code related to ExtPort connection ID. Fixes bug 40648;
+      bugfix on 0.3.5.1-alpha.
