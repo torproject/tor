@@ -664,11 +664,11 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
     if (CIRCUIT_IS_ORIGIN(circ)) {
       circuit_mark_for_close(circ, reason|END_CIRC_REASON_FLAG_REMOTE);
     } else {
-      char payload[1];
-      log_debug(LD_OR, "Delivering 'truncated' back.");
-      payload[0] = (char)reason;
-      relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED,
-                                   payload, sizeof(payload), NULL);
+      /* Close the circuit so we stop queuing cells for it and propagate the
+       * DESTROY cell down the circuit so relays can stop queuing in-flight
+       * cells for this circuit which helps with memory pressure. */
+      log_debug(LD_OR, "Received DESTROY cell from n_chan, closing circuit.");
+      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
     }
   }
 }
