@@ -668,7 +668,7 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
        * DESTROY cell down the circuit so relays can stop queuing in-flight
        * cells for this circuit which helps with memory pressure. */
       log_debug(LD_OR, "Received DESTROY cell from n_chan, closing circuit.");
-      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+      circuit_mark_for_close(circ, reason | END_CIRC_REASON_FLAG_REMOTE);
     }
   }
 }
