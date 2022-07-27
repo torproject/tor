@@ -1,0 +1,5 @@
+  o Minor bugfixes (defense in depth):
+    - Change a test in the netflow padding code to make it more
+      _obviously_ safe against remotely triggered crashes.
+      (It was safe against these before, but not obviously so.)
+      Fixes bug 40645; bugfix on 0.3.1.1-alpha.
