@@ -52,6 +52,7 @@
 
 #define N_EWMA_CWND_PCT_DFLT (50)
 #define N_EWMA_MAX_DFLT (10)
+#define N_EWMA_SS_DFLT (2)
 
 /* BDP algorithms for each congestion control algorithms use the piecewise
  * estimattor. See section 3.1.4 of proposal 324. */
@@ -106,6 +107,11 @@ static uint8_t n_ewma_cwnd_pct;
  * Maximum number N for the N-count EWMA averaging of RTT and BDP.
  */
 static uint8_t n_ewma_max;
+
+/**
+ * Maximum number N for the N-count EWMA averaging of RTT in Slow Start.
+ */
+static uint8_t n_ewma_ss;
 
 /**
  * Minimum number of sendmes before we begin BDP estimates
@@ -196,6 +202,14 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
         N_EWMA_MAX_DFLT,
         N_EWMA_MAX_MIN,
         N_EWMA_MAX_MAX);
+
+#define N_EWMA_SS_MIN 2
+#define N_EWMA_SS_MAX (INT32_MAX)
+  n_ewma_ss =
+    networkstatus_get_param(NULL, "cc_ewma_ss",
+        N_EWMA_SS_DFLT,
+        N_EWMA_SS_MIN,
+        N_EWMA_SS_MAX);
 }
 
 /**
@@ -452,8 +466,18 @@ dequeue_timestamp(smartlist_t *timestamps_u64_usecs)
 static inline uint64_t
 n_ewma_count(const congestion_control_t *cc)
 {
-  uint64_t ewma_cnt = MIN(CWND_UPDATE_RATE(cc)*n_ewma_cwnd_pct/100,
+  uint64_t ewma_cnt = 0;
+
+  if (cc->in_slow_start) {
+    /* In slow-start, we check the Vegas condition every sendme,
+     * so much lower ewma counts are needed. */
+    ewma_cnt = n_ewma_ss;
+  } else {
+    /* After slow-start, we check the Vegas condition only once per
+     * CWND, so it is better to average over longer periods. */
+    ewma_cnt = MIN(CWND_UPDATE_RATE(cc)*n_ewma_cwnd_pct/100,
                           n_ewma_max);
+  }
   ewma_cnt = MAX(ewma_cnt, 2);
   return ewma_cnt;
 }
