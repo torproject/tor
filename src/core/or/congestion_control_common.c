@@ -857,8 +857,10 @@ congestion_control_update_circuit_rtt(congestion_control_t *cc,
     cc->max_rtt_usec = rtt;
   }
 
-  if (cc->min_rtt_usec == 0 || rtt < cc->min_rtt_usec) {
-    cc->min_rtt_usec = rtt;
+  if (cc->min_rtt_usec == 0 || cc->ewma_rtt_usec < cc->min_rtt_usec) {
+    // Using the EWMA for min instead of current RTT helps average out
+    // effects from other conns
+    cc->min_rtt_usec = cc->ewma_rtt_usec;
   }
 
   return rtt;
