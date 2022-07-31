@@ -54,6 +54,8 @@
 #define N_EWMA_MAX_DFLT (10)
 #define N_EWMA_SS_DFLT (2)
 
+#define RTT_RESET_PCT_DFLT (100)
+
 /* BDP algorithms for each congestion control algorithms use the piecewise
  * estimattor. See section 3.1.4 of proposal 324. */
 #define WESTWOOD_BDP_ALG BDP_ALG_PIECEWISE
@@ -119,6 +121,12 @@ static uint8_t n_ewma_ss;
 static uint8_t bwe_sendme_min;
 
 /**
+ * Percentage of the current RTT to use when reseting the minimum RTT
+ * for a circuit. (RTT is reset when the cwnd hits cwnd_min).
+ */
+static uint8_t rtt_reset_pct;
+
+/**
  * Update global congestion control related consensus parameter values,
  * every consensus update.
  */
@@ -162,6 +170,14 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
         CWND_MAX_DFLT,
         CWND_MAX_MIN,
         CWND_MAX_MAX);
+
+#define RTT_RESET_PCT_MIN (0)
+#define RTT_RESET_PCT_MAX (100)
+  rtt_reset_pct =
+    networkstatus_get_param(NULL, "cc_rtt_reset_pct",
+        RTT_RESET_PCT_DFLT,
+        RTT_RESET_PCT_MIN,
+        RTT_RESET_PCT_MAX);
 
 #define SENDME_INC_MIN 1
 #define SENDME_INC_MAX (255)
@@ -857,7 +873,22 @@ congestion_control_update_circuit_rtt(congestion_control_t *cc,
     cc->max_rtt_usec = rtt;
   }
 
-  if (cc->min_rtt_usec == 0 || cc->ewma_rtt_usec < cc->min_rtt_usec) {
+  if (cc->min_rtt_usec == 0) {
+    // If we do not have a min_rtt yet, use current ewma
+    cc->min_rtt_usec = cc->ewma_rtt_usec;
+  } else if (cc->cwnd == cc->cwnd_min) {
+    // Raise min rtt if cwnd hit cwnd_min. This gets us out of a wedge state
+    // if we hit cwnd_min due to an abnormally low rtt.
+    uint64_t new_rtt = percent_max_mix(cc->ewma_rtt_usec, cc->min_rtt_usec,
+                                       rtt_reset_pct);
+
+    static ratelim_t rtt_notice_limit = RATELIM_INIT(300);
+    log_fn_ratelim(&rtt_notice_limit, LOG_NOTICE, LD_CIRC,
+            "Resetting circ RTT from %"PRIu64" to %"PRIu64" due to low cwnd",
+            cc->min_rtt_usec/1000, new_rtt/1000);
+
+    cc->min_rtt_usec = new_rtt;
+  } else if (cc->ewma_rtt_usec < cc->min_rtt_usec) {
     // Using the EWMA for min instead of current RTT helps average out
     // effects from other conns
     cc->min_rtt_usec = cc->ewma_rtt_usec;
