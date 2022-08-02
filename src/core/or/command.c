@@ -629,9 +629,11 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
   if (!CIRCUIT_IS_ORIGIN(circ) &&
       chan == TO_OR_CIRCUIT(circ)->p_chan &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
-    /* the destroy came from behind */
+    /* The destroy came from behind so nullify its p_chan. Close the circuit
+     * with a DESTROYED reason so we don't propagate along the path forward the
+     * reason which could be used as a side channel. */
     circuit_set_p_circid_chan(TO_OR_CIRCUIT(circ), 0, NULL);
-    circuit_mark_for_close(circ, reason|END_CIRC_REASON_FLAG_REMOTE);
+    circuit_mark_for_close(circ, END_CIRC_REASON_DESTROYED);
   } else { /* the destroy came from ahead */
     circuit_set_n_circid_chan(circ, 0, NULL);
     if (CIRCUIT_IS_ORIGIN(circ)) {
@@ -639,9 +641,10 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
     } else {
       /* Close the circuit so we stop queuing cells for it and propagate the
        * DESTROY cell down the circuit so relays can stop queuing in-flight
-       * cells for this circuit which helps with memory pressure. */
+       * cells for this circuit which helps with memory pressure. We do NOT
+       * propagate the remote reason so not to create a side channel. */
       log_debug(LD_OR, "Received DESTROY cell from n_chan, closing circuit.");
-      circuit_mark_for_close(circ, reason | END_CIRC_REASON_FLAG_REMOTE);
+      circuit_mark_for_close(circ, END_CIRC_REASON_DESTROYED);
     }
   }
 }
