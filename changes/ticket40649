@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay):
+    - Do not propagate either forward or backward a DESTROY remote reason when
+      closing a circuit so to avoid a possible side channel. Fixes bug 40649;
+      bugfix on 0.1.2.4-alpha.
