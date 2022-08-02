@@ -806,6 +806,10 @@ connection_or_about_to_close(or_connection_t *or_conn)
   } else if (!tor_digest_is_zero(or_conn->identity_digest)) {
     connection_or_event_status(or_conn, OR_CONN_EVENT_CLOSED,
                 tls_error_to_orconn_end_reason(or_conn->tls_error));
+  } else {
+    /* Normal close, we notify of a done connection. */
+    connection_or_event_status(or_conn, OR_CONN_EVENT_CLOSED,
+                               END_OR_CONN_REASON_DONE);
   }
 }
 
