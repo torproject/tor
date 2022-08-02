@@ -882,10 +882,19 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
   if (!cc->ewma_rtt_usec) {
      uint64_t cwnd = cc->cwnd;
 
+     tor_assert_nonfatal(cc->cwnd <= cwnd_max);
+
      /* If the channel is blocked, keep subtracting off the chan_q
       * until we hit the min cwnd. */
      if (blocked_on_chan) {
-       cwnd = MAX(cwnd - chan_q, cc->cwnd_min);
+       /* Cast is fine because we're less than int32 */
+       if (chan_q >= (int64_t)cwnd) {
+         log_notice(LD_CIRC,
+                    "Clock stall with large chanq: %d %"PRIu64, chan_q, cwnd);
+         cwnd = cc->cwnd_min;
+       } else {
+         cwnd = MAX(cwnd - chan_q, cc->cwnd_min);
+       }
        cc->blocked_chan = 1;
      } else {
        cc->blocked_chan = 0;

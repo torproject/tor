@@ -1,0 +1,8 @@
+  o Minor bugfixes (congestion control):
+    - Add a check for an integer underflow condition that might
+      happen in cases where the system clock is stopped, the
+      ORconn is blocked, and the endpoint sends more than a
+      congestion window worth of non-data control cells at once.
+      This would cause a large congestion window to be calculated
+      instead of a small one. No security impact. Fixes bug 40644;
+      bugfix on 0.4.7.5-alpha.
