@@ -1,0 +1,5 @@
+  o Major bugfixes (relay):
+    - Remove OR connections btrack subsystem entries when the connections
+      closes normally. Before this, we would only close it on error and thus
+      leaking memory for each normal OR connections. Fixes bug 40604; bugfix
+      on 0.4.0.1-alpha.
