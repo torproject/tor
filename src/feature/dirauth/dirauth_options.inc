@@ -76,6 +76,9 @@ CONF_VAR(RecommendedClientVersions, LINELIST, 0, NULL)
 /** Which versions of tor should we tell users to run on relays? */
 CONF_VAR(RecommendedServerVersions, LINELIST, 0, NULL)
 
+/** Relays which should be voted Guard regardless of uptime and bandwidth. */
+CONF_VAR(AuthDirVoteGuard, ROUTERSET, 0, NULL)
+
 /** If an authority has been around for less than this amount of time, it
  * does not believe its reachability information is accurate.  Only
  * altered on testing networks. */

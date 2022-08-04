@@ -573,6 +573,21 @@ should_publish_node_ipv6(const node_t *node, const routerinfo_t *ri,
      router_is_me(ri));
 }
 
+/** Set routerstatus flags based on the authority options. Same as the testing
+ * function but for the main network. */
+static void
+dirserv_set_routerstatus_flags(routerstatus_t *rs)
+{
+  const dirauth_options_t *options = dirauth_get_options();
+
+  tor_assert(rs);
+
+  /* Assign Guard flag to relays that can get it unconditionnaly. */
+  if (routerset_contains_routerstatus(options->AuthDirVoteGuard, rs, 0)) {
+    rs->is_possible_guard = 1;
+  }
+}
+
 /**
  * Extract status information from <b>ri</b> and from other authority
  * functions and store it in <b>rs</b>, as per
@@ -638,6 +653,8 @@ dirauth_set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
   if (options->TestingTorNetwork) {
     dirserv_set_routerstatus_testing(rs);
+  } else {
+    dirserv_set_routerstatus_flags(rs);
   }
 }
 

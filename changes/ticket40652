@@ -1,0 +1,5 @@
+  o Minor features (dirauth):
+    - Add an AuthDirVoteGuard torrc option that can allow authorities to assign
+      the Guard flag to the given fingerprints/country code/IPs. This is a
+      needed feature mostly for defense purposes in case a DoS hits the network
+      and relay start losing the Guard flags too fast. Closes ticket 40652.

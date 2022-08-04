@@ -3229,6 +3229,11 @@ on the public Tor network.
     If set to 0, we vote Running for every relay, and don't perform
     these tests. (Default: 1)
 
+[[AuthDirVoteGuard]] **AuthDirVoteGuard** __node__,__node__,__...__::
+    A list of identity fingerprints or country codes or address patterns of
+    nodes to vote Guard for regardless of their uptime and bandwidth. See
+    <<ExcludeNodes,ExcludeNodes>> for more information on how to specify nodes.
+
 [[BridgePassword]] **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to
     serve all requested bridge information. Used by the (only partially
