@@ -1,0 +1,9 @@
+  o Major bugfixes (congestion control):
+    - Implement RFC3742 Limited Slow Start. Congestion control was
+      overshooting the congestion window during slow start, particularly for
+      onion service activity. With this fix, we now update the congestion
+      window more often during slow start, as well as dampen the exponential
+      growth when the congestion window grows above a capping parameter.
+      This should reduce the memory increases guard relays were seeing, as
+      well as allow us to set lower queue limits to defend against
+      ongoing DoS attacks. Fixes bug 40642; bugfix on 0.4.7.5-alpha.
