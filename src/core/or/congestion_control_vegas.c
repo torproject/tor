@@ -49,21 +49,6 @@
 #define VEGAS_DELTA_ONION_DFLT (8*OUTBUF_CELLS)
 #define VEGAS_SSCAP_ONION_DFLT (600)
 
-/* Single Onions are three hops, so params are based on 3 outbufs of cells */
-#define VEGAS_ALPHA_SOS_DFLT (3*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
-#define VEGAS_BETA_SOS_DFLT (3*OUTBUF_CELLS)
-#define VEGAS_GAMMA_SOS_DFLT (3*OUTBUF_CELLS)
-#define VEGAS_DELTA_SOS_DFLT (5*OUTBUF_CELLS)
-#define VEGAS_SSCAP_SOS_DFLT (500)
-
-/* Vanguard Onions are 7 hops (or 8 if both sides use vanguards, but that
- * should be rare), so params are based on 7 outbufs of cells */
-#define VEGAS_ALPHA_VG_DFLT (7*OUTBUF_CELLS-TLS_RECORD_MAX_CELLS)
-#define VEGAS_BETA_VG_DFLT (7*OUTBUF_CELLS)
-#define VEGAS_GAMMA_VG_DFLT (7*OUTBUF_CELLS)
-#define VEGAS_DELTA_VG_DFLT (9*OUTBUF_CELLS)
-#define VEGAS_SSCAP_VG_DFLT (600)
-
 /**
  * The original TCP Vegas congestion window BDP estimator.
  */
@@ -99,6 +84,7 @@ congestion_control_vegas_set_params(congestion_control_t *cc,
       ss_cwnd_cap = VEGAS_SSCAP_SBWS_DFLT;
       break;
     case CC_PATH_EXIT:
+    case CC_PATH_ONION_SOS:
       alpha_str = "cc_vegas_alpha_exit";
       beta_str = "cc_vegas_beta_exit";
       gamma_str = "cc_vegas_gamma_exit";
@@ -111,6 +97,7 @@ congestion_control_vegas_set_params(congestion_control_t *cc,
       ss_cwnd_cap = VEGAS_SSCAP_EXIT_DFLT;
       break;
     case CC_PATH_ONION:
+    case CC_PATH_ONION_VG:
       alpha_str = "cc_vegas_alpha_onion";
       beta_str = "cc_vegas_beta_onion";
       gamma_str = "cc_vegas_gamma_onion";
@@ -121,30 +108,6 @@ congestion_control_vegas_set_params(congestion_control_t *cc,
       gamma = VEGAS_GAMMA_ONION_DFLT;
       delta = VEGAS_DELTA_ONION_DFLT;
       ss_cwnd_cap = VEGAS_SSCAP_ONION_DFLT;
-      break;
-    case CC_PATH_ONION_SOS:
-      alpha_str = "cc_vegas_alpha_sos";
-      beta_str = "cc_vegas_beta_sos";
-      gamma_str = "cc_vegas_gamma_sos";
-      delta_str = "cc_vegas_delta_sos";
-      sscap_str = "cc_sscap_sos";
-      alpha = VEGAS_ALPHA_SOS_DFLT;
-      beta = VEGAS_BETA_SOS_DFLT;
-      gamma = VEGAS_GAMMA_SOS_DFLT;
-      delta = VEGAS_DELTA_SOS_DFLT;
-      ss_cwnd_cap = VEGAS_SSCAP_SOS_DFLT;
-      break;
-    case CC_PATH_ONION_VG:
-      alpha_str = "cc_vegas_alpha_vg";
-      beta_str = "cc_vegas_beta_vg";
-      gamma_str = "cc_vegas_gamma_vg";
-      delta_str = "cc_vegas_delta_vg";
-      sscap_str = "cc_sscap_vg";
-      alpha = VEGAS_ALPHA_VG_DFLT;
-      beta = VEGAS_BETA_VG_DFLT;
-      gamma = VEGAS_GAMMA_VG_DFLT;
-      delta = VEGAS_DELTA_VG_DFLT;
-      ss_cwnd_cap = VEGAS_SSCAP_VG_DFLT;
       break;
     default:
       tor_assert(0);
