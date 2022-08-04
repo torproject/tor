@@ -3234,6 +3234,27 @@ on the public Tor network.
     nodes to vote Guard for regardless of their uptime and bandwidth. See
     <<ExcludeNodes,ExcludeNodes>> for more information on how to specify nodes.
 
+[[AuthDirVoteGuardBwThresholdFraction]] **AuthDirVoteGuardBwThresholdFraction** __FRACTION__::
+    The Guard flag bandwidth performance threshold fraction that is the
+    fraction representing who gets the Guard flag out of all measured
+    bandwidth. (Default: 0.75)
+
+[[AuthDirVoteGuardGuaranteeTimeKnown]] **AuthDirVoteGuardGuaranteeTimeKnown** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    A relay with at least this much weighted time known can be considered
+    familiar enough to be a guard. (Default: 8 days)
+
+[[AuthDirVoteGuardGuaranteeWFU]] **AuthDirVoteGuardGuaranteeWFU** __FRACTION__::
+    A level of weighted fractional uptime (WFU) is that is sufficient to be a
+    Guard. (Default: 0.98)
+
+[[AuthDirVoteStableGuaranteeMinUptime]] **AuthDirVoteStableGuaranteeMinUptime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    If a relay's uptime is at least this value, then it is always considered
+    stable, regardless of the rest of the network. (Default: 30 days)
+
+[[AuthDirVoteStableGuaranteeMTBF]] **AuthDirVoteStableGuaranteeMTBF** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    If a relay's mean time between failures (MTBF) is least this value, then
+    it will always be considered stable. (Default: 5 days)
+
 [[BridgePassword]] **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to
     serve all requested bridge information. Used by the (only partially
