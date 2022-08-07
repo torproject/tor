@@ -607,7 +607,7 @@ dos_cc_new_create_cell(channel_t *chan)
   /* This is the detection. Assess at every CREATE cell if the client should
    * get marked as malicious. This should be kept as fast as possible. */
   if (cc_has_exhausted_circuits(&entry->dos_stats)) {
-    /* If this is the first time we mark this entry, log it a info level.
+    /* If this is the first time we mark this entry, log it.
      * Under heavy DDoS, logging each time we mark would results in lots and
      * lots of logs. */
     if (entry->dos_stats.cc_stats.marked_until_ts == 0) {

@@ -3179,7 +3179,7 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 #define RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT \
   (50 * RELAY_CIRC_CELL_QUEUE_SIZE_MIN)
 
-/* The maximum number of cell a circuit queue can contain. This is updated at
+/* The maximum number of cells a circuit queue can contain. This is updated at
  * every new consensus and controlled by a parameter. */
 static int32_t max_circuit_cell_queue_size =
   RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT;
