@@ -1,0 +1,10 @@
+  o Minor features (dirauth):
+    - Add an AuthDirVoteGuard torrc option that can allow authorities to
+      assign the Guard flag to the given fingerprints/country code/IPs. This
+      is a needed feature mostly for defense purposes in case a DoS hits the
+      network and relay start losing the Guard flags too fast.
+    - Make UPTIME_TO_GUARANTEE_STABLE, MTBF_TO_GUARANTEE_STABLE,
+      TIME_KNOWN_TO_GUARANTEE_FAMILIAR WFU_TO_GUARANTEE_GUARD tunable from
+      torrc.
+    - Add a torrc option to control the Guard flag bandwidth threshold
+      percentile. Closes ticket 40652.
