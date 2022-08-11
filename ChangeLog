@@ -1,3 +1,71 @@
+INSERT SUMMARY BLURP
+
+Changes in version 0.4.7.9 - 2022-08-11
+  o Major bugfixes (congestion control):
+    - Implement RFC3742 Limited Slow Start. Congestion control was
+      overshooting the congestion window during slow start, particularly
+      for onion service activity. With this fix, we now update the
+      congestion window more often during slow start, as well as dampen
+      the exponential growth when the congestion window grows above a
+      capping parameter. This should reduce the memory increases guard
+      relays were seeing, as well as allow us to set lower queue limits
+      to defend against ongoing DoS attacks. Fixes bug 40642; bugfix
+      on 0.4.7.5-alpha.
+
+  o Major bugfixes (relay):
+    - Remove OR connections btrack subsystem entries when the
+      connections closes normally. Before this, we would only close it
+      on error and thus leaking memory for each normal OR connections.
+      Fixes bug 40604; bugfix on 0.4.0.1-alpha.
+    - Stop sending TRUNCATED cell and instead close the circuits which
+      sends a DESTROY cell so every relay in the circuit path can stop
+      queuing cells. Fixes bug 40623; bugfix on 0.1.0.2-rc.
+
+  o Major bugfixes (vanguards):
+    - We had omitted some checks for whether our vanguards (second layer
+      guards from proposal 333) overlapped. Now make sure to pick each
+      of them to be independent. Also, change the design to allow them
+      to come from the same family. Fixes bug 40639; bugfix
+      on 0.4.7.1-alpha.
+
+  o Minor features (dirauth):
+    - Add a torrc option to control the Guard flag bandwidth threshold
+      percentile. Closes ticket 40652.
+    - Add an AuthDirVoteGuard torrc option that can allow authorities to
+      assign the Guard flag to the given fingerprints/country code/IPs.
+      This is a needed feature mostly for defense purposes in case a DoS
+      hits the network and relay start losing the Guard flags too fast.
+    - Make UPTIME_TO_GUARANTEE_STABLE, MTBF_TO_GUARANTEE_STABLE,
+      TIME_KNOWN_TO_GUARANTEE_FAMILIAR WFU_TO_GUARANTEE_GUARD tunable
+      from torrc.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on August 11, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/08/11.
+
+  o Minor bugfixes (congestion control):
+    - Add a check for an integer underflow condition that might happen
+      in cases where the system clock is stopped, the ORconn is blocked,
+      and the endpoint sends more than a congestion window worth of non-
+      data control cells at once. This would cause a large congestion
+      window to be calculated instead of a small one. No security
+      impact. Fixes bug 40644; bugfix on 0.4.7.5-alpha.
+
+  o Minor bugfixes (defense in depth):
+    - Change a test in the netflow padding code to make it more
+      _obviously_ safe against remotely triggered crashes. (It was safe
+      against these before, but not obviously so.) Fixes bug 40645;
+      bugfix on 0.3.1.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Do not propagate either forward or backward a DESTROY remote
+      reason when closing a circuit so to avoid a possible side channel.
+      Fixes bug 40649; bugfix on 0.1.2.4-alpha.
+
+
 Changes in version 0.4.7.8 - 2022-06-17
   This version fixes several bugfixes including a High severity security issue
   categorized as a Denial of Service. Everyone running an earlier version
