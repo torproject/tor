@@ -2,9 +2,16 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
-INSERT SUMMARY BLURP
-
 Changes in version 0.4.7.9 - 2022-08-11
+  This version contains several major fixes aimed at reducing memory pressure on
+  relays and possible side-channel. It also contains a major bugfix related to
+  congestion control also aimed at reducing memory pressure on relays.
+  Finally, there is last one major bugfix related to Vanguard L2 layer node
+  selection.
+
+  We strongly recommend to upgrade to this version especially for Exit relays
+  in order to help the network defend against this ongoing DDoS.
+
   o Major bugfixes (congestion control):
     - Implement RFC3742 Limited Slow Start. Congestion control was
       overshooting the congestion window during slow start, particularly
@@ -17,13 +24,13 @@ Changes in version 0.4.7.9 - 2022-08-11
       on 0.4.7.5-alpha.
 
   o Major bugfixes (relay):
-    - Remove OR connections btrack subsystem entries when the
-      connections closes normally. Before this, we would only close it
-      on error and thus leaking memory for each normal OR connections.
-      Fixes bug 40604; bugfix on 0.4.0.1-alpha.
-    - Stop sending TRUNCATED cell and instead close the circuits which
-      sends a DESTROY cell so every relay in the circuit path can stop
-      queuing cells. Fixes bug 40623; bugfix on 0.1.0.2-rc.
+    - Remove OR connections btrack subsystem entries when the connections
+      close normally. Before this, we would only remove the entry on error and
+      thus leaking memory for each normal OR connections. Fixes bug 40604;
+      bugfix on 0.4.0.1-alpha.
+    - Stop sending TRUNCATED cell and instead close the circuit from which we
+      received a DESTROY cell. This makes every relay in the circuit path to
+      stop queuing cells. Fixes bug 40623; bugfix on 0.1.0.2-rc.
 
   o Major bugfixes (vanguards):
     - We had omitted some checks for whether our vanguards (second layer
@@ -65,9 +72,9 @@ Changes in version 0.4.7.9 - 2022-08-11
       bugfix on 0.3.1.1-alpha.
 
   o Minor bugfixes (relay):
-    - Do not propagate either forward or backward a DESTROY remote
-      reason when closing a circuit so to avoid a possible side channel.
-      Fixes bug 40649; bugfix on 0.1.2.4-alpha.
+    - Do not propagate either forward or backward a DESTROY remote reason when
+      closing a circuit in order to avoid a possible side channel. Fixes bug
+      40649; bugfix on 0.1.2.4-alpha.
 
 
 Changes in version 0.4.7.8 - 2022-06-17
