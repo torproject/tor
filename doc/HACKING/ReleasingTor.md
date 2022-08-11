@@ -53,6 +53,12 @@ been merged upstream.
       (Version bumps apply to `maint`; anything touching the changelog should
       apply only to `main` or `release`.)
 
+      When updating the version, it will be on `maint` branches and so to
+      merge-forward, use `git merge -s ours`. For instance, if merging the
+      version change of `maint-0.4.5` into `maint-0.4.6`, do on `maint-0.4.6`
+      this command: `git merge -s ours maint-0.4.5`. And then you can proceed
+      with a git-merge-forward.
+
    2. For the ChangeLog and ReleaseNotes, you need to write a blurb at the top
       explaining a bit the release.
 
@@ -126,7 +132,7 @@ do the following:
       If possible, mention in which Tor Browser version (with dates) the
       release will be in. This usually only applies to the latest stable.
 
-   4. Inform `tor-talk@lists.torproject.org` with the releasing pointing to
+   4. Inform `tor-announce@lists.torproject.org` with the releasing pointing to
       the Forum. Append the ChangeLog there. We do this until we can automate
       such post from the forum directly.
 
