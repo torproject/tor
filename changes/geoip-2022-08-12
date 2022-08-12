@@ -1,0 +1,5 @@
+  o Major bugfixes (geoip data):
+    - IPFire informed us on August 12th that databases generated after
+      (including) August 10th did not have proper ARIN network allocations. We
+      are updating the database to use the one generated on August 9th, 2022.
+      Fixes bug 40658; bugfix on 0.4.5.13.
