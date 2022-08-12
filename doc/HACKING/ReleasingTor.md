@@ -126,6 +126,9 @@ do the following:
    2. Merge upstream the artifacts from the `patches` job in the
       `Post-process` stage of the CI release pipeline.
 
+      Like step (2.1) above, the `-dev` version bump need to be done manually
+      with a `git merge -s ours`.
+
    3. Write and post the release announcement for the `forum.torproject.net`
       in the `News -> Tor Release Announcement` category.
 
