@@ -2,6 +2,19 @@ This document summarizes new features and bugfixes in each stable
 release of Tor. If you want to see more detailed descriptions of the
 changes in each development snapshot, see the ChangeLog file.
 
+Changes in version 0.4.5.14 - 2022-08-12
+  This version updates the geoip cache that we generate from IPFire location
+  database to use the August 9th, 2022 one. Everyone MUST update to this
+  latest release else circuit path selection and relay metrics are badly
+  affected.
+
+  o Major bugfixes (geoip data):
+    - IPFire informed us on August 12th that databases generated after
+      (including) August 10th did not have proper ARIN network allocations. We
+      are updating the database to use the one generated on August 9th, 2022.
+      Fixes bug 40658; bugfix on 0.4.5.13.
+
+
 Changes in version 0.4.5.13 - 2022-08-11
   This version contains two major fixes aimed at reducing memory pressure on
   relays and possible side-channel. The rest of the fixes were backported for
