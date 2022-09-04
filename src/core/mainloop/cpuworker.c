@@ -117,7 +117,7 @@ cpuworker_consensus_has_changed(const networkstatus_t *ns)
  * during Tor's lifetime.
  */
 void
-cpu_init(void)
+cpuworker_init(void)
 {
   if (!replyqueue) {
     replyqueue = replyqueue_new(0);

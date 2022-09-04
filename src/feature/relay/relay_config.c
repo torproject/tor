@@ -1327,12 +1327,6 @@ options_act_relay(const or_options_t *old_options)
                "Worker-related options changed. Rotating workers.");
       const int server_mode_turned_on =
         server_mode(options) && !server_mode(old_options);
-      const int dir_server_mode_turned_on =
-        dir_server_mode(options) && !dir_server_mode(old_options);
-
-      if (server_mode_turned_on || dir_server_mode_turned_on) {
-        cpu_init();
-      }
 
       if (server_mode_turned_on) {
         ip_address_changed(0);
