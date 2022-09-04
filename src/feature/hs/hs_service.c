@@ -2464,16 +2464,16 @@ update_all_descriptors_pow_params(time_t now)
       /* Services SHOULD NOT upload a new descriptor if the suggested
        * effort value changes by less than 15 percent. */
       previous_effort = encrypted->pow_params->suggested_effort;
-      if (pow_state->suggested_effort <= previous_effort * 0.85 ||
-          previous_effort * 1.15 <= pow_state->suggested_effort) {
+      if (pow_state->suggested_effort < previous_effort * 0.85 ||
+          previous_effort * 1.15 < pow_state->suggested_effort) {
         log_info(LD_REND, "Suggested effort changed significantly, "
                           "updating descriptors...");
         encrypted->pow_params->suggested_effort = pow_state->suggested_effort;
         descs_updated = 1;
       } else if (previous_effort != pow_state->suggested_effort) {
         /* The change in suggested effort was not significant enough to
-        warrant updating the descriptors, return 0 to reflect they are
-        unchanged. */
+         * warrant updating the descriptors, return 0 to reflect they are
+         * unchanged. */
         log_info(LD_REND, "Change in suggested effort didn't warrant "
                           "updating descriptors.");
       }

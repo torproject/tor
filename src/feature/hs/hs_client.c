@@ -675,7 +675,8 @@ send_introduce1(origin_circuit_t *intro_circ,
 
   /* If the descriptor contains PoW parameters then the service is
    * expecting a PoW solution in the INTRODUCE cell, which we solve here. */
-  if (desc->encrypted_data.pow_params) {
+  if (desc->encrypted_data.pow_params &&
+      desc->encrypted_data.pow_params->suggested_effort > 0) {
     log_debug(LD_REND, "PoW params present in descriptor.");
     pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
 

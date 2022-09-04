@@ -2129,7 +2129,7 @@ decode_pow_params(const directory_token_t *tok,
 
   int ok;
   unsigned long effort =
-      tor_parse_ulong(tok->args[2], 10, 1, UINT32_MAX, &ok, NULL);
+      tor_parse_ulong(tok->args[2], 10, 0, UINT32_MAX, &ok, NULL);
   if (!ok) {
     log_warn(LD_REND, "Unparseable suggested effort %s in PoW params",
              escaped(tok->args[2]));
