@@ -541,7 +541,7 @@ intro_circ_is_ok(const origin_circuit_t *circ)
 
 /** Find a descriptor intro point object that matches the given ident in the
  * given descriptor desc. Return NULL if not found. */
-static const hs_desc_intro_point_t *
+const hs_desc_intro_point_t *
 find_desc_intro_point_by_ident(const hs_ident_circuit_t *ident,
                                const hs_descriptor_t *desc)
 {
@@ -670,7 +670,6 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   const ed25519_public_key_t *service_identity_pk = NULL;
   const hs_desc_intro_point_t *ip;
-  hs_pow_solution_t *pow_solution = NULL;
 
   tor_assert(rend_circ);
   if (intro_circ_is_ok(intro_circ) < 0) {
@@ -682,8 +681,14 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
    * version number but for now there is none because it's all v3. */
   hs_build_address(service_identity_pk, HS_VERSION_THREE, onion_address);
 
-  log_info(LD_REND, "Sending INTRODUCE1 cell to service %s on circuit %u",
+  log_info(LD_REND, "Considering sending INTRODUCE1 cell to service %s "
+           "on circuit %u",
            safe_str_client(onion_address), TO_CIRCUIT(intro_circ)->n_circ_id);
+
+  /* if it's already waiting on the cpuworker farm, don't queue it again */
+  if (intro_circ->hs_currently_solving_pow) {
+    goto tran_err;
+  }
 
   /* 1) Get descriptor from our cache. */
   const hs_descriptor_t *desc =
@@ -731,7 +736,6 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
   if (desc->encrypted_data.pow_params &&
       desc->encrypted_data.pow_params->suggested_effort > 0) {
     log_debug(LD_REND, "PoW params present in descriptor.");
-    pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
 
     /* make sure we can't be tricked into hopeless quests */
     if (desc->encrypted_data.pow_params->suggested_effort >
@@ -746,15 +750,15 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
         CLIENT_MAX_POW_EFFORT;
     }
 
-    if (hs_pow_solve(desc->encrypted_data.pow_params, pow_solution)) {
-      log_warn(LD_REND, "Haven't solved the PoW yet.");
-      goto tran_err;
-    }
-    log_notice(LD_REND, "Got a PoW solution we like! Shipping it!");
-    /* Set flag to reflect that the HS we are attempting to rendezvous has PoW
-     * defenses enabled, and as such we will need to be more lenient with
-     * timing out while waiting for the circuit to be built. */
-    rend_circ->hs_with_pow_circ = 1;
+    /* send it to the client-side pow cpuworker for solving. */
+    intro_circ->hs_currently_solving_pow = 1;
+    pow_queue_work(intro_circ->global_identifier,
+                   rend_circ->global_identifier,
+                   desc->encrypted_data.pow_params);
+
+    /* can't proceed with the intro1 cell yet, so yield back to the
+     * main loop */
+    goto tran_err;
   }
 
   /* move on to the next phase: actually try to send it */
@@ -781,7 +785,6 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
 
  end:
   memwipe(onion_address, 0, sizeof(onion_address));
-  tor_free(pow_solution);
   return status;
 }
 

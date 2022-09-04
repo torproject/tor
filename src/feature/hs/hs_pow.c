@@ -13,9 +13,15 @@ typedef unsigned __int128 uint128_t;
 #include <stdio.h>
 
 #include "ext/ht.h"
+#include "core/or/circuitlist.h"
+#include "core/or/origin_circuit_st.h"
+#include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_descriptor.h"
+#include "feature/hs/hs_client.h"
 #include "feature/hs/hs_pow.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "core/mainloop/cpuworker.h"
+#include "lib/evloop/workqueue.h"
 
 /** Replay cache set up */
 /** Cache entry for (nonce, seed) replay protection. */
@@ -144,7 +150,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
 
   /* We'll do a maximum of the nonce size iterations here which is the maximum
    * number of nonce we can try in an attempt to find a valid solution. */
-  log_notice(LD_REND, "Solving proof of work");
+  log_notice(LD_REND, "Solving proof of work (effort %u)", effort);
   for (uint64_t i = 0; i < UINT64_MAX; i++) {
     /* Calculate S = equix_solve(C || N || E) */
     if (!equix_solve(ctx, challenge, HS_POW_CHALLENGE_LEN, solution)) {
@@ -289,4 +295,151 @@ hs_pow_free_service_state(hs_pow_service_state_t *state)
   smartlist_free(state->rend_request_pqueue);
   mainloop_event_free(state->pop_pqueue_ev);
   tor_free(state);
+}
+
+/* =====
+   Thread workers
+   =====*/
+
+/**
+ * An object passed to a worker thread that will try to solve the pow.
+ */
+typedef struct pow_worker_job_t {
+
+  /** Input: The pow challenge we need to solve. */
+  hs_pow_desc_params_t *pow_params;
+
+  /** State: we'll look these up to figure out how to proceed after. */
+  uint32_t intro_circ_identifier;
+  uint32_t rend_circ_identifier;
+
+  /** Output: The worker thread will malloc and write its answer here,
+   * or set it to NULL if it produced no useful answer. */
+  hs_pow_solution_t *pow_solution_out;
+
+} pow_worker_job_t;
+
+/**
+ * Worker function. This function runs inside a worker thread and receives
+ * a pow_worker_job_t as its input.
+ */
+static workqueue_reply_t
+pow_worker_threadfn(void *state_, void *work_)
+{
+  (void)state_;
+  pow_worker_job_t *job = work_;
+  job->pow_solution_out = tor_malloc_zero(sizeof(hs_pow_solution_t));
+
+  if (hs_pow_solve(job->pow_params, job->pow_solution_out)) {
+    log_info(LD_REND, "Haven't solved the PoW yet. Returning.");
+    tor_free(job->pow_solution_out);
+    job->pow_solution_out = NULL; /* how we signal that we came up empty */
+    return WQ_RPL_REPLY;
+  }
+
+  /* we have a winner! */
+  log_info(LD_REND, "cpuworker pow: we have a winner!");
+  return WQ_RPL_REPLY;
+}
+
+/**
+ * Helper: release all storage held in <b>job</b>.
+ */
+static void
+pow_worker_job_free(pow_worker_job_t *job)
+{
+  if (!job)
+    return;
+  tor_free(job->pow_params);
+  tor_free(job->pow_solution_out);
+  tor_free(job);
+}
+
+/**
+ * Worker function: This function runs in the main thread, and receives
+ * a pow_worker_job_t that the worker thread has already processed.
+ */
+static void
+pow_worker_replyfn(void *work_)
+{
+  tor_assert(in_main_thread());
+  tor_assert(work_);
+
+  pow_worker_job_t *job = work_;
+
+  // look up the circuits that we're going to use this pow in
+  origin_circuit_t *intro_circ =
+    circuit_get_by_global_id(job->intro_circ_identifier);
+  origin_circuit_t *rend_circ =
+    circuit_get_by_global_id(job->rend_circ_identifier);
+
+  /* try to re-create desc and ip */
+  const ed25519_public_key_t *service_identity_pk = NULL;
+  const hs_descriptor_t *desc = NULL;
+  const hs_desc_intro_point_t *ip = NULL;
+  if (intro_circ)
+    service_identity_pk = &intro_circ->hs_ident->identity_pk;
+  if (service_identity_pk)
+    desc = hs_cache_lookup_as_client(service_identity_pk);
+  if (desc)
+    ip = find_desc_intro_point_by_ident(intro_circ->hs_ident, desc);
+
+  if (intro_circ && rend_circ && service_identity_pk && desc && ip &&
+      job->pow_solution_out) { /* successful pow solve, and circs still here */
+
+    log_notice(LD_REND, "Got a PoW solution we like! Shipping it!");
+    /* Set flag to reflect that the HS we are attempting to rendezvous has PoW
+     * defenses enabled, and as such we will need to be more lenient with
+     * timing out while waiting for the service-side circuit to be built. */
+    rend_circ->hs_with_pow_circ = 1;
+
+    // and then send that intro cell
+    if (send_introduce1(intro_circ, rend_circ,
+                        desc, job->pow_solution_out, ip) < 0) {
+      /* if it failed, mark the intro point as ready to start over */
+      intro_circ->hs_currently_solving_pow = 0;
+    }
+
+  } else { /* unsuccessful pow solve. put it back on the queue. */
+    log_notice(LD_REND,
+               "PoW cpuworker returned with no solution. Will retry soon.");
+    if (intro_circ) {
+      intro_circ->hs_currently_solving_pow = 0;
+    }
+    /* We could imagine immediately re-launching a follow-up worker
+     * here too, but for now just let the main intro loop find the
+     * not-being-serviced request and it can start everything again. For
+     * the sake of complexity, maybe that's the best long-term solution
+     * too, and we can tune the cpuworker job to try for longer if we want
+     * to improve efficiency. */
+  }
+
+  pow_worker_job_free(job);
+}
+
+/**
+ * Queue the job of solving the pow in a worker thread.
+ */
+int
+pow_queue_work(uint32_t intro_circ_identifier,
+               uint32_t rend_circ_identifier,
+               const hs_pow_desc_params_t *pow_params)
+{
+  tor_assert(in_main_thread());
+
+  pow_worker_job_t *job = tor_malloc_zero(sizeof(*job));
+  job->intro_circ_identifier = intro_circ_identifier;
+  job->rend_circ_identifier = rend_circ_identifier;
+  job->pow_params = tor_memdup(pow_params, sizeof(hs_pow_desc_params_t));
+
+  workqueue_entry_t *work;
+  work = cpuworker_queue_work(WQ_PRI_LOW,
+                              pow_worker_threadfn,
+                              pow_worker_replyfn,
+                              job);
+  if (!work) {
+    pow_worker_job_free(job);
+    return -1;
+  }
+  return 0;
 }

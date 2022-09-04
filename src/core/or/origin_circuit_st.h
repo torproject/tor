@@ -218,6 +218,10 @@ struct origin_circuit_t {
    * requests. */
   unsigned int hs_with_pow_circ : 1;
 
+  /** Set iff this intro circ required a pow, and it has already queued
+   * the pow with the cpuworker and is awaiting a reply. */
+  unsigned int hs_currently_solving_pow : 1;
+
   /** Set iff this circuit has been given a relaxed timeout because
    * no circuits have opened. Used to prevent spamming logs. */
   unsigned int relaxed_timeout : 1;

@@ -14,7 +14,8 @@
  * Right now, we use this infrastructure
  *  <ul><li>for processing onionskins in onion.c
  *      <li>for compressing consensuses in consdiffmgr.c,
- *      <li>and for calculating diffs and compressing them in consdiffmgr.c.
+ *      <li>for calculating diffs and compressing them in consdiffmgr.c.
+ *      <li>and for solving onion service PoW challenges in pow.c.
  *  </ul>
  **/
 #include "core/or/or.h"

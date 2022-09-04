@@ -130,4 +130,8 @@ int hs_pow_verify(const hs_pow_service_state_t *pow_state,
 void hs_pow_remove_seed_from_cache(uint32_t seed);
 void hs_pow_free_service_state(hs_pow_service_state_t *state);
 
+int pow_queue_work(uint32_t intro_circ_identifier,
+                   uint32_t rend_circ_identifier,
+                   const hs_pow_desc_params_t *pow_params);
+
 #endif /* !defined(TOR_HS_POW_H) */

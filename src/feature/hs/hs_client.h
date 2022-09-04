@@ -78,6 +78,10 @@ typedef struct hs_client_service_authorization_t {
   int flags;
 } hs_client_service_authorization_t;
 
+const hs_desc_intro_point_t *
+find_desc_intro_point_by_ident(const hs_ident_circuit_t *ident,
+                               const hs_descriptor_t *desc);
+
 hs_client_register_auth_status_t
 hs_client_register_auth_credentials(hs_client_service_authorization_t *creds);
 

@@ -3043,8 +3043,8 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       if (introcirc->base_.state == CIRCUIT_STATE_OPEN) {
         int ret;
         log_info(LD_REND, "Found open intro circ %u (id: %" PRIu32 "). "
-                          "Rend circuit %u (id: %" PRIu32 "); Sending "
-                          "introduction. (stream %d sec old)",
+                          "Rend circuit %u (id: %" PRIu32 "); Considering "
+                          "sending introduction. (stream %d sec old)",
                  (unsigned) TO_CIRCUIT(introcirc)->n_circ_id,
                  introcirc->global_identifier,
                  (unsigned) TO_CIRCUIT(rendcirc)->n_circ_id,
