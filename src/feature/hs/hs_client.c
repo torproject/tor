@@ -600,6 +600,59 @@ find_desc_intro_point_by_legacy_id(const char *legacy_id,
   return ret_ip;
 }
 
+/** Phase two for client-side introducing:
+ * Send an INTRODUCE1 cell along the intro circuit and populate the rend
+ * circuit identifier with the needed key material for the e2e encryption.
+ */
+int
+send_introduce1(origin_circuit_t *intro_circ,
+                origin_circuit_t *rend_circ,
+                const hs_descriptor_t *desc,
+                hs_pow_solution_t *pow_solution,
+                const hs_desc_intro_point_t *ip)
+{
+  const ed25519_public_key_t *service_identity_pk =
+    &intro_circ->hs_ident->identity_pk;
+
+  /* Send the INTRODUCE1 cell. */
+  if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
+                              &desc->subcredential, pow_solution) < 0) {
+    if (TO_CIRCUIT(intro_circ)->marked_for_close) {
+      /* If the introduction circuit was closed, we were unable to send the
+       * cell for some reasons. In any case, the intro circuit has to be
+       * closed by the above function. We'll return a transient error so tor
+       * can recover and pick a new intro point. To avoid picking that same
+       * intro point, we'll note down the intro point failure so it doesn't
+       * get reused. */
+      hs_cache_client_intro_state_note(service_identity_pk,
+                                       &intro_circ->hs_ident->intro_auth_pk,
+                                       INTRO_POINT_FAILURE_GENERIC);
+    }
+    /* It is also possible that the rendezvous circuit was closed due to being
+     * unable to use the rendezvous point node_t so in that case, we also want
+     * to recover and let tor pick a new one. */
+    return -1; /* transient failure */
+  }
+
+  /* Cell has been sent successfully. Copy the introduction point
+   * authentication and encryption key in the rendezvous circuit identifier so
+   * we can compute the ntor keys when we receive the RENDEZVOUS2 cell. */
+  memcpy(&rend_circ->hs_ident->intro_enc_pk, &ip->enc_key,
+         sizeof(rend_circ->hs_ident->intro_enc_pk));
+  ed25519_pubkey_copy(&rend_circ->hs_ident->intro_auth_pk,
+                      &intro_circ->hs_ident->intro_auth_pk);
+
+  /* Now, we wait for an ACK or NAK on this circuit. */
+  circuit_change_purpose(TO_CIRCUIT(intro_circ),
+                         CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT);
+  /* Set timestamp_dirty, because circuit_expire_building expects it to
+   * specify when a circuit entered the _C_INTRODUCE_ACK_WAIT state. */
+  TO_CIRCUIT(intro_circ)->timestamp_dirty = time(NULL);
+  pathbias_count_use_attempt(intro_circ);
+
+  return 0; /* Success. */
+}
+
 /** Set a client-side cap on the highest effort of PoW we will try to
  * tackle. If asked for higher, we solve it at this cap. */
 #define CLIENT_MAX_POW_EFFORT 500
@@ -610,8 +663,8 @@ find_desc_intro_point_by_legacy_id(const char *legacy_id,
  * has been taken to recover and -2 if there is a permanent error indicating
  * that both circuits were closed. */
 static int
-send_introduce1(origin_circuit_t *intro_circ,
-                origin_circuit_t *rend_circ)
+consider_sending_introduce1(origin_circuit_t *intro_circ,
+                            origin_circuit_t *rend_circ)
 {
   int status;
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
@@ -704,41 +757,9 @@ send_introduce1(origin_circuit_t *intro_circ,
     rend_circ->hs_with_pow_circ = 1;
   }
 
-  /* Send the INTRODUCE1 cell. */
-  if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
-                              &desc->subcredential, pow_solution) < 0) {
-    if (TO_CIRCUIT(intro_circ)->marked_for_close) {
-      /* If the introduction circuit was closed, we were unable to send the
-       * cell for some reasons. In any case, the intro circuit has to be
-       * closed by the above function. We'll return a transient error so tor
-       * can recover and pick a new intro point. To avoid picking that same
-       * intro point, we'll note down the intro point failure so it doesn't
-       * get reused. */
-      hs_cache_client_intro_state_note(service_identity_pk,
-                                       &intro_circ->hs_ident->intro_auth_pk,
-                                       INTRO_POINT_FAILURE_GENERIC);
-    }
-    /* It is also possible that the rendezvous circuit was closed due to being
-     * unable to use the rendezvous point node_t so in that case, we also want
-     * to recover and let tor pick a new one. */
+  /* move on to the next phase: actually try to send it */
+  if (send_introduce1(intro_circ, rend_circ, desc, NULL, ip) < 0)
     goto tran_err;
-  }
-
-  /* Cell has been sent successfully. Copy the introduction point
-   * authentication and encryption key in the rendezvous circuit identifier so
-   * we can compute the ntor keys when we receive the RENDEZVOUS2 cell. */
-  memcpy(&rend_circ->hs_ident->intro_enc_pk, &ip->enc_key,
-         sizeof(rend_circ->hs_ident->intro_enc_pk));
-  ed25519_pubkey_copy(&rend_circ->hs_ident->intro_auth_pk,
-                      &intro_circ->hs_ident->intro_auth_pk);
-
-  /* Now, we wait for an ACK or NAK on this circuit. */
-  circuit_change_purpose(TO_CIRCUIT(intro_circ),
-                         CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT);
-  /* Set timestamp_dirty, because circuit_expire_building expects it to
-   * specify when a circuit entered the _C_INTRODUCE_ACK_WAIT state. */
-  TO_CIRCUIT(intro_circ)->timestamp_dirty = time(NULL);
-  pathbias_count_use_attempt(intro_circ);
 
   /* Success. */
   status = 0;
@@ -2180,7 +2201,7 @@ int
 hs_client_send_introduce1(origin_circuit_t *intro_circ,
                           origin_circuit_t *rend_circ)
 {
-  return send_introduce1(intro_circ, rend_circ);
+  return consider_sending_introduce1(intro_circ, rend_circ);
 }
 
 /** Called when the client circuit circ has been established. It can be either

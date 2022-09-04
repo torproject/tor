@@ -100,6 +100,12 @@ void hs_client_launch_v3_desc_fetch(
                                const ed25519_public_key_t *onion_identity_pk,
                                const smartlist_t *hsdirs);
 
+int send_introduce1(origin_circuit_t *intro_circ,
+                    origin_circuit_t *rend_circ,
+                    const hs_descriptor_t *desc,
+                    hs_pow_solution_t *pow_solution,
+                    const hs_desc_intro_point_t *ip);
+
 hs_desc_decode_status_t hs_client_decode_descriptor(
                      const char *desc_str,
                      const ed25519_public_key_t *service_identity_pk,
