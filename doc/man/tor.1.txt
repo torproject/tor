@@ -860,6 +860,7 @@ forward slash (/) in the configuration file and on the command line.
     \_relayed traffic_ to the given number of bytes in each direction.
     They do not include directory fetches by the relay (from authority
     or other relays), because that is considered "client" activity. (Default: 0)
+    RelayBandwidthBurst defaults to the value of RelayBandwidthRate if unset.
 
 [[RelayBandwidthRate]] **RelayBandwidthRate** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**TBytes**|**KBits**|**MBits**|**GBits**|**TBits**::
     If not 0, a separate token bucket limits the average incoming bandwidth
@@ -869,6 +870,7 @@ forward slash (/) in the configuration file and on the command line.
     requests, but that may change in future versions. They do not include directory
     fetches by the relay (from authority or other relays), because that is considered
     "client" activity.  (Default: 0)
+    RelayBandwidthRate defaults to the value of RelayBandwidthBurst if unset.
 
 [[RephistTrackTime]] **RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Tells an authority, or other node tracking node reliability and history,
