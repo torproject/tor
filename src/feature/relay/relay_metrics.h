@@ -29,6 +29,8 @@ typedef enum {
   RELAY_METRICS_NUM_DNS_ERRORS = 5,
   /** Number of TCP exhaustion reached. */
   RELAY_METRICS_NUM_TCP_EXHAUSTION = 6,
+  /** Number of connections. */
+  RELAY_METRICS_NUM_CONNECTIONS = 7,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
