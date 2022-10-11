@@ -36,6 +36,7 @@
 #include "feature/stats/rephist.h"
 
 #include "core/or/or_circuit_st.h"
+#include "core/or/channel.h"
 
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */
@@ -188,7 +189,11 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
 #define WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL (60)
     static ratelim_t last_warned =
       RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
-    rep_hist_note_circuit_handshake_dropped(queue_idx);
+    if (!channel_is_client(circ->p_chan)) {
+      // Avoid counting create cells from clients, to go with the same
+      // check in command_process_create_cell().
+      rep_hist_note_circuit_handshake_dropped(queue_idx);
+    }
     if (queue_idx == ONION_HANDSHAKE_TYPE_NTOR) {
       char *m;
       if ((m = rate_limit_log(&last_warned, approx_time()))) {
