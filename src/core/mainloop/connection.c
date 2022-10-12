@@ -2013,6 +2013,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
         log_notice(LD_APP,
                    "Denying socks connection from untrusted address %s.",
                    fmt_and_decorate_addr(&addr));
+        rep_hist_note_conn_rejected(new_type);
         tor_close_socket(news);
         return 0;
       }
@@ -2022,6 +2023,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       if (dir_policy_permits_address(&addr) == 0) {
         log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
                    fmt_and_decorate_addr(&addr));
+        rep_hist_note_conn_rejected(new_type);
         tor_close_socket(news);
         return 0;
       }
@@ -2030,6 +2032,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       /* Assess with the connection DoS mitigation subsystem if this address
        * can open a new connection. */
       if (dos_conn_addr_get_defense_type(&addr) == DOS_CONN_DEFENSE_CLOSE) {
+        rep_hist_note_conn_rejected(new_type);
         tor_close_socket(news);
         return 0;
       }

@@ -1651,6 +1651,8 @@ rep_hist_note_exit_stream_opened(uint16_t port)
 static uint64_t conn_num_created[2][CONN_TYPE_MAX_];
 /** Number of connections opened per direction per type. */
 static uint64_t conn_num_opened[2][CONN_TYPE_MAX_];
+/** Number of connections rejected per type. Always inbound. */
+static uint64_t conn_num_rejected[CONN_TYPE_MAX_];
 
 /** Note that a connection has opened of the given type. */
 void
@@ -1677,6 +1679,15 @@ rep_hist_note_conn_closed(bool from_listener, unsigned int type)
   }
 }
 
+/** Note that a connection has rejected of the given type. */
+void
+rep_hist_note_conn_rejected(unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+
+  conn_num_rejected[type]++;
+}
+
 /** Return number of created connections of the given type. */
 uint64_t
 rep_hist_get_conn_created(bool from_listener, unsigned int type)
@@ -1693,6 +1704,14 @@ rep_hist_get_conn_opened(bool from_listener, unsigned int type)
   tor_assert(type <= CONN_TYPE_MAX_);
   unsigned int dir = CONN_DIRECTION(from_listener);
   return conn_num_opened[dir][type];
+}
+
+/** Return number of opened connections of the given type. */
+uint64_t
+rep_hist_get_conn_rejected(unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+  return conn_num_rejected[type];
 }
 
 /*** cell statistics ***/

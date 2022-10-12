@@ -43,8 +43,10 @@ void rep_hist_note_exit_stream_opened(uint16_t port);
 
 void rep_hist_note_conn_opened(bool initiated, unsigned int type);
 void rep_hist_note_conn_closed(bool initiated, unsigned int type);
+void rep_hist_note_conn_rejected(unsigned int type);
 uint64_t rep_hist_get_conn_created(bool initiated, unsigned int type);
 uint64_t rep_hist_get_conn_opened(bool initiated, unsigned int type);
+uint64_t rep_hist_get_conn_rejected(unsigned int type);
 
 void rep_hist_buffer_stats_init(time_t now);
 void rep_hist_buffer_stats_add_circ(circuit_t *circ,

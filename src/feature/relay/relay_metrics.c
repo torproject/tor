@@ -170,6 +170,11 @@ fill_connections_values(void)
                                rentry->help);
     fill_single_connection_value(sentry, i, "received", "opened",
                                  rep_hist_get_conn_opened(true, i));
+
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "received", "rejected",
+                                 rep_hist_get_conn_rejected(i));
   }
 }
 
