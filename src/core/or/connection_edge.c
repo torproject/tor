@@ -4206,6 +4206,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     log_info(LD_EXIT,"%s failed exit policy%s. Closing.",
              connection_describe(conn),
              why_failed_exit_policy);
+    rep_hist_note_conn_rejected(conn->type);
     connection_edge_end(edge_conn, END_STREAM_REASON_EXITPOLICY);
     circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
     connection_free(conn);
@@ -4233,6 +4234,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
       nodelist_reentry_contains(&conn->addr, conn->port)) {
     log_info(LD_EXIT, "%s tried to connect back to a known relay address. "
                       "Closing.", connection_describe(conn));
+    rep_hist_note_conn_rejected(conn->type);
     connection_edge_end(edge_conn, END_STREAM_REASON_CONNECTREFUSED);
     circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
     connection_free(conn);
