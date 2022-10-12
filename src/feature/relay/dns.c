@@ -1637,7 +1637,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   }
   if (result != DNS_ERR_SHUTDOWN)
     dns_found_answer(string_address, orig_query_type,
-                     result, &addr, hostname, clip_dns_ttl(ttl));
+                     result, &addr, hostname, clip_dns_fuzzy_ttl(ttl));
 
   tor_free(arg_);
 }
