@@ -6,7 +6,7 @@ COPY ./ /usr/src/tor
 WORKDIR /usr/src/tor
 RUN \
 export CXXFLAGS="${CFLAGS}" && \
-apk add --no-cache --virtual .torbuild build-base libcap-dev libseccomp-dev libevent-dev openssl1.1-compat-dev ca-certificates zlib-dev xz-dev zstd-dev git automake autoconf asciidoc nss-dev libevent-static zlib-static openssl-libs-static zstd-static nss-static nss-tools libseccomp-dev libseccomp-static libcap-ng-dev libcap-ng-static libcap-dev libcap-static && \
+apk add --no-cache --virtual .torbuild build-base libcap-dev libseccomp-dev libevent-dev openssl1.1-compat-dev ca-certificates zlib-dev xz-dev zstd-dev git automake autoconf asciidoc nss-dev libevent-static zlib-static openssl-libs-static nss-static nss-tools libseccomp-dev libseccomp-static libcap-ng-dev libcap-ng-static libcap-dev libcap-static && \
 #mkdir -p /usr/src && \
 #cd /usr/src && \
 #git clone --branch automerge https://github.com/maxisoft/tor.git && \
