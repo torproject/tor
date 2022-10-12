@@ -69,6 +69,7 @@
 #define REPHIST_PRIVATE
 #include "core/or/or.h"
 #include "app/config/config.h"
+#include "core/mainloop/connection.h"
 #include "core/or/circuitlist.h"
 #include "core/or/connection_or.h"
 #include "feature/dirauth/authmode.h"
@@ -1636,6 +1637,81 @@ rep_hist_note_exit_stream_opened(uint16_t port)
     return; /* Not initialized. */
   exit_streams[port]++;
   log_debug(LD_HIST, "Opened exit stream to port %d", port);
+}
+
+/******* Connections statistics *******/
+
+#define CONN_DIRECTION_INITIATED 0
+#define CONN_DIRECTION_RECEIVED  1
+
+#define CONN_DIRECTION(from_listener) \
+  (from_listener) ? CONN_DIRECTION_RECEIVED : CONN_DIRECTION_INITIATED
+
+/** Number of connections created as in seen per direction per type. */
+static uint64_t conn_num_created[2][CONN_TYPE_MAX_];
+/** Number of connections opened per direction per type. */
+static uint64_t conn_num_opened[2][CONN_TYPE_MAX_];
+/** Number of connections rejected per type. Always inbound. */
+static uint64_t conn_num_rejected[CONN_TYPE_MAX_];
+
+/** Note that a connection has opened of the given type. */
+void
+rep_hist_note_conn_opened(bool from_listener, unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+
+  unsigned int dir = CONN_DIRECTION(from_listener);
+
+  conn_num_created[dir][type]++;
+  conn_num_opened[dir][type]++;
+}
+
+/** Note that a connection has closed of the given type. */
+void
+rep_hist_note_conn_closed(bool from_listener, unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+
+  unsigned int dir = CONN_DIRECTION(from_listener);
+
+  if (conn_num_opened[dir][type] > 0) {
+    conn_num_opened[dir][type]--;
+  }
+}
+
+/** Note that a connection has rejected of the given type. */
+void
+rep_hist_note_conn_rejected(unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+
+  conn_num_rejected[type]++;
+}
+
+/** Return number of created connections of the given type. */
+uint64_t
+rep_hist_get_conn_created(bool from_listener, unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+  unsigned int dir = CONN_DIRECTION(from_listener);
+  return conn_num_created[dir][type];
+}
+
+/** Return number of opened connections of the given type. */
+uint64_t
+rep_hist_get_conn_opened(bool from_listener, unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+  unsigned int dir = CONN_DIRECTION(from_listener);
+  return conn_num_opened[dir][type];
+}
+
+/** Return number of opened connections of the given type. */
+uint64_t
+rep_hist_get_conn_rejected(unsigned int type)
+{
+  tor_assert(type <= CONN_TYPE_MAX_);
+  return conn_num_rejected[type];
 }
 
 /*** cell statistics ***/
