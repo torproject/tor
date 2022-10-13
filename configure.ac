@@ -2357,7 +2357,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wexplicit-ownership-type
      -Wextern-initializer
      -Wextra
-     -Wextra-semi
      -Wextra-tokens
      -Wflexible-array-extensions
      -Wfloat-conversion
@@ -2504,6 +2503,8 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
   ], [ TOR_TRY_COMPILE_WITH_CFLAGS(warning_flag, [],
               [TOR_WARNING_FLAGS="$TOR_WARNING_FLAGS warning_flag" CFLAGS="$CFLAGS warning_flag"], true)
      ])
+     
+  AX_CHECK_COMPILE_FLAG([-Wextra-semi], [CFLAGS="$CFLAGS -Wextra-semi"], [], [-Werror])
 
 dnl    We should re-enable this in some later version.  Clang doesn't
 dnl    mind, but it causes trouble with GCC.
