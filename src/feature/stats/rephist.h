@@ -48,6 +48,9 @@ uint64_t rep_hist_get_conn_created(bool initiated, unsigned int type);
 uint64_t rep_hist_get_conn_opened(bool initiated, unsigned int type);
 uint64_t rep_hist_get_conn_rejected(unsigned int type);
 
+void rep_hist_note_stream(unsigned int cmd);
+uint64_t rep_hist_get_stream_seen(unsigned int cmd);
+
 void rep_hist_buffer_stats_init(time_t now);
 void rep_hist_buffer_stats_add_circ(circuit_t *circ,
                                     time_t end_of_interval);
