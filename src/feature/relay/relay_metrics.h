@@ -31,6 +31,8 @@ typedef enum {
   RELAY_METRICS_NUM_TCP_EXHAUSTION = 6,
   /** Number of connections. */
   RELAY_METRICS_NUM_CONNECTIONS = 7,
+  /** Number of streams. */
+  RELAY_METRICS_NUM_STREAMS = 8,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
