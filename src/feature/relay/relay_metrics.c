@@ -95,8 +95,8 @@ static const relay_metrics_entry_t base_metrics[] =
   {
     .key = RELAY_METRICS_NUM_CONNECTIONS,
     .type = METRICS_TYPE_COUNTER,
-    .name = METRICS_NAME(relay_connections),
-    .help = "Connections metrics of this relay",
+    .name = METRICS_NAME(relay_connections_total),
+    .help = "Total number of connections",
     .fill_fn = fill_connections_values,
   },
   {
