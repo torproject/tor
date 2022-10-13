@@ -33,6 +33,8 @@ typedef enum {
   RELAY_METRICS_NUM_CONNECTIONS = 7,
   /** Number of streams. */
   RELAY_METRICS_NUM_STREAMS = 8,
+  /** Congestion control counters. */
+  RELAY_METRICS_NUM_CC = 9,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
