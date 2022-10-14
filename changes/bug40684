@@ -1,0 +1,6 @@
+  o Major bugfixes (OSX):
+    - Fix coarse-time computation on Apple platforms (like Mac M1) where
+      the Mach absolute time ticks do not correspond directly to
+      nanoseconds.  Previously, we computed our shift value wrong, which
+      led us to give incorrect timing results.
+      Fixes bug 40684; bugfix on 0.3.3.1-alpha.
