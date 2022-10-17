@@ -3170,6 +3170,33 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
  * every new consensus and controlled by a parameter. */
 static int32_t max_circuit_cell_queue_size =
   RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT;
+/** Maximum number of cell on an outbound circuit queue. This is updated at
+ * every new consensus and controlled by a parameter. This default is incorrect
+ * and won't be used at all except in unit tests. */
+static int32_t max_circuit_cell_queue_size_out =
+  RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT;
+
+/** Return consensus parameter "circ_max_cell_queue_size". The given ns can be
+ * NULL. */
+static uint32_t
+get_param_max_circuit_cell_queue_size(const networkstatus_t *ns)
+{
+  return networkstatus_get_param(ns, "circ_max_cell_queue_size",
+                                 RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT,
+                                 RELAY_CIRC_CELL_QUEUE_SIZE_MIN,
+                                 RELAY_CIRC_CELL_QUEUE_SIZE_MAX);
+}
+
+/** Return consensus parameter "circ_max_cell_queue_size_out". The given ns can
+ * be NULL. */
+static uint32_t
+get_param_max_circuit_cell_queue_size_out(const networkstatus_t *ns)
+{
+  return networkstatus_get_param(ns, "circ_max_cell_queue_size_out",
+                                 get_param_max_circuit_cell_queue_size(ns),
+                                 RELAY_CIRC_CELL_QUEUE_SIZE_MIN,
+                                 RELAY_CIRC_CELL_QUEUE_SIZE_MAX);
+}
 
 /* Called when the consensus has changed. At this stage, the global consensus
  * object has NOT been updated. It is called from
@@ -3181,10 +3208,9 @@ relay_consensus_has_changed(const networkstatus_t *ns)
 
   /* Update the circuit max cell queue size from the consensus. */
   max_circuit_cell_queue_size =
-    networkstatus_get_param(ns, "circ_max_cell_queue_size",
-                            RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT,
-                            RELAY_CIRC_CELL_QUEUE_SIZE_MIN,
-                            RELAY_CIRC_CELL_QUEUE_SIZE_MAX);
+    get_param_max_circuit_cell_queue_size(ns);
+  max_circuit_cell_queue_size_out =
+    get_param_max_circuit_cell_queue_size_out(ns);
 }
 
 /** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>chan</b>
@@ -3201,6 +3227,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
 {
   or_circuit_t *orcirc = NULL;
   cell_queue_t *queue;
+  int32_t max_queue_size;
   int streams_blocked;
   int exitward;
   if (circ->marked_for_close)
@@ -3210,13 +3237,21 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
   if (exitward) {
     queue = &circ->n_chan_cells;
     streams_blocked = circ->streams_blocked_on_n_chan;
+    max_queue_size = max_circuit_cell_queue_size_out;
   } else {
     orcirc = TO_OR_CIRCUIT(circ);
     queue = &orcirc->p_chan_cells;
     streams_blocked = circ->streams_blocked_on_p_chan;
+    max_queue_size = max_circuit_cell_queue_size;
   }
 
-  if (PREDICT_UNLIKELY(queue->n >= max_circuit_cell_queue_size)) {
+  if (PREDICT_UNLIKELY(queue->n >= max_queue_size)) {
+    /* This DoS defense only applies at the Guard as in the p_chan is likely
+     * a client IP attacking the network. */
+    if (exitward && CIRCUIT_IS_ORCIRC(circ)) {
+      dos_note_circ_max_outq(CONST_TO_OR_CIRCUIT(circ)->p_chan);
+    }
+
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "%s circuit has %d cells in its queue, maximum allowed is %d. "
            "Closing circuit for safety reasons.",

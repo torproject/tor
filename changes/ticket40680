@@ -1,0 +1,6 @@
+  o Minor feature (relay, DoS):
+    - Apply circuit creation anti-DoS defenses if the outbound circuit max cell
+      queue size is reached too many times. This introduces two new consensus
+      parameters to control the queue size limit and number of times allowed to
+      go over that limit. Close ticket 40680.
+
