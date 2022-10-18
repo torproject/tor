@@ -3135,6 +3135,9 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 
 /* Minimum value is the maximum circuit window size.
  *
+ * This value is set to a lower bound we believe is reasonable with congestion
+ * control and basic network tunning parameters.
+ *
  * SENDME cells makes it that we can control how many cells can be inflight on
  * a circuit from end to end. This logic makes it that on any circuit cell
  * queue, we have a maximum of cells possible.
@@ -3157,12 +3160,12 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
  * DoS memory pressure so the default size is a middle ground between not
  * having any limit and having a very restricted one. This is why we can also
  * control it through a consensus parameter. */
-#define RELAY_CIRC_CELL_QUEUE_SIZE_MIN CIRCWINDOW_START_MAX
+#define RELAY_CIRC_CELL_QUEUE_SIZE_MIN 50
 /* We can't have a consensus parameter above this value. */
 #define RELAY_CIRC_CELL_QUEUE_SIZE_MAX INT32_MAX
 /* Default value is set to a large value so we can handle padding cells
- * properly which aren't accounted for in the SENDME window. Default is 50000
- * allowed cells in the queue resulting in ~25MB. */
+ * properly which aren't accounted for in the SENDME window. Default is 2500
+ * allowed cells in the queue resulting in ~1MB. */
 #define RELAY_CIRC_CELL_QUEUE_SIZE_DEFAULT \
   (50 * RELAY_CIRC_CELL_QUEUE_SIZE_MIN)
 
