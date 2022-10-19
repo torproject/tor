@@ -205,22 +205,6 @@ struct origin_circuit_t {
    * (in host byte order) for response comparison. */
   uint32_t pathbias_probe_nonce;
 
-  /** Set iff this is a hidden-service circuit which has timed out
-   * according to our current circuit-build timeout, but which has
-   * been kept around because it might still succeed in connecting to
-   * its destination, and which is not a fully-connected rendezvous
-   * circuit.
-   *
-   * (We clear this flag for client-side rendezvous circuits when they
-   * are 'joined' to the other side's rendezvous circuit, so that
-   * connection_ap_handshake_attach_circuit can put client streams on
-   * the circuit.  We also clear this flag for service-side rendezvous
-   * circuits when they are 'joined' to a client's rend circ, but only
-   * for symmetry with the client case.  Client-side introduction
-   * circuits are closed when we get a joined rend circ, and
-   * service-side introduction circuits never have this flag set.) */
-  unsigned int hs_circ_has_timed_out : 1;
-
   /** Set iff this circuit has been given a relaxed timeout because
    * no circuits have opened. Used to prevent spamming logs. */
   unsigned int relaxed_timeout : 1;

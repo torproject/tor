@@ -126,11 +126,6 @@ finalize_rend_circuit(origin_circuit_t *circ, crypt_path_t *hop,
   hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
-  /* Now that this circuit has finished connecting to its destination,
-   * make sure circuit_get_open_circ_or_launch is willing to return it
-   * so we can actually use it. */
-  circ->hs_circ_has_timed_out = 0;
-
   /* If congestion control, transfer ccontrol onto the cpath. */
   if (TO_CIRCUIT(circ)->ccontrol) {
     hop->ccontrol = TO_CIRCUIT(circ)->ccontrol;
