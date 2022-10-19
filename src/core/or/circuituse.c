@@ -759,7 +759,6 @@ circuit_expire_building(void)
                (unsigned)victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
-      hs_circ_retry_service_rendezvous_point(TO_ORIGIN_CIRCUIT(victim));
       /* We'll close as a timeout the victim circuit. The rendezvous point
        * won't keep both circuits, it only keeps the newest (for the same
        * cookie). */

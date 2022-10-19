@@ -433,16 +433,6 @@ can_relaunch_service_rendezvous_point(const origin_circuit_t *circ)
 
   /* XXX: Retrying under certain condition. This is related to #22455. */
 
-  /* Avoid to relaunch twice a circuit to the same rendezvous point at the
-   * same time. */
-  if (circ->hs_service_side_rend_circ_has_been_relaunched) {
-    log_info(LD_REND, "Rendezvous circuit to %s has already been retried. "
-                      "Skipping retry.",
-             safe_str_client(
-                  extend_info_describe(circ->build_state->chosen_exit)));
-    goto disallow;
-  }
-
   /* We check failure_count >= hs_get_service_max_rend_failures()-1 below, and
    * the -1 is because we increment the failure count for our current failure
    * *after* this clause. */
@@ -684,7 +674,7 @@ hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip)
  * - We've already retried this specific rendezvous circuit.
  */
 void
-hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
+hs_circ_retry_service_rendezvous_point(const origin_circuit_t *circ)
 {
   tor_assert(circ);
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
@@ -693,10 +683,6 @@ hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ)
   if (!can_relaunch_service_rendezvous_point(circ)) {
     goto done;
   }
-
-  /* Flag the circuit that we are relaunching, to avoid to relaunch twice a
-   * circuit to the same rendezvous point at the same time. */
-  circ->hs_service_side_rend_circ_has_been_relaunched = 1;
 
   /* Legacy services don't have a hidden service ident. */
   if (circ->hs_ident) {
