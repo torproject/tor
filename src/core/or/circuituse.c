@@ -451,7 +451,8 @@ circuit_expire_building(void)
    * custom timeouts yet */
   struct timeval general_cutoff, begindir_cutoff, fourhop_cutoff,
     close_cutoff, extremely_old_cutoff, hs_extremely_old_cutoff,
-    cannibalized_cutoff, c_intro_cutoff, s_intro_cutoff, stream_cutoff;
+    cannibalized_cutoff, c_intro_cutoff, s_intro_cutoff, stream_cutoff,
+    c_rend_ready_cutoff;
   const or_options_t *options = get_options();
   struct timeval now;
   cpath_build_state_t *build_state;
@@ -531,6 +532,16 @@ circuit_expire_building(void)
   /* Server intro circs have an extra round trip */
   SET_CUTOFF(s_intro_cutoff, get_circuit_build_timeout_ms() * (9/6.0) + 1000);
 
+  /* For circuit purpose set to: CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED.
+   *
+   * The cutoff of such circuit is very high because we end up in this state if
+   * once the INTRODUCE_ACK is received which could be before the service
+   * receives the INTRODUCE2 cell. The worst case is a full 3-hop latency
+   * (intro -> service), 4-hop circuit creation latency (service -> RP), and
+   * finally a 7-hop latency for the RENDEZVOUS2 cell to arrive (service ->
+   * client). */
+  SET_CUTOFF(c_rend_ready_cutoff, get_circuit_build_timeout_ms() * 3 + 1000);
+
   SET_CUTOFF(close_cutoff, get_circuit_build_close_time_ms());
   SET_CUTOFF(extremely_old_cutoff, get_circuit_build_close_time_ms()*2 + 1000);
 
@@ -568,8 +579,12 @@ circuit_expire_building(void)
       cutoff = c_intro_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
       cutoff = s_intro_cutoff;
-    else if (victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
-      cutoff = stream_cutoff;
+    else if (victim->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
+      /* Service connecting to a rendezvous point is a four hop circuit. We set
+       * it explicitly here because this function is a clusterf***. */
+      cutoff = fourhop_cutoff;
+    } else if (victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)
+      cutoff = c_rend_ready_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
       cutoff = close_cutoff;
     else if (TO_ORIGIN_CIRCUIT(victim)->has_opened &&
