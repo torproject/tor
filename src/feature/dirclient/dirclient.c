@@ -249,7 +249,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
         continue;
 
       if (exclude_self && router_digest_is_me(ds->digest)) {
-        /* we don't upload to ourselves, but at least there's now at least
+        /* we don't upload to ourselves, but there's now at least
          * one authority of this type that has what we wanted to upload. */
         found = 1;
         continue;
