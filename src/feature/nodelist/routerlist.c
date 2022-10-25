@@ -2651,7 +2651,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
   digestmap_t *map = NULL;
   smartlist_t *no_longer_old = smartlist_new();
   smartlist_t *downloadable = smartlist_new();
-  routerstatus_t *source = NULL;
+  const routerstatus_t *source = NULL;
   int authdir = authdir_mode(options);
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0, n_in_oldrouters=0;
@@ -2667,10 +2667,17 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
     networkstatus_voter_info_t *voter = smartlist_get(consensus->voters, 0);
     tor_assert(voter);
     ds = trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);
-    if (ds)
-      source = &(ds->fake_status);
-    else
+    if (ds) {
+      source = router_get_consensus_status_by_id(ds->digest);
+      if (!source) {
+        /* prefer to use the address in the consensus, but fall back to
+         * the hard-coded trusted_dir_server address if we don't have a
+         * consensus or this digest isn't in our consensus. */
+        source = &ds->fake_status;
+      }
+    } else {
       log_warn(LD_DIR, "couldn't lookup source from vote?");
+    }
   }
 
   map = digestmap_new();
