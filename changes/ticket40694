@@ -1,0 +1,5 @@
+  o Major bugfixes (onion service):
+    - Set a much higher circuit build timeout for opened client rendezvous
+      circuit. Before this, tor would time them out very quickly leading to many
+      unnecessary retries and thus more load on the network. Fixes bug 40694;
+      bugfix on 0.3.5.1-alpha.
