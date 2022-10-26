@@ -1,0 +1,11 @@
+  o Minor bugfixes (dirauth):
+    - Directory authorities stop voting a consensus "Measured" weight
+      for relays with the Authority flag. Now these relays will be
+      considered unmeasured, which should reserve their bandwidth
+      for their dir auth role and minimize distractions from other
+      roles. In place of the "Measured" weight, they now include a
+      "MeasuredButAuthority" weight (not used by anything) so the
+      bandwidth authority's opinion on this relay can be recorded for
+      posterity. Lastly, remove the AuthDirDontVoteOnDirAuthBandwidth
+      torrc option which never worked right. Fixes bugs 40698 and 40700;
+      bugfix on 0.4.7.2-alpha.
