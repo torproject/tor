@@ -138,7 +138,4 @@ CONF_VAR(VersioningAuthoritativeDirectory, BOOL, 0, "0")
  * pressure or not. */
 CONF_VAR(AuthDirRejectRequestsUnderLoad, BOOL, 0, "1")
 
-/** Boolean: Should we not give bandwidth weight measurements to dirauths? */
-CONF_VAR(AuthDirDontVoteOnDirAuthBandwidth, BOOL, 0, "1")
-
 END_CONF_STRUCT(dirauth_options_t)
