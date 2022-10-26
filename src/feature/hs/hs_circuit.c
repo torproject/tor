@@ -1319,6 +1319,17 @@ hs_circ_cleanup_on_repurpose(circuit_t *circ)
   if (circ->hs_token) {
     hs_circuitmap_remove_circuit(circ);
   }
+
+  switch (circ->purpose) {
+  case CIRCUIT_PURPOSE_S_CONNECT_REND:
+    /* This circuit was connecting to a rendezvous point but it is being
+     * repurposed so we need to relaunch an attempt else the client will be
+     * left hanging waiting for the rendezvous. */
+    hs_circ_retry_service_rendezvous_point(TO_ORIGIN_CIRCUIT(circ));
+    break;
+  default:
+    break;
+  }
 }
 
 /** Return true iff the given established client rendezvous circuit was sent

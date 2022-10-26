@@ -1,0 +1,3 @@
+  o Minor bugfixes (onion service):
+    - Make the service retry a rendezvous if the circuit is being repurposed for
+      measurements. Fixes bug 40696; bugfix on 0.3.5.1-alpha.
