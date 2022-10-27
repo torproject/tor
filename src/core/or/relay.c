@@ -502,7 +502,7 @@ relay_header_unpack(relay_header_t *dest, const uint8_t *src)
 }
 
 /** Convert the relay <b>command</b> into a human-readable string. */
-static const char *
+const char *
 relay_command_to_string(uint8_t command)
 {
   static char buf[64];

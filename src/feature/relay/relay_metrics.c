@@ -12,6 +12,7 @@
 
 #include "core/or/or.h"
 #include "core/mainloop/connection.h"
+#include "core/or/congestion_control_common.h"
 #include "core/or/relay.h"
 
 #include "lib/malloc/malloc.h"
@@ -25,6 +26,7 @@
 #include <event2/dns.h>
 
 /** Declarations of each fill function for metrics defined in base_metrics. */
+static void fill_cc_values(void);
 static void fill_connections_values(void);
 static void fill_dns_error_values(void);
 static void fill_dns_query_values(void);
@@ -32,6 +34,7 @@ static void fill_global_bw_limit_values(void);
 static void fill_socket_values(void);
 static void fill_onionskins_values(void);
 static void fill_oom_values(void);
+static void fill_streams_values(void);
 static void fill_tcp_exhaustion_values(void);
 
 /** The base metrics that is a static array of metrics added to the metrics
@@ -92,9 +95,23 @@ static const relay_metrics_entry_t base_metrics[] =
   {
     .key = RELAY_METRICS_NUM_CONNECTIONS,
     .type = METRICS_TYPE_COUNTER,
-    .name = METRICS_NAME(relay_connections),
-    .help = "Connections metrics of this relay",
+    .name = METRICS_NAME(relay_connections_total),
+    .help = "Total number of connections",
     .fill_fn = fill_connections_values,
+  },
+  {
+    .key = RELAY_METRICS_NUM_STREAMS,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_streams_total),
+    .help = "Total number of streams",
+    .fill_fn = fill_streams_values,
+  },
+  {
+    .key = RELAY_METRICS_NUM_CC,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_congestion_control_total),
+    .help = "Congestion control related counters",
+    .fill_fn = fill_cc_values,
   },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
@@ -120,6 +137,49 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_CC metric. */
+static void
+fill_cc_values(void)
+{
+  const relay_metrics_entry_t *rentry = &base_metrics[RELAY_METRICS_NUM_CC];
+  metrics_store_entry_t *sentry =
+    metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "starvation"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "rtt_reset"));
+  metrics_store_entry_update(sentry, congestion_control_get_num_rtt_reset());
+}
+
+/** Helper: Fill in single stream metrics output. */
+static void
+fill_single_stream_value(metrics_store_entry_t *sentry, uint8_t cmd)
+{
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", relay_command_to_string(cmd)));
+  metrics_store_entry_update(sentry, rep_hist_get_exit_stream_seen(cmd));
+}
+
+/** Fill function for the RELAY_METRICS_NUM_STREAMS metric. */
+static void
+fill_streams_values(void)
+{
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_STREAMS];
+  metrics_store_entry_t *sentry =
+    metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+  fill_single_stream_value(sentry, RELAY_COMMAND_BEGIN);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  fill_single_stream_value(sentry, RELAY_COMMAND_BEGIN_DIR);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  fill_single_stream_value(sentry, RELAY_COMMAND_RESOLVE);
 }
 
 /** Helper: Fill in single connection metrics output. */
