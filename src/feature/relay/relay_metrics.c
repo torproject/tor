@@ -12,6 +12,7 @@
 
 #include "core/or/or.h"
 #include "core/mainloop/connection.h"
+#include "core/mainloop/mainloop.h"
 #include "core/or/congestion_control_common.h"
 #include "core/or/dos.h"
 #include "core/or/relay.h"
@@ -39,6 +40,7 @@ static void fill_onionskins_values(void);
 static void fill_oom_values(void);
 static void fill_streams_values(void);
 static void fill_tcp_exhaustion_values(void);
+static void fill_traffic_values(void);
 
 /** The base metrics that is a static array of metrics added to the metrics
  * store.
@@ -123,6 +125,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Denial of Service defenses related counters",
     .fill_fn = fill_dos_values,
   },
+  {
+    .key = RELAY_METRICS_NUM_TRAFFIC,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_traffic_bytes),
+    .help = "Traffic related counters",
+    .fill_fn = fill_traffic_values,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
@@ -147,6 +156,26 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_TRAFFIC metric. */
+static void
+fill_traffic_values(void)
+{
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_TRAFFIC];
+  metrics_store_entry_t *sentry =
+    metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("direction", "read"));
+  metrics_store_entry_update(sentry, get_bytes_read());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("direction", "written"));
+  metrics_store_entry_update(sentry, get_bytes_written());
 }
 
 /** Fill function for the RELAY_METRICS_NUM_DOS metric. */
