@@ -1,0 +1,6 @@
+  o Minor feature (Mac and iOS build):
+    - Change how combine_libs works on Darwin like platforms to
+      make sure we don't include any `__.SYMDEF` and `__.SYMDEF SORTED`
+      symbols on the archive before we repack and run ${RANLIB} on the
+      archive. This fixes a build issue with recent Xcode versions on
+      Mac Silicon and iOS. Closes ticket 40683.
