@@ -91,6 +91,9 @@ static bool congestion_control_update_circuit_bdp(congestion_control_t *,
 /* For unit tests */
 void congestion_control_set_cc_enabled(void);
 
+/* Number of times the RTT value was reset. For MetricsPort. */
+static uint64_t num_rtt_reset;
+
 /* Consensus parameters cached. The non static ones are extern. */
 static uint32_t cwnd_max = CWND_MAX_DFLT;
 int32_t cell_queue_high = CELL_QUEUE_HIGH_DFLT;
@@ -125,6 +128,13 @@ static uint8_t bwe_sendme_min;
  * for a circuit. (RTT is reset when the cwnd hits cwnd_min).
  */
 static uint8_t rtt_reset_pct;
+
+/** Return the number of RTT reset that have been done. */
+uint64_t
+congestion_control_get_num_rtt_reset(void)
+{
+  return num_rtt_reset;
+}
 
 /**
  * Update global congestion control related consensus parameter values,
@@ -888,6 +898,7 @@ congestion_control_update_circuit_rtt(congestion_control_t *cc,
             cc->min_rtt_usec/1000, new_rtt/1000);
 
     cc->min_rtt_usec = new_rtt;
+    num_rtt_reset++; /* Accounting */
   } else if (cc->ewma_rtt_usec < cc->min_rtt_usec) {
     // Using the EWMA for min instead of current RTT helps average out
     // effects from other conns

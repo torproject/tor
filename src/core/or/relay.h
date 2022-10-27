@@ -16,6 +16,8 @@ extern uint64_t stats_n_relay_cells_relayed;
 extern uint64_t stats_n_relay_cells_delivered;
 extern uint64_t stats_n_circ_max_cell_reached;
 
+const char *relay_command_to_string(uint8_t command);
+
 void relay_consensus_has_changed(const networkstatus_t *ns);
 uint32_t relay_get_param_max_circuit_cell_queue_size(
                                      const networkstatus_t *ns);
