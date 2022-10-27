@@ -14,6 +14,7 @@
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
 #include "core/or/congestion_control_common.h"
+#include "core/or/circuitlist.h"
 #include "core/or/dos.h"
 #include "core/or/relay.h"
 
@@ -36,6 +37,7 @@
 
 /** Declarations of each fill function for metrics defined in base_metrics. */
 static void fill_cc_values(void);
+static void fill_circuits_values(void);
 static void fill_connections_values(void);
 static void fill_dns_error_values(void);
 static void fill_dns_query_values(void);
@@ -146,6 +148,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Relay flags from consensus",
     .fill_fn = fill_relay_flags,
   },
+  {
+    .key = RELAY_METRICS_NUM_CIRCUITS,
+    .type = METRICS_TYPE_GAUGE,
+    .name = METRICS_NAME(relay_circuits_total),
+    .help = "Total number of circuits",
+    .fill_fn = fill_circuits_values,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
@@ -170,6 +179,21 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_CIRCUITS metric. */
+static void
+fill_circuits_values(void)
+{
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_NUM_CIRCUITS];
+  metrics_store_entry_t *sentry =
+    metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "opened"));
+  metrics_store_entry_update(sentry,
+                             smartlist_len(circuit_get_global_list()));
 }
 
 /** Fill function for the RELAY_METRICS_RELAY_FLAGS metric. */
