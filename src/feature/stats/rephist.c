@@ -1639,7 +1639,7 @@ rep_hist_note_exit_stream_opened(uint16_t port)
   log_debug(LD_HIST, "Opened exit stream to port %d", port);
 }
 
-/*** Streams statistics ***/
+/*** Exit streams statistics ***/
 
 /** Number of BEGIN streams seen. */
 static uint64_t streams_begin_seen;
@@ -1650,7 +1650,7 @@ static uint64_t streams_resolve_seen;
 
 /** Note a stream as seen for the given relay command. */
 void
-rep_hist_note_stream(unsigned int cmd)
+rep_hist_note_exit_stream(unsigned int cmd)
 {
   switch (cmd) {
   case RELAY_COMMAND_BEGIN:
@@ -1663,13 +1663,14 @@ rep_hist_note_stream(unsigned int cmd)
     streams_resolve_seen++;
     break;
   default:
+    tor_assert_nonfatal_unreached_once();
     break;
   }
 }
 
 /** Return number of stream seen for the given command. */
 uint64_t
-rep_hist_get_stream_seen(unsigned int cmd)
+rep_hist_get_exit_stream_seen(unsigned int cmd)
 {
   switch (cmd) {
   case RELAY_COMMAND_BEGIN:

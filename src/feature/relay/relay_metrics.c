@@ -160,7 +160,7 @@ fill_single_stream_value(metrics_store_entry_t *sentry, uint8_t cmd)
 {
   metrics_store_entry_add_label(sentry,
           metrics_format_label("type", relay_command_to_string(cmd)));
-  metrics_store_entry_update(sentry, rep_hist_get_stream_seen(cmd));
+  metrics_store_entry_update(sentry, rep_hist_get_exit_stream_seen(cmd));
 }
 
 /** Fill function for the RELAY_METRICS_NUM_STREAMS metric. */

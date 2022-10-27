@@ -4120,7 +4120,7 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
     return -1;
 
   /* Note the RESOLVE stream as seen. */
-  rep_hist_note_stream(RELAY_COMMAND_RESOLVE);
+  rep_hist_note_exit_stream(RELAY_COMMAND_RESOLVE);
 
   /* This 'dummy_conn' only exists to remember the stream ID
    * associated with the resolve request; and to make the
@@ -4246,7 +4246,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
 
   /* Note the BEGIN stream as seen. We do this after the Exit policy check in
    * order to only account for valid streams. */
-  rep_hist_note_stream(RELAY_COMMAND_BEGIN);
+  rep_hist_note_exit_stream(RELAY_COMMAND_BEGIN);
 
 #ifdef HAVE_SYS_UN_H
   if (conn->socket_family != AF_UNIX) {
@@ -4344,7 +4344,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
   log_info(LD_EXIT, "Opening local connection for anonymized directory exit");
 
   /* Note the BEGIN_DIR stream as seen. */
-  rep_hist_note_stream(RELAY_COMMAND_BEGIN_DIR);
+  rep_hist_note_exit_stream(RELAY_COMMAND_BEGIN_DIR);
 
   exitconn->base_.state = EXIT_CONN_STATE_OPEN;
 
