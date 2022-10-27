@@ -84,6 +84,13 @@ int dos_should_refuse_single_hop_client(void);
 void dos_note_refuse_single_hop_client(void);
 void dos_note_circ_max_outq(const channel_t *chan);
 
+uint32_t dos_get_num_cc_marked_addr(void);
+uint32_t dos_get_num_cc_marked_addr_maxq(void);
+uint64_t dos_get_num_cc_rejected(void);
+uint64_t dos_get_num_conn_addr_rejected(void);
+uint64_t dos_get_num_conn_addr_connect_rejected(void);
+uint64_t dos_get_num_single_hop_refused(void);
+
 /*
  * Circuit creation DoS mitigation subsystemn interface.
  */

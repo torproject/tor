@@ -35,6 +35,14 @@ typedef enum {
   RELAY_METRICS_NUM_STREAMS = 8,
   /** Congestion control counters. */
   RELAY_METRICS_NUM_CC = 9,
+  /** Denial of Service defenses subsystem. */
+  RELAY_METRICS_NUM_DOS = 10,
+  /** Denial of Service defenses subsystem. */
+  RELAY_METRICS_NUM_TRAFFIC = 11,
+  /** Relay flags. */
+  RELAY_METRICS_RELAY_FLAGS = 12,
+  /** Numer of circuits. */
+  RELAY_METRICS_NUM_CIRCUITS = 13,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
