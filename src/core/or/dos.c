@@ -581,6 +581,48 @@ dos_is_enabled(void)
 
 /* Circuit creation public API. */
 
+/** Return the number of rejected circuits. */
+uint64_t
+dos_get_num_cc_rejected(void)
+{
+  return cc_num_rejected_cells;
+}
+
+/** Return the number of marked addresses. */
+uint32_t
+dos_get_num_cc_marked_addr(void)
+{
+  return cc_num_marked_addrs;
+}
+
+/** Return the number of marked addresses due to max queue limit reached. */
+uint32_t
+dos_get_num_cc_marked_addr_maxq(void)
+{
+  return cc_num_marked_addrs_max_queue;
+}
+
+/** Return number of concurrent connections rejected. */
+uint64_t
+dos_get_num_conn_addr_rejected(void)
+{
+  return conn_num_addr_rejected;
+}
+
+/** Return the number of connection rejected. */
+uint64_t
+dos_get_num_conn_addr_connect_rejected(void)
+{
+  return conn_num_addr_connect_rejected;
+}
+
+/** Return the number of single hop refused. */
+uint64_t
+dos_get_num_single_hop_refused(void)
+{
+  return num_single_hop_client_refused;
+}
+
 /* Called when a CREATE cell is received from the given channel. */
 void
 dos_cc_new_create_cell(channel_t *chan)

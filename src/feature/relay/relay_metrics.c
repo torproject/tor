@@ -13,6 +13,7 @@
 #include "core/or/or.h"
 #include "core/mainloop/connection.h"
 #include "core/or/congestion_control_common.h"
+#include "core/or/dos.h"
 #include "core/or/relay.h"
 
 #include "lib/malloc/malloc.h"
@@ -20,6 +21,7 @@
 #include "lib/metrics/metrics_store.h"
 #include "lib/log/util_bug.h"
 
+#include "feature/hs/hs_dos.h"
 #include "feature/relay/relay_metrics.h"
 #include "feature/stats/rephist.h"
 
@@ -30,6 +32,7 @@ static void fill_cc_values(void);
 static void fill_connections_values(void);
 static void fill_dns_error_values(void);
 static void fill_dns_query_values(void);
+static void fill_dos_values(void);
 static void fill_global_bw_limit_values(void);
 static void fill_socket_values(void);
 static void fill_onionskins_values(void);
@@ -113,6 +116,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Congestion control related counters",
     .fill_fn = fill_cc_values,
   },
+  {
+    .key = RELAY_METRICS_NUM_DOS,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(relay_dos_total),
+    .help = "Denial of Service defenses related counters",
+    .fill_fn = fill_dos_values,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
@@ -137,6 +147,61 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_NUM_DOS metric. */
+static void
+fill_dos_values(void)
+{
+  const relay_metrics_entry_t *rentry = &base_metrics[RELAY_METRICS_NUM_DOS];
+  metrics_store_entry_t *sentry =
+    metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "circuit_rejected"));
+  metrics_store_entry_update(sentry, dos_get_num_cc_rejected());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "circuit_killed_max_cell"));
+  metrics_store_entry_update(sentry, stats_n_circ_max_cell_reached);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "marked_address"));
+  metrics_store_entry_update(sentry, dos_get_num_cc_marked_addr());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "marked_address_maxq"));
+  metrics_store_entry_update(sentry, dos_get_num_cc_marked_addr_maxq());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "conn_rejected"));
+  metrics_store_entry_update(sentry, dos_get_num_conn_addr_connect_rejected());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "concurrent_conn_rejected"));
+  metrics_store_entry_update(sentry, dos_get_num_conn_addr_rejected());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "single_hop_refused"));
+  metrics_store_entry_update(sentry, dos_get_num_single_hop_refused());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "introduce2_rejected"));
+  metrics_store_entry_update(sentry, hs_dos_get_intro2_rejected_count());
 }
 
 /** Fill function for the RELAY_METRICS_NUM_CC metric. */
