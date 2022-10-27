@@ -17,13 +17,19 @@
 #include "core/or/dos.h"
 #include "core/or/relay.h"
 
+#include "app/config/config.h"
+
 #include "lib/malloc/malloc.h"
 #include "lib/container/smartlist.h"
 #include "lib/metrics/metrics_store.h"
 #include "lib/log/util_bug.h"
 
 #include "feature/hs/hs_dos.h"
+#include "feature/nodelist/nodelist.h"
+#include "feature/nodelist/node_st.h"
+#include "feature/nodelist/routerstatus_st.h"
 #include "feature/relay/relay_metrics.h"
+#include "feature/relay/router.h"
 #include "feature/stats/rephist.h"
 
 #include <event2/dns.h>
@@ -39,6 +45,7 @@ static void fill_socket_values(void);
 static void fill_onionskins_values(void);
 static void fill_oom_values(void);
 static void fill_streams_values(void);
+static void fill_relay_flags(void);
 static void fill_tcp_exhaustion_values(void);
 static void fill_traffic_values(void);
 
@@ -132,6 +139,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .help = "Traffic related counters",
     .fill_fn = fill_traffic_values,
   },
+  {
+    .key = RELAY_METRICS_RELAY_FLAGS,
+    .type = METRICS_TYPE_GAUGE,
+    .name = METRICS_NAME(relay_flag),
+    .help = "Relay flags from consensus",
+    .fill_fn = fill_relay_flags,
+  },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
 
@@ -156,6 +170,86 @@ handshake_type_to_str(const uint16_t type)
       tor_assert_unreached();
       // LCOV_EXCL_STOP
   }
+}
+
+/** Fill function for the RELAY_METRICS_RELAY_FLAGS metric. */
+static void
+fill_relay_flags(void)
+{
+  uint8_t is_fast = 0, is_exit = 0, is_authority = 0, is_stable = 0;
+  uint8_t is_running = 0, is_v2_dir = 0, is_guard = 0, is_sybil = 0;
+  uint8_t is_hs_dir = 0;
+
+  const node_t *me =
+    node_get_by_id((const char *) router_get_my_id_digest());
+  if (me && me->rs) {
+    is_fast = me->rs->is_fast;
+    is_exit = me->rs->is_exit;
+    is_authority = me->rs->is_authority;
+    is_stable = me->rs->is_stable;
+    is_running = me->rs->is_flagged_running;
+    is_v2_dir = me->rs->is_v2_dir;
+    is_guard = me->rs->is_possible_guard;
+    is_sybil = me->rs->is_sybil;
+    is_hs_dir = me->rs->is_hs_dir;
+  }
+
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_RELAY_FLAGS];
+  metrics_store_entry_t *sentry =
+    metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "Fast"));
+  metrics_store_entry_update(sentry, is_fast);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "Exit"));
+  metrics_store_entry_update(sentry, is_exit);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "Authority"));
+  metrics_store_entry_update(sentry, is_authority);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "Stable"));
+  metrics_store_entry_update(sentry, is_stable);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "HSDir"));
+  metrics_store_entry_update(sentry, is_hs_dir);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "Running"));
+  metrics_store_entry_update(sentry, is_running);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "V2Dir"));
+  metrics_store_entry_update(sentry, is_v2_dir);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "Sybil"));
+  metrics_store_entry_update(sentry, is_sybil);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "Guard"));
+  metrics_store_entry_update(sentry, is_guard);
 }
 
 /** Fill function for the RELAY_METRICS_NUM_TRAFFIC metric. */
