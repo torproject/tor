@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay):
+    - Remove a harmless "Bug" log message that can happen in
+      relay_addr_learn_from_dirauth() on relays during startup. Finishes
+      fixing bug 40231. Fixes bug 40523; bugfix on 0.4.5.4-rc.
