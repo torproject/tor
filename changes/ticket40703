@@ -1,0 +1,4 @@
+  o Minor feature (performance):
+    - Bump the maximum amount of CPU to use from 16 to 128. Note that NumCPUs
+      torrc option overrides this hardcoded maximum. Fixes bug 40703; bugfix on
+      0.3.5.1-alpha.
