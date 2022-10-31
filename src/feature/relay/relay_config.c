@@ -33,6 +33,7 @@
 #include "core/or/port_cfg_st.h"
 
 #include "feature/hibernate/hibernate.h"
+#include "feature/hs/hs_service.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/stats/geoip_stats.h"
 #include "feature/stats/predict_ports.h"
@@ -942,7 +943,8 @@ options_validate_relay_accounting(const or_options_t *old_options,
   if (accounting_parse_options(options, 1)<0)
     REJECT("Failed to parse accounting options. See logs for details.");
 
-  if (options->AccountingMax) {
+  if (options->AccountingMax &&
+      !hs_service_non_anonymous_mode_enabled(options)) {
     if (options->RendConfigLines && server_mode(options)) {
       log_warn(LD_CONFIG, "Using accounting with a hidden service and an "
                "ORPort is risky: your hidden service(s) and your public "
@@ -1118,7 +1120,8 @@ options_validate_relay_mode(const or_options_t *old_options,
   if (BUG(!msg))
     return -1;
 
-  if (server_mode(options) && options->RendConfigLines)
+  if (server_mode(options) && options->RendConfigLines &&
+      !hs_service_non_anonymous_mode_enabled(options))
     log_warn(LD_CONFIG,
         "Tor is currently configured as a relay and a hidden service. "
         "That's not very secure: you should probably run your hidden service "
