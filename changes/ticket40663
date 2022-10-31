@@ -1,0 +1,3 @@
+  o Minor bugfixes (authorities, sandbox):
+    - Allow to write file my-consensus-<flavor-name> to disk when sandbox is
+      activated. Fixes bug 40663; bugfix on 0.3.5.1-alpha.
