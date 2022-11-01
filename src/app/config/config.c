@@ -624,7 +624,6 @@ static const config_var_t option_vars_[] = {
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
-  V(RendPostPeriod,              INTERVAL, "1 hour"), /* Used internally. */
   V(RephistTrackTime,            INTERVAL, "24 hours"),
   V_IMMUTABLE(RunAsDaemon,       BOOL,     "0"),
   V(ReducedExitPolicy,           BOOL,     "0"),
@@ -2974,18 +2973,10 @@ config_ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
   return 0;
 }
 
-/** Lowest allowable value for RendPostPeriod; if this is too low, hidden
- * services can overload the directory system. */
-#define MIN_REND_POST_PERIOD (10*60)
-#define MIN_REND_POST_PERIOD_TESTING (5)
-
 /** Highest allowable value for CircuitsAvailableTimeout.
  * If this is too large, client connections will stay open for too long,
  * incurring extra padding overhead. */
 #define MAX_CIRCS_AVAILABLE_TIME (24*60*60)
-
-/** Highest allowable value for RendPostPeriod. */
-#define MAX_DIR_PERIOD ((7*24*60*60)/2)
 
 /** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
@@ -3545,21 +3536,6 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
 
   if (options_validate_relay_padding(old_options, options, msg) < 0)
     return -1;
-
-  const int min_rendpostperiod =
-    options->TestingTorNetwork ?
-    MIN_REND_POST_PERIOD_TESTING : MIN_REND_POST_PERIOD;
-  if (options->RendPostPeriod < min_rendpostperiod) {
-    log_warn(LD_CONFIG, "RendPostPeriod option is too short; "
-             "raising to %d seconds.", min_rendpostperiod);
-    options->RendPostPeriod = min_rendpostperiod;
-  }
-
-  if (options->RendPostPeriod > MAX_DIR_PERIOD) {
-    log_warn(LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
-             MAX_DIR_PERIOD);
-    options->RendPostPeriod = MAX_DIR_PERIOD;
-  }
 
   /* Check the Single Onion Service options */
   if (options_validate_single_onion(options, msg) < 0)

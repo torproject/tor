@@ -125,7 +125,6 @@ ReachableORAddresses 128.0.0.0/8
 RejectPlaintextPorts 23
 RelayBandwidthBurst 10000
 RelayBandwidthRate 1000
-RendPostPeriod 600
 RephistTrackTime 600
 SafeLogging 0
 Schedulers Vanilla,KISTLite,Kist
