@@ -1,0 +1,3 @@
+  o Minor feature (metrics):
+    - Add various congestion control counters to the MetricsPort. Closes ticket
+      40708.
