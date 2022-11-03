@@ -15,6 +15,7 @@
 #include "core/mainloop/mainloop.h"
 #include "core/or/congestion_control_common.h"
 #include "core/or/congestion_control_vegas.h"
+#include "core/or/congestion_control_flow.h"
 #include "core/or/circuitlist.h"
 #include "core/or/dos.h"
 #include "core/or/relay.h"
@@ -408,6 +409,42 @@ fill_cc_values(void)
           metrics_format_label("action", "ss_cwnd"));
   metrics_store_entry_update(sentry,
                              tor_llround(cc_stats_circ_close_ss_cwnd_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "xoff"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "outbuf"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_flow_xoff_outbuf_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "xoff"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "num_sent"));
+  metrics_store_entry_update(sentry,
+                             cc_stats_flow_num_xoff_sent);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "xon"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "outbuf"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_flow_xon_outbuf_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "xon"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "num_sent"));
+  metrics_store_entry_update(sentry,
+                             cc_stats_flow_num_xon_sent);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
