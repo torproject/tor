@@ -382,6 +382,16 @@ fill_cc_values(void)
           metrics_format_label("action", "cwnd"));
   metrics_store_entry_update(sentry,
                              tor_llround(cc_stats_vegas_exit_ss_cwnd_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "on_circ_close"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "cwnd"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_circ_close_cwnd_ma));
 }
 
 /** Helper: Fill in single stream metrics output. */

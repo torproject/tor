@@ -102,6 +102,8 @@
 #include "lib/compress/compress_zstd.h"
 #include "lib/buf/buffers.h"
 #include "core/or/congestion_control_common.h"
+#include "core/or/congestion_control_st.h"
+#include "lib/math/stats.h"
 
 #include "core/or/ocirc_event.h"
 
@@ -146,6 +148,11 @@ static void circuit_about_to_free(circuit_t *circ);
  * circuit_expire_building). 0 otherwise.
  */
 static int any_opened_circs_cached_val = 0;
+
+/** Moving average of the cc->cwnd from each closed circuit. */
+double cc_stats_circ_close_cwnd_ma = 0;
+/* Running count of this moving average. Needed so we can update it. */
+static double stats_circ_close_cwnd_ma_count = 0;
 
 /********* END VARIABLES ************/
 
@@ -2224,6 +2231,13 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
 
   /* Notify the HS subsystem that this circuit is closing. */
   hs_circ_cleanup_on_close(circ);
+
+  /* Update stats. */
+  if (circ->ccontrol) {
+    stats_circ_close_cwnd_ma_count++;
+    STATS_UPDATE_AVG(cc_stats_circ_close_cwnd_ma,
+                     circ->ccontrol->cwnd, stats_circ_close_cwnd_ma_count);
+  }
 
   if (circuits_pending_close == NULL)
     circuits_pending_close = smartlist_new();
