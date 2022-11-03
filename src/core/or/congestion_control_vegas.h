@@ -12,6 +12,8 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/circuit_st.h"
 
+extern double cc_stats_vegas_exit_ss_cwnd_ma;
+
 /* Processing SENDME cell. */
 int congestion_control_vegas_process_sendme(struct congestion_control_t *cc,
                                             const circuit_t *circ,

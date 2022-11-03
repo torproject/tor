@@ -14,16 +14,18 @@
 #include "core/mainloop/connection.h"
 #include "core/mainloop/mainloop.h"
 #include "core/or/congestion_control_common.h"
+#include "core/or/congestion_control_vegas.h"
 #include "core/or/circuitlist.h"
 #include "core/or/dos.h"
 #include "core/or/relay.h"
 
 #include "app/config/config.h"
 
-#include "lib/malloc/malloc.h"
 #include "lib/container/smartlist.h"
-#include "lib/metrics/metrics_store.h"
 #include "lib/log/util_bug.h"
+#include "lib/malloc/malloc.h"
+#include "lib/math/fp.h"
+#include "lib/metrics/metrics_store.h"
 
 #include "feature/hs/hs_dos.h"
 #include "feature/nodelist/nodelist.h"
@@ -370,6 +372,16 @@ fill_cc_values(void)
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "rtt_reset"));
   metrics_store_entry_update(sentry, congestion_control_get_num_rtt_reset());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "slow_start_exit"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "cwnd"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_vegas_exit_ss_cwnd_ma));
 }
 
 /** Helper: Fill in single stream metrics output. */
