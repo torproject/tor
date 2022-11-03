@@ -147,7 +147,7 @@ note_connection(bool inbound, const connection_t *conn)
     }
   }
 
-  rep_hist_note_conn_opened(inbound, conn->type);
+  rep_hist_note_conn_opened(inbound, conn->type, conn->socket_family);
 }
 
 /**

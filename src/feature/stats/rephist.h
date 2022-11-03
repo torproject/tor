@@ -41,12 +41,12 @@ void rep_hist_note_exit_bytes(uint16_t port, size_t num_written,
                               size_t num_read);
 void rep_hist_note_exit_stream_opened(uint16_t port);
 
-void rep_hist_note_conn_opened(bool initiated, unsigned int type);
-void rep_hist_note_conn_closed(bool initiated, unsigned int type);
-void rep_hist_note_conn_rejected(unsigned int type);
-uint64_t rep_hist_get_conn_created(bool initiated, unsigned int type);
-uint64_t rep_hist_get_conn_opened(bool initiated, unsigned int type);
-uint64_t rep_hist_get_conn_rejected(unsigned int type);
+void rep_hist_note_conn_opened(bool initiated, unsigned int type, int af);
+void rep_hist_note_conn_closed(bool initiated, unsigned int type, int af);
+void rep_hist_note_conn_rejected(unsigned int type, int af);
+uint64_t rep_hist_get_conn_created(bool initiated, unsigned int type, int af);
+uint64_t rep_hist_get_conn_opened(bool initiated, unsigned int type, int af);
+uint64_t rep_hist_get_conn_rejected(unsigned int type, int af);
 
 void rep_hist_note_exit_stream(unsigned int cmd);
 uint64_t rep_hist_get_exit_stream_seen(unsigned int cmd);

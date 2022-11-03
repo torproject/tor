@@ -181,6 +181,22 @@ handshake_type_to_str(const uint16_t type)
   }
 }
 
+/** Helper function to convert a socket family type into a string. */
+static inline const char *
+af_to_string(const int af)
+{
+  switch (af) {
+  case AF_INET:
+    return "ipv4";
+  case AF_INET6:
+    return "ipv6";
+  case AF_UNIX:
+    return "unix";
+  default:
+    return "<unknown>";
+  }
+}
+
 /** Fill function for the RELAY_METRICS_NUM_CIRCUITS metric. */
 static void
 fill_circuits_values(void)
@@ -400,6 +416,7 @@ fill_single_connection_value(metrics_store_entry_t *sentry,
                              unsigned int conn_type,
                              const char* direction,
                              const char* state,
+                             int socket_family,
                              uint64_t value)
 {
   metrics_store_entry_add_label(sentry,
@@ -408,6 +425,8 @@ fill_single_connection_value(metrics_store_entry_t *sentry,
           metrics_format_label("direction", direction));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("state", state));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("family", af_to_string(socket_family)));
   metrics_store_entry_update(sentry, value);
 }
 
@@ -425,28 +444,49 @@ fill_connections_values(void)
     }
     metrics_store_entry_t *sentry =
       metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
-    fill_single_connection_value(sentry, i, "initiated", "created",
-                                 rep_hist_get_conn_created(false, i));
+    fill_single_connection_value(sentry, i, "initiated", "created", AF_INET,
+                                 rep_hist_get_conn_created(false, i, AF_INET));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "initiated", "created", AF_INET6,
+                                 rep_hist_get_conn_created(false, i,
+                                                           AF_INET6));
 
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                rentry->help);
-    fill_single_connection_value(sentry, i, "received", "created",
-                                 rep_hist_get_conn_created(true, i));
+    fill_single_connection_value(sentry, i, "received", "created", AF_INET,
+                                 rep_hist_get_conn_created(true, i, AF_INET));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "received", "created", AF_INET6,
+                                 rep_hist_get_conn_created(true, i, AF_INET6));
 
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                rentry->help);
-    fill_single_connection_value(sentry, i, "initiated", "opened",
-                                 rep_hist_get_conn_opened(false, i));
+    fill_single_connection_value(sentry, i, "initiated", "opened", AF_INET,
+                                 rep_hist_get_conn_opened(false, i, AF_INET));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "initiated", "opened", AF_INET6,
+                                 rep_hist_get_conn_opened(false, i, AF_INET6));
 
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                rentry->help);
-    fill_single_connection_value(sentry, i, "received", "opened",
-                                 rep_hist_get_conn_opened(true, i));
+    fill_single_connection_value(sentry, i, "received", "opened", AF_INET,
+                                 rep_hist_get_conn_opened(true, i, AF_INET));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "received", "opened", AF_INET6,
+                                 rep_hist_get_conn_opened(true, i, AF_INET6));
 
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                rentry->help);
-    fill_single_connection_value(sentry, i, "received", "rejected",
-                                 rep_hist_get_conn_rejected(i));
+    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET,
+                                 rep_hist_get_conn_rejected(i, AF_INET));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET6,
+                                 rep_hist_get_conn_rejected(i, AF_INET6));
   }
 }
 
