@@ -317,6 +317,12 @@ fill_dos_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
+          metrics_format_label("type", "circuit_killed_max_cell_outq"));
+  metrics_store_entry_update(sentry, stats_n_circ_max_cell_outq_reached);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
           metrics_format_label("type", "marked_address"));
   metrics_store_entry_update(sentry, dos_get_num_cc_marked_addr());
 

@@ -15,6 +15,7 @@
 extern uint64_t stats_n_relay_cells_relayed;
 extern uint64_t stats_n_relay_cells_delivered;
 extern uint64_t stats_n_circ_max_cell_reached;
+extern uint64_t stats_n_circ_max_cell_outq_reached;
 
 const char *relay_command_to_string(uint8_t command);
 
