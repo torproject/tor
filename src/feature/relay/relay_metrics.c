@@ -376,6 +376,15 @@ fill_cc_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "clock_stalls"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "rtt_skipped"));
+  metrics_store_entry_update(sentry,
+                             congestion_control_get_num_clock_stalls());
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
           metrics_format_label("state", "slow_start_exit"));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "cwnd"));
