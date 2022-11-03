@@ -151,8 +151,12 @@ static int any_opened_circs_cached_val = 0;
 
 /** Moving average of the cc->cwnd from each closed circuit. */
 double cc_stats_circ_close_cwnd_ma = 0;
-/* Running count of this moving average. Needed so we can update it. */
+/** Moving average of the cc->cwnd from each closed slow-start circuit. */
+double cc_stats_circ_close_ss_cwnd_ma = 0;
+
+/* Running count of the above moving averages. Needed so we can update it. */
 static double stats_circ_close_cwnd_ma_count = 0;
+static double stats_circ_close_ss_cwnd_ma_count = 0;
 
 /********* END VARIABLES ************/
 
@@ -2234,9 +2238,21 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
 
   /* Update stats. */
   if (circ->ccontrol) {
-    stats_circ_close_cwnd_ma_count++;
-    STATS_UPDATE_AVG(cc_stats_circ_close_cwnd_ma,
-                     circ->ccontrol->cwnd, stats_circ_close_cwnd_ma_count);
+    if (circ->ccontrol->in_slow_start) {
+      /* If we are in slow start, only count the ss cwnd if we've sent
+       * enough data to get RTT measurements such that we have a min
+       * and a max RTT, and they are not the same. This prevents us from
+       * averaging and reporting unused and low-use circuits here */
+      if (circ->ccontrol->max_rtt_usec != circ->ccontrol->min_rtt_usec) {
+        stats_circ_close_ss_cwnd_ma_count++;
+        STATS_UPDATE_AVG(cc_stats_circ_close_ss_cwnd_ma,
+                   circ->ccontrol->cwnd, stats_circ_close_ss_cwnd_ma_count);
+      }
+    } else {
+      stats_circ_close_cwnd_ma_count++;
+      STATS_UPDATE_AVG(cc_stats_circ_close_cwnd_ma,
+                       circ->ccontrol->cwnd, stats_circ_close_cwnd_ma_count);
+    }
   }
 
   if (circuits_pending_close == NULL)
