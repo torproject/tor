@@ -55,6 +55,11 @@ double cc_stats_vegas_exit_ss_cwnd_ma = 0;
 /* Running count of this moving average. Needed so we can update it. */
 static double stats_cwnd_exit_ss_ma_count = 0;
 
+/** Stats on how many times we reached "delta" param. */
+uint64_t cc_stats_vegas_above_delta = 0;
+/** Stats on how many times we reached "ss_cwnd_max" param. */
+uint64_t cc_stats_vegas_above_ss_cwnd_max = 0;
+
 /**
  * The original TCP Vegas congestion window BDP estimator.
  */
@@ -333,11 +338,13 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
     if (cc->cwnd >= cc->vegas_params.ss_cwnd_max) {
       cc->cwnd = cc->vegas_params.ss_cwnd_max;
       congestion_control_vegas_exit_slow_start(circ, cc);
+      cc_stats_vegas_above_ss_cwnd_max++;
     }
   /* After slow start, We only update once per window */
   } else if (cc->next_cc_event == 0) {
     if (queue_use > cc->vegas_params.delta) {
       cc->cwnd = vegas_bdp(cc) + cc->vegas_params.delta - CWND_INC(cc);
+      cc_stats_vegas_above_delta++;
     } else if (queue_use > cc->vegas_params.beta || cc->blocked_chan) {
       cc->cwnd -= CWND_INC(cc);
     } else if (queue_use < cc->vegas_params.alpha) {

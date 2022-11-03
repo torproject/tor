@@ -13,6 +13,8 @@
 #include "core/or/circuit_st.h"
 
 extern double cc_stats_vegas_exit_ss_cwnd_ma;
+extern uint64_t cc_stats_vegas_above_delta;
+extern uint64_t cc_stats_vegas_above_ss_cwnd_max;
 
 /* Processing SENDME cell. */
 int congestion_control_vegas_process_sendme(struct congestion_control_t *cc,
