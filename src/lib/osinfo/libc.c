@@ -46,12 +46,6 @@ tor_libc_get_name(void)
 const char *
 tor_libc_get_version_str(void)
 {
-#ifdef CHECK_LIBC_VERSION
-  const char *version = gnu_get_libc_version();
-  if (version == NULL)
-    return "N/A";
-  return version;
-#else /* !defined(CHECK_LIBC_VERSION) */
 #ifdef __BSD_VISIBLE
 #include <sys/param.sh>
 #ifdef __DragonFly_version
@@ -65,7 +59,14 @@ tor_libc_get_version_str(void)
 #endif
 #ifdef OpenBSD
   return STR(OpenBSD);
+#endif
 #endif /* defined(__BSD_VISIBLE) */
+#ifdef CHECK_LIBC_VERSION
+  const char *version = gnu_get_libc_version();
+  if (version == NULL)
+    return "N/A";
+  return version;
+#else /* !defined(CHECK_LIBC_VERSION) */
   return "N/A";
 #endif /* defined(CHECK_LIBC_VERSION) */
 }
