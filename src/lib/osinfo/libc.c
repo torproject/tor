@@ -57,6 +57,9 @@ tor_libc_get_version_str(void)
 #ifdef __FreeBSD__
   return STR(__FreeBSD_version);
 #endif
+#ifdef __NetBSD_Version__
+  return STR(__NetBSD_Version__);
+#endif
 #ifdef OpenBSD
   return STR(OpenBSD);
 #endif /* defined(__BSD_VISIBLE) */
