@@ -54,6 +54,9 @@ tor_libc_get_version_str(void)
 #else /* !defined(CHECK_LIBC_VERSION) */
 #ifdef __BSD_VISIBLE
 #include <sys/param.sh>
+#ifdef __DragonFly_version
+  return STR(__DragonFly_version);
+#endif
 #ifdef __FreeBSD__
   return STR(__FreeBSD_version);
 #endif
