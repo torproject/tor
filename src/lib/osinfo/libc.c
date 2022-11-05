@@ -31,9 +31,9 @@
 const char *
 tor_libc_get_name(void)
 {
-#ifdef __BSD_VISIBLE
+#ifdef __BSD_VISIBLE || __NETBSD_SOURCE
   return "BSD";
-#endif /* defined(__BSD_VISIBLE) */
+#endif /* defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE) */
 #ifdef __GLIBC__
   return "Glibc";
 #else /* !defined(__GLIBC__) */
