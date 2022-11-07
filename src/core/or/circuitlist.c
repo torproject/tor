@@ -2245,13 +2245,17 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
        * averaging and reporting unused and low-use circuits here */
       if (circ->ccontrol->max_rtt_usec != circ->ccontrol->min_rtt_usec) {
         stats_circ_close_ss_cwnd_ma_count++;
-        STATS_UPDATE_AVG(cc_stats_circ_close_ss_cwnd_ma,
-                   circ->ccontrol->cwnd, stats_circ_close_ss_cwnd_ma_count);
+        cc_stats_circ_close_ss_cwnd_ma =
+          stats_update_running_avg(cc_stats_circ_close_ss_cwnd_ma,
+                                   circ->ccontrol->cwnd,
+                                   stats_circ_close_ss_cwnd_ma_count);
       }
     } else {
       stats_circ_close_cwnd_ma_count++;
-      STATS_UPDATE_AVG(cc_stats_circ_close_cwnd_ma,
-                       circ->ccontrol->cwnd, stats_circ_close_cwnd_ma_count);
+      cc_stats_circ_close_cwnd_ma =
+        stats_update_running_avg(cc_stats_circ_close_cwnd_ma,
+                                 circ->ccontrol->cwnd,
+                                 stats_circ_close_cwnd_ma_count);
     }
   }
 

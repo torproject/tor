@@ -256,8 +256,9 @@ congestion_control_vegas_exit_slow_start(const circuit_t *circ,
 
   /* Update running cc->cwnd average for metrics. */
   stats_cwnd_exit_ss_ma_count++;
-  STATS_UPDATE_AVG(cc_stats_vegas_exit_ss_cwnd_ma,
-                   cc->cwnd, stats_cwnd_exit_ss_ma_count);
+  cc_stats_vegas_exit_ss_cwnd_ma =
+    stats_update_running_avg(cc_stats_vegas_exit_ss_cwnd_ma,
+                             cc->cwnd, stats_cwnd_exit_ss_ma_count);
 
   /* We need to report that slow start has exited ASAP,
    * for sbws bandwidth measurement. */

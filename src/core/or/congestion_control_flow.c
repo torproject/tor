@@ -486,8 +486,10 @@ flow_control_decide_xoff(edge_connection_t *stream)
       tor_trace(TR_SUBSYS(cc), TR_EV(flow_decide_xoff_sending), stream);
 
       cc_stats_flow_xoff_outbuf_ma_count++;
-      STATS_UPDATE_AVG(cc_stats_flow_xoff_outbuf_ma,
-                       total_buffered, cc_stats_flow_xoff_outbuf_ma_count);
+      cc_stats_flow_xoff_outbuf_ma =
+        stats_update_running_avg(cc_stats_flow_xoff_outbuf_ma,
+                                 total_buffered,
+                                 cc_stats_flow_xoff_outbuf_ma_count);
 
       circuit_send_stream_xoff(stream);
 
@@ -645,8 +647,10 @@ flow_control_decide_xon(edge_connection_t *stream, size_t n_written)
       tor_trace(TR_SUBSYS(cc), TR_EV(flow_decide_xon_rate_change), stream);
 
       cc_stats_flow_xon_outbuf_ma_count++;
-      STATS_UPDATE_AVG(cc_stats_flow_xon_outbuf_ma,
-                       total_buffered, cc_stats_flow_xon_outbuf_ma_count);
+      cc_stats_flow_xon_outbuf_ma =
+        stats_update_running_avg(cc_stats_flow_xon_outbuf_ma,
+                                 total_buffered,
+                                 cc_stats_flow_xon_outbuf_ma_count);
 
       circuit_send_stream_xon(stream);
     }
