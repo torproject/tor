@@ -659,7 +659,7 @@ listener_connection_new(int type, int socket_family)
   connection_init(time(NULL), TO_CONN(listener_conn), type, socket_family);
   /* Listener connections aren't accounted for with note_connection() so do
    * this explicitly so to count them. */
-  rep_hist_note_conn_opened(false, type);
+  rep_hist_note_conn_opened(false, type, socket_family);
   return listener_conn;
 }
 
@@ -1163,7 +1163,8 @@ connection_mark_for_close_internal_, (connection_t *conn,
   conn->timestamp_last_write_allowed = time(NULL);
 
   /* Note the connection close. */
-  rep_hist_note_conn_closed(conn->from_listener, conn->type);
+  rep_hist_note_conn_closed(conn->from_listener, conn->type,
+                            conn->socket_family);
 }
 
 /** Find each connection that has hold_open_until_flushed set to
@@ -2011,7 +2012,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
         log_notice(LD_APP,
                    "Denying socks connection from untrusted address %s.",
                    fmt_and_decorate_addr(&addr));
-        rep_hist_note_conn_rejected(new_type);
+        rep_hist_note_conn_rejected(new_type, conn->socket_family);
         tor_close_socket(news);
         return 0;
       }
@@ -2021,7 +2022,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       if (dir_policy_permits_address(&addr) == 0) {
         log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
                    fmt_and_decorate_addr(&addr));
-        rep_hist_note_conn_rejected(new_type);
+        rep_hist_note_conn_rejected(new_type, conn->socket_family);
         tor_close_socket(news);
         return 0;
       }
@@ -2030,7 +2031,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       /* Assess with the connection DoS mitigation subsystem if this address
        * can open a new connection. */
       if (dos_conn_addr_get_defense_type(&addr) == DOS_CONN_DEFENSE_CLOSE) {
-        rep_hist_note_conn_rejected(new_type);
+        rep_hist_note_conn_rejected(new_type, conn->socket_family);
         tor_close_socket(news);
         return 0;
       }
