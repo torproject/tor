@@ -161,6 +161,10 @@
     ((p) == CIRCUIT_PURPOSE_C_GENERAL || \
      (p) == CIRCUIT_PURPOSE_C_HSDIR_GET)
 
+/** Stats. */
+extern double cc_stats_circ_close_cwnd_ma;
+extern double cc_stats_circ_close_ss_cwnd_ma;
+
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
  * if the cast is impossible. */
 or_circuit_t *TO_OR_CIRCUIT(circuit_t *);

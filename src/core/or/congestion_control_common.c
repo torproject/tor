@@ -94,6 +94,9 @@ void congestion_control_set_cc_enabled(void);
 /* Number of times the RTT value was reset. For MetricsPort. */
 static uint64_t num_rtt_reset;
 
+/* Number of times the clock was stalled. For MetricsPort. */
+static uint64_t num_clock_stalls;
+
 /* Consensus parameters cached. The non static ones are extern. */
 static uint32_t cwnd_max = CWND_MAX_DFLT;
 int32_t cell_queue_high = CELL_QUEUE_HIGH_DFLT;
@@ -134,6 +137,13 @@ uint64_t
 congestion_control_get_num_rtt_reset(void)
 {
   return num_rtt_reset;
+}
+
+/** Return the number of clock stalls that have been done. */
+uint64_t
+congestion_control_get_num_clock_stalls(void)
+{
+  return num_clock_stalls;
 }
 
 /**
@@ -872,6 +882,7 @@ congestion_control_update_circuit_rtt(congestion_control_t *cc,
 
   /* Do not update RTT at all if it looks fishy */
   if (time_delta_stalled_or_jumped(cc, cc->ewma_rtt_usec, rtt)) {
+    num_clock_stalls++; /* Accounting */
     return 0;
   }
 
