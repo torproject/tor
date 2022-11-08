@@ -56,12 +56,6 @@ double cc_stats_vegas_gamma_drop_ma = 0;
 double cc_stats_vegas_delta_drop_ma = 0;
 double cc_stats_vegas_ss_csig_blocked_ma = 0;
 double cc_stats_vegas_csig_blocked_ma = 0;
-/* Running count of this moving average. Needed so we can update it. */
-static double stats_cwnd_exit_ss_ma_count = 0;
-static double stats_cwnd_gamma_drop_ma_count = 0;
-static double stats_cwnd_delta_drop_ma_count = 0;
-static double stats_ss_csig_blocked_ma_count = 0;
-static double stats_csig_blocked_ma_count = 0;
 
 /** Stats on how many times we reached "delta" param. */
 uint64_t cc_stats_vegas_above_delta = 0;
@@ -263,10 +257,9 @@ congestion_control_vegas_exit_slow_start(const circuit_t *circ,
   congestion_control_vegas_log(circ, cc);
 
   /* Update running cc->cwnd average for metrics. */
-  stats_cwnd_exit_ss_ma_count++;
   cc_stats_vegas_exit_ss_cwnd_ma =
     stats_update_running_avg(cc_stats_vegas_exit_ss_cwnd_ma,
-                             cc->cwnd, stats_cwnd_exit_ss_ma_count);
+                             cc->cwnd);
 
   /* We need to report that slow start has exited ASAP,
    * for sbws bandwidth measurement. */
@@ -347,21 +340,19 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
 
       /* Account the amount we reduced the cwnd by for the gamma cutoff */
       cwnd_diff = (old_cwnd > cc->cwnd ? old_cwnd - cc->cwnd : 0);
-      stats_cwnd_gamma_drop_ma_count++;
       cc_stats_vegas_gamma_drop_ma =
         stats_update_running_avg(cc_stats_vegas_gamma_drop_ma,
-                             cwnd_diff, stats_cwnd_gamma_drop_ma_count);
+                             cwnd_diff);
 
-      stats_ss_csig_blocked_ma_count++;
       /* Compute the percentage we experience a blocked csig vs RTT sig */
       if (cc->blocked_chan) {
         cc_stats_vegas_ss_csig_blocked_ma =
           stats_update_running_avg(cc_stats_vegas_ss_csig_blocked_ma,
-                                   100, stats_ss_csig_blocked_ma_count);
+                                   100);
       } else {
         cc_stats_vegas_ss_csig_blocked_ma =
           stats_update_running_avg(cc_stats_vegas_ss_csig_blocked_ma,
-                                   0, stats_ss_csig_blocked_ma_count);
+                                   0);
       }
 
       congestion_control_vegas_exit_slow_start(circ, cc);
@@ -384,23 +375,21 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
 
       /* Account the amount we reduced the cwnd by for the gamma cutoff */
       cwnd_diff = (old_cwnd > cc->cwnd ? old_cwnd - cc->cwnd : 0);
-      stats_cwnd_delta_drop_ma_count++;
       cc_stats_vegas_delta_drop_ma =
         stats_update_running_avg(cc_stats_vegas_delta_drop_ma,
-                             cwnd_diff, stats_cwnd_delta_drop_ma_count);
+                             cwnd_diff);
 
       cc_stats_vegas_above_delta++;
     } else if (queue_use > cc->vegas_params.beta || cc->blocked_chan) {
-      stats_csig_blocked_ma_count++;
       /* Compute the percentage we experience a blocked csig vs RTT sig */
       if (cc->blocked_chan) {
         cc_stats_vegas_csig_blocked_ma =
           stats_update_running_avg(cc_stats_vegas_csig_blocked_ma,
-                                   100, stats_csig_blocked_ma_count);
+                                   100);
       } else {
         cc_stats_vegas_csig_blocked_ma =
           stats_update_running_avg(cc_stats_vegas_csig_blocked_ma,
-                                   0, stats_csig_blocked_ma_count);
+                                   0);
       }
 
       cc->cwnd -= CWND_INC(cc);
