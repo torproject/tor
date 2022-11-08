@@ -1693,70 +1693,127 @@ rep_hist_get_exit_stream_seen(unsigned int cmd)
   (from_listener) ? CONN_DIRECTION_RECEIVED : CONN_DIRECTION_INITIATED
 
 /** Number of connections created as in seen per direction per type. */
-static uint64_t conn_num_created[2][CONN_TYPE_MAX_];
+static uint64_t conn_num_created_v4[2][CONN_TYPE_MAX_];
+static uint64_t conn_num_created_v6[2][CONN_TYPE_MAX_];
 /** Number of connections opened per direction per type. */
-static uint64_t conn_num_opened[2][CONN_TYPE_MAX_];
+static uint64_t conn_num_opened_v4[2][CONN_TYPE_MAX_];
+static uint64_t conn_num_opened_v6[2][CONN_TYPE_MAX_];
 /** Number of connections rejected per type. Always inbound. */
-static uint64_t conn_num_rejected[CONN_TYPE_MAX_];
+static uint64_t conn_num_rejected_v4[CONN_TYPE_MAX_];
+static uint64_t conn_num_rejected_v6[CONN_TYPE_MAX_];
 
 /** Note that a connection has opened of the given type. */
 void
-rep_hist_note_conn_opened(bool from_listener, unsigned int type)
+rep_hist_note_conn_opened(bool from_listener, unsigned int type, int af)
 {
   tor_assert(type <= CONN_TYPE_MAX_);
 
   unsigned int dir = CONN_DIRECTION(from_listener);
 
-  conn_num_created[dir][type]++;
-  conn_num_opened[dir][type]++;
+  switch (af) {
+  case AF_INET:
+    conn_num_created_v4[dir][type]++;
+    conn_num_opened_v4[dir][type]++;
+    break;
+  case AF_INET6:
+    conn_num_created_v6[dir][type]++;
+    conn_num_opened_v6[dir][type]++;
+    break;
+  default:
+    /* Ignore non IP connections at this point in time. */
+    break;
+  }
 }
 
 /** Note that a connection has closed of the given type. */
 void
-rep_hist_note_conn_closed(bool from_listener, unsigned int type)
+rep_hist_note_conn_closed(bool from_listener, unsigned int type, int af)
 {
   tor_assert(type <= CONN_TYPE_MAX_);
 
   unsigned int dir = CONN_DIRECTION(from_listener);
 
-  if (conn_num_opened[dir][type] > 0) {
-    conn_num_opened[dir][type]--;
+  switch (af) {
+  case AF_INET:
+    if (conn_num_opened_v4[dir][type] > 0) {
+      conn_num_opened_v4[dir][type]--;
+    }
+    break;
+  case AF_INET6:
+    if (conn_num_opened_v6[dir][type] > 0) {
+      conn_num_opened_v6[dir][type]--;
+    }
+    break;
+  default:
+    /* Ignore non IP connections at this point in time. */
+    break;
   }
 }
 
 /** Note that a connection has rejected of the given type. */
 void
-rep_hist_note_conn_rejected(unsigned int type)
+rep_hist_note_conn_rejected(unsigned int type, int af)
 {
   tor_assert(type <= CONN_TYPE_MAX_);
 
-  conn_num_rejected[type]++;
+  switch (af) {
+  case AF_INET:
+    conn_num_rejected_v4[type]++;
+    break;
+  case AF_INET6:
+    conn_num_rejected_v6[type]++;
+    break;
+  default:
+    /* Ignore non IP connections at this point in time. */
+    break;
+  }
 }
 
 /** Return number of created connections of the given type. */
 uint64_t
-rep_hist_get_conn_created(bool from_listener, unsigned int type)
+rep_hist_get_conn_created(bool from_listener, unsigned int type, int af)
 {
   tor_assert(type <= CONN_TYPE_MAX_);
   unsigned int dir = CONN_DIRECTION(from_listener);
-  return conn_num_created[dir][type];
+  switch (af) {
+  case AF_INET:
+    return conn_num_created_v4[dir][type];
+  case AF_INET6:
+    return conn_num_created_v6[dir][type];
+  default:
+    return 0;
+  }
 }
 
 /** Return number of opened connections of the given type. */
 uint64_t
-rep_hist_get_conn_opened(bool from_listener, unsigned int type)
+rep_hist_get_conn_opened(bool from_listener, unsigned int type, int af)
 {
   tor_assert(type <= CONN_TYPE_MAX_);
   unsigned int dir = CONN_DIRECTION(from_listener);
-  return conn_num_opened[dir][type];
+  switch (af) {
+  case AF_INET:
+    return conn_num_opened_v4[dir][type];
+  case AF_INET6:
+    return conn_num_opened_v6[dir][type];
+  default:
+    return 0;
+  }
 }
 
 /** Return number of opened connections of the given type. */
 uint64_t
-rep_hist_get_conn_rejected(unsigned int type)
+rep_hist_get_conn_rejected(unsigned int type, int af)
 {
   tor_assert(type <= CONN_TYPE_MAX_);
-  return conn_num_rejected[type];
+  switch (af) {
+  case AF_INET:
+    return conn_num_rejected_v4[type];
+  case AF_INET6:
+    return conn_num_rejected_v6[type];
+  default:
+    return 0;
+  }
 }
 
 /*** cell statistics ***/
