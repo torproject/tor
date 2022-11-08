@@ -128,6 +128,7 @@ uint64_t stats_n_relay_cells_delivered = 0;
 /** Stats: how many circuits have we closed due to the cell queue limit being
  * reached (see append_cell_to_circuit_queue()) */
 uint64_t stats_n_circ_max_cell_reached = 0;
+uint64_t stats_n_circ_max_cell_outq_reached = 0;
 
 /**
  * Update channel usage state based on the type of relay cell and
@@ -3265,6 +3266,7 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     /* This DoS defense only applies at the Guard as in the p_chan is likely
      * a client IP attacking the network. */
     if (exitward && CIRCUIT_IS_ORCIRC(circ)) {
+      stats_n_circ_max_cell_outq_reached++;
       dos_note_circ_max_outq(CONST_TO_OR_CIRCUIT(circ)->p_chan);
     }
 
