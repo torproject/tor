@@ -395,6 +395,15 @@ fill_cc_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "slow_start_exit"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "gamma_drop"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_vegas_gamma_drop_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
           metrics_format_label("state", "on_circ_close"));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "cwnd"));
@@ -461,6 +470,15 @@ fill_cc_values(void)
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "above_ss_cwnd_max"));
   metrics_store_entry_update(sentry, cc_stats_vegas_above_ss_cwnd_max);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "process_sendme"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "delta_drop"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_vegas_delta_drop_ma));
 }
 
 /** Helper: Fill in single stream metrics output. */
