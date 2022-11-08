@@ -13,6 +13,8 @@
 #include "core/or/circuit_st.h"
 
 extern double cc_stats_vegas_exit_ss_cwnd_ma;
+extern double cc_stats_vegas_gamma_drop_ma;
+extern double cc_stats_vegas_delta_drop_ma;
 extern uint64_t cc_stats_vegas_above_delta;
 extern uint64_t cc_stats_vegas_above_ss_cwnd_max;
 
