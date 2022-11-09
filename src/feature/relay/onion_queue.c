@@ -71,6 +71,25 @@ static int ol_entries[MAX_QUEUE_IDX+1];
 static int num_ntors_per_tap(void);
 static void onion_queue_entry_remove(onion_queue_t *victim);
 
+/** Return the max onion queue delay value either from the torrc options (if
+ * the user explicitly set it) else from the consensus parameter. */
+static uint64_t
+get_max_onion_queue_delay(const or_options_t *options)
+{
+#define MAX_ONION_QUEUE_DELAY_DEFAULT 1750 /* msec */
+#define MAX_ONION_QUEUE_DELAY_MIN 1 /* msec */
+#define MAX_ONION_QUEUE_DELAY_MAX INT32_MAX /* msec */
+
+  if (options && options->MaxOnionQueueDelay > 0) {
+    return options->MaxOnionQueueDelay;
+  }
+
+  return networkstatus_get_param(NULL, "MaxOnionQueueDelay",
+                                 MAX_ONION_QUEUE_DELAY_DEFAULT,
+                                 MAX_ONION_QUEUE_DELAY_MIN,
+                                 MAX_ONION_QUEUE_DELAY_MAX);
+}
+
 /**
  * We combine ntorv3 and ntor into the same queue, so we must
  * use this function to covert the cell type to a queue index.
@@ -103,6 +122,7 @@ have_room_for_onionskin(uint16_t type)
 {
   const or_options_t *options = get_options();
   int num_cpus;
+  uint64_t max_onion_queue_delay;
   uint64_t tap_usec, ntor_usec;
   uint64_t ntor_during_tap_usec, tap_during_ntor_usec;
 
@@ -110,6 +130,8 @@ have_room_for_onionskin(uint16_t type)
   if (ol_entries[type] < 50)
     return 1;
   num_cpus = get_num_cpus(options);
+  max_onion_queue_delay = get_max_onion_queue_delay(options);
+
   /* Compute how many microseconds we'd expect to need to clear all
    * onionskins in various combinations of the queues. */
 
@@ -140,19 +162,17 @@ have_room_for_onionskin(uint16_t type)
   /* See whether that exceeds MaxOnionQueueDelay. If so, we can't queue
    * this. */
   if (type == ONION_HANDSHAKE_TYPE_NTOR &&
-      (ntor_usec + tap_during_ntor_usec) / 1000 >
-       (uint64_t)options->MaxOnionQueueDelay)
+      (ntor_usec + tap_during_ntor_usec) / 1000 > max_onion_queue_delay)
     return 0;
 
   if (type == ONION_HANDSHAKE_TYPE_TAP &&
-      (tap_usec + ntor_during_tap_usec) / 1000 >
-       (uint64_t)options->MaxOnionQueueDelay)
+      (tap_usec + ntor_during_tap_usec) / 1000 > max_onion_queue_delay)
     return 0;
 
   /* If we support the ntor handshake, then don't let TAP handshakes use
    * more than 2/3 of the space on the queue. */
   if (type == ONION_HANDSHAKE_TYPE_TAP &&
-      tap_usec / 1000 > (uint64_t)options->MaxOnionQueueDelay * 2 / 3)
+      tap_usec / 1000 > max_onion_queue_delay * 2 / 3)
     return 0;
 
   return 1;
