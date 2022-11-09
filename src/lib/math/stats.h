@@ -10,13 +10,33 @@
 #ifndef TOR_STATS_H
 #define TOR_STATS_H
 
-/** Update an average making it a "running average". The "avg" is the current
- * value that will be updated to the new one. The "value" is the new value to
- * add to the average and "n" is the new count as in including the "value". */
+/**
+ * Compute an N-count EWMA, aka N-EWMA. N-EWMA is defined as:
+ *  EWMA = alpha*value + (1-alpha)*EWMA_prev
+ * with alpha = 2/(N+1).
+ *
+ * This works out to:
+ *  EWMA = value*2/(N+1) + EMA_prev*(N-1)/(N+1)
+ *       = (value*2 + EWMA_prev*(N-1))/(N+1)
+ */
 static inline double
-stats_update_running_avg(double avg, double value, double n)
+n_count_ewma_double(double avg, double value, uint64_t N)
 {
-  return ((avg * (n - 1)) + value) / n;
+  /* If the average was not previously computed, return value.
+   * The less than is because we have stupid C warning flags that
+   * prevent exact comparison to 0.0, so we can't do an exact
+   * check for unitialized double values. Yay pedantry!
+   * Love it when it introduces surprising edge case bugs like
+   * this will. */
+  if (avg < 0.0000002)
+    return value;
+  else
+    return (2*value + (N-1)*avg)/(N+1);
 }
+
+/* For most stats, an N_EWMA of 100 is sufficient */
+#define DEFAULT_STATS_N_EWMA_COUNT 100
+#define stats_update_running_avg(avg, value) \
+    n_count_ewma_double(avg, value, DEFAULT_STATS_N_EWMA_COUNT)
 
 #endif /* !defined(TOR_STATS_H) */

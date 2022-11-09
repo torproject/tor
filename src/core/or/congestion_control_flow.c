@@ -41,9 +41,7 @@ static uint32_t xon_rate_bytes;
 uint64_t cc_stats_flow_num_xoff_sent;
 uint64_t cc_stats_flow_num_xon_sent;
 double cc_stats_flow_xoff_outbuf_ma = 0;
-static double cc_stats_flow_xoff_outbuf_ma_count = 0;
 double cc_stats_flow_xon_outbuf_ma = 0;
-static double cc_stats_flow_xon_outbuf_ma_count = 0;
 
 /* In normal operation, we can get a burst of up to 32 cells before returning
  * to libevent to flush the outbuf. This is a heuristic from hardcoded values
@@ -485,11 +483,9 @@ flow_control_decide_xoff(edge_connection_t *stream)
                  total_buffered, buffer_limit_xoff);
       tor_trace(TR_SUBSYS(cc), TR_EV(flow_decide_xoff_sending), stream);
 
-      cc_stats_flow_xoff_outbuf_ma_count++;
       cc_stats_flow_xoff_outbuf_ma =
         stats_update_running_avg(cc_stats_flow_xoff_outbuf_ma,
-                                 total_buffered,
-                                 cc_stats_flow_xoff_outbuf_ma_count);
+                                 total_buffered);
 
       circuit_send_stream_xoff(stream);
 
@@ -646,11 +642,9 @@ flow_control_decide_xon(edge_connection_t *stream, size_t n_written)
                  total_buffered);
       tor_trace(TR_SUBSYS(cc), TR_EV(flow_decide_xon_rate_change), stream);
 
-      cc_stats_flow_xon_outbuf_ma_count++;
       cc_stats_flow_xon_outbuf_ma =
         stats_update_running_avg(cc_stats_flow_xon_outbuf_ma,
-                                 total_buffered,
-                                 cc_stats_flow_xon_outbuf_ma_count);
+                                 total_buffered);
 
       circuit_send_stream_xon(stream);
     }
