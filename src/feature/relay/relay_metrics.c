@@ -411,15 +411,6 @@ fill_cc_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "slow_start_exit"));
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "gamma_drop"));
-  metrics_store_entry_update(sentry,
-                             tor_llround(cc_stats_vegas_gamma_drop_ma));
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
-  metrics_store_entry_add_label(sentry,
           metrics_format_label("state", "on_circ_close"));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "cwnd"));
@@ -438,43 +429,43 @@ fill_cc_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "xoff"));
+          metrics_format_label("state", "flow_control"));
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "outbuf"));
-  metrics_store_entry_update(sentry,
-                             tor_llround(cc_stats_flow_xoff_outbuf_ma));
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "xoff"));
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "num_sent"));
+          metrics_format_label("action", "xoff_num_sent"));
   metrics_store_entry_update(sentry,
                              cc_stats_flow_num_xoff_sent);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "xon"));
+          metrics_format_label("state", "flow_control"));
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "outbuf"));
-  metrics_store_entry_update(sentry,
-                             tor_llround(cc_stats_flow_xon_outbuf_ma));
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "xon"));
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "num_sent"));
+          metrics_format_label("action", "xon_num_sent"));
   metrics_store_entry_update(sentry,
                              cc_stats_flow_num_xon_sent);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "process_sendme"));
+          metrics_format_label("state", "buffers"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "xon_outbuf"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_flow_xon_outbuf_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "buffers"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "xoff_outbuf"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_flow_xoff_outbuf_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_limits"));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "above_delta"));
   metrics_store_entry_update(sentry, cc_stats_vegas_above_delta);
@@ -482,7 +473,7 @@ fill_cc_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "process_sendme"));
+          metrics_format_label("state", "cc_limits"));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "above_ss_cwnd_max"));
   metrics_store_entry_update(sentry, cc_stats_vegas_above_ss_cwnd_max);
@@ -490,11 +481,38 @@ fill_cc_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "process_sendme"));
+          metrics_format_label("state", "cc_backoff"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "chan_blocked_pct"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_vegas_csig_blocked_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_backoff"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "gamma_drop"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_vegas_gamma_drop_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_backoff"));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "delta_drop"));
   metrics_store_entry_update(sentry,
                              tor_llround(cc_stats_vegas_delta_drop_ma));
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_backoff"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "ss_chan_blocked_pct"));
+  metrics_store_entry_update(sentry,
+                             tor_llround(cc_stats_vegas_ss_csig_blocked_ma));
 }
 
 /** Helper: Fill in single stream metrics output. */
