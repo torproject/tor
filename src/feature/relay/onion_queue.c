@@ -48,9 +48,6 @@ typedef struct onion_queue_t {
   time_t when_added;
 } onion_queue_t;
 
-/** 5 seconds on the onion queue til we just send back a destroy */
-#define ONIONQUEUE_WAIT_CUTOFF 5
-
 TOR_TAILQ_HEAD(onion_queue_head_t, onion_queue_t);
 typedef struct onion_queue_head_t onion_queue_head_t;
 
@@ -70,6 +67,20 @@ static int ol_entries[MAX_QUEUE_IDX+1];
 
 static int num_ntors_per_tap(void);
 static void onion_queue_entry_remove(onion_queue_t *victim);
+
+/** Return the onion queue wait cutoff value from the consensus parameter. */
+static time_t
+get_onionqueue_wait_cutoff(void)
+{
+/* In seconds. */
+#define ONION_QUEUE_WAIT_CUTOFF_DEFAULT 5
+#define ONION_QUEUE_WAIT_CUTOFF_MIN 0
+#define ONION_QUEUE_WAIT_CUTOFF_MAX INT32_MAX
+  return networkstatus_get_param(NULL, "onion_queue_wait_cutoff",
+                                 ONION_QUEUE_WAIT_CUTOFF_DEFAULT,
+                                 ONION_QUEUE_WAIT_CUTOFF_MIN,
+                                 ONION_QUEUE_WAIT_CUTOFF_MAX);
+}
 
 /** Return the max onion queue delay value either from the torrc options (if
  * the user explicitly set it) else from the consensus parameter. */
@@ -242,7 +253,7 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
   /* cull elderly requests. */
   while (1) {
     onion_queue_t *head = TOR_TAILQ_FIRST(&ol_list[queue_idx]);
-    if (now - head->when_added < (time_t)ONIONQUEUE_WAIT_CUTOFF)
+    if (now - head->when_added < get_onionqueue_wait_cutoff())
       break;
 
     circ = head->circ;
