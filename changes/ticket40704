@@ -1,0 +1,6 @@
+  o Minor feature (relay):
+    - Two new consensus parameters are added to control the wait time in queue
+      of the onionskins. One of them is the torrc MaxOnionQueueDelay options
+      which supersedes the consensus parameter. Closes ticket 40704.
+    - Change a hardcoded value for the maximum of per CPU tasks into a
+      consensus parameter.
