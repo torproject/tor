@@ -154,10 +154,6 @@ double cc_stats_circ_close_cwnd_ma = 0;
 /** Moving average of the cc->cwnd from each closed slow-start circuit. */
 double cc_stats_circ_close_ss_cwnd_ma = 0;
 
-/* Running count of the above moving averages. Needed so we can update it. */
-static double stats_circ_close_cwnd_ma_count = 0;
-static double stats_circ_close_ss_cwnd_ma_count = 0;
-
 /********* END VARIABLES ************/
 
 /* Implement circuit handle helpers. */
@@ -2244,18 +2240,14 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
        * and a max RTT, and they are not the same. This prevents us from
        * averaging and reporting unused and low-use circuits here */
       if (circ->ccontrol->max_rtt_usec != circ->ccontrol->min_rtt_usec) {
-        stats_circ_close_ss_cwnd_ma_count++;
         cc_stats_circ_close_ss_cwnd_ma =
           stats_update_running_avg(cc_stats_circ_close_ss_cwnd_ma,
-                                   circ->ccontrol->cwnd,
-                                   stats_circ_close_ss_cwnd_ma_count);
+                                   circ->ccontrol->cwnd);
       }
     } else {
-      stats_circ_close_cwnd_ma_count++;
       cc_stats_circ_close_cwnd_ma =
         stats_update_running_avg(cc_stats_circ_close_cwnd_ma,
-                                 circ->ccontrol->cwnd,
-                                 stats_circ_close_cwnd_ma_count);
+                                 circ->ccontrol->cwnd);
     }
   }
 
