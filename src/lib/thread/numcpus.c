@@ -53,10 +53,10 @@ compute_num_cpus_impl(void)
     cpus = cpus_onln;
   } else if (cpus_onln > 0 && cpus_conf > 0) {
     if (cpus_onln < cpus_conf) {
-      log_notice(LD_GENERAL, "I think we have %ld CPUS, but only %ld of them "
-                 "are available. Telling Tor to only use %ld. You can over"
-                 "ride this with the NumCPUs option",
-                 cpus_conf, cpus_onln, cpus_onln);
+      log_info(LD_GENERAL, "I think we have %ld CPUS, but only %ld of them "
+               "are available. Telling Tor to only use %ld. You can over"
+               "ride this with the NumCPUs option",
+               cpus_conf, cpus_onln, cpus_onln);
     }
     cpus = cpus_onln;
   }
