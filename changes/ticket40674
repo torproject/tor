@@ -1,0 +1,3 @@
+  o Major bugfixes (relay):
+    - Improve security of our DNS cache by randomly clipping the TTL value.
+      TROVE-2021-009. Fixes bug 40674; bugfix on 0.3.5.1-alpha.
