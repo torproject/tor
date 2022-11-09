@@ -1,3 +1,42 @@
+Changes in version 0.4.7.10 - 2022-08-12
+  This version updates the geoip cache that we generate from IPFire location
+  database to use the August 9th, 2022 one. Everyone MUST update to this
+  latest release else circuit path selection and relay metrics are badly
+  affected.
+
+  o Major bugfixes (geoip data):
+    - IPFire informed us on August 12th that databases generated after
+      (including) August 10th did not have proper ARIN network allocations. We
+      are updating the database to use the one generated on August 9th, 2022.
+      Fixes bug 40658; bugfix on 0.4.7.9.
+
+
+Changes in version 0.4.6.12 - 2022-08-12
+  This version updates the geoip cache that we generate from IPFire location
+  database to use the August 9th, 2022 one. Everyone MUST update to this
+  latest release else circuit path selection and relay metrics are badly
+  affected.
+
+  o Major bugfixes (geoip data):
+    - IPFire informed us on August 12th that databases generated after
+      (including) August 10th did not have proper ARIN network allocations. We
+      are updating the database to use the one generated on August 9th, 2022.
+      Fixes bug 40658; bugfix on 0.4.6.11.
+
+
+Changes in version 0.4.5.14 - 2022-08-12
+  This version updates the geoip cache that we generate from IPFire location
+  database to use the August 9th, 2022 one. Everyone MUST update to this
+  latest release else circuit path selection and relay metrics are badly
+  affected.
+
+  o Major bugfixes (geoip data):
+    - IPFire informed us on August 12th that databases generated after
+      (including) August 10th did not have proper ARIN network allocations. We
+      are updating the database to use the one generated on August 9th, 2022.
+      Fixes bug 40658; bugfix on 0.4.5.13.
+
+
 Changes in version 0.4.7.9 - 2022-08-11
   This version contains several major fixes aimed at reducing memory pressure on
   relays and possible side-channel. It also contains a major bugfix related to
