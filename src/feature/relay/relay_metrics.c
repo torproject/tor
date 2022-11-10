@@ -41,7 +41,8 @@
 /** Declarations of each fill function for metrics defined in base_metrics. */
 static void fill_cc_values(void);
 static void fill_circuits_values(void);
-static void fill_connections_values(void);
+static void fill_conn_counter_values(void);
+static void fill_conn_gauge_values(void);
 static void fill_dns_error_values(void);
 static void fill_dns_query_values(void);
 static void fill_dos_values(void);
@@ -110,11 +111,18 @@ static const relay_metrics_entry_t base_metrics[] =
     .fill_fn = fill_tcp_exhaustion_values,
   },
   {
-    .key = RELAY_METRICS_NUM_CONNECTIONS,
-    .type = METRICS_TYPE_GAUGE,
+    .key = RELAY_METRICS_CONN_COUNTERS,
+    .type = METRICS_TYPE_COUNTER,
     .name = METRICS_NAME(relay_connections_total),
-    .help = "Total number of connections",
-    .fill_fn = fill_connections_values,
+    .help = "Total number of created/rejected connections",
+    .fill_fn = fill_conn_counter_values,
+  },
+  {
+    .key = RELAY_METRICS_CONN_GAUGES,
+    .type = METRICS_TYPE_GAUGE,
+    .name = METRICS_NAME(relay_connections),
+    .help = "Total number of opened connections",
+    .fill_fn = fill_conn_gauge_values,
   },
   {
     .key = RELAY_METRICS_NUM_STREAMS,
@@ -563,12 +571,12 @@ fill_single_connection_value(metrics_store_entry_t *sentry,
   metrics_store_entry_update(sentry, value);
 }
 
-/** Fill function for the RELAY_METRICS_NUM_CONNECTIONS metric. */
+/** Fill function for the RELAY_METRICS_CONN_COUNTERS metric. */
 static void
-fill_connections_values(void)
+fill_conn_counter_values(void)
 {
   const relay_metrics_entry_t *rentry =
-    &base_metrics[RELAY_METRICS_NUM_CONNECTIONS];
+    &base_metrics[RELAY_METRICS_CONN_COUNTERS];
 
   for (unsigned int i = CONN_TYPE_MIN_; i < CONN_TYPE_MAX_ ; i++) {
     /* Type is unused. Ugly but else we clobber the output. */
@@ -596,6 +604,31 @@ fill_connections_values(void)
 
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                rentry->help);
+    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET,
+                                 rep_hist_get_conn_rejected(i, AF_INET));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET6,
+                                 rep_hist_get_conn_rejected(i, AF_INET6));
+
+    /* No counter for "initiated" + "rejected" connections exists. */
+  }
+}
+
+/** Fill function for the RELAY_METRICS_CONN_GAUGES metric. */
+static void
+fill_conn_gauge_values(void)
+{
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_CONN_GAUGES];
+
+  for (unsigned int i = CONN_TYPE_MIN_; i < CONN_TYPE_MAX_ ; i++) {
+    /* Type is unused. Ugly but else we clobber the output. */
+    if (i == 10) {
+      continue;
+    }
+    metrics_store_entry_t *sentry =
+      metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
     fill_single_connection_value(sentry, i, "initiated", "opened", AF_INET,
                                  rep_hist_get_conn_opened(false, i, AF_INET));
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
@@ -611,15 +644,6 @@ fill_connections_values(void)
                                rentry->help);
     fill_single_connection_value(sentry, i, "received", "opened", AF_INET6,
                                  rep_hist_get_conn_opened(true, i, AF_INET6));
-
-    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                               rentry->help);
-    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET,
-                                 rep_hist_get_conn_rejected(i, AF_INET));
-    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                               rentry->help);
-    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET6,
-                                 rep_hist_get_conn_rejected(i, AF_INET6));
   }
 }
 

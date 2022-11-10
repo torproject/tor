@@ -29,20 +29,22 @@ typedef enum {
   RELAY_METRICS_NUM_DNS_ERRORS = 5,
   /** Number of TCP exhaustion reached. */
   RELAY_METRICS_NUM_TCP_EXHAUSTION = 6,
-  /** Number of connections. */
-  RELAY_METRICS_NUM_CONNECTIONS = 7,
+  /** Connections counters (always going up). */
+  RELAY_METRICS_CONN_COUNTERS = 7,
+  /** Connections gauges. */
+  RELAY_METRICS_CONN_GAUGES = 8,
   /** Number of streams. */
-  RELAY_METRICS_NUM_STREAMS = 8,
+  RELAY_METRICS_NUM_STREAMS = 9,
   /** Congestion control counters. */
-  RELAY_METRICS_NUM_CC = 9,
+  RELAY_METRICS_NUM_CC = 10,
   /** Denial of Service defenses subsystem. */
-  RELAY_METRICS_NUM_DOS = 10,
+  RELAY_METRICS_NUM_DOS = 11,
   /** Denial of Service defenses subsystem. */
-  RELAY_METRICS_NUM_TRAFFIC = 11,
+  RELAY_METRICS_NUM_TRAFFIC = 12,
   /** Relay flags. */
-  RELAY_METRICS_RELAY_FLAGS = 12,
+  RELAY_METRICS_RELAY_FLAGS = 13,
   /** Numer of circuits. */
-  RELAY_METRICS_NUM_CIRCUITS = 13,
+  RELAY_METRICS_NUM_CIRCUITS = 14,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
