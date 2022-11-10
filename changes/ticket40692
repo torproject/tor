@@ -1,3 +1,0 @@
-  o Minor bugfixes (onion service client):
-    - A collapsing onion service circuit should be seen as an "unreachable"
-      error so it can be retried. Fixes bug 40692; bugfix on 0.3.5.1-alpha.
