@@ -39,9 +39,11 @@
 #include <event2/dns.h>
 
 /** Declarations of each fill function for metrics defined in base_metrics. */
-static void fill_cc_values(void);
+static void fill_cc_counters_values(void);
+static void fill_cc_gauges_values(void);
 static void fill_circuits_values(void);
-static void fill_connections_values(void);
+static void fill_conn_counter_values(void);
+static void fill_conn_gauge_values(void);
 static void fill_dns_error_values(void);
 static void fill_dns_query_values(void);
 static void fill_dos_values(void);
@@ -110,11 +112,18 @@ static const relay_metrics_entry_t base_metrics[] =
     .fill_fn = fill_tcp_exhaustion_values,
   },
   {
-    .key = RELAY_METRICS_NUM_CONNECTIONS,
-    .type = METRICS_TYPE_GAUGE,
+    .key = RELAY_METRICS_CONN_COUNTERS,
+    .type = METRICS_TYPE_COUNTER,
     .name = METRICS_NAME(relay_connections_total),
-    .help = "Total number of connections",
-    .fill_fn = fill_connections_values,
+    .help = "Total number of created/rejected connections",
+    .fill_fn = fill_conn_counter_values,
+  },
+  {
+    .key = RELAY_METRICS_CONN_GAUGES,
+    .type = METRICS_TYPE_GAUGE,
+    .name = METRICS_NAME(relay_connections),
+    .help = "Total number of opened connections",
+    .fill_fn = fill_conn_gauge_values,
   },
   {
     .key = RELAY_METRICS_NUM_STREAMS,
@@ -124,11 +133,18 @@ static const relay_metrics_entry_t base_metrics[] =
     .fill_fn = fill_streams_values,
   },
   {
-    .key = RELAY_METRICS_NUM_CC,
+    .key = RELAY_METRICS_CC_COUNTERS,
     .type = METRICS_TYPE_COUNTER,
     .name = METRICS_NAME(relay_congestion_control_total),
     .help = "Congestion control related counters",
-    .fill_fn = fill_cc_values,
+    .fill_fn = fill_cc_counters_values,
+  },
+  {
+    .key = RELAY_METRICS_CC_GAUGES,
+    .type = METRICS_TYPE_GAUGE,
+    .name = METRICS_NAME(relay_congestion_control),
+    .help = "Congestion control related gauges",
+    .fill_fn = fill_cc_gauges_values,
   },
   {
     .key = RELAY_METRICS_NUM_DOS,
@@ -376,14 +392,15 @@ fill_dos_values(void)
   metrics_store_entry_update(sentry, hs_dos_get_intro2_rejected_count());
 }
 
-/** Fill function for the RELAY_METRICS_NUM_CC metric. */
+/** Fill function for the RELAY_METRICS_CC_COUNTERS metric. */
 static void
-fill_cc_values(void)
+fill_cc_counters_values(void)
 {
-  const relay_metrics_entry_t *rentry = &base_metrics[RELAY_METRICS_NUM_CC];
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_CC_COUNTERS];
+
   metrics_store_entry_t *sentry =
     metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
-
   metrics_store_entry_add_label(sentry,
           metrics_format_label("state", "starvation"));
   metrics_store_entry_add_label(sentry,
@@ -401,6 +418,48 @@ fill_cc_values(void)
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "flow_control"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "xoff_num_sent"));
+  metrics_store_entry_update(sentry,
+                             cc_stats_flow_num_xoff_sent);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "flow_control"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "xon_num_sent"));
+  metrics_store_entry_update(sentry,
+                             cc_stats_flow_num_xon_sent);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_limits"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "above_delta"));
+  metrics_store_entry_update(sentry, cc_stats_vegas_above_delta);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_limits"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "above_ss_cwnd_max"));
+  metrics_store_entry_update(sentry, cc_stats_vegas_above_ss_cwnd_max);
+}
+
+/** Fill function for the RELAY_METRICS_CC_GAUGES metric. */
+static void
+fill_cc_gauges_values(void)
+{
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_CC_GAUGES];
+
+  metrics_store_entry_t *sentry =
+    metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
   metrics_store_entry_add_label(sentry,
           metrics_format_label("state", "slow_start_exit"));
   metrics_store_entry_add_label(sentry,
@@ -429,24 +488,6 @@ fill_cc_values(void)
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "flow_control"));
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "xoff_num_sent"));
-  metrics_store_entry_update(sentry,
-                             cc_stats_flow_num_xoff_sent);
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "flow_control"));
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "xon_num_sent"));
-  metrics_store_entry_update(sentry,
-                             cc_stats_flow_num_xon_sent);
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
-  metrics_store_entry_add_label(sentry,
           metrics_format_label("state", "buffers"));
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "xon_outbuf"));
@@ -461,22 +502,6 @@ fill_cc_values(void)
           metrics_format_label("action", "xoff_outbuf"));
   metrics_store_entry_update(sentry,
                              tor_llround(cc_stats_flow_xoff_outbuf_ma));
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "cc_limits"));
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "above_delta"));
-  metrics_store_entry_update(sentry, cc_stats_vegas_above_delta);
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("state", "cc_limits"));
-  metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "above_ss_cwnd_max"));
-  metrics_store_entry_update(sentry, cc_stats_vegas_above_ss_cwnd_max);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                              rentry->help);
@@ -563,12 +588,12 @@ fill_single_connection_value(metrics_store_entry_t *sentry,
   metrics_store_entry_update(sentry, value);
 }
 
-/** Fill function for the RELAY_METRICS_NUM_CONNECTIONS metric. */
+/** Fill function for the RELAY_METRICS_CONN_COUNTERS metric. */
 static void
-fill_connections_values(void)
+fill_conn_counter_values(void)
 {
   const relay_metrics_entry_t *rentry =
-    &base_metrics[RELAY_METRICS_NUM_CONNECTIONS];
+    &base_metrics[RELAY_METRICS_CONN_COUNTERS];
 
   for (unsigned int i = CONN_TYPE_MIN_; i < CONN_TYPE_MAX_ ; i++) {
     /* Type is unused. Ugly but else we clobber the output. */
@@ -596,6 +621,31 @@ fill_connections_values(void)
 
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
                                rentry->help);
+    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET,
+                                 rep_hist_get_conn_rejected(i, AF_INET));
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help);
+    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET6,
+                                 rep_hist_get_conn_rejected(i, AF_INET6));
+
+    /* No counter for "initiated" + "rejected" connections exists. */
+  }
+}
+
+/** Fill function for the RELAY_METRICS_CONN_GAUGES metric. */
+static void
+fill_conn_gauge_values(void)
+{
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_CONN_GAUGES];
+
+  for (unsigned int i = CONN_TYPE_MIN_; i < CONN_TYPE_MAX_ ; i++) {
+    /* Type is unused. Ugly but else we clobber the output. */
+    if (i == 10) {
+      continue;
+    }
+    metrics_store_entry_t *sentry =
+      metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
     fill_single_connection_value(sentry, i, "initiated", "opened", AF_INET,
                                  rep_hist_get_conn_opened(false, i, AF_INET));
     sentry = metrics_store_add(the_store, rentry->type, rentry->name,
@@ -611,15 +661,6 @@ fill_connections_values(void)
                                rentry->help);
     fill_single_connection_value(sentry, i, "received", "opened", AF_INET6,
                                  rep_hist_get_conn_opened(true, i, AF_INET6));
-
-    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                               rentry->help);
-    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET,
-                                 rep_hist_get_conn_rejected(i, AF_INET));
-    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                               rentry->help);
-    fill_single_connection_value(sentry, i, "received", "rejected", AF_INET6,
-                                 rep_hist_get_conn_rejected(i, AF_INET6));
   }
 }
 

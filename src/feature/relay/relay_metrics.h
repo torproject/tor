@@ -16,33 +16,37 @@
  * the base_metrics array. */
 typedef enum {
   /** Number of OOM invocation. */
-  RELAY_METRICS_NUM_OOM_BYTES  = 0,
+  RELAY_METRICS_NUM_OOM_BYTES,
   /** Number of onionskines handled. */
-  RELAY_METRICS_NUM_ONIONSKINS = 1,
+  RELAY_METRICS_NUM_ONIONSKINS,
   /** Number of sockets. */
-  RELAY_METRICS_NUM_SOCKETS    = 2,
+  RELAY_METRICS_NUM_SOCKETS,
   /** Number of global connection rate limit. */
-  RELAY_METRICS_NUM_GLOBAL_RW_LIMIT = 3,
+  RELAY_METRICS_NUM_GLOBAL_RW_LIMIT,
   /** Number of DNS queries. */
-  RELAY_METRICS_NUM_DNS        = 4,
+  RELAY_METRICS_NUM_DNS,
   /** Number of DNS query errors. */
-  RELAY_METRICS_NUM_DNS_ERRORS = 5,
+  RELAY_METRICS_NUM_DNS_ERRORS,
   /** Number of TCP exhaustion reached. */
-  RELAY_METRICS_NUM_TCP_EXHAUSTION = 6,
-  /** Number of connections. */
-  RELAY_METRICS_NUM_CONNECTIONS = 7,
+  RELAY_METRICS_NUM_TCP_EXHAUSTION,
+  /** Connections counters (always going up). */
+  RELAY_METRICS_CONN_COUNTERS,
+  /** Connections gauges. */
+  RELAY_METRICS_CONN_GAUGES,
   /** Number of streams. */
-  RELAY_METRICS_NUM_STREAMS = 8,
+  RELAY_METRICS_NUM_STREAMS,
   /** Congestion control counters. */
-  RELAY_METRICS_NUM_CC = 9,
+  RELAY_METRICS_CC_COUNTERS,
+  /** Congestion control gauges. */
+  RELAY_METRICS_CC_GAUGES,
   /** Denial of Service defenses subsystem. */
-  RELAY_METRICS_NUM_DOS = 10,
+  RELAY_METRICS_NUM_DOS,
   /** Denial of Service defenses subsystem. */
-  RELAY_METRICS_NUM_TRAFFIC = 11,
+  RELAY_METRICS_NUM_TRAFFIC,
   /** Relay flags. */
-  RELAY_METRICS_RELAY_FLAGS = 12,
+  RELAY_METRICS_RELAY_FLAGS,
   /** Numer of circuits. */
-  RELAY_METRICS_NUM_CIRCUITS = 13,
+  RELAY_METRICS_NUM_CIRCUITS,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
