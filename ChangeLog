@@ -1,3 +1,127 @@
+Changes in version 0.4.7.11 - 2022-11-10
+  This version contains several major fixes aimed at helping defend against
+  network denial of service. It is also extending drastically the MetricsPort
+  for relays to help us gather more internal data to investigate performance
+  and attacks.
+
+  We strongly recommend to upgrade to this version especially for Exit relays
+  in order to help the network defend against this ongoing DDoS.
+
+  o Directory authority changes (dizum, Faravahar):
+    - Change dizum IP address. Closes ticket 40687.
+    - Remove Faravahar until its operator, Sina, set it back up online
+      outside of Team Cymru network. Closes ticket 40688.
+
+  o Major bugfixes (geoip data):
+    - IPFire informed us on August 12th that databases generated after
+      (including) August 10th did not have proper ARIN network
+      allocations. We are updating the database to use the one generated
+      on August 9th, 2022. Fixes bug 40658; bugfix on 0.4.5.13.
+
+  o Major bugfixes (onion service):
+    - Set a much higher circuit build timeout for opened client rendezvous
+      circuit. Before this, tor would time them out very quickly leading to
+      unnecessary retries meaning more load on the network. Fixes bug 40694;
+      bugfix on 0.3.5.1-alpha.
+
+  o Major bugfixes (OSX):
+    - Fix coarse-time computation on Apple platforms (like Mac M1) where
+      the Mach absolute time ticks do not correspond directly to
+      nanoseconds. Previously, we computed our shift value wrong, which
+      led us to give incorrect timing results. Fixes bug 40684; bugfix
+      on 0.3.3.1-alpha.
+
+  o Major bugfixes (relay):
+    - Improve security of our DNS cache by randomly clipping the TTL
+      value. TROVE-2021-009. Fixes bug 40674; bugfix on 0.3.5.1-alpha.
+
+  o Minor feature (Mac and iOS build):
+    - Change how combine_libs works on Darwin like platforms to make
+      sure we don't include any `__.SYMDEF` and `__.SYMDEF SORTED`
+      symbols on the archive before we repack and run ${RANLIB} on the
+      archive. This fixes a build issue with recent Xcode versions on
+      Mac Silicon and iOS. Closes ticket 40683.
+
+  o Minor feature (metrics):
+    - Add various congestion control counters to the MetricsPort. Closes
+      ticket 40708.
+
+  o Minor feature (performance):
+    - Bump the maximum amount of CPU that can be used from 16 to 128. Note
+      that NumCPUs torrc option overrides this hardcoded maximum. Fixes bug
+      40703; bugfix on 0.3.5.1-alpha.
+
+  o Minor feature (relay):
+    - Make an hardcoded value for the maximum of per CPU tasks into a
+      consensus parameter.
+    - Two new consensus parameters are added to control the wait time in
+      queue of the onionskins. One of them is the torrc
+      MaxOnionQueueDelay options which supersedes the consensus
+      parameter. Closes ticket 40704.
+
+  o Minor feature (relay, DoS):
+    - Apply circuit creation anti-DoS defenses if the outbound circuit
+      max cell queue size is reached too many times. This introduces two
+      new consensus parameters to control the queue size limit and
+      number of times allowed to go over that limit. Closes ticket 40680.
+
+  o Minor feature (relay, metrics):
+    - Add DoS defenses counter to MetricsPort.
+    - Add congestion control RTT reset counter to MetricsPort.
+    - Add counters to the MetricsPort how many connections, per type,
+      are currently opened and how many were created.
+    - Add relay flags from the consensus to the MetricsPort.
+    - Add total number of opened circuits to MetricsPort.
+    - Add total number of streams seen by an Exit to the MetricsPort.
+    - Add traffic stats as in number of read/written bytes in total.
+    - Related to ticket 40194.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on November 10, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/11/10.
+
+  o Minor bugfixes (authorities, sandbox):
+    - Allow to write file my-consensus-<flavor-name> to disk when
+      sandbox is activated. Fixes bug 40663; bugfix on 0.3.5.1-alpha.
+
+  o Minor bugfixes (dirauth):
+    - Directory authorities stop voting a consensus "Measured" weight
+      for relays with the Authority flag. Now these relays will be
+      considered unmeasured, which should reserve their bandwidth for
+      their dir auth role and minimize distractions from other roles. In
+      place of the "Measured" weight, they now include a
+      "MeasuredButAuthority" weight (not used by anything) so the
+      bandwidth authority's opinion on this relay can be recorded for
+      posterity. Lastly, remove the AuthDirDontVoteOnDirAuthBandwidth
+      torrc option which never worked right. Fixes bugs 40698 and 40700;
+      bugfix on 0.4.7.2-alpha.
+
+  o Minor bugfixes (onion service client):
+    - A collapsing onion service circuit should be seen as an
+      "unreachable" error so it can be retried. Fixes bug 40692; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (onion service):
+    - Make the service retry a rendezvous if the circuit is being
+      repurposed for measurements. Fixes bug 40696; bugfix
+      on 0.3.5.1-alpha.
+
+  o Minor bugfixes (relay overload statistics):
+    - Count total create cells vs dropped create cells properly, when
+      assessing if our fraction of dropped cells is too high. We only
+      count non-client circuits in the denominator, but we would include
+      client circuits in the numerator, leading to surprising log lines
+      claiming that we had dropped more than 100% of incoming create
+      cells. Fixes bug 40673; bugfix on 0.4.7.1-alpha.
+
+  o Code simplification and refactoring (bridges):
+    - Remove unused code related to ExtPort connection ID. Fixes bug
+      40648; bugfix on 0.3.5.1-alpha.
+
+
 Changes in version 0.4.7.10 - 2022-08-12
   This version updates the geoip cache that we generate from IPFire location
   database to use the August 9th, 2022 one. Everyone MUST update to this
