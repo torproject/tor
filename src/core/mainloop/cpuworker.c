@@ -144,6 +144,16 @@ cpu_init(void)
   set_max_pending_tasks(NULL);
 }
 
+/** Return the number of threads configured for our CPU worker. */
+unsigned int
+cpuworker_get_n_threads(void)
+{
+  if (!threadpool) {
+    return 0;
+  }
+  return threadpool_get_n_threads(threadpool);
+}
+
 /** Magic numbers to make sure our cpuworker_requests don't grow any
  * mis-framing bugs. */
 #define CPUWORKER_REQUEST_MAGIC 0xda4afeed
