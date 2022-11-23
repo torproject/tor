@@ -709,7 +709,7 @@ circuit_build_times_handle_completed_hop(origin_circuit_t *circ)
      * Switch their purpose and wait. */
     if (circ->base_.purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
       log_info(LD_CIRC,
-               "Deciding to timeout circuit %"PRIu32"\n",
+               "Deciding to timeout circuit %"PRIu32,
                (circ->global_identifier));
       circuit_build_times_mark_circ_as_measurement_only(circ);
     }
