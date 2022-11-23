@@ -1,0 +1,3 @@
+  o Minor bugfixes (cpuworker, relay):
+    - Fix an off by one overload calculation on the number of CPUs being used by
+      our thread pool. Fixes bug 40719; bugfix on 0.3.5.1-alpha.

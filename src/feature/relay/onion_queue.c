@@ -152,7 +152,13 @@ have_room_for_onionskin(uint16_t type)
   /* If we've got fewer than 50 entries, we always have room for one more. */
   if (ol_entries[type] < 50)
     return 1;
-  num_cpus = get_num_cpus(options);
+
+  /* If zero, this means our thread pool was never initialized meaning we can't
+   * really get here but make sure we don't have such value because we are
+   * using as a divisor. */
+  num_cpus = cpuworker_get_n_threads();
+  tor_assert(num_cpus > 0);
+
   max_onion_queue_delay = get_onion_queue_max_delay(options);
 
   /* Compute how many microseconds we'd expect to need to clear all
