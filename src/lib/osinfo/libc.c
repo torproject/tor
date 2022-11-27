@@ -31,7 +31,7 @@
 const char *
 tor_libc_get_name(void)
 {
-#ifdef __BSD_VISIBLE || __NETBSD_SOURCE
+#if defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE)
   return "BSD";
 #endif /* defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE) */
 #ifdef __GLIBC__
@@ -46,7 +46,7 @@ tor_libc_get_name(void)
 const char *
 tor_libc_get_version_str(void)
 {
-#ifdef __BSD_VISIBLE || __NETBSD_SOURCE
+#if defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE)
 #include <sys/param.h>
 #ifdef __DragonFly_version
   return STR(__DragonFly_version);
