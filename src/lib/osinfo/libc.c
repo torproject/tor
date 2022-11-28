@@ -31,6 +31,9 @@
 const char *
 tor_libc_get_name(void)
 {
+#if defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE)
+  return "BSD";
+#endif /* defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE) */
 #ifdef __GLIBC__
   return "Glibc";
 #else /* !defined(__GLIBC__) */
@@ -43,6 +46,21 @@ tor_libc_get_name(void)
 const char *
 tor_libc_get_version_str(void)
 {
+#if defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE)
+#include <sys/param.h>
+#ifdef __DragonFly_version
+  return STR(__DragonFly_version);
+#endif
+#ifdef __FreeBSD__
+  return STR(__FreeBSD_version);
+#endif
+#ifdef __NetBSD_Version__
+  return STR(__NetBSD_Version__);
+#endif
+#ifdef OpenBSD
+  return STR(OpenBSD);
+#endif
+#endif /* defined(__BSD_VISIBLE) || defined(__NETBSD_SOURCE) */
 #ifdef CHECK_LIBC_VERSION
   const char *version = gnu_get_libc_version();
   if (version == NULL)
