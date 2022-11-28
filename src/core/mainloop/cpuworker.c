@@ -129,7 +129,7 @@ cpu_init(void)
       always make sure we have at least two threads, so that there will be at
       least one thread of each kind.
     */
-    const int n_threads = get_num_cpus(get_options()) + 1;
+    const int n_threads = MAX(get_num_cpus(get_options()), 2);
     threadpool = threadpool_new(n_threads,
                                 replyqueue,
                                 worker_state_new,

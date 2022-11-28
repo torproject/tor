@@ -1,0 +1,4 @@
+  o Minor feature (cpuworker):
+    - Always use the number of threads for our CPU worker pool to the number of
+      core available but cap it to a minimum of 2 in case of a single core.
+      Fixes bug 40713; bugfix on 0.3.5.1-alpha.
