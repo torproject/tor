@@ -1256,6 +1256,23 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address,
 }
 #endif /* defined(HAVE_SYS_UN_H) || defined(RUNNING_DOXYGEN) */
 
+/* Log a rate-limited warning about resource exhaustion */
+static void
+warn_about_resource_exhaution(void)
+{
+#define WARN_TOO_MANY_CONNS_INTERVAL (6*60*60)
+  static ratelim_t last_warned = RATELIM_INIT(WARN_TOO_MANY_CONNS_INTERVAL);
+  char *m;
+  if ((m = rate_limit_log(&last_warned, approx_time()))) {
+    int n_conns = get_n_open_sockets();
+    log_warn(LD_NET,"Failing because we have %d connections already. Please "
+             "read doc/TUNING for guidance.%s", n_conns, m);
+    tor_free(m);
+    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
+                                 n_conns);
+  }
+}
+
 /**
  * A socket failed from resource exhaustion.
  *
@@ -1284,17 +1301,7 @@ socket_failed_from_resource_exhaustion(void)
     rep_hist_note_overload(OVERLOAD_FD_EXHAUSTED);
   }
 
-#define WARN_TOO_MANY_CONNS_INTERVAL (6*60*60)
-  static ratelim_t last_warned = RATELIM_INIT(WARN_TOO_MANY_CONNS_INTERVAL);
-  char *m;
-  if ((m = rate_limit_log(&last_warned, approx_time()))) {
-    int n_conns = get_n_open_sockets();
-    log_warn(LD_NET,"Failing because we have %d connections already. Please "
-             "read doc/TUNING for guidance.%s", n_conns, m);
-    tor_free(m);
-    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
-                                 n_conns);
-  }
+  warn_about_resource_exhaution();
 }
 
 #ifdef HAVE_SYS_UN_H
