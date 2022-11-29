@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - Rely on actual error returned by the kernel when choosing what resource
+      exhaustion to log. Fixes issue 40613; Fix on tor-0.4.6.1-alpha.
