@@ -1274,33 +1274,13 @@ warn_about_resource_exhaution(void)
 }
 
 /**
- * A socket failed from resource exhaustion.
+ * A socket failed from file descriptor exhaustion.
  *
- * Among other actions, warn that an accept or a connect has failed because
- * we're running out of TCP sockets we can use on current system.  Rate-limit
- * these warnings so that we don't spam the log. */
-static void
-socket_failed_from_resource_exhaustion(void)
+ * Note down file descriptor exhaustion and log a warning. */
+static inline void
+socket_failed_from_fd_exhaustion(void)
 {
-  /* When we get to this point we know that a socket could not be
-   * established. However the kernel does not let us know whether the reason is
-   * because we ran out of TCP source ports, or because we exhausted all the
-   * FDs on this system, or for any other reason.
-   *
-   * For this reason, we are going to use the following heuristic: If our
-   * system supports a lot of sockets, we will assume that it's a problem of
-   * TCP port exhaustion. Otherwise, if our system does not support many
-   * sockets, we will assume that this is because of file descriptor
-   * exhaustion.
-   */
-  if (get_max_sockets() > 65535) {
-    /* TCP port exhaustion */
-    rep_hist_note_tcp_exhaustion();
-  } else {
-    /* File descriptor exhaustion */
-    rep_hist_note_overload(OVERLOAD_FD_EXHAUSTED);
-  }
-
+  rep_hist_note_overload(OVERLOAD_FD_EXHAUSTED);
   warn_about_resource_exhaution();
 }
 
@@ -1519,7 +1499,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (!SOCKET_OK(s)) {
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
-        socket_failed_from_resource_exhaustion();
+        socket_failed_from_fd_exhaustion();
         /*
          * We'll call the OOS handler at the error exit, so set the
          * exhaustion flag for it.
@@ -1645,7 +1625,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (! SOCKET_OK(s)) {
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
-        socket_failed_from_resource_exhaustion();
+        socket_failed_from_fd_exhaustion();
         /*
          * We'll call the OOS handler at the error exit, so set the
          * exhaustion flag for it.
@@ -1958,7 +1938,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       connection_check_oos(get_n_open_sockets(), 0);
       return 0;
     } else if (ERRNO_IS_RESOURCE_LIMIT(e)) {
-      socket_failed_from_resource_exhaustion();
+      socket_failed_from_fd_exhaustion();
       /* Exhaustion; tell the OOS handler */
       connection_check_oos(get_n_open_sockets(), 1);
       return 0;
@@ -2227,7 +2207,7 @@ connection_connect_sockaddr,(connection_t *conn,
      */
     *socket_error = tor_socket_errno(s);
     if (ERRNO_IS_RESOURCE_LIMIT(*socket_error)) {
-      socket_failed_from_resource_exhaustion();
+      socket_failed_from_fd_exhaustion();
       connection_check_oos(get_n_open_sockets(), 1);
     } else {
       log_warn(LD_NET,"Error creating network socket: %s",
