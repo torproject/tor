@@ -731,6 +731,9 @@ typedef struct protover_summary_flags_t {
   /** True iff this router supports congestion control.
    * Requires both FlowCtrl=2 *and* Relay=4 */
   unsigned int supports_congestion_control : 1;
+
+  /** True iff this router supports conflux. Requires Relay=5 */
+  unsigned int supports_conflux : 1;
 } protover_summary_flags_t;
 
 typedef struct routerinfo_t routerinfo_t;
