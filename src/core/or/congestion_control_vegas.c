@@ -71,6 +71,7 @@ uint64_t cc_stats_vegas_above_delta = 0;
 /** Stats on how many times we reached "ss_cwnd_max" param. */
 uint64_t cc_stats_vegas_above_ss_cwnd_max = 0;
 uint64_t cc_stats_vegas_below_ss_inc_floor = 0;
+uint64_t cc_stats_vegas_circ_exited_ss = 0;
 
 /**
  * The original TCP Vegas congestion window BDP estimator.
@@ -266,7 +267,7 @@ congestion_control_vegas_exit_slow_start(const circuit_t *circ,
   cc->next_cc_event = CWND_UPDATE_RATE(cc);
   congestion_control_vegas_log(circ, cc);
 
-  /* Update running cc->cwnd average for metrics. */
+  /* Update metricsport metrics */
   cc_stats_vegas_exit_ss_cwnd_ma =
     stats_update_running_avg(cc_stats_vegas_exit_ss_cwnd_ma,
                              cc->cwnd);
@@ -276,6 +277,7 @@ congestion_control_vegas_exit_slow_start(const circuit_t *circ,
   cc_stats_vegas_exit_ss_inc_ma =
     stats_update_running_avg(cc_stats_vegas_exit_ss_inc_ma,
                              rfc3742_ss_inc(cc));
+  cc_stats_vegas_circ_exited_ss++;
 
   /* We need to report that slow start has exited ASAP,
    * for sbws bandwidth measurement. */

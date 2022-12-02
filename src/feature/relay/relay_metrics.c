@@ -457,6 +457,30 @@ fill_cc_counters_values(void)
   metrics_store_entry_add_label(sentry,
           metrics_format_label("action", "below_ss_inc_floor"));
   metrics_store_entry_update(sentry, cc_stats_vegas_below_ss_inc_floor);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_circuits"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "circs_creared"));
+  metrics_store_entry_update(sentry, cc_stats_circs_created);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_circuits"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "circs_closed"));
+  metrics_store_entry_update(sentry, cc_stats_circs_closed);
+
+  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                             rentry->help);
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("state", "cc_circuits"));
+  metrics_store_entry_add_label(sentry,
+          metrics_format_label("action", "circs_exited_ss"));
+  metrics_store_entry_update(sentry, cc_stats_vegas_circ_exited_ss);
 }
 
 /** Fill function for the RELAY_METRICS_CC_GAUGES metric. */

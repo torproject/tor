@@ -31,6 +31,7 @@ extern double cc_stats_vegas_queue_ma;
 extern double cc_stats_vegas_bdp_ma;
 
 extern uint64_t cc_stats_vegas_below_ss_inc_floor;
+extern uint64_t cc_stats_vegas_circ_exited_ss;
 
 /* Processing SENDME cell. */
 int congestion_control_vegas_process_sendme(struct congestion_control_t *cc,
