@@ -85,6 +85,8 @@ char *congestion_control_get_control_port_fields(const origin_circuit_t *);
 uint64_t congestion_control_get_num_rtt_reset(void);
 uint64_t congestion_control_get_num_clock_stalls(void);
 
+extern uint64_t cc_stats_circs_created;
+
 /* Ugh, C.. these are private. Use the getter instead, when
  * external to the congestion control code. */
 extern uint32_t or_conn_highwater;
