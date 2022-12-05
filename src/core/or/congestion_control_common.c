@@ -132,6 +132,9 @@ static uint8_t bwe_sendme_min;
  */
 static uint8_t rtt_reset_pct;
 
+/** Metric to count the number of congestion control circuits **/
+uint64_t cc_stats_circs_created = 0;
+
 /** Return the number of RTT reset that have been done. */
 uint64_t
 congestion_control_get_num_rtt_reset(void)
@@ -421,6 +424,8 @@ congestion_control_new(const circuit_params_t *params, cc_path_t path)
   congestion_control_t *cc = tor_malloc_zero(sizeof(congestion_control_t));
 
   congestion_control_init(cc, params, path);
+
+  cc_stats_circs_created++;
 
   return cc;
 }

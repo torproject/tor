@@ -154,6 +154,8 @@ double cc_stats_circ_close_cwnd_ma = 0;
 /** Moving average of the cc->cwnd from each closed slow-start circuit. */
 double cc_stats_circ_close_ss_cwnd_ma = 0;
 
+uint64_t cc_stats_circs_closed = 0;
+
 /********* END VARIABLES ************/
 
 /* Implement circuit handle helpers. */
@@ -2249,6 +2251,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
         stats_update_running_avg(cc_stats_circ_close_cwnd_ma,
                                  circ->ccontrol->cwnd);
     }
+    cc_stats_circs_closed++;
   }
 
   if (circuits_pending_close == NULL)
