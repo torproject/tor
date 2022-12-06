@@ -1,0 +1,5 @@
+  o Directory authority changes (moria1):
+    - Rotate the relay identity key and v3 identity key for moria1. They
+      have been online for more than a decade and refreshing keys
+      periodically is good practice. Advertise new ports too, to avoid
+      confusion. Closes ticket 40722.
