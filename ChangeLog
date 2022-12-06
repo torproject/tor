@@ -1,3 +1,67 @@
+Changes in version 0.4.7.12 - 2022-12-06
+  This version contains a major change that is a new key for moria1. Also, new
+  metrics are exported on the MetricsPort for the congestion control
+  subsystem.
+
+  o Directory authority changes (moria1):
+    - Rotate the relay identity key and v3 identity key for moria1. They
+      have been online for more than a decade and refreshing keys
+      periodically is good practice. Advertise new ports too, to avoid
+      confusion. Closes ticket 40722.
+
+  o Minor feature (Congestion control metrics):
+    - Add additional metricsport relay metrics for congestion control.
+      Closes ticket 40724.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on December 06, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/12/06.
+
+  o Minor bugfixes (cpuworker, relay):
+    - Fix an off by one overload calculation on the number of CPUs being
+      used by our thread pool. Fixes bug 40719; bugfix on 0.3.5.1-alpha.
+
+
+Changes in version 0.4.5.15 - 2022-12-06
+  This version has several major changes for directory authorities. And a
+  major bugfix on OSX. Again, we strongly recommend to upgrade to our 0.4.7.x
+  series latest stable. This series is EOL on February 15th, 2023.
+
+  o Directory authority changes (dizum):
+    - Change dizum IP address. Closes ticket 40687.
+
+  o Directory authority changes (Faravahar):
+    - Remove Faravahar until its operator, Sina, set it back up online
+      outside of Team Cymru network. Closes ticket 40688.
+
+  o Directory authority changes (moria1):
+    - Rotate the relay identity key and v3 identity key for moria1. They
+      have been online for more than a decade and refreshing keys
+      periodically is good practice. Advertise new ports too, to avoid
+      confusion. Closes ticket 40722.
+
+  o Major bugfixes (OSX):
+    - Fix coarse-time computation on Apple platforms (like Mac M1) where
+      the Mach absolute time ticks do not correspond directly to
+      nanoseconds. Previously, we computed our shift value wrong, which
+      led us to give incorrect timing results. Fixes bug 40684; bugfix
+      on 0.3.3.1-alpha.
+
+  o Major bugfixes (relay):
+    - Improve security of our DNS cache by randomly clipping the TTL
+      value. TROVE-2021-009. Fixes bug 40674; bugfix on 0.3.5.1-alpha.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on December 06, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/12/06.
+
+
 Changes in version 0.4.7.11 - 2022-11-10
   This version contains several major fixes aimed at helping defend against
   network denial of service. It is also extending drastically the MetricsPort
