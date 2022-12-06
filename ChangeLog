@@ -1,3 +1,30 @@
+Changes in version 0.4.7.12 - 2022-12-06
+  This version contains a major change that is a new key for moria1. Also, new
+  metrics are exported on the MetricsPort for the congestion control
+  subsystem.
+
+  o Directory authority changes (moria1):
+    - Rotate the relay identity key and v3 identity key for moria1. They
+      have been online for more than a decade and refreshing keys
+      periodically is good practice. Advertise new ports too, to avoid
+      confusion. Closes ticket 40722.
+
+  o Minor feature (Congestion control metrics):
+    - Add additional metricsport relay metrics for congestion control.
+      Closes ticket 40724.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on December 06, 2022.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2022/12/06.
+
+  o Minor bugfixes (cpuworker, relay):
+    - Fix an off by one overload calculation on the number of CPUs being
+      used by our thread pool. Fixes bug 40719; bugfix on 0.3.5.1-alpha.
+
+
 Changes in version 0.4.7.11 - 2022-11-10
   This version contains several major fixes aimed at helping defend against
   network denial of service. It is also extending drastically the MetricsPort
