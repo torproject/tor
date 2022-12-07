@@ -1,0 +1,3 @@
+  o Minor bugfixes (relay, metrics):
+    - Fix typo in a congestion control label on the MetricsPort. Fixes bug
+      40727; bugfix on 0.4.7.12.

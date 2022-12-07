@@ -463,7 +463,7 @@ fill_cc_counters_values(void)
   metrics_store_entry_add_label(sentry,
           metrics_format_label("state", "cc_circuits"));
   metrics_store_entry_add_label(sentry,
-          metrics_format_label("action", "circs_creared"));
+          metrics_format_label("action", "circs_created"));
   metrics_store_entry_update(sentry, cc_stats_circs_created);
 
   sentry = metrics_store_add(the_store, rentry->type, rentry->name,
