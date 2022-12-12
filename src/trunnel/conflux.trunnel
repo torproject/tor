@@ -1,0 +1,66 @@
+/*
+ * This file contains the definition for the Conflux related cells. See
+ * proposal 329.
+ */
+
+/* No Opinion means the endpoint can choose whatever it thinks is best. */
+const CONFLUX_UX_NO_OPINION = 0x00;
+/* Min latency always only uses the lowest RTT */
+const CONFLUX_UX_MIN_LATENCY = 0x01;
+/* Min latency always only uses the lowest RTT */
+const CONFLUX_UX_LOW_MEM_LATENCY = 0x02;
+/* Use a high-throughput algorithm that maximizes throughput
+ * by using the full congestion window of all circuits, at the expense
+ * of more reordering queue at the receiver */
+const CONFLUX_UX_HIGH_THROUGHPUT  = 0x03;
+/* THRPT_LO uses a high-throughput algorithm that tries to minimize
+ * out-of-order queues at the receiver */
+const CONFLUX_UX_LOW_MEM_THROUGHPUT  = 0x04;
+
+/* The RELAY_CONFLUX_LINK definition. */
+struct trn_cell_conflux_link {
+  /* Version field. */
+  u8 version IN [0x01];
+
+  /* Payload */
+  u8 payload[];
+};
+
+/* The RELAY_CIRCUIT_LINKED definition. */
+struct trn_cell_conflux_linked {
+  /* Version field. */
+  u8 version IN [0x01];
+
+  /* Payload of the cell. */
+  u8 payload[];
+};
+
+/* The RELAY_CONFLUX_LINKED_ACK definition. */
+struct trn_cell_conflux_linked_ack {
+  /* Payload. At the moment, empty. */
+  u8 payload[];
+};
+
+/* The RELAY_CONFLUX_SWITCH definition. */
+struct trn_cell_conflux_switch {
+  /* Relative sequence number. */
+  u32 seqnum;
+};
+
+/* The payload version 1 of RELAY_CONFLUX_LINK and RELAY_CIRCUIT_LINKED cells.
+ * */
+struct trn_cell_conflux_link_payload_v1 {
+  /* Used to identify the other conflux to link with. */
+  u8 nonce[32];
+
+  /* Last sequence number sent and received. */
+  u64 last_seqno_sent;
+  u64 last_seqno_recv;
+
+  /* Desired user experience behavior */
+  u8 desired_ux IN [CONFLUX_UX_NO_OPINION,
+                   CONFLUX_UX_MIN_LATENCY,
+                   CONFLUX_UX_LOW_MEM_LATENCY,
+                   CONFLUX_UX_LOW_MEM_THROUGHPUT,
+                   CONFLUX_UX_HIGH_THROUGHPUT];
+};
