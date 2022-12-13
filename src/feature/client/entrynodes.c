@@ -1895,7 +1895,7 @@ make_guard_confirmed(guard_selection_t *gs, entry_guard_t *guard)
 
   guard->confirmed_idx = gs->next_confirmed_idx++;
   smartlist_add(gs->confirmed_entry_guards, guard);
-  /** The confirmation ordering might not be the sample ording. We need to
+  /** The confirmation ordering might not be the sample ordering. We need to
    * reorder */
   smartlist_sort(gs->confirmed_entry_guards, compare_guards_by_sampled_idx);
 

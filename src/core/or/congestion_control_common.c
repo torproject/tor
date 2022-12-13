@@ -127,7 +127,7 @@ static uint8_t n_ewma_ss;
 static uint8_t bwe_sendme_min;
 
 /**
- * Percentage of the current RTT to use when reseting the minimum RTT
+ * Percentage of the current RTT to use when resetting the minimum RTT
  * for a circuit. (RTT is reset when the cwnd hits cwnd_min).
  */
 static uint8_t rtt_reset_pct;

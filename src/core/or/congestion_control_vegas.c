@@ -354,12 +354,12 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
                                    0);
       } else {
         cc->cwnd += inc;
-        cc->next_cc_event = 1; // Technically irellevant, but for consistency
+        cc->next_cc_event = 1; // Technically irrelevant, but for consistency
       }
     } else {
       uint64_t old_cwnd = cc->cwnd;
 
-      /* Congestion signal: Set cwnd to gamma threshhold */
+      /* Congestion signal: Set cwnd to gamma threshold */
       cc->cwnd = vegas_bdp(cc) + cc->vegas_params.gamma;
 
       /* Compute the percentage we experience a blocked csig vs RTT sig */
@@ -398,8 +398,8 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
       uint64_t old_cwnd = cc->cwnd;
       uint64_t cwnd_diff;
 
-      /* If we are above the delta threshhold, drop cwnd down to the
-       * delta threshhold. */
+      /* If we are above the delta threshold, drop cwnd down to the
+       * delta threshold. */
       cc->cwnd = vegas_bdp(cc) + cc->vegas_params.delta - CWND_INC(cc);
 
       /* Account the amount we reduced the cwnd by for the gamma cutoff */

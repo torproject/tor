@@ -336,7 +336,7 @@ glass-box one is one you implement while looking at how the function is
 implemented.
 
 In either case, make sure to consider common cases *and* edge cases; success
-cases and failure csaes.
+cases and failure cases.
 
 For example, consider testing this function:
 

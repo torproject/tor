@@ -41,8 +41,8 @@ typedef enum {
    * Prop#324: TOR_NOLA - NOLA looks the BDP right in the eye and uses it
    * immediately as CWND. No slow start, no other congestion signals, no delay,
    * no bullshit. Like TOR_VEGAS, it also uses aggressive BDP estimates, to
-   * avoid out-competition. It seems a bit better throughput than Vegas,
-   * but its agressive BDP and rapid updates may lead to more queue latency. */
+   * avoid out-competition. It seems a bit better throughput than Vegas, but
+   * its aggressive BDP and rapid updates may lead to more queue latency. */
   CC_ALG_NOLA = 3,
 } cc_alg_t;
 
