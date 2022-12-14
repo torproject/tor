@@ -99,6 +99,7 @@
 #include "core/or/sendme.h"
 #include "core/or/congestion_control_common.h"
 #include "core/or/congestion_control_flow.h"
+#include "core/or/conflux.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -116,6 +117,11 @@ static void adjust_exit_policy_from_exitpolicy_failure(origin_circuit_t *circ,
                                                   entry_connection_t *conn,
                                                   node_t *node,
                                                   const tor_addr_t *addr);
+static int connection_edge_process_ordered_relay_cell(cell_t *cell,
+                                           circuit_t *circ,
+                                           edge_connection_t *conn,
+                                           crypt_path_t *layer_hint,
+                                           relay_header_t *rh);
 
 /** Stats: how many relay cells have originated at this hop, or have
  * been relayed onward (not recognized at this hop)?
@@ -610,7 +616,7 @@ pad_cell_payload(uint8_t *cell_payload, size_t data_len)
  * return 0.
  */
 MOCK_IMPL(int,
-relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
+relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *orig_circ,
                                uint8_t relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer,
                                const char *filename, int lineno))
@@ -640,6 +646,7 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
   rh.stream_id = stream_id;
   rh.length = payload_len;
   relay_header_pack(cell.payload, &rh);
+
   if (payload_len)
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
 
@@ -2051,9 +2058,6 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   static int num_seen=0;
   relay_header_t rh;
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
-  int optimistic_data = 0; /* Set to 1 if we receive data on a stream
-                            * that's in the EXIT_CONN_STATE_RESOLVING
-                            * or EXIT_CONN_STATE_CONNECTING states. */
 
   tor_assert(cell);
   tor_assert(circ);
@@ -2086,8 +2090,66 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     }
   }
 
+  /* Conflux handling: If conflux is disabled, or the relay command is not
+   * multiplexed across circuits, then process it immediately.
+   *
+   * Otherwise, we need to process the relay cell against our conflux
+   * queues, and if doing so results in ordered cells to deliver, we
+   * dequeue and process those in-order until there are no more.
+   */
+  if (!circ->conflux || !conflux_should_multiplex(rh.command)) {
+    return connection_edge_process_ordered_relay_cell(cell, circ, conn,
+                                                      layer_hint, &rh);
+  } else {
+    // If conflux says this cell is in-order, then begin processing
+    // cells from queue until there are none. Otherwise, we do nothing
+    // until further cells arrive.
+    if (conflux_process_cell(circ->conflux, circ, layer_hint, cell)) {
+      conflux_cell_t *c_cell = NULL;
+      int ret = 0;
+
+      /* First, process this cell */
+      if ((ret = connection_edge_process_ordered_relay_cell(cell, circ, conn,
+                                                 layer_hint, &rh)) < 0) {
+        return ret;
+      }
+
+      /* Now, check queue for more */
+      while ((c_cell = conflux_dequeue_cell(circ->conflux))) {
+        relay_header_unpack(&rh, c_cell->cell.payload);
+        conn = relay_lookup_conn(circ, &c_cell->cell, CELL_DIRECTION_OUT,
+                                 layer_hint);
+        if ((ret = connection_edge_process_ordered_relay_cell(&c_cell->cell,
+                                                   circ, conn, layer_hint,
+                                                   &rh)) < 0) {
+          /* Negative return value is a fatal error. Return early and tear down
+           * circuit */
+          tor_free(c_cell);
+          return ret;
+        }
+        tor_free(c_cell);
+      }
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Helper function to process a relay cell that is in the proper order
+ * for processing right now. */
+static int
+connection_edge_process_ordered_relay_cell(cell_t *cell, circuit_t *circ,
+                                           edge_connection_t *conn,
+                                           crypt_path_t *layer_hint,
+                                           relay_header_t *rh)
+{
+  int optimistic_data = 0; /* Set to 1 if we receive data on a stream
+                            * that's in the EXIT_CONN_STATE_RESOLVING
+                            * or EXIT_CONN_STATE_CONNECTING states. */
+
   /* Tell circpad that we've received a recognized cell */
-  circpad_deliver_recognized_relay_cell_events(circ, rh.command, layer_hint);
+  circpad_deliver_recognized_relay_cell_events(circ, rh->command, layer_hint);
 
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
@@ -2095,22 +2157,22 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     if (conn->base_.type == CONN_TYPE_EXIT &&
         (conn->base_.state == EXIT_CONN_STATE_CONNECTING ||
          conn->base_.state == EXIT_CONN_STATE_RESOLVING) &&
-        rh.command == RELAY_COMMAND_DATA) {
+        rh->command == RELAY_COMMAND_DATA) {
       /* Allow DATA cells to be delivered to an exit node in state
        * EXIT_CONN_STATE_CONNECTING or EXIT_CONN_STATE_RESOLVING.
        * This speeds up HTTP, for example. */
       optimistic_data = 1;
-    } else if (rh.stream_id == 0 && rh.command == RELAY_COMMAND_DATA) {
+    } else if (rh->stream_id == 0 && rh->command == RELAY_COMMAND_DATA) {
       log_warn(LD_BUG, "Somehow I had a connection that matched a "
                "data cell with stream ID 0.");
     } else {
       return connection_edge_process_relay_cell_not_open(
-               &rh, cell, circ, conn, layer_hint);
+               rh, cell, circ, conn, layer_hint);
     }
   }
 
   return handle_relay_cell_command(cell, circ, conn, layer_hint,
-                              &rh, optimistic_data);
+                              rh, optimistic_data);
 }
 
 /** How many relay_data cells have we built, ever? */
