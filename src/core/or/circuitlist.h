@@ -247,6 +247,8 @@ MOCK_DECL(void, channel_note_destroy_not_pending,
 
 smartlist_t *circuit_find_circuits_to_upgrade_from_guard_wait(void);
 
+bool circuit_is_queue_full(const circuit_t *circ, cell_direction_t direction);
+
 /* Declare the handle helpers */
 HANDLE_DECL(circuit, circuit_t, )
 #define circuit_handle_free(h)    \

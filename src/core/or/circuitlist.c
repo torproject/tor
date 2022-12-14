@@ -2831,3 +2831,27 @@ assert_circuit_ok,(const circuit_t *c))
     tor_assert(!or_circ || !or_circ->rend_splice);
   }
 }
+
+/** Return true iff the circuit queue for the given direction is full that is
+ * above the high watermark. */
+bool
+circuit_is_queue_full(const circuit_t *circ, cell_direction_t direction)
+{
+  int queue_size;
+
+  tor_assert(circ);
+
+  /* Gather objects we need based on cell direction. */
+  if (direction == CELL_DIRECTION_OUT) {
+    /* Outbound. */
+    queue_size = circ->n_chan_cells.n;
+  } else {
+    /* Inbound. */
+    queue_size = CONST_TO_OR_CIRCUIT(circ)->p_chan_cells.n;
+  }
+
+  /* Then check if our cell queue has reached its high watermark as in its
+   * upper limit. This is so we avoid too much memory pressure by queuing a
+   * large amount of cells. */
+  return queue_size >= cell_queue_highwatermark();
+}
