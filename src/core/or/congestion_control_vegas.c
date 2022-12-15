@@ -283,8 +283,11 @@ rfc3742_ss_inc(const congestion_control_t *cc)
     //  => K = 2*cwnd/max_ssthresh
     // cwnd += int(MSS/K);
     //  => cwnd += MSS*max_ssthresh/(2*cwnd)
-    return ((uint64_t)cc->sendme_inc*cc->vegas_params.ss_cwnd_cap + cc->cwnd)/
-            (2*cc->cwnd);
+    // Return at least 1 for inc.
+    return MAX(
+            ((uint64_t)cc->sendme_inc*cc->vegas_params.ss_cwnd_cap + cc->cwnd)/
+                 (2*cc->cwnd),
+               1);
   }
 }
 
@@ -447,8 +450,10 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
         cc->cwnd += inc;
 
         // Check if inc is less than what we would do in steady-state
-        // avoidance
-        if (inc*SENDME_PER_CWND(cc) <= CWND_INC(cc)) {
+        // avoidance. Note that this is likely never to happen
+        // in practice, but we keep this block and the metrics to make
+        // sure.
+        if (inc*SENDME_PER_CWND(cc) <= CWND_INC(cc)*cc->cwnd_inc_rate) {
           congestion_control_vegas_exit_slow_start(circ, cc);
 
           cc_stats_vegas_below_ss_inc_floor++;
