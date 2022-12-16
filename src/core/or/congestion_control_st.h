@@ -160,8 +160,15 @@ struct congestion_control_t {
    */
   uint64_t next_cc_event;
 
+  /** Counts down until we process a cwnd worth of SENDME acks.
+   * Used to track full cwnd status. */
+  uint64_t next_cwnd_event;
+
   /** Are we in slow start? */
   bool in_slow_start;
+
+  /** Has the cwnd become full since last cwnd update? */
+  bool cwnd_full;
 
   /** Is the local channel blocked on us? That's a congestion signal */
   bool blocked_chan;

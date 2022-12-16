@@ -50,6 +50,25 @@
 #define VEGAS_DELTA_ONION_DFLT (9*OUTBUF_CELLS)
 #define VEGAS_SSCAP_ONION_DFLT (600)
 
+/**
+ * Number of sendme_incs between cwnd and inflight for cwnd to be
+ * still considered full */
+#define VEGAS_CWND_FULL_GAP_DFLT (1)
+static int cc_vegas_cwnd_full_gap = VEGAS_CWND_FULL_GAP_DFLT;
+
+/**
+ * If the cwnd becomes less than this percent full at any point,
+ * we declare it not full immediately.
+ */
+#define VEGAS_CWND_FULL_MINPCT_DFLT (75)
+static int cc_vegas_cwnd_full_minpct = VEGAS_CWND_FULL_MINPCT_DFLT;
+
+/**
+ * Param to decide when to reset the cwnd.
+ */
+#define VEGAS_CWND_FULL_PER_CWND_DFLT (1)
+static int cc_cwnd_full_per_cwnd = VEGAS_CWND_FULL_PER_CWND_DFLT;
+
 /** Moving average of the cc->cwnd from each circuit exiting slowstart. */
 double cc_stats_vegas_exit_ss_cwnd_ma = 0;
 double cc_stats_vegas_exit_ss_bdp_ma = 0;
@@ -173,6 +192,24 @@ congestion_control_vegas_set_params(congestion_control_t *cc,
       delta,
       0,
       INT32_MAX);
+
+  cc_vegas_cwnd_full_minpct =
+   networkstatus_get_param(NULL, "cc_cwnd_full_minpct",
+      VEGAS_CWND_FULL_MINPCT_DFLT,
+      0,
+      100);
+
+  cc_vegas_cwnd_full_gap =
+   networkstatus_get_param(NULL, "cc_cwnd_full_gap",
+      VEGAS_CWND_FULL_GAP_DFLT,
+      0,
+      INT32_MAX);
+
+  cc_cwnd_full_per_cwnd =
+   networkstatus_get_param(NULL, "cc_cwnd_full_per_cwnd",
+      VEGAS_CWND_FULL_PER_CWND_DFLT,
+      0,
+      1);
 }
 
 /**
@@ -289,6 +326,62 @@ congestion_control_vegas_exit_slow_start(const circuit_t *circ,
 }
 
 /**
+ * Returns true if the congestion window is considered full.
+ *
+ * We allow a number of sendme_incs gap in case buffering issues
+ * with edge conns cause the window to occasionally be not quite
+ * full. This can happen if several SENDMEs arrive before we
+ * return to the eventloop to fill the inbuf on edge connections.
+ */
+static inline bool
+cwnd_is_full(const congestion_control_t *cc)
+{
+  if (cc->inflight + cc_vegas_cwnd_full_gap*cc->sendme_inc >= cc->cwnd) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/**
+ * Returns true if the congestion window is no longer full.
+ *
+ * This functions as a low watermark, below which we stop
+ * allowing cwnd increments.
+ */
+static inline bool
+cwnd_is_nonfull(const congestion_control_t *cc)
+{
+  /* Use multiply form to avoid division */
+  if (100*cc->inflight < cc_vegas_cwnd_full_minpct * cc->cwnd) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/**
+ * Decide if it is time to reset the cwnd_full status.
+ *
+ * If cc_cwnd_full_per_cwnd=1, we reset cwnd_full once per congestion
+ * window, ie:
+ *   next_cwnd_event == SENDME_PER_CWND(cc)
+ *
+ * Otherwise, we reset cwnd_full whenever there is an update of
+ * the congestion window, ie:
+ *   next_cc_event == CWND_UPDATE_RATE(cc)
+ */
+static inline bool
+cwnd_full_reset(const congestion_control_t *cc)
+{
+  if (cc_cwnd_full_per_cwnd) {
+    return (cc->next_cwnd_event == SENDME_PER_CWND(cc));
+  } else {
+    return (cc->next_cc_event == CWND_UPDATE_RATE(cc));
+  }
+}
+
+/**
  * Process a SENDME and update the congestion window according to the
  * rules specified in TOR_VEGAS of Proposal #324.
  *
@@ -322,6 +415,10 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
   if (cc->next_cc_event)
     cc->next_cc_event--;
 
+  /* Update ack counter until a full cwnd is processed */
+  if (cc->next_cwnd_event)
+    cc->next_cwnd_event--;
+
   /* Compute BDP and RTT. If we did not update, don't run the alg */
   if (!congestion_control_update_circuit_estimates(cc, circ, layer_hint)) {
     cc->inflight = cc->inflight - cc->sendme_inc;
@@ -335,26 +432,36 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
   else
     queue_use = cc->cwnd - vegas_bdp(cc);
 
+  /* Update the full state */
+  if (cwnd_is_full(cc))
+    cc->cwnd_full = 1;
+  else if (cwnd_is_nonfull(cc))
+    cc->cwnd_full = 0;
+
   if (cc->in_slow_start) {
     if (queue_use < cc->vegas_params.gamma && !cc->blocked_chan) {
-      /* Get the "Limited Slow Start" increment */
-      uint64_t inc = rfc3742_ss_inc(cc);
+      /* If the congestion window is not fully in use, skip any
+       * increment of cwnd in slow start */
+      if (cc->cwnd_full) {
+        /* Get the "Limited Slow Start" increment */
+        uint64_t inc = rfc3742_ss_inc(cc);
 
-      // Check if inc is less than what we would do in steady-state
-      // avoidance
-      if (inc*SENDME_PER_CWND(cc) <= CWND_INC(cc)) {
-        cc->cwnd += inc;
-        congestion_control_vegas_exit_slow_start(circ, cc);
+        // Check if inc is less than what we would do in steady-state
+        // avoidance
+        if (inc*SENDME_PER_CWND(cc) <= CWND_INC(cc)) {
+          cc->cwnd += inc;
+          congestion_control_vegas_exit_slow_start(circ, cc);
 
-        cc_stats_vegas_below_ss_inc_floor++;
+          cc_stats_vegas_below_ss_inc_floor++;
 
-        /* We exited slow start without being blocked */
-        cc_stats_vegas_ss_csig_blocked_ma =
-          stats_update_running_avg(cc_stats_vegas_ss_csig_blocked_ma,
-                                   0);
-      } else {
-        cc->cwnd += inc;
-        cc->next_cc_event = 1; // Technically irellevant, but for consistency
+          /* We exited slow start without being blocked */
+          cc_stats_vegas_ss_csig_blocked_ma =
+            stats_update_running_avg(cc_stats_vegas_ss_csig_blocked_ma,
+                                     0);
+        } else {
+          cc->cwnd += inc;
+          cc->next_cc_event = 1; // Technically irellevant, but for consistency
+        }
       }
     } else {
       uint64_t old_cwnd = cc->cwnd;
@@ -444,7 +551,8 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
       cc_stats_vegas_csig_delta_ma =
           stats_update_running_avg(cc_stats_vegas_csig_delta_ma,
                                    0);
-    } else if (queue_use < cc->vegas_params.alpha) {
+    } else if (cc->cwnd_full &&
+               queue_use < cc->vegas_params.alpha) {
       cc->cwnd += CWND_INC(cc);
 
       /* Percentage counters: Add 100% alpha, 0 for other two */
@@ -493,6 +601,15 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
             circ->purpose, cc->cwnd);
     }
   }
+
+  /* Once per cwnd, reset the cwnd full state */
+  if (cc->next_cwnd_event == 0) {
+    cc->next_cwnd_event = SENDME_PER_CWND(cc);
+  }
+
+  /* Decide if enough time has passed to reset the cwnd utilization */
+  if (cwnd_full_reset(cc))
+    cc->cwnd_full = 0;
 
   /* Update inflight with ack */
   cc->inflight = cc->inflight - cc->sendme_inc;
