@@ -2233,23 +2233,6 @@ connection_connect_sockaddr,(connection_t *conn,
              tor_socket_strerror(errno));
   }
 
-#ifdef IP_BIND_ADDRESS_NO_PORT
-  static int try_ip_bind_address_no_port = 1;
-  if (bindaddr && try_ip_bind_address_no_port &&
-      setsockopt(s, SOL_IP, IP_BIND_ADDRESS_NO_PORT, &(int){1}, sizeof(int))) {
-    if (errno == EINVAL) {
-      log_notice(LD_NET, "Tor was built with support for "
-                         "IP_BIND_ADDRESS_NO_PORT, but the current kernel "
-                         "doesn't support it. This might cause Tor to run out "
-                         "of ephemeral ports more quickly.");
-      try_ip_bind_address_no_port = 0;
-    } else {
-      log_warn(LD_NET, "Error setting IP_BIND_ADDRESS_NO_PORT on new "
-                       "connection: %s", tor_socket_strerror(errno));
-    }
-  }
-#endif
-
   /* From ip(7): Inform the kernel to not reserve an ephemeral port when using
    * bind(2) with a port number of 0. The port will later be automatically
    * chosen at connect(2) time, in a way that allows sharing a source port as
