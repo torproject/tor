@@ -1,0 +1,5 @@
+  o Minor features (relays):
+    - Set the Linux-specific IP_BIND_ADDRESS_NO_PORT option on outgoing
+      sockets, allowing relays using OutboundBindAddress to make more outgoing
+      connections than ephemeral ports, as long as they are to separate
+      destinations. Related to issue 40597; patch by Alex Xu (Hello71).
