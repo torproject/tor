@@ -231,7 +231,7 @@ static inline uint64_t CWND_UPDATE_RATE(const struct congestion_control_t *cc)
    * of acks */
 
   if (cc->in_slow_start) {
-    return ((cc->cwnd + cc->sendme_inc/2)/cc->sendme_inc);
+    return 1;
   } else {
     return ((cc->cwnd + cc->cwnd_inc_rate*cc->sendme_inc/2)
            / (cc->cwnd_inc_rate*cc->sendme_inc));
