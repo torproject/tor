@@ -301,7 +301,6 @@ congestion_control_vegas_exit_slow_start(const circuit_t *circ,
 {
   congestion_control_vegas_log(circ, cc);
   cc->in_slow_start = 0;
-  cc->next_cc_event = CWND_UPDATE_RATE(cc);
   congestion_control_vegas_log(circ, cc);
 
   /* Update metricsport metrics */
@@ -445,11 +444,11 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
       if (cc->cwnd_full) {
         /* Get the "Limited Slow Start" increment */
         uint64_t inc = rfc3742_ss_inc(cc);
+        cc->cwnd += inc;
 
         // Check if inc is less than what we would do in steady-state
         // avoidance
         if (inc*SENDME_PER_CWND(cc) <= CWND_INC(cc)) {
-          cc->cwnd += inc;
           congestion_control_vegas_exit_slow_start(circ, cc);
 
           cc_stats_vegas_below_ss_inc_floor++;
@@ -458,9 +457,6 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
           cc_stats_vegas_ss_csig_blocked_ma =
             stats_update_running_avg(cc_stats_vegas_ss_csig_blocked_ma,
                                      0);
-        } else {
-          cc->cwnd += inc;
-          cc->next_cc_event = 1; // Technically irellevant, but for consistency
         }
       }
     } else {
@@ -581,9 +577,6 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
     /* cwnd can never fall below 1 increment */
     cc->cwnd = MAX(cc->cwnd, cc->cwnd_min);
 
-    /* Schedule next update */
-    cc->next_cc_event = CWND_UPDATE_RATE(cc);
-
     congestion_control_vegas_log(circ, cc);
 
     /* Update metrics */
@@ -602,9 +595,12 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
     }
   }
 
-  /* Once per cwnd, reset the cwnd full state */
+  /* Reset event counters */
   if (cc->next_cwnd_event == 0) {
     cc->next_cwnd_event = SENDME_PER_CWND(cc);
+  }
+  if (cc->next_cc_event == 0) {
+    cc->next_cc_event = CWND_UPDATE_RATE(cc);
   }
 
   /* Decide if enough time has passed to reset the cwnd utilization */
