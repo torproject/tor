@@ -158,11 +158,11 @@ struct congestion_control_t {
    * It is also reset to 0 immediately whenever the circuit's orconn is
    * blocked, and when a previously blocked orconn is unblocked.
    */
-  uint64_t next_cc_event;
+  uint16_t next_cc_event;
 
   /** Counts down until we process a cwnd worth of SENDME acks.
    * Used to track full cwnd status. */
-  uint64_t next_cwnd_event;
+  uint16_t next_cwnd_event;
 
   /** Are we in slow start? */
   bool in_slow_start;
