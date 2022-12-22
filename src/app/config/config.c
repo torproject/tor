@@ -7256,7 +7256,7 @@ getinfo_helper_config(control_connection_t *conn,
 }
 
 /* Check whether an address has already been set against the options
- * depending on address family and destination type. Any exsting
+ * depending on address family and destination type. Any existing
  * value will lead to a fail, even if it is the same value. If not
  * set and not only validating, copy it into this location too.
  * Returns 0 on success or -1 if this address is already set.

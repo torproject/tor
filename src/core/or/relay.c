@@ -3051,7 +3051,7 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
      *
      * We are accepting this as an "ok" race else the changes are likely non
      * trivial to make the mark for close to set the num cells to 0 and change
-     * the free functions to detach the circuit conditionnaly without creating
+     * the free functions to detach the circuit conditionally without creating
      * a chain effect of madness.
      *
      * The lesson here is arti will prevail and leave the cmux dragon alone. */
@@ -3150,7 +3150,7 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 /* Minimum value is the maximum circuit window size.
  *
  * This value is set to a lower bound we believe is reasonable with congestion
- * control and basic network tunning parameters.
+ * control and basic network running parameters.
  *
  * SENDME cells makes it that we can control how many cells can be inflight on
  * a circuit from end to end. This logic makes it that on any circuit cell

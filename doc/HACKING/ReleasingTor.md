@@ -76,7 +76,7 @@ Steps are:
 
    1. Run `./build.sh` which will download everything you need, including the
       latest tarballs from the release CI, and auto-commit the signatures if
-      the checksum match. You will need to confim the commits.
+      the checksum match. You will need to confirm the commits.
 
    2. If all is good, `git push origin main` your signatures.
 

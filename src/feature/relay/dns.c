@@ -1459,7 +1459,7 @@ configure_libevent_options(void)
    * the query itself timed out in transit. */
   SET("timeout:", get_consensus_param_exit_dns_timeout());
 
-  /* This tells libevent to attemps up to X times a DNS query if the previous
+  /* This tells libevent to attempt up to X times a DNS query if the previous
    * one failed to complete within N second. We believe that this should be
    * enough to catch temporary hiccups on the first query. But after that, it
    * should signal us that it won't be able to resolve it. */
