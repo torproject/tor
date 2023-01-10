@@ -1018,6 +1018,18 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
     return 0;
   }
 
+  /* We had a case where someone removed their TotalBuildTimes from the state
+   * files while having CircuitBuildAbandonedCount above 0 leading to a
+   * segfault (#40437). Simply bug on it and return an error so at least the
+   * user will learn that they broke the state file. */
+  if (BUG(state->TotalBuildTimes <= 0 &&
+          state->CircuitBuildAbandonedCount > 0)) {
+    log_warn(LD_GENERAL, "CircuitBuildAbandonedCount count is above 0 but "
+                         "no TotalBuildTimes have been found. Unable to "
+                         "parse broken state file");
+    return -1;
+  }
+
   /* build_time_t 0 means uninitialized */
   loaded_times = tor_calloc(state->TotalBuildTimes, sizeof(build_time_t));
 
