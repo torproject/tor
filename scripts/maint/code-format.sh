@@ -160,11 +160,17 @@ if [[ $GITIDX = 1 ]]; then
     # partially staged.
     note "Stashing unstaged changes"
     git stash -q --keep-index
+    # For some reasons, shellcheck is not seeing that we can call this
+    # function from the trap below.
+    # shellcheck disable=SC2317
     function restoregit() {
         note "Restoring git state"
         git stash pop -q
     }
 else
+    # For some reasons, shellcheck is not seeing that we can call this
+    # function from the trap below.
+    # shellcheck disable=SC2317
     function restoregit() {
         true
     }
