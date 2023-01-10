@@ -1,0 +1,3 @@
+  o Minor bugfixes (sandbox, authority):
+    - With the sandbox enabled, allow to write "my-consensus-{ns|microdesc}" and
+      to rename them as well. Fixes bug 40729; bugfix on 0.3.5.1-alpha.
