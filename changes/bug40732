@@ -1,0 +1,7 @@
+  o Major bugfixes (congestion control):
+    - Avoid incrementing the congestion window when the window is not
+      fully in use. Thia prevents overshoot in cases where long periods
+      of low activity would allow our congestion window to grow, and
+      then get followed by a burst, which would cause queue overload.
+      Also improve the increment checks for RFC3742. Fixes bug 40732;
+      bugfix on 0.4.7.5-alpha.
