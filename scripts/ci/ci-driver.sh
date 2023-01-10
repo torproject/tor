@@ -375,7 +375,6 @@ if [[ "$RUN_STAGE_BUILD" = "yes" ]] ; then
             hooray "Distcheck was successful. Nothing further will be done."
             # We have to exit early here, since we can't do any other tests.
             cp tor-*.tar.gz "${CI_SRCDIR}"/artifacts
-            exit 0
         else
             error "Diagnostics:"
             runcmd make show-distdir-testlog || true
@@ -383,6 +382,7 @@ if [[ "$RUN_STAGE_BUILD" = "yes" ]] ; then
             die "Unable to continue."
         fi
         end_section Distcheck
+        exit 0
     fi
 fi
 
