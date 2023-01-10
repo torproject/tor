@@ -336,7 +336,7 @@ congestion_control_vegas_exit_slow_start(const circuit_t *circ,
  * return to the eventloop to fill the inbuf on edge connections.
  */
 static inline bool
-cwnd_is_full(const congestion_control_t *cc)
+cwnd_became_full(const congestion_control_t *cc)
 {
   if (cc->inflight + cc_vegas_cwnd_full_gap*cc->sendme_inc >= cc->cwnd) {
     return true;
@@ -352,7 +352,7 @@ cwnd_is_full(const congestion_control_t *cc)
  * allowing cwnd increments.
  */
 static inline bool
-cwnd_is_nonfull(const congestion_control_t *cc)
+cwnd_became_nonfull(const congestion_control_t *cc)
 {
   /* Use multiply form to avoid division */
   if (100*cc->inflight < cc_vegas_cwnd_full_minpct * cc->cwnd) {
@@ -435,9 +435,9 @@ congestion_control_vegas_process_sendme(congestion_control_t *cc,
     queue_use = cc->cwnd - vegas_bdp(cc);
 
   /* Update the full state */
-  if (cwnd_is_full(cc))
+  if (cwnd_became_full(cc))
     cc->cwnd_full = 1;
-  else if (cwnd_is_nonfull(cc))
+  else if (cwnd_became_nonfull(cc))
     cc->cwnd_full = 0;
 
   if (cc->in_slow_start) {
