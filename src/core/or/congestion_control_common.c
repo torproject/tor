@@ -902,7 +902,7 @@ congestion_control_update_circuit_rtt(congestion_control_t *cc,
   if (cc->min_rtt_usec == 0) {
     // If we do not have a min_rtt yet, use current ewma
     cc->min_rtt_usec = cc->ewma_rtt_usec;
-  } else if (cc->cwnd == cc->cwnd_min) {
+  } else if (cc->cwnd == cc->cwnd_min && !cc->in_slow_start) {
     // Raise min rtt if cwnd hit cwnd_min. This gets us out of a wedge state
     // if we hit cwnd_min due to an abnormally low rtt.
     uint64_t new_rtt = percent_max_mix(cc->ewma_rtt_usec, cc->min_rtt_usec,
