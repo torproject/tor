@@ -203,7 +203,7 @@ congestion_control_vegas_set_params(congestion_control_t *cc,
    networkstatus_get_param(NULL, "cc_cwnd_full_gap",
       VEGAS_CWND_FULL_GAP_DFLT,
       0,
-      INT32_MAX);
+      INT16_MAX);
 
   cc_cwnd_full_per_cwnd =
    networkstatus_get_param(NULL, "cc_cwnd_full_per_cwnd",
