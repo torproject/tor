@@ -1,3 +1,65 @@
+Changes in version 0.4.7.13 - 2023-01-12
+  This version contains three major bugfixes, two for relays and one for
+  client being a security fix, TROVE-2022-002. We have added, for Linux, the
+  support for IP_BIND_ADDRESS_NO_PORT for relays using OutboundBindAddress.
+  We strongly recommend to upgrade to this version considering the important
+  congestion control fix detailed below.
+
+  o Major bugfixes (congestion control):
+    - Avoid incrementing the congestion window when the window is not
+      fully in use. Thia prevents overshoot in cases where long periods
+      of low activity would allow our congestion window to grow, and
+      then get followed by a burst, which would cause queue overload.
+      Also improve the increment checks for RFC3742. Fixes bug 40732;
+      bugfix on 0.4.7.5-alpha.
+
+  o Major bugfixes (relay):
+    - When opening a channel because of a circuit request that did not
+      include an Ed25519 identity, record the Ed25519 identity that we
+      actually received, so that we can use the channel for other
+      circuit requests that _do_ list an Ed25519 identity. (Previously
+      we had code to record this identity, but a logic bug caused it to
+      be disabled.) Fixes bug 40563; bugfix on 0.3.0.1-alpha. Patch
+      from "cypherpunks".
+
+  o Major bugfixes (TROVE-2022-002, client):
+    - The SafeSocks option had its logic inverted for SOCKS4 and
+      SOCKS4a. It would let the unsafe SOCKS4 pass but not the safe
+      SOCKS4a one. This is TROVE-2022-002 which was reported on
+      Hackerone by "cojabo". Fixes bug 40730; bugfix on 0.3.5.1-alpha.
+
+  o Minor feature (authority):
+    - Reject 0.4.6.x series at the authority level. Closes ticket 40664.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on January 12, 2023.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2023/01/12.
+
+  o Minor features (relays):
+    - Set the Linux-specific IP_BIND_ADDRESS_NO_PORT option on outgoing
+      sockets, allowing relays using OutboundBindAddress to make more
+      outgoing connections than ephemeral ports, as long as they are to
+      separate destinations. Related to issue 40597; patch by Alex
+      Xu (Hello71).
+
+  o Minor bugfixes (relay, metrics):
+    - Fix typo in a congestion control label on the MetricsPort. Fixes
+      bug 40727; bugfix on 0.4.7.12.
+
+  o Minor bugfixes (sandbox, authority):
+    - With the sandbox enabled, allow to write "my-consensus-
+      {ns|microdesc}" and to rename them as well. Fixes bug 40729;
+      bugfix on 0.3.5.1-alpha.
+
+  o Code simplifications and refactoring:
+    - Rely on actual error returned by the kernel when choosing what
+      resource exhaustion to log. Fixes issue 40613; Fix
+      on tor-0.4.6.1-alpha.
+
+
 Changes in version 0.4.7.12 - 2022-12-06
   This version contains a major change that is a new key for moria1. Also, new
   metrics are exported on the MetricsPort for the congestion control
