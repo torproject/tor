@@ -1,0 +1,5 @@
+  o Major bugfixes (TROVE-2022-002, client):
+    - The SafeSocks option had its logic inverted for SOCKS4 and SOCKS4a. It
+      would let the unsafe SOCKS4 pass but not the safe SOCKS4a one. This is
+      TROVE-2022-002 which was reported on Hackerone by "cojabo". Fixes bug
+      40730; bugfix on 0.3.5.1-alpha.
