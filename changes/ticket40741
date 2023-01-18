@@ -1,0 +1,2 @@
+  o Minor feature (lzma):
+    - Fix compiler warnings for liblzma >= 5.3.1. Closes ticket 40741.
