@@ -747,6 +747,15 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *orig_circ,
    * because the cell digest is set within that function. */
   if (relay_command == RELAY_COMMAND_DATA) {
     sendme_record_cell_digest_on_circ(circ, cpath_layer);
+
+    /* Handle the circuit-level SENDME package window. */
+    if (sendme_note_circuit_data_packaged(circ, cpath_layer) < 0) {
+      /* Package window has gone under 0. Protocol issue. */
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Circuit package window is below 0. Closing circuit.");
+      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+      return -1;
+    }
   }
 
   return 0;
@@ -1696,19 +1705,6 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_DATA:
       ++stats_n_data_cells_received;
 
-      /* Update our circuit-level deliver window that we received a DATA cell.
-       * If the deliver window goes below 0, we end the circuit and stream due
-       * to a protocol failure. */
-      if (sendme_circuit_data_received(circ, layer_hint) < 0) {
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "(relay data) circ deliver_window below 0. Killing.");
-        connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
-        return -END_CIRC_REASON_TORPROTOCOL;
-      }
-
-      /* Consider sending a circuit-level SENDME cell. */
-      sendme_circuit_consider_sending(circ, layer_hint);
-
       if (rh->stream_id == 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Relay data cell with zero "
                "stream_id. Dropping.");
@@ -2113,6 +2109,26 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     }
   }
 
+  /* Regardless of conflux or not, we always decide to send a SENDME
+   * for RELAY_DATA immediately
+   */
+  if (rh.command == RELAY_COMMAND_DATA) {
+    /* Update our circuit-level deliver window that we received a DATA cell.
+     * If the deliver window goes below 0, we end the circuit and stream due
+     * to a protocol failure. */
+    if (sendme_circuit_data_received(circ, layer_hint) < 0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "(relay data) circ deliver_window below 0. Killing.");
+      connection_edge_end_close(conn, END_STREAM_REASON_TORPROTOCOL);
+      return -END_CIRC_REASON_TORPROTOCOL;
+    }
+
+    /* Consider sending a circuit-level SENDME cell. */
+    sendme_circuit_consider_sending(circ, layer_hint);
+
+    /* Continue on to process the data cell via conflux or not */
+  }
+
   /* Conflux handling: If conflux is disabled, or the relay command is not
    * multiplexed across circuits, then process it immediately.
    *
@@ -2398,19 +2414,11 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     buf_add(entry_conn->pending_optimistic_data, payload, length);
   }
 
+  /* Send a data cell. This handles the circuit package window. */
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,
                                    payload, length) < 0 ) {
     /* circuit got marked for close, don't continue, don't need to mark conn */
     return 0;
-  }
-
-  /* Handle the circuit-level SENDME package window. */
-  if (sendme_note_circuit_data_packaged(circ, cpath_layer) < 0) {
-    /* Package window has gone under 0. Protocol issue. */
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Circuit package window is below 0. Closing circuit.");
-    conn->end_reason = END_STREAM_REASON_TORPROTOCOL;
-    return -1;
   }
 
   /* Handle the stream-level SENDME package window. */
