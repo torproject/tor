@@ -243,7 +243,6 @@ router_rebuild_store(int flags, desc_store_t *store)
   int r = -1;
   off_t offset = 0;
   smartlist_t *signed_descriptors = NULL;
-  int nocache=0;
   size_t total_expected_len = 0;
   int had_any;
   int force = flags & RRS_FORCE;
@@ -304,7 +303,6 @@ router_rebuild_store(int flags, desc_store_t *store)
         goto done;
       }
       if (sd->do_not_cache) {
-        ++nocache;
         continue;
       }
       c = tor_malloc(sizeof(sized_chunk_t));

@@ -817,22 +817,26 @@ channel_check_for_duplicates(void)
     log_notice(LD_OR,
         "Your relay has a very large number of connections to other relays. "
         "Is your outbound address the same as your relay address? "
-        "Found %d connections to %d relays. Found %d current canonical "
-        "connections, in %d of which we were a non-canonical peer. "
+        "Found %d connections to authorities, %d connections to %d relays. "
+        "Found %d current canonical connections, "
+        "in %d of which we were a non-canonical peer. "
         "%d relays had more than 1 connection, %d had more than 2, and "
         "%d had more than 4 connections.",
-        total_relay_connections, total_relays, total_canonical,
-        total_half_canonical, total_gt_one_connection,
-        total_gt_two_connections, total_gt_four_connections);
+        total_dirauth_connections, total_relay_connections,
+        total_relays, total_canonical, total_half_canonical,
+        total_gt_one_connection, total_gt_two_connections,
+        total_gt_four_connections);
   } else {
     log_info(LD_OR, "Performed connection pruning. "
-        "Found %d connections to %d relays. Found %d current canonical "
-        "connections, in %d of which we were a non-canonical peer. "
+        "Found %d connections to authorities, %d connections to %d relays. "
+        "Found %d current canonical connections, "
+        "in %d of which we were a non-canonical peer. "
         "%d relays had more than 1 connection, %d had more than 2, and "
         "%d had more than 4 connections.",
-        total_relay_connections, total_relays, total_canonical,
-        total_half_canonical, total_gt_one_connection,
-        total_gt_two_connections, total_gt_four_connections);
+        total_dirauth_connections, total_relay_connections,
+        total_relays, total_canonical, total_half_canonical,
+        total_gt_one_connection, total_gt_two_connections,
+        total_gt_four_connections);
   }
 }
 
