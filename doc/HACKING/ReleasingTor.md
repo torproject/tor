@@ -139,6 +139,12 @@ do the following:
       the Forum. Append the ChangeLog there. We do this until we can automate
       such post from the forum directly.
 
+   5. Update torproject.org website by submitting a MR to
+      https://gitlab.torproject.org/tpo/web/tpo
+
+      The `databags/versions.ini` file is the one to change with the newly
+      released version(s).
+
 ### New Stable
 
    1. Create the `maint-x.y.z` and `release-x.y.z` branches at the version
