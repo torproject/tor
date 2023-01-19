@@ -1043,6 +1043,7 @@ test_crypto_mac_sha3(void *arg)
 {
   const char msg[] = "i am in a library somewhere using my computer";
   const char key[] = "i'm from the past talking to the future.";
+  char *mem_op_hex_tmp = NULL;
 
   uint8_t hmac_test[DIGEST256_LEN];
   char hmac_manual[DIGEST256_LEN];
@@ -1077,7 +1078,12 @@ test_crypto_mac_sha3(void *arg)
   /* Now compare the two results */
   tt_mem_op(hmac_test, OP_EQ, hmac_manual, DIGEST256_LEN);
 
- done: ;
+  /* Check against a known correct value (computed from python) */
+  test_memeq_hex(hmac_test,
+                  "753fba6d87d49497238a512a3772dd29"
+                  "1e55f7d1cd332c9fb5c967c7a10a13ca");
+ done:
+  tor_free(mem_op_hex_tmp);
 }
 
 /** Run unit tests for our public key crypto functions */
