@@ -432,7 +432,7 @@ get_second_cached_disaster_srv(void)
  * thus will be ignored for the param construction.
  *
  * The result is put in param_out. */
-static void
+STATIC void
 build_blinded_key_param(const ed25519_public_key_t *pubkey,
                         const uint8_t *secret, size_t secret_len,
                         uint64_t period_num, uint64_t period_length,

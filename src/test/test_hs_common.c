@@ -1509,6 +1509,61 @@ test_reachability(void *arg)
   }
 }
 
+static void
+test_blinding_basics(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp = NULL;
+  uint64_t time_period = 1234;
+  ed25519_keypair_t keypair;
+  const char pubkey_hex[] =
+    "833990B085C1A688C1D4C8B1F6B56AFAF5A2ECA674449E1D704F83765CCB7BC6";
+  const char seckey_hex[] =
+    "D8C7FF0E31295B66540D789AF3E3DF992038A9592EEA01D8B7CBA06D6E66D159"
+    "4D6167696320576F7264733A20737065697373636F62616C742062697669756D";
+  base16_decode((char*)keypair.pubkey.pubkey, sizeof(keypair.pubkey.pubkey),
+                pubkey_hex, strlen(pubkey_hex));
+  base16_decode((char*)keypair.seckey.seckey, sizeof(keypair.seckey.seckey),
+                seckey_hex, strlen(seckey_hex));
+
+  uint64_t period_len = get_time_period_length();
+  tt_u64_op(period_len, OP_EQ, 1440);
+  uint8_t params[32];
+  build_blinded_key_param(&keypair.pubkey, NULL, 0,
+                          time_period, 1440,
+                          params);
+  test_memeq_hex(params,
+                 "379E50DB31FEE6775ABD0AF6FB7C371E"
+                 "060308F4F847DB09FE4CFE13AF602287");
+
+  ed25519_public_key_t blinded_public;
+  hs_build_blinded_pubkey(&keypair.pubkey, NULL, 0, time_period,
+                          &blinded_public);
+  hs_subcredential_t subcred;
+  hs_get_subcredential(&keypair.pubkey, &blinded_public, &subcred);
+
+  test_memeq_hex(blinded_public.pubkey,
+                 "3A50BF210E8F9EE955AE0014F7A6917F"
+                 "B65EBF098A86305ABB508D1A7291B6D5");
+  test_memeq_hex(subcred.subcred,
+                 "635D55907816E8D76398A675A50B1C2F"
+                 "3E36B42A5CA77BA3A0441285161AE07D");
+
+  ed25519_keypair_t blinded_keypair;
+  hs_build_blinded_keypair(&keypair, NULL, 0, time_period,
+                           &blinded_keypair);
+  tt_mem_op(blinded_public.pubkey, OP_EQ, blinded_keypair.pubkey.pubkey,
+            ED25519_PUBKEY_LEN);
+  test_memeq_hex(blinded_keypair.seckey.seckey,
+                 "A958DC83AC885F6814C67035DE817A2C"
+                 "604D5D2F715282079448F789B656350B"
+                 "4540FE1F80AA3F7E91306B7BF7A8E367"
+                 "293352B14A29FDCC8C19F3558075524B");
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
 /** Pick an HSDir for service with <b>onion_identity_pk</b> as a client. Put
  *  its identity digest in <b>hsdir_digest_out</b>. */
 static void
@@ -1843,6 +1898,7 @@ test_client_service_hsdir_set_sync(void *arg)
 }
 
 struct testcase_t hs_common_tests[] = {
+  { "blinding_basics", test_blinding_basics, TT_FORK, NULL, NULL },
   { "build_address", test_build_address, TT_FORK,
     NULL, NULL },
   { "validate_address", test_validate_address, TT_FORK,
