@@ -63,6 +63,7 @@
 #include "lib/math/fp.h"
 #include "lib/time/tvdiff.h"
 #include "lib/trace/events.h"
+#include "src/core/mainloop/mainloop.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "feature/dircommon/dir_connection_st.h"
@@ -938,7 +939,7 @@ circuit_log_ancient_one_hop_circuits(int age)
                  c->marked_for_close,
                  c->hold_open_until_flushed ? "" : "not ",
                  conn->edge_has_sent_end ? "" : "not ",
-                 conn->edge_blocked_on_circ ? "Blocked" : "Not blocked");
+                 connection_is_reading(c) ? "Not blocked" : "Blocked");
       if (! c->linked_conn)
         continue;
 

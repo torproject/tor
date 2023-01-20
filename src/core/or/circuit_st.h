@@ -88,11 +88,11 @@ struct circuit_t {
   extend_info_t *n_hop;
 
   /** True iff we are waiting for n_chan_cells to become less full before
-   * allowing p_streams to add any more cells. (Origin circuit only.) */
-  unsigned int streams_blocked_on_n_chan : 1;
+   * allowing any more cells on this circuit. (Origin circuit only.) */
+  unsigned int circuit_blocked_on_n_chan : 1;
   /** True iff we are waiting for p_chan_cells to become less full before
-   * allowing n_streams to add any more cells. (OR circuit only.) */
-  unsigned int streams_blocked_on_p_chan : 1;
+   * allowing any more cells on this circuit. (OR circuit only.) */
+  unsigned int circuit_blocked_on_p_chan : 1;
 
   /** True iff we have queued a delete backwards on this circuit, but not put
    * it on the output buffer. */

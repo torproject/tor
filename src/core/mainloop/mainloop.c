@@ -497,7 +497,7 @@ connection_watch_events(connection_t *conn, watchable_events_t events)
 
 /** Return true iff <b>conn</b> is listening for read events. */
 int
-connection_is_reading(connection_t *conn)
+connection_is_reading(const connection_t *conn)
 {
   tor_assert(conn);
 

@@ -66,9 +66,6 @@ struct edge_connection_t {
                          * connections.  Set once we've set the stream end,
                          * and check in connection_about_to_close_connection().
                          */
-  /** True iff we've blocked reading until the circuit has fewer queued
-   * cells. */
-  unsigned int edge_blocked_on_circ:1;
 
   /** Unique ID for directory requests; this used to be in connection_t, but
    * that's going away and being used on channels instead.  We still tag

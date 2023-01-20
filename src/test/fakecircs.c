@@ -41,8 +41,8 @@ new_fake_orcirc(channel_t *nchan, channel_t *pchan)
   cell_queue_init(&(circ->n_chan_cells));
 
   circ->n_hop = NULL;
-  circ->streams_blocked_on_n_chan = 0;
-  circ->streams_blocked_on_p_chan = 0;
+  circ->circuit_blocked_on_n_chan = 0;
+  circ->circuit_blocked_on_p_chan = 0;
   circ->n_delete_pending = 0;
   circ->p_delete_pending = 0;
   circ->received_destroy = 0;

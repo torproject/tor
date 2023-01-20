@@ -954,11 +954,11 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
   if (CIRCUIT_IS_ORIGIN(circ)) {
     /* origin circs use n_chan */
     chan_q = circ->n_chan_cells.n;
-    blocked_on_chan = circ->streams_blocked_on_n_chan;
+    blocked_on_chan = circ->circuit_blocked_on_n_chan;
   } else {
     /* Both onion services and exits use or_circuit and p_chan */
     chan_q = CONST_TO_OR_CIRCUIT(circ)->p_chan_cells.n;
-    blocked_on_chan = circ->streams_blocked_on_p_chan;
+    blocked_on_chan = circ->circuit_blocked_on_p_chan;
   }
 
   /* If we have no EWMA RTT, it is because monotime has been stalled
