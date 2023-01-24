@@ -248,6 +248,19 @@ struct circuit_t {
 
   /** Congestion control fields */
   struct congestion_control_t *ccontrol;
+
+  /** Conflux linked circuit information.
+   *
+   * If this is non-NULL, the circuit is linked and part of a usable set,
+   * and for origin_circuit_t subtypes, the circuit purpose is
+   * CIRCUIT_PURPOSE_CONFLUX_LINKED.
+   *
+   * If this is NULL, the circuit could still be part of a pending conflux
+   * object, in which case the conflux_pending_nonce field is set, and for
+   * origin_circuit_t subtypes, the purpose is
+   * CIRCUIT_PURPOSE_CONFLUX_UNLINKED.
+  */
+  struct conflux_t *conflux;
 };
 
 #endif /* !defined(CIRCUIT_ST_H) */

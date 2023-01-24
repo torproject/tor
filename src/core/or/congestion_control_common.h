@@ -46,7 +46,7 @@ congestion_control_t *congestion_control_new(
                                     cc_path_t path);
 
 int congestion_control_dispatch_cc_alg(congestion_control_t *cc,
-                                       const circuit_t *circ,
+                                       circuit_t *circ,
                                        const crypt_path_t *layer_hint);
 
 void congestion_control_note_cell_sent(congestion_control_t *cc,

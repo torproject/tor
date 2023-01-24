@@ -624,6 +624,23 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *orig_circ,
   cell_t cell;
   relay_header_t rh;
   cell_direction_t cell_direction;
+  circuit_t *circ = orig_circ;
+
+  /* If conflux is enabled, decide which leg to send on, and use that */
+  if (orig_circ->conflux && conflux_should_multiplex(relay_command)) {
+    circ = conflux_decide_circ_for_send(orig_circ->conflux, orig_circ,
+                                        relay_command);
+    if (BUG(!circ)) {
+      log_warn(LD_BUG, "No circuit to send on for conflux");
+      circ = orig_circ;
+    } else {
+      /* Conflux circuits always send multiplexed relay commands to
+       * to the last hop. (Non-multiplexed commands go on their
+       * original circuit and hop). */
+      cpath_layer = conflux_get_destination_hop(circ);
+    }
+  }
+
   /* XXXX NM Split this function into a separate versions per circuit type? */
 
   tor_assert(circ);
@@ -719,6 +736,10 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *orig_circ,
     log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
     return -1;
+  }
+
+  if (circ->conflux) {
+    conflux_note_cell_sent(circ->conflux, circ, relay_command);
   }
 
   /* If applicable, note the cell digest for the SENDME version 1 purpose if
@@ -1639,6 +1660,8 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
 
   /* Now handle all the other commands */
   switch (rh->command) {
+    case RELAY_COMMAND_CONFLUX_SWITCH:
+      return conflux_process_switch_command(circ, layer_hint, cell, rh);
     case RELAY_COMMAND_BEGIN:
     case RELAY_COMMAND_BEGIN_DIR:
       if (layer_hint &&

@@ -23,6 +23,7 @@
 #include "core/or/congestion_control_nola.h"
 #include "core/or/congestion_control_westwood.h"
 #include "core/or/congestion_control_st.h"
+#include "core/or/conflux.h"
 #include "core/or/trace_probes_cc.h"
 #include "lib/time/compat_time.h"
 #include "feature/nodelist/networkstatus.h"
@@ -1188,7 +1189,7 @@ congestion_control_update_circuit_bdp(congestion_control_t *cc,
  */
 int
 congestion_control_dispatch_cc_alg(congestion_control_t *cc,
-                                   const circuit_t *circ,
+                                   circuit_t *circ,
                                    const crypt_path_t *layer_hint)
 {
   int ret = -END_CIRC_REASON_INTERNAL;
@@ -1217,6 +1218,10 @@ congestion_control_dispatch_cc_alg(congestion_control_t *cc,
            cc->cwnd, cwnd_max);
     cc->cwnd = cwnd_max;
   }
+
+  /* If we have a non-zero RTT measurement, update conflux. */
+  if (circ->conflux && cc->ewma_rtt_usec)
+    conflux_update_rtt(circ->conflux, circ, cc->ewma_rtt_usec);
 
   return ret;
 }
