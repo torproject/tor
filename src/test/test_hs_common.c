@@ -645,6 +645,19 @@ test_disaster_srv(void *arg)
   tt_mem_op(cached_disaster_srv_one, OP_EQ, srv_one, DIGEST256_LEN);
   tt_mem_op(cached_disaster_srv_two, OP_EQ, srv_two, DIGEST256_LEN);
 
+  /* For at least one SRV, check that its result was as expected. */
+  {
+    uint8_t srv1_expected[32];
+    crypto_digest256(
+        (char*)srv1_expected,
+        "shared-random-disaster\0\0\0\0\0\0\x05\xA0\0\0\0\0\0\0\0\1",
+        strlen("shared-random-disaster")+16,
+        DIGEST_SHA3_256);
+    tt_mem_op(srv_one, OP_EQ, srv1_expected, DIGEST256_LEN);
+    tt_str_op(hex_str((char*)srv_one, DIGEST256_LEN), OP_EQ,
+        "F8A4948707653837FA44ABB5BBC75A12F6F101E7F8FAF699B9715F4965D3507D");
+  }
+
   /* Ask for an SRV that has already been computed */
   get_disaster_srv(2, srv_two);
   /* and check that the cache entries have not changed */
