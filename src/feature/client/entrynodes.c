@@ -610,7 +610,7 @@ mark_primary_guards_maybe_reachable(guard_selection_t *gs)
 }
 
 /* Called when we exhaust all guards in our sampled set: Marks all guards as
-   maybe-reachable so that we 'll try them again. */
+   maybe-reachable so that we'll try them again. */
 static void
 mark_all_guards_maybe_reachable(guard_selection_t *gs)
 {
@@ -1058,7 +1058,7 @@ get_max_sample_size(guard_selection_t *gs,
 }
 
 /**
- * Return a smartlist of the all the guards that are not currently
+ * Return a smartlist of all the guards that are not currently
  * members of the sample (GUARDS - SAMPLED_GUARDS).  The elements of
  * this list are node_t pointers in the non-bridge case, and
  * bridge_info_t pointers in the bridge case.  Set *<b>n_guards_out</b>
