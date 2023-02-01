@@ -100,6 +100,8 @@
 #include "core/or/congestion_control_common.h"
 #include "core/or/congestion_control_flow.h"
 #include "core/or/conflux.h"
+#include "core/or/conflux_util.h"
+#include "core/or/conflux_pool.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -450,7 +452,6 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell,
   /* IN or OUT cells could have come from either direction, now
    * that we allow rendezvous *to* an OP.
    */
-
   if (CIRCUIT_IS_ORIGIN(circ)) {
     for (tmpconn = TO_ORIGIN_CIRCUIT(circ)->p_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
@@ -544,6 +545,10 @@ relay_command_to_string(uint8_t command)
     case RELAY_COMMAND_EXTENDED2: return "EXTENDED2";
     case RELAY_COMMAND_PADDING_NEGOTIATE: return "PADDING_NEGOTIATE";
     case RELAY_COMMAND_PADDING_NEGOTIATED: return "PADDING_NEGOTIATED";
+    case RELAY_COMMAND_CONFLUX_LINK: return "CONFLUX_LINK";
+    case RELAY_COMMAND_CONFLUX_LINKED: return "CONFLUX_LINKED";
+    case RELAY_COMMAND_CONFLUX_LINKED_ACK: return "CONFLUX_LINKED_ACK";
+    case RELAY_COMMAND_CONFLUX_SWITCH: return "CONFLUX_SWITCH";
     default:
       tor_snprintf(buf, sizeof(buf), "Unrecognized relay command %u",
                    (unsigned)command);
@@ -782,6 +787,7 @@ connection_edge_send_command(edge_connection_t *fromconn,
   circuit_t *circ;
   crypt_path_t *cpath_layer = fromconn->cpath_layer;
   tor_assert(fromconn);
+
   circ = fromconn->on_circuit;
 
   if (fromconn->base_.marked_for_close) {
@@ -1653,6 +1659,15 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
 
   /* Now handle all the other commands */
   switch (rh->command) {
+    case RELAY_COMMAND_CONFLUX_LINK:
+      conflux_process_link(circ, cell, rh->length);
+      return 0;
+    case RELAY_COMMAND_CONFLUX_LINKED:
+      conflux_process_linked(circ, layer_hint, cell, rh->length);
+      return 0;
+    case RELAY_COMMAND_CONFLUX_LINKED_ACK:
+      conflux_process_linked_ack(circ);
+      return 0;
     case RELAY_COMMAND_CONFLUX_SWITCH:
       return conflux_process_switch_command(circ, layer_hint, cell, rh);
     case RELAY_COMMAND_BEGIN:
@@ -1713,7 +1728,6 @@ handle_relay_cell_command(cell_t *cell, circuit_t *circ,
       /* Update our stream-level deliver window that we just received a DATA
        * cell. Going below 0 means we have a protocol level error so the
        * stream and circuit are closed. */
-
       if (sendme_stream_data_received(conn) < 0) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) conn deliver_window below 0. Killing.");

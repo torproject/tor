@@ -558,6 +558,7 @@ router_can_choose_node(const node_t *node, int flags)
   const bool direct_conn = (flags & CRN_DIRECT_CONN) != 0;
   const bool rendezvous_v3 = (flags & CRN_RENDEZVOUS_V3) != 0;
   const bool initiate_ipv6_extend = (flags & CRN_INITIATE_IPV6_EXTEND) != 0;
+  const bool need_conflux = (flags & CRN_CONFLUX) != 0;
 
   const or_options_t *options = get_options();
   const bool check_reach =
@@ -592,6 +593,10 @@ router_can_choose_node(const node_t *node, int flags)
   if (rendezvous_v3 &&
       !node_supports_v3_rendezvous_point(node))
     return false;
+  /* Exclude relay that don't do conflux if requested. */
+  if (need_conflux && !node_supports_conflux(node)) {
+    return false;
+  }
   /* Choose a node with an OR address that matches the firewall rules */
   if (direct_conn && check_reach &&
       !reachable_addr_allows_node(node,

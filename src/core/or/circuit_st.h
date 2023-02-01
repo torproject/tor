@@ -261,6 +261,14 @@ struct circuit_t {
    * CIRCUIT_PURPOSE_CONFLUX_UNLINKED.
   */
   struct conflux_t *conflux;
+
+  /** If set, this circuit is considered *unlinked* and in the pending pool.
+   * The nonce value is used to find the other legs. Origin circuits that
+   * have this set are in the CIRCUIT_PURPOSE_CONFLUX_UNLINKED purpose.
+   *
+   * If this is NULL, and conflux object is set, it means this circuit is
+   * linked and thus part of a usable set. */
+  uint8_t *conflux_pending_nonce;
 };
 
 #endif /* !defined(CIRCUIT_ST_H) */

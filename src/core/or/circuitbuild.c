@@ -465,6 +465,8 @@ origin_circuit_init(uint8_t purpose, int flags)
     ((flags & CIRCLAUNCH_IS_INTERNAL) ? 1 : 0);
   circ->build_state->is_ipv6_selftest =
     ((flags & CIRCLAUNCH_IS_IPV6_SELFTEST) ? 1 : 0);
+  circ->build_state->need_conflux =
+    ((flags & CIRCLAUNCH_NEED_CONFLUX) ? 1 : 0);
   circ->base_.purpose = purpose;
   return circ;
 }
@@ -491,6 +493,47 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit_ei, int flags)
   circ = origin_circuit_init(purpose, flags);
 
   if (onion_pick_cpath_exit(circ, exit_ei, is_hs_v3_rp_circuit) < 0 ||
+      onion_populate_cpath(circ) < 0) {
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NOPATH);
+    return NULL;
+  }
+
+  circuit_event_status(circ, CIRC_EVENT_LAUNCHED, 0);
+
+  if ((err_reason = circuit_handle_first_hop(circ)) < 0) {
+    circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
+    return NULL;
+  }
+
+  tor_trace(TR_SUBSYS(circuit), TR_EV(establish), circ);
+  return circ;
+}
+
+/**
+ * Build a new conflux circuit for <b>purpose</b>. If <b>exit</b> is defined,
+ * then use that as your exit router, else choose a suitable exit node.
+ * The <b>flags</b> argument is a bitfield of CIRCLAUNCH_* flags, see
+ * circuit_launch_by_extend_info() for more details.
+ *
+ * Also launch a connection to the first OR in the chosen path, if
+ * it's not open already.
+ */
+MOCK_IMPL(origin_circuit_t *,
+circuit_establish_circuit_conflux,(const uint8_t *conflux_nonce,
+                                   uint8_t purpose, extend_info_t *exit_ei,
+                                   int flags))
+{
+  origin_circuit_t *circ;
+  int err_reason = 0;
+
+  /* Right now, only conflux client circuits use this function */
+  tor_assert(purpose == CIRCUIT_PURPOSE_CONFLUX_UNLINKED);
+
+  circ = origin_circuit_init(purpose, flags);
+  TO_CIRCUIT(circ)->conflux_pending_nonce =
+    tor_memdup(conflux_nonce, DIGEST256_LEN);
+
+  if (onion_pick_cpath_exit(circ, exit_ei, 0) < 0 ||
       onion_populate_cpath(circ) < 0) {
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NOPATH);
     return NULL;
@@ -2105,6 +2148,8 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
       flags |= CRN_DIRECT_CONN;
     if (is_hs_v3_rp_circuit)
       flags |= CRN_RENDEZVOUS_V3;
+    if (state->need_conflux)
+      flags |= CRN_CONFLUX;
     const node_t *node =
       choose_good_exit_server(circ, flags, state->is_internal);
     if (!node) {

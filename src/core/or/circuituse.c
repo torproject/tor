@@ -36,6 +36,7 @@
 #include "core/or/circuitstats.h"
 #include "core/or/circuituse.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/conflux_pool.h"
 #include "core/or/connection_edge.h"
 #include "core/or/extendinfo.h"
 #include "core/or/policies.h"
@@ -73,6 +74,8 @@
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "core/or/socks_request_st.h"
+
+#include "core/or/conflux_util.h"
 
 STATIC void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
@@ -1217,6 +1220,7 @@ circuit_predict_and_launch_new(void)
     log_info(LD_CIRC,
              "Have %d clean circs (%d internal), need another exit circ.",
              num, num_internal);
+
     circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
     return;
   }
@@ -1663,6 +1667,9 @@ circuit_has_opened(origin_circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       hs_client_circuit_has_opened(circ);
+      break;
+    case CIRCUIT_PURPOSE_CONFLUX_UNLINKED:
+      conflux_circuit_has_opened(circ);
       break;
     case CIRCUIT_PURPOSE_C_GENERAL:
       circuit_try_attaching_streams(circ);
@@ -3062,6 +3069,13 @@ circuit_change_purpose(circuit_t *circ, uint8_t new_purpose)
              !!(CIRCUIT_PURPOSE_IS_ORIGIN(new_purpose)));
 
   if (circ->purpose == new_purpose) return;
+
+  /* If this is a conflux circuit, a purpose change means we have closed */
+  if (CIRCUIT_IS_CONFLUX(circ)) {
+    /* If we're not transitioning to the linked purpose, we're closed. */
+    if (new_purpose != CIRCUIT_PURPOSE_CONFLUX_LINKED)
+      conflux_circuit_has_closed(circ);
+  }
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     char old_purpose_desc[80] = "";

@@ -62,6 +62,8 @@
 #include "core/or/circuituse.h"
 #include "core/or/circuitstats.h"
 #include "core/or/circuitpadding.h"
+#include "core/or/conflux.h"
+#include "core/or/conflux_pool.h"
 #include "core/or/crypt_path.h"
 #include "core/or/extendinfo.h"
 #include "core/or/status.h"
@@ -118,6 +120,7 @@
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
 
+#include "core/or/conflux_util.h"
 /********* START VARIABLES **********/
 
 /** A global list of all circuits at this hop. */
@@ -2254,6 +2257,11 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
   /* Notify the HS subsystem that this circuit is closing. */
   hs_circ_cleanup_on_close(circ);
 
+  /* Specific actions if this is a conflux related circuit. */
+  if (CIRCUIT_IS_CONFLUX(circ)) {
+    conflux_circuit_has_closed(circ);
+  }
+
   /* Update stats. */
   if (circ->ccontrol) {
     if (circ->ccontrol->in_slow_start) {
@@ -2297,6 +2305,8 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
 static void
 circuit_about_to_free_atexit(circuit_t *circ)
 {
+  /* Cleanup conflux specifics. */
+  conflux_circuit_about_to_free(circ);
 
   if (circ->n_chan) {
     circuit_clear_cell_queue(circ, circ->n_chan);
@@ -2325,6 +2335,9 @@ circuit_about_to_free(circuit_t *circ)
 
   int reason = circ->marked_for_close_reason;
   int orig_reason = circ->marked_for_close_orig_reason;
+
+  /* Cleanup conflux specifics. */
+  conflux_circuit_about_to_free(circ);
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
     onion_pending_remove(TO_OR_CIRCUIT(circ));

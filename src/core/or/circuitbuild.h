@@ -24,6 +24,12 @@ origin_circuit_t *origin_circuit_init(uint8_t purpose, int flags);
 origin_circuit_t *circuit_establish_circuit(uint8_t purpose,
                                             extend_info_t *exit,
                                             int flags);
+MOCK_DECL(origin_circuit_t *, circuit_establish_circuit_conflux, (
+                                            const uint8_t *nonce,
+                                            uint8_t purpose,
+                                            extend_info_t *exit,
+                                            int flags));
+
 struct circuit_guard_state_t *origin_circuit_get_guard_state(
                                             origin_circuit_t *circ);
 int circuit_handle_first_hop(origin_circuit_t *circ);
