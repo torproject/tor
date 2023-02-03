@@ -126,6 +126,7 @@
 #include "core/or/circuitlist.h"
 #include "core/or/circuitstats.h"
 #include "core/or/circuituse.h"
+#include "core/or/conflux_pool.h"
 #include "core/or/policies.h"
 #include "feature/client/bridges.h"
 #include "feature/client/circpathbias.h"
@@ -150,6 +151,8 @@
 #include "feature/nodelist/node_st.h"
 #include "core/or/origin_circuit_st.h"
 #include "app/config/or_state_st.h"
+
+#include "core/or/conflux_util.h"
 
 /** A list of existing guard selection contexts. */
 static smartlist_t *guard_contexts = NULL;
@@ -1588,6 +1591,19 @@ guard_create_exit_restriction(const uint8_t *exit_id)
   return rst;
 }
 
+/* Allocate and return a new exit guard restriction that excludes all current
+ * and pending conflux guards */
+STATIC entry_guard_restriction_t *
+guard_create_conflux_restriction(const origin_circuit_t *circ)
+{
+  entry_guard_restriction_t *rst = NULL;
+  rst = tor_malloc_zero(sizeof(entry_guard_restriction_t));
+  rst->type = RST_EXCL_LIST;
+  rst->excluded = smartlist_new();
+  conflux_add_guards_to_exclude_list(circ, rst->excluded);
+  return rst;
+}
+
 /** If we have fewer than this many possible usable guards, don't set
  * MD-availability-based restrictions: we might denylist all of them. */
 #define MIN_GUARDS_FOR_MD_RESTRICTION 10
@@ -1680,6 +1696,8 @@ entry_guard_obeys_restriction(const entry_guard_t *guard,
     return guard_obeys_exit_restriction(guard, rst);
   } else if (rst->type == RST_OUTDATED_MD_DIRSERVER) {
     return guard_obeys_md_dirserver_restriction(guard);
+  } else if (rst->type == RST_EXCL_LIST) {
+    return !smartlist_contains_digest(rst->excluded, guard->identity);
   }
 
   tor_assert_nonfatal_unreached();
@@ -2427,6 +2445,11 @@ entry_guard_has_higher_priority(entry_guard_t *a, entry_guard_t *b)
 STATIC void
 entry_guard_restriction_free_(entry_guard_restriction_t *rst)
 {
+  if (rst && rst->excluded) {
+    SMARTLIST_FOREACH(rst->excluded, void *, g,
+                      tor_free(g));
+    smartlist_free(rst->excluded);
+  }
   tor_free(rst);
 }
 
@@ -3780,7 +3803,8 @@ guards_update_all(void)
 /** Helper: pick a guard for a circuit, with whatever algorithm is
     used. */
 const node_t *
-guards_choose_guard(cpath_build_state_t *state,
+guards_choose_guard(const origin_circuit_t *circ,
+                    cpath_build_state_t *state,
                     uint8_t purpose,
                     circuit_guard_state_t **guard_state_out)
 {
@@ -3788,14 +3812,18 @@ guards_choose_guard(cpath_build_state_t *state,
   const uint8_t *exit_id = NULL;
   entry_guard_restriction_t *rst = NULL;
 
-  /* Only apply restrictions if we have a specific exit node in mind, and only
-   * if we are not doing vanguard circuits: we don't want to apply guard
-   * restrictions to vanguard circuits. */
-  if (state && !circuit_should_use_vanguards(purpose) &&
+  /* If we this is a conflux circuit, build an exclusion list for it. */
+  if (CIRCUIT_IS_CONFLUX(TO_CIRCUIT(circ))) {
+    rst = guard_create_conflux_restriction(circ);
+    /* Don't allow connecting back to the exit if there is one */
+    if (state && (exit_id = build_state_get_exit_rsa_id(state))) {
+      /* add the exit_id to the excluded list */
+      smartlist_add(rst->excluded, tor_memdup(exit_id, DIGEST_LEN));
+    }
+  } else if (state && !circuit_should_use_vanguards(purpose) &&
       (exit_id = build_state_get_exit_rsa_id(state))) {
     /* We're building to a targeted exit node, so that node can't be
-     * chosen as our guard for this circuit.  Remember that fact in a
-     * restriction. */
+     * chosen as our guard for this circuit, unless we're vanguards. */
     rst = guard_create_exit_restriction(exit_id);
     tor_assert(rst);
   }

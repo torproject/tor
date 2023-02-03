@@ -57,7 +57,8 @@ const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 struct circuit_guard_state_t;
 
-const node_t *choose_good_entry_server(uint8_t purpose,
+const node_t *choose_good_entry_server(const origin_circuit_t *circ,
+                           uint8_t purpose,
                            cpath_build_state_t *state,
                            struct circuit_guard_state_t **guard_state_out);
 void circuit_upgrade_circuits_from_guard_wait(void);

@@ -45,6 +45,7 @@
 #include "core/or/command.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
+#include "core/or/conflux_pool.h"
 #include "core/or/extendinfo.h"
 #include "core/or/onion.h"
 #include "core/or/ocirc_event.h"
@@ -89,7 +90,8 @@ static int circuit_send_first_onion_skin(origin_circuit_t *circ);
 static int circuit_build_no_more_hops(origin_circuit_t *circ);
 static int circuit_send_intermediate_onion_skin(origin_circuit_t *circ,
                                                 crypt_path_t *hop);
-static const node_t *choose_good_middle_server(uint8_t purpose,
+static const node_t *choose_good_middle_server(const origin_circuit_t *,
+                          uint8_t purpose,
                           cpath_build_state_t *state,
                           crypt_path_t *head,
                           int cur_len);
@@ -2313,7 +2315,8 @@ build_vanguard_middle_exclude_list(uint8_t purpose,
  * hop, based on already chosen nodes.
  */
 static smartlist_t *
-build_middle_exclude_list(uint8_t purpose,
+build_middle_exclude_list(const origin_circuit_t *circ,
+                          uint8_t purpose,
                           cpath_build_state_t *state,
                           crypt_path_t *head,
                           int cur_len)
@@ -2329,6 +2332,9 @@ build_middle_exclude_list(uint8_t purpose,
   }
 
   excluded = smartlist_new();
+
+  // Exclude other middles on pending and built conflux circs
+  conflux_add_middles_to_exclude_list(circ, excluded);
 
   /* For non-vanguard circuits, add the exit and its family to the exclude list
    * (note that the exit/last hop is always chosen first in
@@ -2423,7 +2429,8 @@ pick_vanguard_middle_node(const or_options_t *options,
  * family, and make sure we don't duplicate any previous nodes or their
  * families. */
 static const node_t *
-choose_good_middle_server(uint8_t purpose,
+choose_good_middle_server(const origin_circuit_t * circ,
+                          uint8_t purpose,
                           cpath_build_state_t *state,
                           crypt_path_t *head,
                           int cur_len)
@@ -2438,7 +2445,7 @@ choose_good_middle_server(uint8_t purpose,
   log_debug(LD_CIRC, "Contemplating intermediate hop #%d: random choice.",
             cur_len+1);
 
-  excluded = build_middle_exclude_list(purpose, state, head, cur_len);
+  excluded = build_middle_exclude_list(circ, purpose, state, head, cur_len);
 
   flags |= cpath_build_state_to_crn_flags(state);
   flags |= cpath_build_state_to_crn_ipv6_extend_flag(state, cur_len);
@@ -2483,7 +2490,8 @@ choose_good_middle_server(uint8_t purpose,
  * guard worked or not.
  */
 const node_t *
-choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
+choose_good_entry_server(const origin_circuit_t *circ,
+                         uint8_t purpose, cpath_build_state_t *state,
                          circuit_guard_state_t **guard_state_out)
 {
   const node_t *choice;
@@ -2505,7 +2513,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state,
     /* This request is for an entry server to use for a regular circuit,
      * and we use entry guard nodes.  Just return one of the guard nodes.  */
     tor_assert(guard_state_out);
-    return guards_choose_guard(state, purpose, guard_state_out);
+    return guards_choose_guard(circ, state, purpose, guard_state_out);
   }
 
   excluded = smartlist_new();
@@ -2551,7 +2559,7 @@ onion_extend_cpath(origin_circuit_t *circ)
   if (cur_len == state->desired_path_len - 1) { /* Picking last node */
     info = extend_info_dup(state->chosen_exit);
   } else if (cur_len == 0) { /* picking first node */
-    const node_t *r = choose_good_entry_server(purpose, state,
+    const node_t *r = choose_good_entry_server(circ, purpose, state,
                                                &circ->guard_state);
     if (r) {
       /* If we're a client, use the preferred address rather than the
@@ -2564,7 +2572,7 @@ onion_extend_cpath(origin_circuit_t *circ)
     }
   } else {
     const node_t *r =
-      choose_good_middle_server(purpose, state, circ->cpath, cur_len);
+      choose_good_middle_server(circ, purpose, state, circ->cpath, cur_len);
     if (r) {
       info = extend_info_from_node(r, 0, false);
     }

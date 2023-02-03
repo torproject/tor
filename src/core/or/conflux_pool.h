@@ -21,6 +21,11 @@ void conflux_predict_new(time_t now);
 
 bool conflux_launch_leg(const uint8_t *nonce);
 
+void conflux_add_guards_to_exclude_list(const origin_circuit_t *circ,
+                                        smartlist_t *excluded);
+void conflux_add_middles_to_exclude_list(const origin_circuit_t *circ,
+                                    smartlist_t *excluded);
+
 void conflux_circuit_has_closed(circuit_t *circ);
 void conflux_circuit_has_opened(origin_circuit_t *orig_circ);
 void conflux_circuit_about_to_free(circuit_t *circ);

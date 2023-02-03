@@ -31,6 +31,8 @@
 #include "core/or/crypt_path_st.h"
 #include "core/or/or_circuit_st.h"
 #include "core/or/origin_circuit_st.h"
+#include "core/or/extend_info_st.h"
+#include "core/or/conflux_st.h"
 
 #include "feature/nodelist/nodelist.h"
 
@@ -1090,6 +1092,127 @@ conflux_launch_leg(const uint8_t *nonce)
 
  err:
   return false;
+}
+
+/**
+ * Add the identity digest of the guard nodes of all legs of the conflux
+ * circuit.
+ *
+ * This function checks both pending and linked conflux circuits.
+ */
+void
+conflux_add_guards_to_exclude_list(const origin_circuit_t *orig_circ,
+                                   smartlist_t *excluded)
+{
+  tor_assert(orig_circ);
+  tor_assert(excluded);
+
+  /* Ease our lives. */
+  const circuit_t *circ = TO_CIRCUIT(orig_circ);
+
+  /* Ignore if this is not conflux related. */
+  if (!CIRCUIT_IS_CONFLUX(circ)) {
+    return;
+  }
+
+  /* When building a circuit, we should not have a conflux object
+   * ourselves (though one may exist elsewhere). */
+  tor_assert(!circ->conflux);
+
+  /* Getting here without a nonce is a code flow issue. */
+  if (BUG(!circ->conflux_pending_nonce)) {
+    return;
+  }
+
+  /* A linked set exists, use it. */
+  const conflux_t *cfx = linked_pool_get(circ->conflux_pending_nonce, true);
+  if (cfx) {
+    CONFLUX_FOR_EACH_LEG_BEGIN(cfx, leg) {
+      const origin_circuit_t *ocirc = CONST_TO_ORIGIN_CIRCUIT(leg->circ);
+      smartlist_add(excluded,
+                    tor_memdup(ocirc->cpath->extend_info->identity_digest,
+                               DIGEST_LEN));
+    } CONFLUX_FOR_EACH_LEG_END(leg);
+  }
+
+  /* An unlinked set might exist for this nonce, if so, add the second hop of
+   * the existing legs to the exclusion list. */
+  unlinked_circuits_t *unlinked =
+    unlinked_pool_get(circ->conflux_pending_nonce, true);
+  if (unlinked) {
+    tor_assert(unlinked->is_client);
+    SMARTLIST_FOREACH_BEGIN(unlinked->legs, leg_t *, leg) {
+      /* Convert to origin circ and get cpath */
+      const origin_circuit_t *ocirc = CONST_TO_ORIGIN_CIRCUIT(leg->circ);
+      smartlist_add(excluded,
+                    tor_memdup(ocirc->cpath->extend_info->identity_digest,
+                               DIGEST_LEN));
+    } SMARTLIST_FOREACH_END(leg);
+  }
+}
+
+/**
+ * Add the identity digest of the middle nodes of all legs of the conflux
+ * circuit.
+ *
+ * This function checks both pending and linked conflux circuits.
+ *
+ * XXX: The add guard and middle could be merged since it is the exact same
+ * code except for the cpath position and the identity digest vs node_t in
+ * the list. We could use an extra param indicating guard or middle. */
+void
+conflux_add_middles_to_exclude_list(const origin_circuit_t *orig_circ,
+                                    smartlist_t *excluded)
+{
+  tor_assert(orig_circ);
+  tor_assert(excluded);
+
+  /* Ease our lives. */
+  const circuit_t *circ = TO_CIRCUIT(orig_circ);
+
+  /* Ignore if this is not conflux related. */
+  if (!CIRCUIT_IS_CONFLUX(circ)) {
+    return;
+  }
+
+  /* When building a circuit, we should not have a conflux object
+   * ourselves (though one may exist elsewhere). */
+  tor_assert(!circ->conflux);
+
+  /* Getting here without a nonce is a code flow issue. */
+  if (BUG(!circ->conflux_pending_nonce)) {
+    return;
+  }
+
+  /* A linked set exists, use it. */
+  const conflux_t *cfx = linked_pool_get(circ->conflux_pending_nonce, true);
+  if (cfx) {
+    CONFLUX_FOR_EACH_LEG_BEGIN(cfx, leg) {
+      const origin_circuit_t *ocirc = CONST_TO_ORIGIN_CIRCUIT(leg->circ);
+      node_t *node = node_get_mutable_by_id(
+                     ocirc->cpath->next->extend_info->identity_digest);
+      if (node) {
+        smartlist_add(excluded, node);
+      }
+    } CONFLUX_FOR_EACH_LEG_END(leg);
+  }
+
+  /* An unlinked set might exist for this nonce, if so, add the second hop of
+   * the existing legs to the exclusion list. */
+  unlinked_circuits_t *unlinked =
+    unlinked_pool_get(circ->conflux_pending_nonce, true);
+  if (unlinked) {
+    tor_assert(unlinked->is_client);
+    SMARTLIST_FOREACH_BEGIN(unlinked->legs, leg_t *, leg) {
+      /* Convert to origin circ and get cpath */
+      const origin_circuit_t *ocirc = CONST_TO_ORIGIN_CIRCUIT(leg->circ);
+      node_t *node = node_get_mutable_by_id(
+                     ocirc->cpath->next->extend_info->identity_digest);
+      if (node) {
+        smartlist_add(excluded, node);
+      }
+    } SMARTLIST_FOREACH_END(leg);
+  }
 }
 
 /** The given circuit is conflux pending and has closed. This deletes the leg
