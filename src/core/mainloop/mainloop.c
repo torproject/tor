@@ -21,7 +21,7 @@
  *   <li>signal_callback(), which handles incoming signals.
  *  </ul>
  * Other events are used for specific purposes, or for building more complex
- * control structures.  If you search for usage of tor_libevent_new(), you
+ * control structures.  If you search for usage of tor_event_new(), you
  * will find all the events that we construct in Tor.
  *
  * Tor has numerous housekeeping operations that need to happen
