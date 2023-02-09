@@ -138,7 +138,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
       purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
       purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
       purpose == CIRCUIT_PURPOSE_HS_VANGUARDS ||
-      purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
+      purpose == CIRCUIT_PURPOSE_C_REND_JOINED ||
+      purpose == CIRCUIT_PURPOSE_CONFLUX_LINKED) {
     if (circ->timestamp_dirty &&
        circ->timestamp_dirty+get_options()->MaxCircuitDirtiness <= now)
       return 0;
@@ -162,6 +163,8 @@ circuit_is_acceptable(const origin_circuit_t *origin_circ,
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+      purpose == CIRCUIT_PURPOSE_CONFLUX_UNLINKED ||
+      purpose == CIRCUIT_PURPOSE_CONFLUX_LINKED ||
       purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
       purpose == CIRCUIT_PURPOSE_C_HSDIR_GET) {
     tor_addr_t addr;
@@ -1003,7 +1006,8 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
-        circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+        (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+        circ->purpose == CIRCUIT_PURPOSE_CONFLUX_LINKED) &&
         (!circ->timestamp_dirty ||
          circ->timestamp_dirty + get_options()->MaxCircuitDirtiness > now)) {
       origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
@@ -1450,6 +1454,8 @@ circuit_expire_old_circuits_clientside(void)
       if (timercmp(&circ->timestamp_began, &cutoff, OP_LT)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
                 circ->purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
+                circ->purpose == CIRCUIT_PURPOSE_CONFLUX_UNLINKED ||
+                circ->purpose == CIRCUIT_PURPOSE_CONFLUX_LINKED ||
                 circ->purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||
                 circ->purpose == CIRCUIT_PURPOSE_HS_VANGUARDS ||
                 circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
@@ -1655,6 +1661,8 @@ circuit_has_opened(origin_circuit_t *circ)
       hs_client_circuit_has_opened(circ);
       break;
     case CIRCUIT_PURPOSE_C_GENERAL:
+      circuit_try_attaching_streams(circ);
+      break;
     case CIRCUIT_PURPOSE_C_HSDIR_GET:
     case CIRCUIT_PURPOSE_S_HSDIR_POST:
       /* Tell any AP connections that have been waiting for a new
@@ -2027,6 +2035,11 @@ circuit_should_cannibalize_to_build(uint8_t purpose_to_build,
    * important that it have lower latency than get built fast.
    */
   if (purpose_to_build == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO) {
+    return 0;
+  }
+
+  /* Do not cannibalize for conflux circuits */
+  if (purpose_to_build == CIRCUIT_PURPOSE_CONFLUX_UNLINKED) {
     return 0;
   }
 
@@ -2607,6 +2620,8 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
     exitnode = node_get_by_id(cpath->extend_info->identity_digest);
 
   /* See if we can use optimistic data on this circuit */
+  // TODO-329-PURPOSE: Can conflux use optimistic data? Does
+  // anything use optimistic data? Does anything use this?
   if (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
       circ->base_.purpose == CIRCUIT_PURPOSE_C_HSDIR_GET ||
       circ->base_.purpose == CIRCUIT_PURPOSE_S_HSDIR_POST ||

@@ -1444,6 +1444,7 @@ route_len_for_purpose(uint8_t purpose, extend_info_t *exit_ei)
   switch (purpose) {
     /* These purposes connect to a router that we chose, so DEFAULT_ROUTE_LEN
      * is safe: */
+  case CIRCUIT_PURPOSE_CONFLUX_UNLINKED:
   case CIRCUIT_PURPOSE_TESTING:
     /* router reachability testing */
     known_purpose = 1;
@@ -1927,6 +1928,7 @@ choose_good_exit_server(origin_circuit_t *circ,
        * since it should be random. */
       tor_assert_nonfatal(is_internal);
       FALLTHROUGH;
+    case CIRCUIT_PURPOSE_CONFLUX_UNLINKED:
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, options->ExcludeNodes, flags);
@@ -1974,6 +1976,8 @@ warn_if_last_router_excluded(origin_circuit_t *circ,
     case CIRCUIT_PURPOSE_S_HSDIR_POST:
     case CIRCUIT_PURPOSE_C_HSDIR_GET:
     case CIRCUIT_PURPOSE_C_GENERAL:
+    case CIRCUIT_PURPOSE_CONFLUX_UNLINKED:
+    case CIRCUIT_PURPOSE_CONFLUX_LINKED:
       if (circ->build_state->is_internal)
         return;
       description = "requested exit node";
@@ -2109,8 +2113,11 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei,
     }
     exit_ei = extend_info_from_node(node, state->onehop_tunnel,
                 /* for_exit_use */
-                !state->is_internal && TO_CIRCUIT(circ)->purpose ==
-                  CIRCUIT_PURPOSE_C_GENERAL);
+                !state->is_internal && (
+                  TO_CIRCUIT(circ)->purpose ==
+                  CIRCUIT_PURPOSE_C_GENERAL ||
+                  TO_CIRCUIT(circ)->purpose ==
+                  CIRCUIT_PURPOSE_CONFLUX_UNLINKED));
     if (BUG(exit_ei == NULL))
       return -1;
   }

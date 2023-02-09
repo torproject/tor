@@ -841,6 +841,11 @@ circuit_purpose_to_controller_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_C_CIRCUIT_PADDING:
       return "CIRCUIT_PADDING";
 
+    case CIRCUIT_PURPOSE_CONFLUX_UNLINKED:
+      return "CONFLUX_UNLINKED";
+    case CIRCUIT_PURPOSE_CONFLUX_LINKED:
+      return "CONFLUX_LINKED";
+
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
       return buf;
@@ -870,6 +875,8 @@ circuit_purpose_to_controller_hs_state_string(uint8_t purpose)
     case CIRCUIT_PURPOSE_PATH_BIAS_TESTING:
     case CIRCUIT_PURPOSE_HS_VANGUARDS:
     case CIRCUIT_PURPOSE_C_CIRCUIT_PADDING:
+    case CIRCUIT_PURPOSE_CONFLUX_UNLINKED:
+    case CIRCUIT_PURPOSE_CONFLUX_LINKED:
       return NULL;
 
     case CIRCUIT_PURPOSE_INTRO_POINT:
@@ -972,6 +979,12 @@ circuit_purpose_to_string(uint8_t purpose)
 
     case CIRCUIT_PURPOSE_C_CIRCUIT_PADDING:
       return "Circuit kept open for padding";
+
+    case CIRCUIT_PURPOSE_CONFLUX_UNLINKED:
+      return "Unlinked conflux circuit";
+
+    case CIRCUIT_PURPOSE_CONFLUX_LINKED:
+      return "Linked conflux circuit";
 
     default:
       tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
@@ -1841,6 +1854,9 @@ get_circuit_purpose_needed_to_cannibalize(uint8_t purpose)
      * circuits so that we get the same path construction logic. */
     return CIRCUIT_PURPOSE_HS_VANGUARDS;
   } else {
+    /* Conflux purposes should never get here */
+    tor_assert_nonfatal(purpose != CIRCUIT_PURPOSE_CONFLUX_UNLINKED &&
+                        purpose != CIRCUIT_PURPOSE_CONFLUX_LINKED);
     /* If no vanguards are used just get a general circuit! */
     return CIRCUIT_PURPOSE_C_GENERAL;
   }
@@ -1885,6 +1901,10 @@ circuit_find_to_cannibalize(uint8_t purpose_to_produce, extend_info_t *info,
 
   tor_assert_nonfatal(purpose_to_search_for == CIRCUIT_PURPOSE_C_GENERAL ||
                       purpose_to_search_for == CIRCUIT_PURPOSE_HS_VANGUARDS);
+
+  tor_assert_nonfatal(purpose_to_search_for !=
+                      CIRCUIT_PURPOSE_CONFLUX_UNLINKED);
+  tor_assert_nonfatal(purpose_to_produce != CIRCUIT_PURPOSE_CONFLUX_UNLINKED);
 
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "

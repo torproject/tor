@@ -1236,6 +1236,7 @@ connection_ap_expire_beginning(void)
     }
 
     if (circ->purpose != CIRCUIT_PURPOSE_C_GENERAL &&
+        circ->purpose != CIRCUIT_PURPOSE_CONFLUX_LINKED &&
         circ->purpose != CIRCUIT_PURPOSE_CONTROLLER &&
         circ->purpose != CIRCUIT_PURPOSE_C_HSDIR_GET &&
         circ->purpose != CIRCUIT_PURPOSE_S_HSDIR_POST &&
@@ -3112,6 +3113,8 @@ connection_ap_supports_optimistic_data(const entry_connection_t *conn)
   const edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
   /* We can only send optimistic data if we're connected to an open
      general circuit. */
+  // TODO-329-PURPOSE: Can conflux circuits use optimistic data?
+  // Does anything use optimistic data?
   if (edge_conn->on_circuit == NULL ||
       edge_conn->on_circuit->state != CIRCUIT_STATE_OPEN ||
       (edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL &&
@@ -3138,7 +3141,8 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
     return 0;
 
   /* No flags for hidden services. */
-  if (edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL)
+  if (edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_C_GENERAL &&
+      edge_conn->on_circuit->purpose != CIRCUIT_PURPOSE_CONFLUX_LINKED)
     return 0;
 
   /* If only IPv4 is supported, no flags */
@@ -3222,6 +3226,7 @@ connection_ap_handshake_send_begin,(entry_connection_t *ap_conn))
 
   tor_snprintf(payload,RELAY_PAYLOAD_SIZE, "%s:%d",
                (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+                circ->base_.purpose == CIRCUIT_PURPOSE_CONFLUX_LINKED ||
                 circ->base_.purpose == CIRCUIT_PURPOSE_CONTROLLER) ?
                  ap_conn->socks_request->address : "",
                ap_conn->socks_request->port);
@@ -3323,7 +3328,8 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
   tor_assert(base_conn->type == CONN_TYPE_AP);
   tor_assert(base_conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(ap_conn->socks_request);
-  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL);
+  tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+             circ->base_.purpose == CIRCUIT_PURPOSE_CONFLUX_LINKED);
 
   command = ap_conn->socks_request->command;
   tor_assert(SOCKS_COMMAND_IS_RESOLVE(command));
