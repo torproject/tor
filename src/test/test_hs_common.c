@@ -1527,8 +1527,14 @@ test_blinding_basics(void *arg)
 {
   (void)arg;
   char *mem_op_hex_tmp = NULL;
-  uint64_t time_period = 1234;
+  const uint64_t time_period = 1234;
   ed25519_keypair_t keypair;
+
+  time_t instant;
+  tt_int_op(0, OP_EQ, parse_iso_time("1973-05-20 01:50:33", &instant));
+  tt_int_op(1440, OP_EQ, get_time_period_length()); // in minutes, remember.
+  tt_int_op(time_period, OP_EQ, hs_get_time_period_num(instant));
+
   const char pubkey_hex[] =
     "833990B085C1A688C1D4C8B1F6B56AFAF5A2ECA674449E1D704F83765CCB7BC6";
   const char seckey_hex[] =
