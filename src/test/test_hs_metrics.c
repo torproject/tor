@@ -56,6 +56,23 @@ test_metrics(void *arg)
                                service, 0, 42);
   tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 84);
 
+  /* Update tor_hs_intro_rejected_intro_req_count */
+  hs_metrics_update_by_ident(HS_METRICS_NUM_REJECTED_INTRO_REQ,
+                             &service->keys.identity_pk, 0, 112);
+
+  entries = metrics_store_get_all(service->metrics.store,
+                                  "tor_hs_intro_rejected_intro_req_count");
+  tt_assert(entries);
+  tt_int_op(smartlist_len(entries), OP_EQ, 1);
+  entry = smartlist_get(entries, 0);
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 112);
+
+  /* Update tor_hs_intro_rejected_intro_req_count entry by service now. */
+  hs_metrics_update_by_service(HS_METRICS_NUM_REJECTED_INTRO_REQ,
+                               service, 0, 10);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 122);
+
  done:
   hs_free_all();
 }

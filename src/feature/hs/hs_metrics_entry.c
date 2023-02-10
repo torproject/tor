@@ -45,19 +45,31 @@ const hs_metrics_entry_t base_metrics[] =
     .key = HS_METRICS_NUM_ESTABLISHED_RDV,
     .type = METRICS_TYPE_GAUGE,
     .name = METRICS_NAME(hs_rdv_established_count),
-    .help = "Total number of established rendezvous circuit",
+    .help = "Total number of established rendezvous circuits",
   },
   {
     .key = HS_METRICS_NUM_RDV,
     .type = METRICS_TYPE_COUNTER,
     .name = METRICS_NAME(hs_rdv_num_total),
-    .help = "Total number of rendezvous circuit created",
+    .help = "Total number of rendezvous circuits created",
+  },
+  {
+    .key = HS_METRICS_NUM_FAILED_RDV,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(hs_rdv_error_count),
+    .help = "Total number of rendezvous circuit errors",
   },
   {
     .key = HS_METRICS_NUM_ESTABLISHED_INTRO,
     .type = METRICS_TYPE_GAUGE,
     .name = METRICS_NAME(hs_intro_established_count),
     .help = "Total number of established introduction circuit",
+  },
+  {
+    .key = HS_METRICS_NUM_REJECTED_INTRO_REQ,
+    .type = METRICS_TYPE_COUNTER,
+    .name = METRICS_NAME(hs_intro_rejected_intro_req_count),
+    .help = "Total number of rejected introduction circuits",
   },
 };
 

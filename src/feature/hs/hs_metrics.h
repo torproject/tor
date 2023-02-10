@@ -28,12 +28,16 @@ void hs_metrics_update_by_ident(const hs_metrics_key_t key,
                                 const ed25519_public_key_t *ident_pk,
                                 const uint16_t port, int64_t n);
 void hs_metrics_update_by_service(const hs_metrics_key_t key,
-                                  hs_service_t *service, const uint16_t port,
-                                  int64_t n);
+                                  const hs_service_t *service,
+                                  uint16_t port, int64_t n);
 
 /** New introducion request received. */
 #define hs_metrics_new_introduction(s) \
   hs_metrics_update_by_service(HS_METRICS_NUM_INTRODUCTIONS, (s), 0, 1)
+
+/** Introducion request rejected. */
+#define hs_metrics_reject_intro_req(s) \
+  hs_metrics_update_by_service(HS_METRICS_NUM_REJECTED_INTRO_REQ, (s), 0, 1)
 
 /** Number of bytes written to the application from the service. */
 #define hs_metrics_app_write_bytes(i, port, n) \
@@ -47,6 +51,10 @@ void hs_metrics_update_by_service(const hs_metrics_key_t key,
  * is REND_JOINED which is when the RENDEZVOUS2 cell is sent. */
 #define hs_metrics_new_established_rdv(s) \
   hs_metrics_update_by_service(HS_METRICS_NUM_ESTABLISHED_RDV, (s), 0, 1)
+
+/** New rendezvous circuit failure. */
+#define hs_metrics_failed_rdv(i) \
+  hs_metrics_update_by_ident(HS_METRICS_NUM_FAILED_RDV, (i), 0, 1)
 
 /** Established rendezvous closed. This is called when the circuit in
  * REND_JOINED state is marked for close. */

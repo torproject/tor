@@ -144,7 +144,7 @@ hs_service_ht_hash(const hs_service_t *service)
                                    sizeof(service->keys.identity_pk.pubkey));
 }
 
-/** This is _the_ global hash map of hidden services which indexed the service
+/** This is _the_ global hash map of hidden services which indexes the services
  * contained in it by master public identity key which is roughly the onion
  * address of the service. */
 static struct hs_service_ht *hs_service_map;
@@ -3524,6 +3524,10 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
 
   return 0;
  err:
+  if (service) {
+    hs_metrics_reject_intro_req(service);
+  }
+
   return -1;
 }
 

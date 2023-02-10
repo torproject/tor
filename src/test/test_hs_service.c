@@ -1183,6 +1183,8 @@ test_bad_introduce2(void *arg)
   origin_circuit_t *circ = NULL;
   hs_service_t *service = NULL;
   hs_service_intro_point_t *ip = NULL;
+  const smartlist_t *entries = NULL;
+  const metrics_store_entry_t *entry = NULL;
 
   (void) arg;
 
@@ -1227,6 +1229,17 @@ test_bad_introduce2(void *arg)
                             "an INTRODUCE2 cell on circuit");
   teardown_capture_of_logs();
 
+  /* Make sure the tor_hs_intro_rejected_intro_req_count metric was
+   * incremented */
+  entries = metrics_store_get_all(service->metrics.store,
+                                  "tor_hs_intro_rejected_intro_req_count");
+
+  tt_assert(entries);
+  tt_int_op(smartlist_len(entries), OP_EQ, 1);
+  entry = smartlist_get(entries, 0);
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 1);
+
   /* Set an IP object now for this circuit. */
   {
     ip = helper_create_service_ip();
@@ -1242,6 +1255,10 @@ test_bad_introduce2(void *arg)
   ret = hs_service_receive_introduce2(circ, payload, sizeof(payload));
   tt_int_op(ret, OP_EQ, -1);
   tt_u64_op(ip->introduce2_count, OP_EQ, 0);
+
+  /* Make sure the tor_hs_intro_rejected_intro_req_count metric was incremented
+   * a second time */
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 2);
 
  done:
   or_state_free(dummy_state);

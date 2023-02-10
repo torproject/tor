@@ -72,8 +72,8 @@ init_store(hs_service_t *service)
  * value used to update the entry. */
 void
 hs_metrics_update_by_service(const hs_metrics_key_t key,
-                             hs_service_t *service, const uint16_t port,
-                             int64_t n)
+                             const hs_service_t *service,
+                             uint16_t port, int64_t n)
 {
   tor_assert(service);
 

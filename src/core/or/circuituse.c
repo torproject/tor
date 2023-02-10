@@ -51,6 +51,7 @@
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_common.h"
 #include "feature/hs/hs_ident.h"
+#include "feature/hs/hs_metrics.h"
 #include "feature/hs/hs_stats.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/networkstatus.h"
@@ -1751,8 +1752,10 @@ circuit_build_failed(origin_circuit_t *circ)
               circuit_purpose_to_string(TO_CIRCUIT(circ)->purpose));
 
     /* If the path failed on an RP, retry it. */
-    if (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND)
+    if (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
+      hs_metrics_failed_rdv(&circ->hs_ident->identity_pk);
       hs_circ_retry_service_rendezvous_point(circ);
+    }
 
     /* In all other cases, just bail. The rest is just failure accounting
      * that we don't want to do */
@@ -1862,6 +1865,8 @@ circuit_build_failed(origin_circuit_t *circ)
                "(%s hop failed).",
                escaped(build_state_get_exit_nickname(circ->build_state)),
                failed_at_last_hop?"last":"non-last");
+
+      hs_metrics_failed_rdv(&circ->hs_ident->identity_pk);
       hs_circ_retry_service_rendezvous_point(circ);
       break;
     /* default:

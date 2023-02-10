@@ -1,0 +1,3 @@
+  o Minor features (metrics):
+    - Add service side metrics for REND and introduction request failures.
+      Closes ticket 40755.
