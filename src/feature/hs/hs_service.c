@@ -170,9 +170,7 @@ is_client_auth_enabled(const hs_service_t *service)
 }
 
 /** Query the given service map with a public key and return a service object
- * if found else NULL. It is also possible to set a directory path in the
- * search query. If pk is NULL, then it will be set to zero indicating the
- * hash table to compare the directory path instead. */
+ * if found else NULL. */
 STATIC hs_service_t *
 find_service(hs_service_ht *map, const ed25519_public_key_t *pk)
 {
