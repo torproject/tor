@@ -1,0 +1,3 @@
+  o Minor bugfixes (metrics):
+    - Decrement hs_intro_established_count on introduction circuit close. Fixes
+      bug 40751; bugfix on 0.4.7.12.
