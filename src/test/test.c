@@ -779,6 +779,7 @@ struct testgroup_t testgroups[] = {
   { "config/mgr/", confmgr_tests },
   { "config/parse/", confparse_tests },
   { "conflux/cell/", conflux_cell_tests },
+  { "conflux/pool/", conflux_pool_tests },
   { "connection/", connection_tests },
   { "conscache/", conscache_tests },
   { "consdiff/", consdiff_tests },
