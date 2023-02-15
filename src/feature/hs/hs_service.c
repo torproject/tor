@@ -42,6 +42,7 @@
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_metrics.h"
+#include "feature/hs/hs_metrics_entry.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs/hs_stats.h"
 #include "feature/hs/hs_ob.h"
@@ -3508,6 +3509,9 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
                      "an INTRODUCE2 cell on circuit %u for service %s",
              TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
+
+    hs_metrics_reject_intro_req(service,
+                                HS_METRICS_ERR_INTRO_REQ_BAD_AUTH_KEY);
     goto err;
   }
   /* If we have an IP object, we MUST have a descriptor object. */
@@ -3524,9 +3528,6 @@ service_handle_introduce2(origin_circuit_t *circ, const uint8_t *payload,
 
   return 0;
  err:
-  if (service) {
-    hs_metrics_reject_intro_req(service);
-  }
 
   return -1;
 }

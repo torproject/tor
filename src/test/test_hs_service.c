@@ -1229,14 +1229,34 @@ test_bad_introduce2(void *arg)
                             "an INTRODUCE2 cell on circuit");
   teardown_capture_of_logs();
 
-  /* Make sure the tor_hs_intro_rejected_intro_req_count metric was
-   * incremented */
   entries = metrics_store_get_all(service->metrics.store,
                                   "tor_hs_intro_rejected_intro_req_count");
 
   tt_assert(entries);
-  tt_int_op(smartlist_len(entries), OP_EQ, 1);
-  entry = smartlist_get(entries, 0);
+  /* There are `hs_metrics_intro_req_size` entries (one for each
+   * possible `reason` label value). */
+  tt_int_op(smartlist_len(entries), OP_EQ,
+            hs_metrics_intro_req_error_reasons_size);
+
+  /* Make sure the tor_hs_intro_rejected_intro_req_count metric was
+   * only incremented for reason HS_METRICS_ERR_INTRO_REQ_BAD_AUTH_KEY. */
+  for (size_t i = 0; i < hs_metrics_intro_req_error_reasons_size; ++i) {
+    const char *reason = hs_metrics_intro_req_error_reasons[i];
+
+    if (!strcmp(reason, HS_METRICS_ERR_INTRO_REQ_BAD_AUTH_KEY)) {
+      continue;
+    }
+
+    entry = metrics_store_find_entry_with_label(
+        entries,
+        metrics_format_label("reason", reason));
+    tt_assert(entry);
+    tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 0);
+  }
+
+  entry = metrics_store_find_entry_with_label(
+      entries,
+      metrics_format_label("reason", HS_METRICS_ERR_INTRO_REQ_BAD_AUTH_KEY));
   tt_assert(entry);
   tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 1);
 
@@ -1257,8 +1277,31 @@ test_bad_introduce2(void *arg)
   tt_u64_op(ip->introduce2_count, OP_EQ, 0);
 
   /* Make sure the tor_hs_intro_rejected_intro_req_count metric was incremented
-   * a second time */
-  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 2);
+   * a second time, this time, with reason="invalid_introduce2_cell". */
+  entry = metrics_store_find_entry_with_label(
+      entries,
+      metrics_format_label("reason", HS_METRICS_ERR_INTRO_REQ_INTRODUCE2));
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 1);
+
+  /* The metric entries with other reason labels are unaffected */
+  entry = metrics_store_find_entry_with_label(
+      entries,
+      metrics_format_label("reason", HS_METRICS_ERR_INTRO_REQ_SUBCREDENTIAL));
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 0);
+
+  entry = metrics_store_find_entry_with_label(
+      entries, metrics_format_label(
+                   "reason", HS_METRICS_ERR_INTRO_REQ_INTRODUCE2_REPLAY));
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 0);
+
+  entry = metrics_store_find_entry_with_label(
+      entries,
+      metrics_format_label("reason", HS_METRICS_ERR_INTRO_REQ_BAD_AUTH_KEY));
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 1);
 
  done:
   or_state_free(dummy_state);
@@ -2293,6 +2336,8 @@ test_intro2_handling(void *arg)
   /* Disable onionbalance */
   x_service.config.ob_master_pubkeys = NULL;
   x_service.state.replay_cache_rend_cookie = replaycache_new(0,0);
+  /* Initialize the metrics store */
+  hs_metrics_service_init(&x_service);
 
   /* Create subcredential for x: */
   ed25519_keypair_t x_identity_keypair;
@@ -2456,6 +2501,20 @@ test_intro2_handling(void *arg)
                                    (uint8_t*)relay_payload, relay_payload_len);
   tt_int_op(retval, OP_EQ, 0);
 
+  /* We haven't encountered any errors yet, so all the introduction request
+   * error metrics should be 0 */
+  const smartlist_t *entries = metrics_store_get_all(
+      x_service.metrics.store, "tor_hs_intro_rejected_intro_req_count");
+  const metrics_store_entry_t *entry = NULL;
+
+  for (size_t i = 0; i < hs_metrics_intro_req_error_reasons_size; ++i) {
+    entry = metrics_store_find_entry_with_label(
+        entries,
+        metrics_format_label("reason", hs_metrics_intro_req_error_reasons[i]));
+    tt_assert(entry);
+    tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 0);
+  }
+
   /* ************************************************************ */
 
   /* Act IV:
@@ -2473,6 +2532,11 @@ test_intro2_handling(void *arg)
   tt_int_op(retval, OP_EQ, -1);
   expect_log_msg_containing("with the same ENCRYPTED section");
   teardown_capture_of_logs();
+  entry = metrics_store_find_entry_with_label(
+      entries,
+      metrics_format_label("reason", HS_METRICS_ERR_INTRO_REQ_INTRODUCE2));
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 1);
 
   /* Now cleanup the intro point replay cache but not the service replay cache
      and see that this one triggers this time. */
@@ -2487,6 +2551,12 @@ test_intro2_handling(void *arg)
   expect_log_msg_containing("with same REND_COOKIE");
   teardown_capture_of_logs();
 
+  entry = metrics_store_find_entry_with_label(
+      entries, metrics_format_label(
+                   "reason", HS_METRICS_ERR_INTRO_REQ_INTRODUCE2_REPLAY));
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 1);
+
   /* Now just to make sure cleanup both replay caches and make sure that the
      cell gets through */
   replaycache_free(x_ip->replay_cache);
@@ -2498,6 +2568,9 @@ test_intro2_handling(void *arg)
                                    &x_subcred,
                                    (uint8_t*)relay_payload, relay_payload_len);
   tt_int_op(retval, OP_EQ, 0);
+
+  /* This time, the error metric was *not* incremented */
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 1);
 
   /* As a final thing, create an INTRODUCE1 cell from Alice to X using Y's
    * subcred (should fail since Y is just another instance and not the frontend
@@ -2515,7 +2588,13 @@ test_intro2_handling(void *arg)
                                    intro_circ, x_ip,
                                    &y_subcred,
                                    (uint8_t*)relay_payload, relay_payload_len);
+
   tt_int_op(retval, OP_EQ, -1);
+  entry = metrics_store_find_entry_with_label(
+      entries,
+      metrics_format_label("reason", HS_METRICS_ERR_INTRO_REQ_INTRODUCE2));
+  tt_assert(entry);
+  tt_int_op(metrics_store_entry_get_value(entry), OP_EQ, 2);
 
  done:
   /* Start cleaning up X */
@@ -2524,6 +2603,7 @@ test_intro2_handling(void *arg)
   tor_free(x_service.state.ob_subcreds);
   service_descriptor_free(x_service.desc_current);
   service_descriptor_free(x_service.desc_next);
+  hs_metrics_service_free(&x_service);
   service_intro_point_free(x_ip);
 
   /* Clean up Alice */

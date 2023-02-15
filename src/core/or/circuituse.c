@@ -1753,7 +1753,8 @@ circuit_build_failed(origin_circuit_t *circ)
 
     /* If the path failed on an RP, retry it. */
     if (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
-      hs_metrics_failed_rdv(&circ->hs_ident->identity_pk);
+      hs_metrics_failed_rdv(&circ->hs_ident->identity_pk,
+                            HS_METRICS_ERR_RDV_PATH);
       hs_circ_retry_service_rendezvous_point(circ);
     }
 
@@ -1866,7 +1867,8 @@ circuit_build_failed(origin_circuit_t *circ)
                escaped(build_state_get_exit_nickname(circ->build_state)),
                failed_at_last_hop?"last":"non-last");
 
-      hs_metrics_failed_rdv(&circ->hs_ident->identity_pk);
+      hs_metrics_failed_rdv(&circ->hs_ident->identity_pk,
+                            HS_METRICS_ERR_RDV_RP_CONN_FAILURE);
       hs_circ_retry_service_rendezvous_point(circ);
       break;
     /* default:
