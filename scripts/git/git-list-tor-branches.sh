@@ -143,9 +143,6 @@ finish() {
 # List of all branches.  These must be in order, from oldest to newest, with
 # maint before release.
 
-branch maint-0.4.5
-branch release-0.4.5
-
 branch maint-0.4.7
 branch release-0.4.7
 

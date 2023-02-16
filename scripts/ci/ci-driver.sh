@@ -293,10 +293,6 @@ TOR_VER_AT_LEAST_044=no
 # These are the currently supported Tor versions; no need to work with anything
 # ancient in this script.
 case "$TOR_VERSION" in
-    0.4.5.*)
-        TOR_VER_AT_LEAST_043=yes
-        TOR_VER_AT_LEAST_044=yes
-        ;;
     0.4.7.*)
         TOR_VER_AT_LEAST_043=yes
         TOR_VER_AT_LEAST_044=yes
