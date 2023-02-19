@@ -3053,7 +3053,7 @@ rep_hist_note_est_intro_action(est_intro_action_t action)
 uint64_t
 rep_hist_get_est_intro_action_count(est_intro_action_t action)
 {
-  return est_rend_actions[action];
+  return est_intro_actions[action];
 }
 
 void
