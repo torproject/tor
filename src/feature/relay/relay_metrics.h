@@ -48,7 +48,15 @@ typedef enum {
   /** Numer of circuits. */
   RELAY_METRICS_NUM_CIRCUITS,
   /** Timestamp at which the current online keys will expire. */
-  RELAY_METRICS_SIGNING_CERT_EXPIRY
+  RELAY_METRICS_SIGNING_CERT_EXPIRY,
+  /** Number of times we received an EST_REND cell */
+  RELAY_METRICS_NUM_EST_REND,
+  /** Number of times we received an EST_INTRO cell */
+  RELAY_METRICS_NUM_EST_INTRO,
+  /** Number of times we received an INTRO1 cell */
+  RELAY_METRICS_NUM_INTRO1_CELLS,
+  /** Number of times we received a REND1 cell */
+  RELAY_METRICS_NUM_REND1_CELLS,
 } relay_metrics_key_t;
 
 /** The metadata of a relay metric. */
