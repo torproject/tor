@@ -145,7 +145,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
      * client gives up on a rendezvous circuit after sending INTRODUCE1, but
      * before the onion service sends the RENDEZVOUS1 cell.
      */
-    rep_hist_note_rend1_action(REND1_UNKNOWN_SERVICE);
+    rep_hist_note_rend1_action(REND1_UNKNOWN_COOKIE);
     log_fn(LOG_DEBUG, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
          hexid);

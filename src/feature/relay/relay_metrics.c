@@ -1156,7 +1156,7 @@ fill_rend1_cells(void)
       {.name = "success", .key = REND1_SUCCESS},
       {.name = "unsuitable_circuit", .key = REND1_UNSUITABLE_CIRCUIT},
       {.name = "malformed", .key = REND1_MALFORMED},
-      {.name = "unknown_service", .key = REND1_UNKNOWN_SERVICE},
+      {.name = "unknown_cookie", .key = REND1_UNKNOWN_COOKIE},
       {.name = "circuit_dead", .key = REND1_CIRCUIT_DEAD},
   };
   static const size_t num_actions = ARRAY_LENGTH(actions);
