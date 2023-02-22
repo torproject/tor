@@ -2689,7 +2689,8 @@ update_suggested_effort(hs_service_t *service, time_t now)
     /* If we had a queue during this period, and the current top of queue
      * is at or above the suggested effort, we should re-estimate the effort.
      * Otherwise, it can stay the same (no change to effort). */
-    if (top_of_rend_pqueue_is_worthwhile(pow_state)) {
+    if (smartlist_len(pow_state->rend_request_pqueue) > 0 &&
+        top_of_rend_pqueue_is_worthwhile(pow_state)) {
       pow_state->suggested_effort = (uint32_t)(pow_state->total_effort /
                                                pow_state->rend_handled);
     }

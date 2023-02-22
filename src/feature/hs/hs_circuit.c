@@ -722,9 +722,9 @@ count_service_rp_circuits_pending(hs_service_t *service)
   return count;
 }
 
-/** Peek at the top entry on the pending rend pqueue. If its level of
- * effort is at least what we're suggesting for that service right now,
- * return 1, else return 0.
+/** Peek at the top entry on the pending rend pqueue, which must not be empty.
+ * If its level of effort is at least what we're suggesting for that service
+ * right now, return 1, else return 0.
  */
 int
 top_of_rend_pqueue_is_worthwhile(hs_pow_service_state_t *pow_state)
