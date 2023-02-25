@@ -2700,6 +2700,8 @@ update_suggested_effort(hs_service_t *service, time_t now)
     pow_state->suggested_effort = 2*pow_state->suggested_effort/3;
   }
 
+  hs_metrics_pow_suggested_effort(service, pow_state->suggested_effort);
+
   log_debug(LD_REND, "Recalculated suggested effort: %u",
             pow_state->suggested_effort);
 

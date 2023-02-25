@@ -68,6 +68,8 @@ add_metric_with_labels(hs_service_t *service, hs_metrics_key_t metric,
     case HS_METRICS_NUM_ESTABLISHED_RDV: FALLTHROUGH;
     case HS_METRICS_NUM_RDV: FALLTHROUGH;
     case HS_METRICS_NUM_ESTABLISHED_INTRO: FALLTHROUGH;
+    case HS_METRICS_POW_NUM_PQUEUE_RDV: FALLTHROUGH;
+    case HS_METRICS_POW_SUGGESTED_EFFORT: FALLTHROUGH;
     case HS_METRICS_INTRO_CIRC_BUILD_TIME: FALLTHROUGH;
     case HS_METRICS_REND_CIRC_BUILD_TIME: FALLTHROUGH;
     default:
@@ -146,7 +148,7 @@ void
 hs_metrics_update_by_service(const hs_metrics_key_t key,
                              const hs_service_t *service,
                              uint16_t port, const char *reason,
-                             int64_t n, int64_t obs)
+                             int64_t n, int64_t obs, bool reset)
 {
   tor_assert(service);
 
@@ -167,6 +169,9 @@ hs_metrics_update_by_service(const hs_metrics_key_t key,
              entry, metrics_format_label("port", port_to_str(port)))) &&
         ((!reason || metrics_store_entry_has_label(
                          entry, metrics_format_label("reason", reason))))) {
+      if (reset) {
+        metrics_store_entry_reset(entry);
+      }
 
       if (metrics_store_entry_is_histogram(entry)) {
         metrics_store_hist_entry_update(entry, n, obs);
@@ -190,7 +195,7 @@ void
 hs_metrics_update_by_ident(const hs_metrics_key_t key,
                            const ed25519_public_key_t *ident_pk,
                            const uint16_t port, const char *reason,
-                           int64_t n, int64_t obs)
+                           int64_t n, int64_t obs, bool reset)
 {
   hs_service_t *service;
 
@@ -204,7 +209,7 @@ hs_metrics_update_by_ident(const hs_metrics_key_t key,
      * service and thus the only way to know is to lookup the service. */
     return;
   }
-  hs_metrics_update_by_service(key, service, port, reason, n, obs);
+  hs_metrics_update_by_service(key, service, port, reason, n, obs, reset);
 }
 
 /** Return a list of all the onion service metrics stores. This is the

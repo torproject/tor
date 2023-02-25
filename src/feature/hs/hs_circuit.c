@@ -791,6 +791,9 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
                            compare_rend_request_by_effort_,
                            offsetof(pending_rend_t, idx));
 
+    hs_metrics_pow_pqueue_rdv(service,
+                              smartlist_len(pow_state->rend_request_pqueue));
+
     log_notice(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
                       "Waited %d. "
                       "Remaining requests: %u",
@@ -870,6 +873,9 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
                        compare_rend_request_by_effort_,
                        offsetof(pending_rend_t, idx), req);
 
+  hs_metrics_pow_pqueue_rdv(service,
+                            smartlist_len(pow_state->rend_request_pqueue));
+
   log_notice(LD_REND, "Enqueued rendezvous request with effort: %u. "
                     "Queued requests: %u",
            req->rdv_data.pow_effort,
@@ -888,6 +894,8 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
   if (smartlist_len(pow_state->rend_request_pqueue) >=
         QUEUED_REND_REQUEST_HIGH_WATER) {
     trim_rend_pqueue(pow_state, now);
+    hs_metrics_pow_pqueue_rdv(service,
+                              smartlist_len(pow_state->rend_request_pqueue));
   }
 
   return 0;
