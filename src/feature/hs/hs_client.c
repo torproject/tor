@@ -1451,9 +1451,20 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
   /* Check if fetching a desc for this HS is useful to us right now */
   {
     const hs_descriptor_t *cached_desc = NULL;
+    int has_usable_intro = false;
+    int has_expired_hs_pow = false;
+
     cached_desc = hs_cache_lookup_as_client(identity_pk);
-    if (cached_desc && hs_client_any_intro_points_usable(identity_pk,
-                                                         cached_desc)) {
+    if (cached_desc) {
+      has_usable_intro = hs_client_any_intro_points_usable(identity_pk,
+                                                           cached_desc);
+      if (cached_desc->encrypted_data.pow_params) {
+        has_expired_hs_pow =
+          cached_desc->encrypted_data.pow_params->expiration_time <
+          approx_time();
+      }
+    }
+    if (has_usable_intro && !has_expired_hs_pow) {
       log_info(LD_GENERAL, "We would fetch a v3 hidden service descriptor "
                            "but we already have a usable descriptor.");
       status = HS_CLIENT_FETCH_HAVE_DESC;
