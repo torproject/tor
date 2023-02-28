@@ -509,6 +509,8 @@ static const config_var_t option_vars_[] = {
   VAR("HiddenServiceOnionBalanceInstance",
       LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServicePoWDefensesEnabled", LINELIST_S, RendConfigLines, NULL),
+  VAR("HiddenServicePoWQueueRate", LINELIST_S, RendConfigLines, NULL),
+  VAR("HiddenServicePoWQueueBurst", LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceStatistics", BOOL, HiddenServiceStatistics_option, "1"),
   V(ClientOnionAuthDir,          FILENAME, NULL),
   OBSOLETE("CloseHSClientCircuitsImmediatelyOnTimeout"),

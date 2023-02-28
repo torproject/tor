@@ -785,6 +785,20 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
       return; /* done here! no cleanup needed. */
     }
 
+    if (pow_state->using_pqueue_bucket) {
+      token_bucket_ctr_refill(&pow_state->pqueue_bucket,
+                              (uint32_t) approx_time());
+
+      if (token_bucket_ctr_get(&pow_state->pqueue_bucket) > 0) {
+        token_bucket_ctr_dec(&pow_state->pqueue_bucket, 1);
+      } else {
+        /* Waiting for pqueue rate limit to refill, come back later */
+        const struct timeval delay_tv = { 0, 100000 };
+        mainloop_event_schedule(pow_state->pop_pqueue_ev, &delay_tv);
+        return;
+      }
+    }
+
     /* Pop next request by effort. */
     pending_rend_t *req =
       smartlist_pqueue_pop(pow_state->rend_request_pqueue,
@@ -815,6 +829,11 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 
     ++pow_state->rend_handled;
     ++in_flight;
+
+    if (pow_state->using_pqueue_bucket &&
+        token_bucket_ctr_get(&pow_state->pqueue_bucket) < 1) {
+      break;
+    }
 
     if (++count == MAX_REND_REQUEST_PER_MAINLOOP) {
       break;

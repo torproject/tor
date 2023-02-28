@@ -320,6 +320,13 @@ config_validate_service(const hs_service_config_t *config)
              config->intro_dos_burst_per_sec, config->intro_dos_rate_per_sec);
     goto invalid;
   }
+  if (config->has_pow_defenses_enabled &&
+      (config->pow_queue_burst < config->pow_queue_rate)) {
+    log_warn(LD_CONFIG, "Hidden service PoW queue burst (%" PRIu32 ") can "
+                        "not be smaller than the rate value (%" PRIu32 ").",
+             config->pow_queue_burst, config->pow_queue_rate);
+    goto invalid;
+  }
 
   /* Valid. */
   return 0;
@@ -394,8 +401,17 @@ config_service_v3(const hs_opts_t *hs_opts,
 
   /* Are the PoW anti-DoS defenses enabled? */
   config->has_pow_defenses_enabled = hs_opts->HiddenServicePoWDefensesEnabled;
-  log_info(LD_REND, "Service PoW defenses are %s.",
+  config->pow_queue_rate = hs_opts->HiddenServicePoWQueueRate;
+  config->pow_queue_burst = hs_opts->HiddenServicePoWQueueBurst;
+
+  log_info(LD_REND, "Service PoW defenses are %s",
            config->has_pow_defenses_enabled ? "enabled" : "disabled");
+  if (config->has_pow_defenses_enabled) {
+    log_info(LD_REND, "Service PoW queue rate set to: %" PRIu32,
+             config->pow_queue_rate);
+    log_info(LD_REND, "Service PoW queue burst set to: %" PRIu32,
+             config->pow_queue_burst);
+  }
 
   /* We do not load the key material for the service at this stage. This is
    * done later once tor can confirm that it is in a running state. */

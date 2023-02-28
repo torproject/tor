@@ -15,6 +15,7 @@ typedef unsigned __int128 uint128_t;
 #include "ext/equix/include/equix.h"
 
 #include "lib/evloop/compat_libevent.h"
+#include "lib/evloop/token_bucket.h"
 #include "lib/smartlist_core/smartlist_core.h"
 
 #define HS_POW_SUGGESTED_EFFORT_DEFAULT 20 // HRPR TODO 5000
@@ -70,6 +71,9 @@ typedef struct hs_pow_service_state_t {
    * the service's priority queue; higher effort is higher priority. */
   mainloop_event_t *pop_pqueue_ev;
 
+  /* Token bucket for rate limiting the priority queue */
+  token_bucket_ctr_t pqueue_bucket;
+
   /* The current seed being used in the PoW defenses. */
   uint8_t seed_current[HS_POW_SEED_LEN];
 
@@ -99,8 +103,12 @@ typedef struct hs_pow_service_state_t {
   time_t next_effort_update;
   /* Sum of effort of all valid requests received since the last update. */
   uint64_t total_effort;
+
   /* Did we have elements waiting in the queue during this period? */
   bool had_queue;
+  /* Are we using pqueue_bucket to rate limit the pqueue? */
+  bool using_pqueue_bucket;
+
 } hs_pow_service_state_t;
 
 /* Struct to store a solution to the PoW challenge. */

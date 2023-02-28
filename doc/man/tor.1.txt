@@ -3099,6 +3099,19 @@ The following options are per onion service:
     entirely when the service is not overloaded.
     (Default: 0)
 
+[[HiddenServicePoWQueueRate]] **HiddenServicePoWQueueRate** __NUM__::
+
+    The sustained rate of rendezvous requests to dispatch per second from
+    the priority queue. Has no effect when proof-of-work is disabled.
+    If this is set to 0 there's no explicit limit and we will process
+    requests as quickly as possible.
+    (Default: 250)
+
+[[HiddenServicePoWQueueBurst]] **HiddenServicePoWQueueBurst** __NUM__::
+
+    The maximum burst size for rendezvous requests handled from the
+    priority queue at once. (Default: 2500)
+
 
 == DIRECTORY AUTHORITY SERVER OPTIONS
 

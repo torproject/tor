@@ -279,6 +279,15 @@ initialize_pow_defenses(hs_service_t *service)
   pow_state->rend_request_pqueue = smartlist_new();
   pow_state->pop_pqueue_ev = NULL;
 
+  if (service->config.pow_queue_rate > 0 &&
+      service->config.pow_queue_burst >= service->config.pow_queue_rate) {
+    pow_state->using_pqueue_bucket = 1;
+    token_bucket_ctr_init(&pow_state->pqueue_bucket,
+                          service->config.pow_queue_rate,
+                          service->config.pow_queue_burst,
+                          (uint32_t) approx_time());
+  }
+
   pow_state->min_effort = service->config.pow_min_effort;
 
   /* We recalculate and update the suggested effort every HS_UPDATE_PERIOD
