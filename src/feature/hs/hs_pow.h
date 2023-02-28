@@ -18,7 +18,6 @@ typedef unsigned __int128 uint128_t;
 #include "lib/evloop/token_bucket.h"
 #include "lib/smartlist_core/smartlist_core.h"
 
-#define HS_POW_SUGGESTED_EFFORT_DEFAULT 20 // HRPR TODO 5000
 /* Service updates the suggested effort every HS_UPDATE_PERIOD seconds. */
 #define HS_UPDATE_PERIOD 300 // HRPR TODO Should be consensus
 
