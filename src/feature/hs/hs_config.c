@@ -351,7 +351,7 @@ config_service_v3(const hs_opts_t *hs_opts,
   if (hs_opts->HiddenServiceExportCircuitID) {
     int ok;
     config->circuit_id_protocol =
-      helper_parse_circuit_id_protocol("HiddenServcieExportCircuitID",
+      helper_parse_circuit_id_protocol("HiddenServiceExportCircuitID",
                                        hs_opts->HiddenServiceExportCircuitID,
                                        &ok);
     if (!ok) {
