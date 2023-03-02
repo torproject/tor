@@ -146,46 +146,35 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
   challenge = build_equix_challenge(pow_params->seed, nonce, effort);
 
   ctx = equix_alloc(EQUIX_CTX_SOLVE);
-  equix_solution solution[EQUIX_MAX_SOLS];
+  equix_solution solutions[EQUIX_MAX_SOLS];
 
-  /* We'll do a maximum of the nonce size iterations here which is the maximum
-   * number of nonce we can try in an attempt to find a valid solution. */
   log_notice(LD_REND, "Solving proof of work (effort %u)", effort);
-  for (uint64_t i = 0; i < UINT64_MAX; i++) {
-    /* Calculate S = equix_solve(C || N || E) */
-    if (!equix_solve(ctx, challenge, HS_POW_CHALLENGE_LEN, solution)) {
-      ret = -1;
-      goto end;
-    }
-    const equix_solution *sol = &solution[0];
+  for (;;) {
+    /* Calculate solutions to S = equix_solve(C || N || E),  */
+    int count = equix_solve(ctx, challenge, HS_POW_CHALLENGE_LEN, solutions);
+    for (int i = 0; i < count; i++) {
+      const equix_solution *sol = &solutions[i];
 
-    equix_result result = equix_verify(ctx, challenge,
-                                       HS_POW_CHALLENGE_LEN, sol);
-    if (result != EQUIX_OK) {
-      /* Go again with a new nonce. */
-      increment_and_set_nonce(&nonce, challenge);
-      continue;
-    }
+      /* Check an Equi-X solution against the effort threshold */
+      if (validate_equix_challenge(challenge, sol, effort)) {
+        /* Store the nonce N. */
+        pow_solution_out->nonce = nonce;
+        /* Store the effort E. */
+        pow_solution_out->effort = effort;
+        /* We only store the first 4 bytes of the seed C. */
+        pow_solution_out->seed_head = get_uint32(pow_params->seed);
+        /* Store the solution S */
+        memcpy(&pow_solution_out->equix_solution, sol,
+               sizeof(pow_solution_out->equix_solution));
 
-    /* Validate the challenge against the solution. */
-    if (validate_equix_challenge(challenge, sol, effort)) {
-      /* Store the nonce N. */
-      pow_solution_out->nonce = nonce;
-      /* Store the effort E. */
-      pow_solution_out->effort = effort;
-      /* We only store the first 4 bytes of the seed C. */
-      pow_solution_out->seed_head = get_uint32(pow_params->seed);
-      /* Store the solution S */
-      memcpy(&pow_solution_out->equix_solution, sol,
-             sizeof(pow_solution_out->equix_solution));
-
-      /* Indicate success and we are done. */
-      ret = 0;
-      break;
+        /* Indicate success and we are done. */
+        ret = 0;
+        goto end;
+      }
     }
 
-    /* Did not pass the R * E <= UINT32_MAX check. Increment the nonce and
-     * try again. */
+    /* No solutions for this nonce and/or none that passed the effort
+     * threshold, increment and try again. */
     increment_and_set_nonce(&nonce, challenge);
   }
 
