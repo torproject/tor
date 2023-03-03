@@ -2739,6 +2739,7 @@ circuits_handle_oom(size_t current_allocation)
     mem_recovered += n * packed_cell_mem_cost();
     mem_recovered += half_stream_alloc;
     mem_recovered += freed;
+    mem_recovered += conflux_get_circ_bytes_allocation(circ);
 
     if (mem_recovered >= mem_to_recover)
       goto done_recovering_mem;

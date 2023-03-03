@@ -2879,6 +2879,8 @@ cell_queues_check_size(void)
   alloc += geoip_client_cache_total;
   const size_t dns_cache_total = dns_cache_total_allocation();
   alloc += dns_cache_total;
+  const size_t conflux_total = conflux_get_total_bytes_allocation();
+  alloc += conflux_total;
   if (alloc >= get_options()->MaxMemInQueues_low_threshold) {
     last_time_under_memory_pressure = approx_time();
     if (alloc >= get_options()->MaxMemInQueues) {
@@ -2908,6 +2910,14 @@ cell_queues_check_size(void)
           dns_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
         removed = dns_cache_handle_oom(now, bytes_to_remove);
         oom_stats_n_bytes_removed_dns += removed;
+        alloc -= removed;
+      }
+      /* Like onion service above, try to go down to 10% if we are above 20% */
+      if (conflux_total > get_options()->MaxMemInQueues / 5) {
+        const size_t bytes_to_remove =
+          conflux_total - (size_t)(get_options()->MaxMemInQueues / 10);
+        removed = conflux_handle_oom(bytes_to_remove);
+        oom_stats_n_bytes_removed_cell += removed;
         alloc -= removed;
       }
       removed = circuits_handle_oom(alloc);

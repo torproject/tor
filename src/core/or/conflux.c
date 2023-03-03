@@ -32,6 +32,10 @@
 static inline uint64_t cwnd_sendable(const circuit_t *on_circ,
                                      uint64_t in_usec, uint64_t our_usec);
 
+/* Track the total number of bytes used by all ooo_q so it can be used by the
+ * OOM handler to assess. */
+static uint64_t total_ooo_q_bytes = 0;
+
 /**
  * Determine if we should multiplex a specific relay command or not.
  *
@@ -154,6 +158,41 @@ conflux_get_max_seq_recv(const conflux_t *cfx)
   } CONFLUX_FOR_EACH_LEG_END(leg);
 
   return max_seq_recv;
+}
+
+/** Return the total memory allocation the circuit is using by conflux. If this
+ * circuit is not a Conflux circuit, 0 is returned. */
+uint64_t
+conflux_get_circ_bytes_allocation(const circuit_t *circ)
+{
+  if (circ->conflux) {
+    return smartlist_len(circ->conflux->ooo_q) * sizeof(conflux_cell_t);
+  }
+  return 0;
+}
+
+/** Return the total memory allocation in bytes by the subsystem.
+ *
+ * At the moment, only out of order queues are consiered. */
+uint64_t
+conflux_get_total_bytes_allocation(void)
+{
+  return total_ooo_q_bytes;
+}
+
+/** The OOM handler is asking us to try to free at least bytes_to_remove. */
+size_t
+conflux_handle_oom(size_t bytes_to_remove)
+{
+  (void) bytes_to_remove;
+
+  /* We are not doing anything on the sets, the OOM handler will trigger a
+   * circuit clean up which will affect conflux sets, by pruning oldest
+   * circuits. */
+
+  log_info(LD_CIRC, "OOM handler triggered. OOO queus allocation: %" PRIu64,
+           total_ooo_q_bytes);
+  return 0;
 }
 
 /**
