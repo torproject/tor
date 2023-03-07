@@ -127,3 +127,23 @@ metrics_store_entry_has_label(const metrics_store_entry_t *entry,
 
   return smartlist_contains_string(entry->labels, label);
 }
+
+/** Return the first entry that has the given label, or NULL if none
+ * of the entries have the label. */
+metrics_store_entry_t *
+metrics_store_find_entry_with_label(const smartlist_t *entries,
+                                    const char *label)
+{
+  tor_assert(entries);
+  tor_assert(label);
+
+  SMARTLIST_FOREACH_BEGIN(entries, metrics_store_entry_t *, entry) {
+    tor_assert(entry);
+
+    if (smartlist_contains_string(entry->labels, label)) {
+      return entry;
+    }
+  } SMARTLIST_FOREACH_END(entry);
+
+  return NULL;
+}

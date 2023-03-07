@@ -8,9 +8,13 @@
 
 #define HS_METRICS_ENTRY_PRIVATE
 
+#include <stddef.h>
+
 #include "orconfig.h"
 
 #include "lib/cc/compat_compiler.h"
+#include "lib/log/log.h"
+#include "lib/log/util_bug.h"
 
 #include "feature/hs/hs_metrics_entry.h"
 
@@ -75,3 +79,31 @@ const hs_metrics_entry_t base_metrics[] =
 
 /** Size of base_metrics array that is number of entries. */
 const size_t base_metrics_size = ARRAY_LENGTH(base_metrics);
+
+/** Possible values for the reason label of the
+ * hs_intro_rejected_intro_req_count metric. */
+const char *hs_metrics_intro_req_error_reasons[] =
+{
+  HS_METRICS_ERR_INTRO_REQ_BAD_AUTH_KEY,
+  HS_METRICS_ERR_INTRO_REQ_INTRODUCE2,
+  HS_METRICS_ERR_INTRO_REQ_SUBCREDENTIAL,
+  HS_METRICS_ERR_INTRO_REQ_INTRODUCE2_REPLAY,
+};
+
+/** The number of entries in the hs_metrics_intro_req_error_reasons array. */
+const size_t hs_metrics_intro_req_error_reasons_size =
+    ARRAY_LENGTH(hs_metrics_intro_req_error_reasons);
+
+/** Possible values for the reason label of the hs_rdv_error_count metric. */
+const char *hs_metrics_rend_error_reasons[] =
+{
+  HS_METRICS_ERR_RDV_RP_CONN_FAILURE,
+  HS_METRICS_ERR_RDV_PATH,
+  HS_METRICS_ERR_RDV_RENDEZVOUS1,
+  HS_METRICS_ERR_RDV_E2E,
+  HS_METRICS_ERR_RDV_RETRY,
+};
+
+/** The number of entries in the hs_metrics_rend_error_reasons array. */
+const size_t hs_metrics_rend_error_reasons_size =
+    ARRAY_LENGTH(hs_metrics_rend_error_reasons);

@@ -13,6 +13,33 @@
 
 #include "lib/metrics/metrics_common.h"
 
+/* Possible values for the reason label of the
+ * hs_intro_rejected_intro_req_count metric. */
+/** The hidden service received an unknown introduction auth key. */
+#define HS_METRICS_ERR_INTRO_REQ_BAD_AUTH_KEY      "bad_auth_key"
+/** The hidden service received a malformed INTRODUCE2 cell. */
+#define HS_METRICS_ERR_INTRO_REQ_INTRODUCE2        "invalid_introduce2"
+/** The hidden service does not have the necessary subcredential. */
+#define HS_METRICS_ERR_INTRO_REQ_SUBCREDENTIAL     "subcredential"
+/** The hidden service received an INTRODUCE2 replay. */
+#define HS_METRICS_ERR_INTRO_REQ_INTRODUCE2_REPLAY "replay"
+
+/* Possible values for the reason label of the hs_rdv_error_count metric. */
+/** The hidden service failed to connect to the rendezvous point. */
+#define HS_METRICS_ERR_RDV_RP_CONN_FAILURE         "rp_conn_failure"
+/** The hidden service failed to build a circuit to the rendezvous point due
+ * to an invalid selected path. */
+#define  HS_METRICS_ERR_RDV_PATH                   "invalid_path"
+/** The hidden service failed to send the RENDEZVOUS1 cell on rendezvous
+ * circuit. */
+#define HS_METRICS_ERR_RDV_RENDEZVOUS1             "rendezvous1"
+/** The hidden service failed to set up an end-to-end rendezvous circuit to
+ * the client. */
+#define HS_METRICS_ERR_RDV_E2E                     "e2e_circ"
+/** The hidden service reattempted to connect to the rendezvous point by
+ * launching a new circuit to it, but failed */
+#define HS_METRICS_ERR_RDV_RETRY                   "retry"
+
 /** Metrics key which are used as an index in the main base metrics array. */
 typedef enum {
   /** Number of introduction requests. */
@@ -50,6 +77,11 @@ typedef struct hs_metrics_entry_t {
 extern const hs_metrics_entry_t base_metrics[];
 extern const size_t base_metrics_size;
 
-#endif /* defined(HS_METRICS_ENTRY_PRIVATE) */
+extern const char *hs_metrics_intro_req_error_reasons[];
+extern const size_t hs_metrics_intro_req_error_reasons_size;
 
+extern const char *hs_metrics_rend_error_reasons[];
+extern const size_t hs_metrics_rend_error_reasons_size;
+
+#endif /* defined(HS_METRICS_ENTRY_PRIVATE) */
 #endif /* !defined(TOR_FEATURE_HS_METRICS_ENTRY_H) */

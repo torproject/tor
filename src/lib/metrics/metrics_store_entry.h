@@ -12,6 +12,7 @@
 #include "lib/cc/torint.h"
 
 #include "lib/metrics/metrics_common.h"
+#include "lib/container/smartlist.h"
 
 #ifdef METRICS_STORE_ENTRY_PRIVATE
 
@@ -57,6 +58,8 @@ void metrics_store_entry_free_(metrics_store_entry_t *entry);
 int64_t metrics_store_entry_get_value(const metrics_store_entry_t *entry);
 bool metrics_store_entry_has_label(const metrics_store_entry_t *entry,
                                    const char *label);
+metrics_store_entry_t *metrics_store_find_entry_with_label(
+        const smartlist_t *entries, const char *label);
 
 /* Modifiers. */
 void metrics_store_entry_add_label(metrics_store_entry_t *entry,

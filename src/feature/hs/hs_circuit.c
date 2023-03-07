@@ -494,7 +494,10 @@ retry_service_rendezvous_point(const origin_circuit_t *circ)
   if (new_circ == NULL) {
     log_warn(LD_REND, "Failed to launch rendezvous circuit to %s",
              safe_str_client(extend_info_describe(bstate->chosen_exit)));
-    hs_metrics_failed_rdv(&circ->hs_ident->identity_pk);
+
+    hs_metrics_failed_rdv(&circ->hs_ident->identity_pk,
+                          HS_METRICS_ERR_RDV_RETRY);
+
     goto done;
   }
 
@@ -832,7 +835,6 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
 {
   size_t payload_len;
   uint8_t payload[RELAY_PAYLOAD_SIZE] = {0};
-  int reason = 0;
 
   tor_assert(service);
   tor_assert(circ);
@@ -864,33 +866,34 @@ hs_circ_service_rp_has_opened(const hs_service_t *service,
     payload_len = HS_LEGACY_RENDEZVOUS_CELL_SIZE;
   }
 
-  if ((reason = relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
-                                             RELAY_COMMAND_RENDEZVOUS1,
-                                             (const char *) payload,
-                                             payload_len,
-                                             circ->cpath->prev)) < 0) {
+  if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(circ),
+                                   RELAY_COMMAND_RENDEZVOUS1,
+                                   (const char *) payload,
+                                   payload_len,
+                                   circ->cpath->prev) < 0) {
     /* On error, circuit is closed. */
     log_warn(LD_REND, "Unable to send RENDEZVOUS1 cell on circuit %u "
                       "for service %s",
              TO_CIRCUIT(circ)->n_circ_id,
              safe_str_client(service->onion_address));
+
+    hs_metrics_failed_rdv(&service->keys.identity_pk,
+                          HS_METRICS_ERR_RDV_RENDEZVOUS1);
     goto done;
   }
 
   /* Setup end-to-end rendezvous circuit between the client and us. */
-  if ((reason = hs_circuit_setup_e2e_rend_circ(circ,
+  if (hs_circuit_setup_e2e_rend_circ(circ,
                        circ->hs_ident->rendezvous_ntor_key_seed,
                        sizeof(circ->hs_ident->rendezvous_ntor_key_seed),
-                       1)) < 0) {
+                       1) < 0) {
     log_warn(LD_GENERAL, "Failed to setup circ");
+
+    hs_metrics_failed_rdv(&service->keys.identity_pk, HS_METRICS_ERR_RDV_E2E);
     goto done;
   }
 
  done:
-  if (reason < 0) {
-    hs_metrics_failed_rdv(&service->keys.identity_pk);
-  }
-
   memwipe(payload, 0, sizeof(payload));
 }
 
@@ -1004,12 +1007,15 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   data.replay_cache = ip->replay_cache;
   data.cc_enabled = 0;
 
-  if (get_subcredential_for_handling_intro2_cell(service,
-                                                 &data, subcredential)) {
+  if (get_subcredential_for_handling_intro2_cell(service, &data,
+                                                 subcredential)) {
+    hs_metrics_reject_intro_req(service,
+                                HS_METRICS_ERR_INTRO_REQ_SUBCREDENTIAL);
     goto done;
   }
 
   if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
+    hs_metrics_reject_intro_req(service, HS_METRICS_ERR_INTRO_REQ_INTRODUCE2);
     goto done;
   }
 
@@ -1027,6 +1033,8 @@ hs_circ_handle_introduce2(const hs_service_t *service,
     log_info(LD_REND, "We received an INTRODUCE2 cell with same REND_COOKIE "
                       "field %ld seconds ago. Dropping cell.",
              (long int) elapsed);
+    hs_metrics_reject_intro_req(service,
+                                HS_METRICS_ERR_INTRO_REQ_INTRODUCE2_REPLAY);
     goto done;
   }
 
