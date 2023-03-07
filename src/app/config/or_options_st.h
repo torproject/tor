@@ -723,6 +723,10 @@ struct or_options_t {
    * accessing this value directly.  */
   int ClientPreferIPv6DirPort;
 
+  /** If true, the tor client will use conflux for its general purpose
+   * circuits which excludes onion service traffic. */
+  int ConfluxEnabled;
+
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
   /** The length of time we think it will take to distribute votes. */

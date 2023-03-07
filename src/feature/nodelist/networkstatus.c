@@ -51,6 +51,7 @@
 #include "core/or/circuitmux.h"
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
+#include "core/or/conflux_params.h"
 #include "core/or/connection_edge.h"
 #include "core/or/connection_or.h"
 #include "core/or/dos.h"
@@ -1711,6 +1712,7 @@ notify_after_networkstatus_changes(void)
   flow_control_new_consensus_params(c);
   hs_service_new_consensus_params(c);
   dns_new_consensus_params(c);
+  conflux_params_new_consensus(c);
 
   /* Maintenance of our L2 guard list */
   maintain_layer2_guards();

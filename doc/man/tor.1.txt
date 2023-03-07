@@ -348,6 +348,12 @@ forward slash (/) in the configuration file and on the command line.
     forwards its traffic to it. It's the duty of that proxy to properly forward
     the traffic to the bridge. (Default: none)
 
+[[ConfluxEnabled]] **ConfluxEnabled** **0**|**1**|**auto**::
+    If this option is set to 1, general purpose traffic will use Conflux which
+    is traffic splitting among multiple legs (circuits). Onion services are not
+    supported at the moment. Default value is set to "auto" meaning the
+    consensus is used to decide unless set. (Default: auto)
+
 [[ConnLimit]] **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file
