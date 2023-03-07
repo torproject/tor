@@ -1734,8 +1734,7 @@ tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
          * issue 7712. */
         openssl_bug_7712_is_present = 1;
         log_warn(LD_GENERAL, "Detected OpenSSL bug 7712: disabling TLS 1.3 on "
-                 "future connections. A fix is expected to appear in OpenSSL "
-                 "1.1.1b.");
+                 "future connections.");
       }
     }
     if (openssl_bug_7712_is_present)
