@@ -1,0 +1,5 @@
+  o Minor features (directory authorities):
+    - Directory authorities now include their AuthDirMaxServersPerAddr
+      config option in the consensus parameter section of their vote. Now
+      external tools can better predict how they will behave. Implements
+      ticket 40753.
