@@ -1,0 +1,3 @@
+  o Minor features (metrics):
+    - Add support for histograms.
+      Part of ticket 40757.

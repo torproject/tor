@@ -76,7 +76,8 @@ add_metric_with_labels(hs_service_t *service, hs_metrics_key_t metric,
   if (!num_error_reasons) {
       metrics_store_entry_t *entry = metrics_store_add(
           store, base_metrics[metric].type, base_metrics[metric].name,
-          base_metrics[metric].help);
+          base_metrics[metric].help, base_metrics[metric].bucket_count,
+          base_metrics[metric].buckets);
 
       metrics_store_entry_add_label(entry,
               metrics_format_label("onion", service->onion_address));
@@ -97,7 +98,9 @@ add_metric_with_labels(hs_service_t *service, hs_metrics_key_t metric,
     metrics_store_entry_t *entry =
       metrics_store_add(store, base_metrics[metric].type,
                         base_metrics[metric].name,
-                        base_metrics[metric].help);
+                        base_metrics[metric].help,
+                        base_metrics[metric].bucket_count,
+                        base_metrics[metric].buckets);
     /* Add labels to the entry. */
     metrics_store_entry_add_label(entry,
             metrics_format_label("onion", service->onion_address));

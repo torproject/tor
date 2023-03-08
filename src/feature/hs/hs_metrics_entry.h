@@ -70,6 +70,10 @@ typedef struct hs_metrics_entry_t {
   const char *name;
   /* Metrics output help comment. */
   const char *help;
+  /* The buckets, if the metric type is METRICS_TYPE_HISTOGRAM. */
+  const int64_t *buckets;
+  /* The number of buckets, if the metric type is METRICS_TYPE_HISTOGRAM. */
+  size_t bucket_count;
   /* True iff a port label should be added to the metrics entry. */
   bool port_as_label;
 } hs_metrics_entry_t;
