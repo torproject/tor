@@ -127,6 +127,9 @@ typedef struct hs_pow_solution_t {
   equix_solution equix_solution;
 } hs_pow_solution_t;
 
+#ifdef HAVE_MODULE_POW
+#define have_module_pow() (1)
+
 /* API */
 int hs_pow_solve(const hs_pow_desc_params_t *pow_params,
                  hs_pow_solution_t *pow_solution_out);
@@ -137,8 +140,54 @@ int hs_pow_verify(const hs_pow_service_state_t *pow_state,
 void hs_pow_remove_seed_from_cache(uint32_t seed);
 void hs_pow_free_service_state(hs_pow_service_state_t *state);
 
-int pow_queue_work(uint32_t intro_circ_identifier,
-                   uint32_t rend_circ_identifier,
-                   const hs_pow_desc_params_t *pow_params);
+int hs_pow_queue_work(uint32_t intro_circ_identifier,
+                      uint32_t rend_circ_identifier,
+                      const hs_pow_desc_params_t *pow_params);
+
+#else /* !defined(HAVE_MODULE_POW) */
+#define have_module_pow() (0)
+
+static inline int
+hs_pow_solve(const hs_pow_desc_params_t *pow_params,
+             hs_pow_solution_t *pow_solution_out)
+{
+  (void)pow_params;
+  (void)pow_solution_out;
+  return -1;
+}
+
+static inline int
+hs_pow_verify(const hs_pow_service_state_t *pow_state,
+              const hs_pow_solution_t *pow_solution)
+{
+  (void)pow_state;
+  (void)pow_solution;
+  return -1;
+}
+
+static inline void
+hs_pow_remove_seed_from_cache(uint32_t seed)
+{
+  (void)seed;
+}
+
+static inline void
+hs_pow_free_service_state(hs_pow_service_state_t *state)
+{
+  (void)state;
+}
+
+static inline int
+hs_pow_queue_work(uint32_t intro_circ_identifier,
+                  uint32_t rend_circ_identifier,
+                  const hs_pow_desc_params_t *pow_params)
+{
+  (void)intro_circ_identifier;
+  (void)rend_circ_identifier;
+  (void)pow_params;
+  return -1;
+}
+
+#endif /* defined(HAVE_MODULE_POW) */
 
 #endif /* !defined(TOR_HS_POW_H) */

@@ -15,11 +15,18 @@ LIBTOR_APP_A_SOURCES += 				\
 	src/feature/hs/hs_intropoint.c		\
 	src/feature/hs/hs_metrics.c			\
 	src/feature/hs/hs_ob.c			\
-	src/feature/hs/hs_pow.c			\
 	src/feature/hs/hs_service.c		\
 	src/feature/hs/hs_stats.c		\
 	src/feature/hs/hs_sys.c		\
 	src/feature/hs/hs_metrics_entry.c
+
+# Proof of Work module
+MODULE_POW_SOURCES =				\
+	src/feature/hs/hs_pow.c
+
+if BUILD_MODULE_POW
+LIBTOR_APP_A_SOURCES +=	$(MODULE_POW_SOURCES)
+endif
 
 # ADD_C_FILE: INSERT HEADERS HERE.
 noinst_HEADERS +=					\

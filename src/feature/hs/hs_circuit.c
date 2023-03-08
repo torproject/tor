@@ -1369,7 +1369,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
 
   /* Add the rendezvous request to the priority queue if PoW defenses are
    * enabled, otherwise rendezvous as usual. */
-  if (service->config.has_pow_defenses_enabled) {
+  if (have_module_pow() && service->config.has_pow_defenses_enabled) {
     log_notice(LD_REND,
                "Adding introduction request to pqueue with effort: %u",
                data.rdv_data.pow_effort);

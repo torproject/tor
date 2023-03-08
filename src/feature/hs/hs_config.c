@@ -327,6 +327,12 @@ config_validate_service(const hs_service_config_t *config)
              config->pow_queue_burst, config->pow_queue_rate);
     goto invalid;
   }
+  if (config->has_pow_defenses_enabled && !have_module_pow()) {
+    log_warn(LD_CONFIG, "Hidden service proof-of-work defenses are enabled "
+                        "in our configuration but this build of tor does not "
+                        "include the required 'pow' module.");
+    goto invalid;
+  }
 
   /* Valid. */
   return 0;

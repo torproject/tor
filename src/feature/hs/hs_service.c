@@ -2899,7 +2899,7 @@ run_housekeeping_event(time_t now)
 
     /* Check if we need to initialize or update PoW parameters, if the
      * defenses are enabled. */
-    if (service->config.has_pow_defenses_enabled) {
+    if (have_module_pow() && service->config.has_pow_defenses_enabled) {
       pow_housekeeping(service, now);
     }
 
@@ -2937,8 +2937,10 @@ run_build_descriptor_event(time_t now)
    * is useful for newly built descriptors. */
   update_all_descriptors_intro_points(now);
 
-  /* Update the PoW params if needed. */
-  update_all_descriptors_pow_params(now);
+  if (have_module_pow()) {
+    /* Update the PoW params if needed. */
+    update_all_descriptors_pow_params(now);
+  }
 }
 
 /** For the given service, launch any intro point circuits that could be

@@ -733,7 +733,8 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
 
   /* If the descriptor contains PoW parameters then the service is
    * expecting a PoW solution in the INTRODUCE cell, which we solve here. */
-  if (desc->encrypted_data.pow_params &&
+  if (have_module_pow() &&
+      desc->encrypted_data.pow_params &&
       desc->encrypted_data.pow_params->suggested_effort > 0) {
     log_debug(LD_REND, "PoW params present in descriptor.");
 
@@ -752,9 +753,11 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
 
     /* send it to the client-side pow cpuworker for solving. */
     intro_circ->hs_currently_solving_pow = 1;
-    pow_queue_work(intro_circ->global_identifier,
-                   rend_circ->global_identifier,
-                   desc->encrypted_data.pow_params);
+    if (0 != hs_pow_queue_work(intro_circ->global_identifier,
+                               rend_circ->global_identifier,
+                               desc->encrypted_data.pow_params)) {
+      log_debug(LD_REND, "Failed to enqueue PoW request");
+    }
 
     /* can't proceed with the intro1 cell yet, so yield back to the
      * main loop */

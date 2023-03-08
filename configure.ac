@@ -373,7 +373,7 @@ dnl Tor modules options. These options are namespaced with --disable-module-XXX
 dnl ---
 
 dnl All our modules.
-m4_define(MODULES, relay dirauth dircache)
+m4_define([MODULES], [relay dirauth dircache pow])
 
 # Some modules are only disabled through another option. For those, we don't
 # want to print the help in the summary at the end of the configure. Any entry
@@ -382,6 +382,9 @@ m4_define(MODULES, relay dirauth dircache)
 m4_set_add_all([MODULES_WITH_NO_OPTIONS], [dircache])
 
 dnl Relay module.
+m4_define([module_option_hints(relay)],
+  [AS_IF([test "x$value" = x1], [HINT_OPT([--disable-module-relay])],
+    [HINT_NONE])])
 AC_ARG_ENABLE([module-relay],
               AS_HELP_STRING([--disable-module-relay],
                              [Build tor without the Relay modules: tor can not run as a relay, bridge, or authority. Implies --disable-module-dirauth]))
@@ -399,6 +402,9 @@ AM_COND_IF(BUILD_MODULE_DIRCACHE,
                      [Compile with directory cache support]))
 
 dnl Directory Authority module.
+m4_define([module_option_hints(dirauth)],
+  [AS_IF([test "x$value" = x1], [HINT_OPT([--disable-module-dirauth])],
+    [HINT_NONE])])
 AC_ARG_ENABLE([module-dirauth],
               AS_HELP_STRING([--disable-module-dirauth],
                              [Build tor without the Directory Authority module: tor can not run as a directory authority or bridge authority]))
@@ -406,6 +412,19 @@ AM_CONDITIONAL(BUILD_MODULE_DIRAUTH,[test "x$enable_module_dirauth" != "xno" && 
 AM_COND_IF(BUILD_MODULE_DIRAUTH,
            AC_DEFINE([HAVE_MODULE_DIRAUTH], [1],
                      [Compile with Directory Authority feature support]))
+
+dnl Hidden Service Proof-of-Work module.
+m4_define([module_option_hints(pow)],
+  [AS_IF([test "x$value" = x1], [HINT_OPT([--disable-module-pow])],
+    [AS_IF([test "x$license_option" != "xGPL"], [HINT_OPT([requires --enable-gpl])],
+      [HINT_NONE])])])
+AC_ARG_ENABLE([module-pow],
+              AS_HELP_STRING([--disable-module-pow],
+                             [Build tor without proof-of-work denial of service mitigation, normally available when building with --enable-gpl]))
+AM_CONDITIONAL(BUILD_MODULE_POW,
+               [test "x$license_option" = "xGPL" && test "x$enable_module_pow" != "xno"])
+AM_COND_IF(BUILD_MODULE_POW,
+           AC_DEFINE([HAVE_MODULE_POW], [1], [Compile with proof-of-work support]))
 
 dnl Helper variables.
 TOR_MODULES_ALL_ENABLED=
@@ -2733,12 +2752,22 @@ PPRINT_PROP_BOOL([Fragile Hardening (--enable-fragile-hardening, dev only)], $va
 AS_ECHO
 PPRINT_SUBTITLE([Modules])
 
+# Modules have documentation hints indicating how they can be enabled
+# or disabled, and those hints can select which version of our message
+# to show based on variables at configure-time.
+#
+# Each "module_option_hints(<name>)" macro, if it exists, must
+# visit exactly one HINT_* macro using shell conditionals.
+
 m4_foreach_w([mname], MODULES,
   [
     AM_COND_IF(m4_join([], [BUILD_MODULE_], m4_toupper([]mname[])), value=1, value=0)
-    m4_set_contains([MODULES_WITH_NO_OPTIONS], mname,
-                    PPRINT_PROP_BOOL([mname], $value),
-                    PPRINT_PROP_BOOL([mname (--disable-module-mname)], $value))
+    m4_pushdef([HINT_OPT], [PPRINT_PROP_BOOL](mname ($1), [[$value]]))
+    m4_pushdef([HINT_NONE], [PPRINT_PROP_BOOL](mname, [[$value]]))
+    m4_ifdef([module_option_hints](mname),
+      [m4_indir([module_option_hints](mname))],
+      [HINT_NONE])
+    m4_popdef([HINT_OPT], [HINT_NONE])
   ]
 )
 

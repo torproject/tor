@@ -410,9 +410,9 @@ pow_worker_replyfn(void *work_)
  * Queue the job of solving the pow in a worker thread.
  */
 int
-pow_queue_work(uint32_t intro_circ_identifier,
-               uint32_t rend_circ_identifier,
-               const hs_pow_desc_params_t *pow_params)
+hs_pow_queue_work(uint32_t intro_circ_identifier,
+                  uint32_t rend_circ_identifier,
+                  const hs_pow_desc_params_t *pow_params)
 {
   tor_assert(in_main_thread());
 
