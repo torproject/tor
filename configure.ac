@@ -53,6 +53,19 @@ if test "x$PKG_CONFIG_PATH" = "x" && test "x$prefix" != "xNONE" && test "$host" 
    AC_MSG_NOTICE([set PKG_CONFIG_PATH=$PKG_CONFIG_PATH to support cross-compiling])
 fi
 
+# License options
+
+AC_ARG_ENABLE(gpl,
+  AS_HELP_STRING(--enable-gpl, [allow the inclusion of GPL-licensed code, building a version of tor and libtor covered by the GPL rather than its usual 3-clause BSD license]))
+license_option=BSD
+AS_IF([test "x$enable_gpl" = xyes],
+  [
+    AC_DEFINE(ENABLE_GPL, 1, [Defined if tor is building in GPL-licensed mode.])
+    license_option=GPL
+  ])
+
+# Optional features
+
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only. Deprecated: see --with-malloc]))
 AC_ARG_ENABLE(static-openssl,
@@ -2651,6 +2664,7 @@ PPRINT_SUBTITLE([Build Features])
 
 PPRINT_PROP_STRING([Compiler], [$CC])
 PPRINT_PROP_STRING([Host OS], [$host_os])
+PPRINT_PROP_STRING([License Option], [$license_option])
 AS_ECHO
 
 test "x$enable_fatal_warnings" = "xyes" && value=1 || value=0
