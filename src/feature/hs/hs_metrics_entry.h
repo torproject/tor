@@ -58,6 +58,10 @@ typedef enum {
   HS_METRICS_NUM_ESTABLISHED_INTRO = 6,
   /** Number of rejected introducton requests. */
   HS_METRICS_NUM_REJECTED_INTRO_REQ = 7,
+  /** Introduction circuit build time in milliseconds. */
+  HS_METRICS_INTRO_CIRC_BUILD_TIME = 8,
+  /** Rendezvous circuit build time in milliseconds. */
+  HS_METRICS_REND_CIRC_BUILD_TIME = 9,
 } hs_metrics_key_t;
 
 /** The metadata of an HS metrics. */

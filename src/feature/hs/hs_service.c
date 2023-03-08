@@ -33,6 +33,7 @@
 #include "lib/crypt_ops/crypto_ope.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/time/tvdiff.h"
 
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_common.h"
@@ -3412,6 +3413,11 @@ service_rendezvous_circ_has_opened(origin_circuit_t *circ)
    * will even out the metric. */
   if (TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     hs_metrics_new_established_rdv(service);
+
+    struct timeval now;
+    tor_gettimeofday(&now);
+    int64_t duration = tv_mdiff(&TO_CIRCUIT(circ)->timestamp_began, &now);
+    hs_metrics_rdv_circ_build_time(service, duration);
   }
 
   goto done;
@@ -3465,8 +3471,13 @@ service_handle_intro_established(origin_circuit_t *circ,
     goto err;
   }
 
+  struct timeval now;
+  tor_gettimeofday(&now);
+  int64_t duration = tv_mdiff(&TO_CIRCUIT(circ)->timestamp_began, &now);
+
   /* Update metrics. */
   hs_metrics_new_established_intro(service);
+  hs_metrics_intro_circ_build_time(service, duration);
 
   log_info(LD_REND, "Successfully received an INTRO_ESTABLISHED cell "
                     "on circuit %u for service %s",

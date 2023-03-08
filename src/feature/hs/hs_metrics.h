@@ -27,58 +27,75 @@ const smartlist_t *hs_metrics_get_stores(void);
 void hs_metrics_update_by_ident(const hs_metrics_key_t key,
                                 const ed25519_public_key_t *ident_pk,
                                 const uint16_t port, const char *reason,
-                                int64_t n);
+                                int64_t n, int64_t obs);
 void hs_metrics_update_by_service(const hs_metrics_key_t key,
                                   const hs_service_t *service,
                                   uint16_t port, const char *reason,
-                                  int64_t n);
+                                  int64_t n, int64_t obs);
 
 /** New introducion request received. */
-#define hs_metrics_new_introduction(s) \
-  hs_metrics_update_by_service(HS_METRICS_NUM_INTRODUCTIONS, (s), 0, NULL, 1)
+#define hs_metrics_new_introduction(s)                                        \
+  hs_metrics_update_by_service(HS_METRICS_NUM_INTRODUCTIONS, (s), 0, NULL, 1, \
+                               0)
 
 /** Introducion request rejected. */
 #define hs_metrics_reject_intro_req(s, reason)                            \
   hs_metrics_update_by_service(HS_METRICS_NUM_REJECTED_INTRO_REQ, (s), 0, \
-                               (reason), 1)
+                               (reason), 1, 0)
 
 /** Number of bytes written to the application from the service. */
 #define hs_metrics_app_write_bytes(i, port, n)                              \
   hs_metrics_update_by_ident(HS_METRICS_APP_WRITE_BYTES, (i), (port), NULL, \
-                             (n))
+                             (n), 0)
 
 /** Number of bytes read from the application to the service. */
-#define hs_metrics_app_read_bytes(i, port, n) \
-  hs_metrics_update_by_ident(HS_METRICS_APP_READ_BYTES, (i), (port), NULL, (n))
+#define hs_metrics_app_read_bytes(i, port, n)                              \
+  hs_metrics_update_by_ident(HS_METRICS_APP_READ_BYTES, (i), (port), NULL, \
+                             (n), 0)
 
 /** Newly established rendezvous. This is called as soon as the circuit purpose
  * is REND_JOINED which is when the RENDEZVOUS2 cell is sent. */
-#define hs_metrics_new_established_rdv(s) \
-  hs_metrics_update_by_service(HS_METRICS_NUM_ESTABLISHED_RDV, (s), 0, NULL, 1)
+#define hs_metrics_new_established_rdv(s)                                    \
+  hs_metrics_update_by_service(HS_METRICS_NUM_ESTABLISHED_RDV, (s), 0, NULL, \
+                               1, 0)
 
 /** New rendezvous circuit failure. */
 #define hs_metrics_failed_rdv(i, reason) \
-  hs_metrics_update_by_ident(HS_METRICS_NUM_FAILED_RDV, (i), 0, (reason), 1)
+  hs_metrics_update_by_ident(HS_METRICS_NUM_FAILED_RDV, (i), 0, (reason), 1, 0)
 
 /** Established rendezvous closed. This is called when the circuit in
  * REND_JOINED state is marked for close. */
-#define hs_metrics_close_established_rdv(i) \
-  hs_metrics_update_by_ident(HS_METRICS_NUM_ESTABLISHED_RDV, (i), 0, NULL, -1)
+#define hs_metrics_close_established_rdv(i)                                \
+  hs_metrics_update_by_ident(HS_METRICS_NUM_ESTABLISHED_RDV, (i), 0, NULL, \
+                             -1, 0)
 
 /** New rendezvous circuit being launched. */
 #define hs_metrics_new_rdv(i) \
-  hs_metrics_update_by_ident(HS_METRICS_NUM_RDV, (i), 0, NULL, 1)
+  hs_metrics_update_by_ident(HS_METRICS_NUM_RDV, (i), 0, NULL, 1, 0)
 
 /** New introduction circuit has been established. This is called when the
  * INTRO_ESTABLISHED has been received by the service. */
 #define hs_metrics_new_established_intro(s)                              \
   hs_metrics_update_by_service(HS_METRICS_NUM_ESTABLISHED_INTRO, (s), 0, \
-                               NULL, 1)
+                               NULL, 1, 0)
 
 /** Established introduction circuit closes. This is called when
  * INTRO_ESTABLISHED circuit is marked for close. */
 #define hs_metrics_close_established_intro(i)                                \
   hs_metrics_update_by_ident(HS_METRICS_NUM_ESTABLISHED_INTRO, (i), 0, NULL, \
-                             -1)
+                             -1, 0)
+
+/** Record an introduction circuit build time duration. This is called
+ * when the INTRO_ESTABLISHED has been received by the service. */
+#define hs_metrics_intro_circ_build_time(s, obs)                         \
+  hs_metrics_update_by_service(HS_METRICS_INTRO_CIRC_BUILD_TIME, (s), 0, \
+                               NULL, 1, obs)
+
+/** Record a rendezvous circuit build time duration. This is called as soon as
+ * the circuit purpose is REND_JOINED which is when the RENDEZVOUS2 cell is
+ * sent. */
+#define hs_metrics_rdv_circ_build_time(s, obs)                                \
+  hs_metrics_update_by_service(HS_METRICS_REND_CIRC_BUILD_TIME, (s), 0, NULL, \
+                               1, obs)
 
 #endif /* !defined(TOR_FEATURE_HS_HS_METRICS_H) */
