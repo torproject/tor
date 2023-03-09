@@ -1,6 +1,11 @@
 
 AM_CPPFLAGS += -I$(srcdir)/src/ext -Isrc/ext
 
+# TODO: put this with other equix/hashx ext defs when those happen,
+# and also add it to the autoconf config header. For now this is here
+# just for test_crypto's benefit.
+AM_CPPFLAGS += -DHASHX_SIZE=8
+
 EXTRA_DIST += src/ext/ext.md
 
 EXTHEADERS = \

@@ -10,6 +10,7 @@
 #include "test/test.h"
 #include "lib/crypt_ops/aes.h"
 #include "siphash.h"
+#include "ext/equix/hashx/include/hashx.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_ed25519.h"
@@ -2957,6 +2958,76 @@ test_crypto_blake2b(void *arg)
   ;
 }
 
+static void
+test_crypto_hashx(void *arg)
+{
+  (void)arg;
+
+  /* Specifically test the embedded instance of HashX inside Equi-X.
+   * It uses a non-default setting of HASHX_SIZE=8 */
+  static const struct {
+    const char *seed_literal;
+    uint64_t hash_input;
+    const char *out_hex;
+  } vectors[] = {
+    { "", 0, "466cc2021c268560" },
+    { "a", 0, "b2a110ee695c475c" },
+    { "ab", 0, "57c77f7e0d2c1727" },
+    { "abc", 0, "ef560991338086d1" },
+    { "", 999, "304068b62bc4874e" },
+    { "a", 999, "c8b66a8eb4bba304" },
+    { "ab", 999, "26c1f7031f0b3645" },
+    { "abc", 999, "de84f9d286b39ab5" },
+    { "abc", UINT64_MAX, "f756c266a3cb3b5a" }
+  };
+
+  static const struct {
+    hashx_type type;
+  } variations[] = {
+    { HASHX_INTERPRETED },
+#if defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__)
+    { HASHX_COMPILED },
+#endif
+  };
+
+  const unsigned num_vectors = sizeof vectors / sizeof vectors[0];
+  const unsigned num_variations = sizeof variations / sizeof variations[0];
+
+  for (unsigned vec_i = 0; vec_i < num_vectors; vec_i++) {
+    const char *seed_literal = vectors[vec_i].seed_literal;
+    const uint64_t hash_input = vectors[vec_i].hash_input;
+    const char *out_hex = vectors[vec_i].out_hex;
+    const size_t seed_len = strlen(seed_literal);
+    const size_t out_hex_len = strlen(out_hex);
+
+    int retval = -1;
+    uint8_t out_expected[HASHX_SIZE] = { 0 };
+    tt_int_op(out_hex_len, OP_EQ, 2 * HASHX_SIZE);
+    retval = base16_decode((char*)out_expected, HASHX_SIZE,
+                           out_hex, out_hex_len);
+    tt_int_op(retval, OP_EQ, HASHX_SIZE);
+
+    for (unsigned vari_i = 0; vari_i < num_variations; vari_i++) {
+      uint8_t out_actual[HASHX_SIZE] = { 0 };
+
+      hashx_ctx *ctx = hashx_alloc(variations[vari_i].type);
+      tt_ptr_op(ctx, OP_NE, NULL);
+      tt_ptr_op(ctx, OP_NE, HASHX_NOTSUPP);
+      retval = hashx_make(ctx, seed_literal, seed_len);
+      tt_int_op(retval, OP_EQ, 1);
+
+      memset(out_actual, 0xa5, sizeof out_actual);
+      hashx_exec(ctx, hash_input, out_actual);
+      tt_mem_op(out_actual, OP_EQ, out_expected, sizeof out_actual);
+
+      hashx_free(ctx);
+    }
+  }
+
+ done:
+  ;
+}
+
 /* We want the likelihood that the random buffer exhibits any regular pattern
  * to be far less than the memory bit error rate in the int return value.
  * Using 2048 bits provides a failure rate of 1/(3 * 10^616), and we call
@@ -3187,6 +3258,7 @@ struct testcase_t crypto_tests[] = {
   { "ed25519_storage", test_crypto_ed25519_storage, 0, NULL, NULL },
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   { "blake2b", test_crypto_blake2b, 0, NULL, NULL },
+  { "hashx", test_crypto_hashx, 0, NULL, NULL },
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
