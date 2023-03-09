@@ -37,6 +37,7 @@ ALL_BUGS_ARE_FATAL="${ALL_BUGS_ARE_FATAL:-no}"
 DISABLE_DIRAUTH="${DISABLE_DIRAUTH:-no}"
 DISABLE_RELAY="${DISABLE_RELAY:-no}"
 NSS="${NSS:-no}"
+GPL="${GPL:-no}"
 
 # Options for which tests to run.   All should be yes/no.
 CHECK="${CHECK:-yes}"
@@ -200,6 +201,7 @@ yes_or_no ALL_BUGS_ARE_FATAL
 yes_or_no DISABLE_DIRAUTH
 yes_or_no DISABLE_RELAY
 yes_or_no NSS
+yes_or_no GPL
 
 yes_or_no RUN_STAGE_CONFIGURE
 yes_or_no RUN_STAGE_BUILD
@@ -261,6 +263,9 @@ if [[ "$DISABLE_RELAY" == "yes" ]]; then
 fi
 if [[ "$NSS" == "yes" ]]; then
     configure_options+=("--enable-nss")
+fi
+if [[ "$GPL" == "yes" ]]; then
+    configure_options+=("--enable-gpl")
 fi
 
 #############################################################################

@@ -212,6 +212,16 @@ debian-disable-relay:
     - ./scripts/ci/ci-driver.sh
 
 #####
+# GPL licensed mode, enables pow module
+debian-gpl:
+  image: debian:buster
+  <<: *debian-template
+  variables:
+    GPL: "yes"
+  script:
+    - ./scripts/ci/ci-driver.sh
+
+#####
 # NSS check on debian
 debian-nss:
   image: debian:buster
