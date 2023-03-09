@@ -9,12 +9,10 @@
 
 typedef unsigned __int128 uint128_t;
 
-// TODO fixme
-#include <blake2.h>
-
 #include <stdio.h>
 
 #include "ext/ht.h"
+#include "ext/compat_blake2.h"
 #include "core/or/circuitlist.h"
 #include "core/or/origin_circuit_st.h"
 #include "feature/hs/hs_cache.h"

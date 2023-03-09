@@ -10,6 +10,7 @@
 #include "test/test.h"
 #include "lib/crypt_ops/aes.h"
 #include "siphash.h"
+#include "ext/compat_blake2.h"
 #include "ext/equix/hashx/include/hashx.h"
 #include "lib/crypt_ops/crypto_curve25519.h"
 #include "lib/crypt_ops/crypto_dh.h"
@@ -20,9 +21,6 @@
 #include "lib/crypt_ops/crypto_init.h"
 #include "ed25519_vectors.inc"
 #include "test/log_test_helpers.h"
-
-// TODO fixme
-#include <blake2.h>
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>

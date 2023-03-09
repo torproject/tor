@@ -14,8 +14,7 @@ FUZZING_LIBS = \
 	@TOR_SYSTEMD_LIBS@ \
 	@TOR_LZMA_LIBS@ \
 	@TOR_ZSTD_LIBS@ \
-	@TOR_TRACE_LIBS@ \
-	@LIBB2_LIBS@
+	@TOR_TRACE_LIBS@
 
 oss-fuzz-prereqs: \
     src/test/libtor-testing.a
