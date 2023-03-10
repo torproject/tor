@@ -31,8 +31,6 @@ tor_incr_n_warnings() {
   tor_ac_n_warnings=`expr $tor_ac_n_warnings + 1`
 }
 
-AC_CONFIG_COMMANDS([equix], [./src/ext/equix/build.sh])
-
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
 
@@ -2601,6 +2599,17 @@ if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then
       AC_MSG_WARN([Tried to enable coverage on OSX without using the clang compiler. This might not work! If coverage fails, use CC=clang when configuring with --enable-coverage.])
    esac
 fi
+
+# These HashX parameter definitions are needed in CPPFLAGS when compiling
+# the equix and hashx ext modules, but elsewhere in tor we can use orconfig.h
+
+m4_define([equix_hashx_size], [8])
+[HASHX_SIZE=]equix_hashx_size
+AC_SUBST([HASHX_SIZE])
+AC_DEFINE([HASHX_SIZE], equix_hashx_size,
+          [Output size in bytes for the internal customization of HashX])
+AC_DEFINE([HASHX_STATIC], [1], [We statically link with HashX])
+AC_DEFINE([EQUIX_STATIC], [1], [We statically link with EquiX])
 
 CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_zlib"
 

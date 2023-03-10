@@ -114,6 +114,10 @@ TOR_CRYPTO_LIBS = \
 	$(LIBKECCAK_TINY) \
 	$(LIBDONNA)
 
+if BUILD_MODULE_POW
+TOR_CRYPTO_LIBS += $(EQUIX_LIBS)
+endif
+
 # Variants of the above for linking the testing variant of tor (for coverage
 # and tests)
 if UNITTESTS_ENABLED
@@ -121,12 +125,9 @@ TOR_CRYPTO_TESTING_LIBS = \
 	src/lib/libtor-tls-testing.a \
 	src/lib/libtor-crypt-ops-testing.a \
 	$(LIBKECCAK_TINY) \
-	$(LIBDONNA)
+	$(LIBDONNA) \
+	$(EQUIX_LIBS)
 endif
-
-EQUIX_LIBS = \
-  src/ext/equix/build/libequix.a \
-  src/ext/equix/build/hashx/libhashx.a
 
 # All static libraries used to link tor.
 TOR_INTERNAL_LIBS = \
@@ -136,8 +137,7 @@ TOR_INTERNAL_LIBS = \
 	$(TOR_CRYPTO_LIBS) \
 	$(TOR_UTIL_LIBS) \
 	src/trunnel/libor-trunnel.a \
-	src/lib/libtor-trace.a \
-	$(EQUIX_LIBS)
+	src/lib/libtor-trace.a
 
 libtor.a: $(TOR_INTERNAL_LIBS)
 	$(AM_V_AR) export AR="$(AR)"; \
@@ -157,8 +157,7 @@ TOR_INTERNAL_TESTING_LIBS = \
 	$(TOR_CRYPTO_TESTING_LIBS) \
 	$(TOR_UTIL_TESTING_LIBS) \
 	src/trunnel/libor-trunnel-testing.a \
-	src/lib/libtor-trace.a \
-	$(EQUIX_LIBS)
+	src/lib/libtor-trace.a
 
 src/test/libtor-testing.a: $(TOR_INTERNAL_TESTING_LIBS)
 	$(AM_V_AR) export AR="$(AR)"; \
