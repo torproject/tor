@@ -147,6 +147,7 @@ extern struct testcase_t hs_intropoint_tests[];
 extern struct testcase_t hs_metrics_tests[];
 extern struct testcase_t hs_ntor_tests[];
 extern struct testcase_t hs_ob_tests[];
+extern struct testcase_t hs_pow_tests[];
 extern struct testcase_t hs_service_tests[];
 extern struct testcase_t keypin_tests[];
 extern struct testcase_t link_handshake_tests[];
@@ -207,6 +208,7 @@ extern struct testcase_t voting_schedule_tests[];
 extern struct testcase_t x509_tests[];
 
 extern struct testcase_t slow_crypto_tests[];
+extern struct testcase_t slow_hs_pow_tests[];
 extern struct testcase_t slow_process_tests[];
 extern struct testcase_t slow_ptr_tests[];
 
