@@ -86,7 +86,7 @@ void hashx_compile_x86(const hashx_program* program, uint8_t* code) {
 	uint8_t* pos = code;
 	uint8_t* target = NULL;
 	EMIT(pos, x86_prologue);
-	for (int i = 0; i < program->code_size; ++i) {
+	for (size_t i = 0; i < program->code_size; ++i) {
 		const instruction* instr = &program->code[i];
 		switch (instr->opcode)
 		{

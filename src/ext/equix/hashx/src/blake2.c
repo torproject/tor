@@ -239,11 +239,6 @@ static FORCE_INLINE void blake2b_increment_counter(blake2b_state* S,
 	S->t[1] += (S->t[0] < inc);
 }
 
-static FORCE_INLINE void blake2b_invalidate_state(blake2b_state* S) {
-	//clear_internal_memory(S, sizeof(*S));      /* wipe */
-	blake2b_set_lastblock(S); /* invalidate for further use */
-}
-
 static FORCE_INLINE void blake2b_init0(blake2b_state* S) {
 	memset(S, 0, sizeof(*S));
 	memcpy(S->h, blake2b_IV, sizeof(S->h));

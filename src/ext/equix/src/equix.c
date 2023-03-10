@@ -13,12 +13,12 @@
 
 static bool verify_order(const equix_solution* solution) {
 	return
-		tree_cmp4(&solution->idx[0], &solution->idx[4]) &
-		tree_cmp2(&solution->idx[0], &solution->idx[2]) &
-		tree_cmp2(&solution->idx[4], &solution->idx[6]) &
-		tree_cmp1(&solution->idx[0], &solution->idx[1]) &
-		tree_cmp1(&solution->idx[2], &solution->idx[3]) &
-		tree_cmp1(&solution->idx[4], &solution->idx[5]) &
+		tree_cmp4(&solution->idx[0], &solution->idx[4]) &&
+		tree_cmp2(&solution->idx[0], &solution->idx[2]) &&
+		tree_cmp2(&solution->idx[4], &solution->idx[6]) &&
+		tree_cmp1(&solution->idx[0], &solution->idx[1]) &&
+		tree_cmp1(&solution->idx[2], &solution->idx[3]) &&
+		tree_cmp1(&solution->idx[4], &solution->idx[5]) &&
 		tree_cmp1(&solution->idx[6], &solution->idx[7]);
 }
 

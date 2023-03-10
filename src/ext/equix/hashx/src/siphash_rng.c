@@ -27,5 +27,5 @@ uint32_t hashx_siphash_rng_u32(siphash_rng* gen) {
 		gen->count32 = sizeof(gen->buffer32) / sizeof(uint32_t);
 	}
 	gen->count32--;
-	return gen->buffer32 >> (gen->count32 * 32);
+	return (uint32_t)(gen->buffer32 >> (gen->count32 * 32));
 }

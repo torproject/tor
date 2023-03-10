@@ -61,7 +61,7 @@ static FORCE_INLINE uint64_t rotr64(uint64_t a, unsigned int b) {
 #ifndef HAVE_UMULH
 #define LO(x) ((x)&0xffffffff)
 #define HI(x) ((x)>>32)
-uint64_t umulh(uint64_t a, uint64_t b) {
+static uint64_t umulh(uint64_t a, uint64_t b) {
 	uint64_t ah = HI(a), al = LO(a);
 	uint64_t bh = HI(b), bl = LO(b);
 	uint64_t x00 = al * bl;
@@ -80,7 +80,7 @@ uint64_t umulh(uint64_t a, uint64_t b) {
 #endif
 
 #ifndef HAVE_SMULH
-int64_t smulh(int64_t a, int64_t b) {
+static int64_t smulh(int64_t a, int64_t b) {
 	int64_t hi = umulh(a, b);
 	if (a < 0LL) hi -= b;
 	if (b < 0LL) hi -= a;
@@ -91,24 +91,28 @@ int64_t smulh(int64_t a, int64_t b) {
 
 static FORCE_INLINE uint64_t sign_extend_2s_compl(uint32_t x) {
 	return (-1 == ~0) ?
-		(int64_t)(int32_t)(x) :
+		(uint64_t)(int64_t)(int32_t)(x) :
 		(x > INT32_MAX ? (x | 0xffffffff00000000ULL) : (uint64_t)x);
 }
 
 void hashx_program_execute(const hashx_program* program, uint64_t r[8]) {
-	int target = 0;
+	size_t target = 0;
 	bool branch_enable = true;
 	uint32_t result = 0;
+#ifdef HASHX_PROGRAM_STATS
 	int branch_idx = 0;
-	for (int i = 0; i < program->code_size; ++i) {
+#endif
+	for (size_t i = 0; i < program->code_size; ++i) {
 		const instruction* instr = &program->code[i];
 		switch (instr->opcode)
 		{
 		case INSTR_UMULH_R:
-			result = r[instr->dst] = umulh(r[instr->dst], r[instr->src]);
+			result = (uint32_t) (r[instr->dst] = umulh(r[instr->dst],
+			                                           r[instr->src]));
 			break;
 		case INSTR_SMULH_R:
-			result = r[instr->dst] = smulh(r[instr->dst], r[instr->src]);
+			result = (uint32_t) (r[instr->dst] = smulh(r[instr->dst],
+			                                           r[instr->src]));
 			break;
 		case INSTR_MUL_R:
 			r[instr->dst] *= r[instr->src];
@@ -143,7 +147,9 @@ void hashx_program_execute(const hashx_program* program, uint64_t r[8]) {
 				((hashx_program*)program)->branches[branch_idx]++;
 #endif
 			}
+#ifdef HASHX_PROGRAM_STATS
 			branch_idx++;
+#endif
 			break;
 		default:
 			UNREACHABLE;
