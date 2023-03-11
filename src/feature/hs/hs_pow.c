@@ -75,6 +75,23 @@ increment_and_set_nonce(uint128_t *nonce, uint8_t *challenge)
   memcpy(challenge + HS_POW_SEED_LEN, nonce, HS_POW_NONCE_LEN);
 }
 
+/* Helper: Allocate an EquiX context, using the much faster compiled
+ * implementation of hashx if it's available on this architecture. */
+static equix_ctx *
+build_equix_ctx(equix_ctx_flags flags)
+{
+  equix_ctx *ctx = equix_alloc(flags | EQUIX_CTX_COMPILE);
+  if (ctx == EQUIX_NOTSUPP) {
+    ctx = equix_alloc(flags);
+  }
+  tor_assert_nonfatal(ctx != EQUIX_NOTSUPP);
+  tor_assert_nonfatal(ctx != NULL);
+  if (ctx == EQUIX_NOTSUPP) {
+    ctx = NULL;
+  }
+  return ctx;
+}
+
 /* Helper: Build EquiX challenge (C || N || INT_32(E)) and return a newly
  * allocated buffer containing it. */
 static uint8_t *
@@ -145,7 +162,10 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
   /* Build EquiX challenge (C || N || INT_32(E)). */
   challenge = build_equix_challenge(pow_params->seed, nonce, effort);
 
-  ctx = equix_alloc(EQUIX_CTX_SOLVE);
+  ctx = build_equix_ctx(EQUIX_CTX_SOLVE);
+  if (!ctx) {
+    goto end;
+  }
   equix_solution solutions[EQUIX_MAX_SOLS];
 
   log_notice(LD_REND, "Solving proof of work (effort %u)", effort);
@@ -239,9 +259,12 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
     goto done;
   }
 
-  /* Fail if equix_verify(C || N || E, S) != EQUIX_OK */
-  ctx = equix_alloc(EQUIX_CTX_SOLVE);
+  ctx = build_equix_ctx(EQUIX_CTX_VERIFY);
+  if (!ctx) {
+    goto done;
+  }
 
+  /* Fail if equix_verify(C || N || E, S) != EQUIX_OK */
   equix_result result = equix_verify(ctx, challenge, HS_POW_CHALLENGE_LEN,
                                      &pow_solution->equix_solution);
   if (result != EQUIX_OK) {
