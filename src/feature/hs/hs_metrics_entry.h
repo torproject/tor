@@ -58,6 +58,10 @@ typedef enum {
   HS_METRICS_NUM_ESTABLISHED_INTRO = 6,
   /** Number of rejected introducton requests. */
   HS_METRICS_NUM_REJECTED_INTRO_REQ = 7,
+  /** Introduction circuit build time in milliseconds. */
+  HS_METRICS_INTRO_CIRC_BUILD_TIME = 8,
+  /** Rendezvous circuit build time in milliseconds. */
+  HS_METRICS_REND_CIRC_BUILD_TIME = 9,
 } hs_metrics_key_t;
 
 /** The metadata of an HS metrics. */
@@ -70,6 +74,10 @@ typedef struct hs_metrics_entry_t {
   const char *name;
   /* Metrics output help comment. */
   const char *help;
+  /* The buckets, if the metric type is METRICS_TYPE_HISTOGRAM. */
+  const int64_t *buckets;
+  /* The number of buckets, if the metric type is METRICS_TYPE_HISTOGRAM. */
+  size_t bucket_count;
   /* True iff a port label should be added to the metrics entry. */
   bool port_as_label;
 } hs_metrics_entry_t;

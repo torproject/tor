@@ -68,6 +68,8 @@ add_metric_with_labels(hs_service_t *service, hs_metrics_key_t metric,
     case HS_METRICS_NUM_ESTABLISHED_RDV: FALLTHROUGH;
     case HS_METRICS_NUM_RDV: FALLTHROUGH;
     case HS_METRICS_NUM_ESTABLISHED_INTRO: FALLTHROUGH;
+    case HS_METRICS_INTRO_CIRC_BUILD_TIME: FALLTHROUGH;
+    case HS_METRICS_REND_CIRC_BUILD_TIME: FALLTHROUGH;
     default:
       break;
   }
@@ -76,7 +78,8 @@ add_metric_with_labels(hs_service_t *service, hs_metrics_key_t metric,
   if (!num_error_reasons) {
       metrics_store_entry_t *entry = metrics_store_add(
           store, base_metrics[metric].type, base_metrics[metric].name,
-          base_metrics[metric].help);
+          base_metrics[metric].help, base_metrics[metric].bucket_count,
+          base_metrics[metric].buckets);
 
       metrics_store_entry_add_label(entry,
               metrics_format_label("onion", service->onion_address));
@@ -97,7 +100,9 @@ add_metric_with_labels(hs_service_t *service, hs_metrics_key_t metric,
     metrics_store_entry_t *entry =
       metrics_store_add(store, base_metrics[metric].type,
                         base_metrics[metric].name,
-                        base_metrics[metric].help);
+                        base_metrics[metric].help,
+                        base_metrics[metric].bucket_count,
+                        base_metrics[metric].buckets);
     /* Add labels to the entry. */
     metrics_store_entry_add_label(entry,
             metrics_format_label("onion", service->onion_address));
@@ -141,7 +146,7 @@ void
 hs_metrics_update_by_service(const hs_metrics_key_t key,
                              const hs_service_t *service,
                              uint16_t port, const char *reason,
-                             int64_t n)
+                             int64_t n, int64_t obs)
 {
   tor_assert(service);
 
@@ -162,8 +167,14 @@ hs_metrics_update_by_service(const hs_metrics_key_t key,
              entry, metrics_format_label("port", port_to_str(port)))) &&
         ((!reason || metrics_store_entry_has_label(
                          entry, metrics_format_label("reason", reason))))) {
+
+      if (metrics_store_entry_is_histogram(entry)) {
+        metrics_store_hist_entry_update(entry, n, obs);
+      } else {
         metrics_store_entry_update(entry, n);
-        break;
+      }
+
+      break;
     }
   } SMARTLIST_FOREACH_END(entry);
 }
@@ -179,7 +190,7 @@ void
 hs_metrics_update_by_ident(const hs_metrics_key_t key,
                            const ed25519_public_key_t *ident_pk,
                            const uint16_t port, const char *reason,
-                           int64_t n)
+                           int64_t n, int64_t obs)
 {
   hs_service_t *service;
 
@@ -193,7 +204,7 @@ hs_metrics_update_by_ident(const hs_metrics_key_t key,
      * service and thus the only way to know is to lookup the service. */
     return;
   }
-  hs_metrics_update_by_service(key, service, port, reason, n);
+  hs_metrics_update_by_service(key, service, port, reason, n, obs);
 }
 
 /** Return a list of all the onion service metrics stores. This is the

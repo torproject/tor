@@ -1,0 +1,8 @@
+  o Minor features (metrics):
+    - Add support for histograms.
+      Part of ticket 40757.
+  o Minor features (hs, metrics):
+    - Add tor_hs_rend_circ_build_time and tor_hs_intro_circ_build_time
+      histograms to measure hidden service rend/intro circuit build time
+      durations.
+      Part of ticket 40757.

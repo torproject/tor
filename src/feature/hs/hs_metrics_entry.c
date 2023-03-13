@@ -18,6 +18,19 @@
 
 #include "feature/hs/hs_metrics_entry.h"
 
+/* Histogram time buckets (in milliseconds). */
+static const int64_t hs_metrics_circ_build_time_buckets[] =
+{
+  1000,  /* 1s */
+  5000,  /* 5s */
+  10000, /* 10s */
+  30000, /* 30s */
+  60000  /* 60s */
+};
+
+static const size_t hs_metrics_circ_build_time_buckets_size =
+  ARRAY_LENGTH(hs_metrics_circ_build_time_buckets);
+
 /** The base metrics that is a static array of metrics that are added to every
  * single new stores.
  *
@@ -74,6 +87,22 @@ const hs_metrics_entry_t base_metrics[] =
     .type = METRICS_TYPE_COUNTER,
     .name = METRICS_NAME(hs_intro_rejected_intro_req_count),
     .help = "Total number of rejected introduction circuits",
+  },
+  {
+    .key = HS_METRICS_INTRO_CIRC_BUILD_TIME,
+    .type = METRICS_TYPE_HISTOGRAM,
+    .name = METRICS_NAME(hs_intro_circ_build_time),
+    .buckets = hs_metrics_circ_build_time_buckets,
+    .bucket_count = hs_metrics_circ_build_time_buckets_size,
+    .help = "The introduction circuit build time in milliseconds",
+  },
+  {
+    .key = HS_METRICS_REND_CIRC_BUILD_TIME,
+    .type = METRICS_TYPE_HISTOGRAM,
+    .name = METRICS_NAME(hs_rend_circ_build_time),
+    .buckets = hs_metrics_circ_build_time_buckets,
+    .bucket_count = hs_metrics_circ_build_time_buckets_size,
+    .help = "The rendezvous circuit build time in milliseconds",
   },
 };
 
