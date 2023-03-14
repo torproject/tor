@@ -807,6 +807,11 @@ handle_introduce2_encrypted_cell_pow_extension(const hs_service_t *service,
 
   tor_assert(field);
 
+  if (!service->state.pow_state) {
+    log_info(LD_REND, "Unsolicited PoW solution in INTRODUCE2 request.");
+    goto end;
+  }
+
   if (trn_cell_extension_pow_parse(&pow,
                trn_extension_field_getconstarray_field(field),
                trn_extension_field_getlen_field(field)) < 0) {
