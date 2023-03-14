@@ -315,7 +315,7 @@ test_hs_pow_vectors(void *arg)
       "cdd49fdbc34326d9d2f18ed277469c63", "7f153437c58620d3ea4717746093dde6",
       "01"
       "cdd49fdbc34326d9d2f18ed277469c63"
-      "0001869f" "cf0afb86"
+      "0001869f" "86fb0acf"
       "7f153437c58620d3ea4717746093dde6"
     },
     {
@@ -325,7 +325,7 @@ test_hs_pow_vectors(void *arg)
       "cdd49fdbc34326d9d2f18ed270469c63", "7f153437c58620d3ea4717746093dde6",
       "01"
       "cdd49fdbc34326d9d2f18ed270469c63"
-      "000186a0" "cf0afb86"
+      "000186a0" "86fb0acf"
       "7f153437c58620d3ea4717746093dde6"
     },
     {
@@ -335,7 +335,7 @@ test_hs_pow_vectors(void *arg)
       "cdd49fdbc34326d9d2f18ed277469c63", "7f153437c58620d3ea4717746093dde6",
       "01"
       "cdd49fdbc34326d9d2f18ed277469c63"
-      "000186a0" "cf0afb86"
+      "000186a0" "86fb0acf"
       "7f153437c58620d3ea4717746093dde6"
     }
   };
@@ -382,8 +382,7 @@ test_hs_pow_vectors(void *arg)
                             sol_hex, 2 * sizeof solution.equix_solution),
                             OP_EQ, HS_POW_EQX_SOL_LEN);
 
-    memcpy(&solution.seed_head, pow_state->seed_previous,
-           sizeof solution.seed_head);
+    solution.seed_head = tor_ntohl(get_uint32(pow_state->seed_previous));
 
     /* Try to encode 'solution' into a relay cell */
 

@@ -211,15 +211,14 @@ test_hs_pow_vectors(void *arg)
                             sizeof solution.equix_solution,
                             sol_hex, 2 * sizeof solution.equix_solution),
                             OP_EQ, HS_POW_EQX_SOL_LEN);
-    memcpy(&solution.seed_head, params.seed, sizeof solution.seed_head);
+    solution.seed_head = tor_ntohl(get_uint32(params.seed));
 
     memset(&output, 0xaa, sizeof output);
     testing_enable_prefilled_rng(rng_bytes, HS_POW_NONCE_LEN);
     tt_int_op(0, OP_EQ, hs_pow_solve(&params, &output));
     testing_disable_prefilled_rng();
 
-    tt_mem_op(params.seed, OP_EQ, &output.seed_head,
-              sizeof output.seed_head);
+    tt_int_op(solution.seed_head, OP_EQ, output.seed_head);
     tt_mem_op(&solution.nonce, OP_EQ, &output.nonce,
               sizeof output.nonce);
     tt_mem_op(&solution.equix_solution, OP_EQ, &output.equix_solution,

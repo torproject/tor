@@ -182,7 +182,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
         /* Store the effort E. */
         pow_solution_out->effort = effort;
         /* We only store the first 4 bytes of the seed C. */
-        pow_solution_out->seed_head = get_uint32(pow_params->seed);
+        pow_solution_out->seed_head = tor_ntohl(get_uint32(pow_params->seed));
         /* Store the solution S */
         memcpy(&pow_solution_out->equix_solution, sol,
                sizeof(pow_solution_out->equix_solution));
@@ -231,9 +231,11 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 
   /* Find a valid seed C that starts with the seed head. Fail if no such seed
    * exists. */
-  if (get_uint32(pow_state->seed_current) == pow_solution->seed_head) {
+  if (tor_ntohl(get_uint32(pow_state->seed_current))
+      == pow_solution->seed_head) {
     seed = pow_state->seed_current;
-  } else if (get_uint32(pow_state->seed_previous) == pow_solution->seed_head) {
+  } else if (tor_ntohl(get_uint32(pow_state->seed_previous))
+      == pow_solution->seed_head) {
     seed = pow_state->seed_previous;
   } else {
     log_warn(LD_REND, "Seed head didn't match either seed.");
