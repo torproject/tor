@@ -7,8 +7,6 @@
  * when a hidden service is defending against DoS attacks.
  **/
 
-typedef unsigned __int128 uint128_t;
-
 #include <stdio.h>
 
 #include "ext/ht.h"
@@ -20,6 +18,7 @@ typedef unsigned __int128 uint128_t;
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_pow.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/cc/ctassert.h"
 #include "core/mainloop/cpuworker.h"
 #include "lib/evloop/workqueue.h"
 
@@ -27,7 +26,7 @@ typedef unsigned __int128 uint128_t;
 /** Cache entry for (nonce, seed) replay protection. */
 typedef struct nonce_cache_entry_t {
   HT_ENTRY(nonce_cache_entry_t) node;
-  uint128_t nonce;
+  uint8_t nonce[HS_POW_NONCE_LEN];
   uint32_t seed_head;
 } nonce_cache_entry_t;
 
@@ -36,7 +35,7 @@ static inline int
 nonce_cache_entries_eq_(const struct nonce_cache_entry_t *entry1,
                         const struct nonce_cache_entry_t *entry2)
 {
-  return entry1->nonce == entry2->nonce &&
+  return fast_memeq(entry1->nonce, entry2->nonce, HS_POW_NONCE_LEN) &&
          entry1->seed_head == entry2->seed_head;
 }
 
@@ -44,7 +43,7 @@ nonce_cache_entries_eq_(const struct nonce_cache_entry_t *entry1,
 static inline unsigned
 nonce_cache_entry_hash_(const struct nonce_cache_entry_t *ent)
 {
-  return (unsigned)siphash24g(&ent->nonce, HS_POW_NONCE_LEN) + ent->seed_head;
+  return (unsigned)siphash24g(ent->nonce, HS_POW_NONCE_LEN) + ent->seed_head;
 }
 
 static HT_HEAD(nonce_cache_table_ht, nonce_cache_entry_t)
@@ -69,9 +68,14 @@ nonce_cache_entry_has_seed(nonce_cache_entry_t *ent, void *data)
 /** Helper: Increment a given nonce and set it in the challenge at the right
  * offset. Use by the solve function. */
 static inline void
-increment_and_set_nonce(uint128_t *nonce, uint8_t *challenge)
+increment_and_set_nonce(uint8_t *nonce, uint8_t *challenge)
 {
-  (*nonce)++;
+  for (unsigned i = 0; i < HS_POW_NONCE_LEN; i++) {
+    uint8_t prev = nonce[i];
+    if (++nonce[i] > prev) {
+      break;
+    }
+  }
   memcpy(challenge + HS_POW_SEED_LEN, nonce, HS_POW_NONCE_LEN);
 }
 
@@ -95,7 +99,7 @@ build_equix_ctx(equix_ctx_flags flags)
 /* Helper: Build EquiX challenge (C || N || INT_32(E)) and return a newly
  * allocated buffer containing it. */
 static uint8_t *
-build_equix_challenge(const uint8_t *seed, const uint128_t nonce,
+build_equix_challenge(const uint8_t *seed, const uint8_t *nonce,
                       const uint32_t effort)
 {
   /* Build EquiX challenge (C || N || INT_32(E)). */
@@ -104,7 +108,7 @@ build_equix_challenge(const uint8_t *seed, const uint128_t nonce,
 
   memcpy(challenge, seed, HS_POW_SEED_LEN);
   offset += HS_POW_SEED_LEN;
-  memcpy(challenge + offset, &nonce, HS_POW_NONCE_LEN);
+  memcpy(challenge + offset, nonce, HS_POW_NONCE_LEN);
   offset += HS_POW_NONCE_LEN;
   set_uint32(challenge + offset, tor_htonl(effort));
   offset += HS_POW_EFFORT_LEN;
@@ -146,7 +150,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
              hs_pow_solution_t *pow_solution_out)
 {
   int ret = -1;
-  uint128_t nonce;
+  uint8_t nonce[HS_POW_NONCE_LEN];
   uint8_t *challenge = NULL;
   equix_ctx *ctx = NULL;
 
@@ -157,7 +161,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
   uint32_t effort = pow_params->suggested_effort;
 
   /* Generate a random nonce N. */
-  crypto_rand((char *)&nonce, sizeof(uint128_t));
+  crypto_rand((char *)nonce, sizeof nonce);
 
   /* Build EquiX challenge (C || N || INT_32(E)). */
   challenge = build_equix_challenge(pow_params->seed, nonce, effort);
@@ -178,7 +182,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
       /* Check an Equi-X solution against the effort threshold */
       if (validate_equix_challenge(challenge, sol, effort)) {
         /* Store the nonce N. */
-        pow_solution_out->nonce = nonce;
+        memcpy(pow_solution_out->nonce, nonce, HS_POW_NONCE_LEN);
         /* Store the effort E. */
         pow_solution_out->effort = effort;
         /* We only store the first 4 bytes of the seed C. */
@@ -195,7 +199,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
 
     /* No solutions for this nonce and/or none that passed the effort
      * threshold, increment and try again. */
-    increment_and_set_nonce(&nonce, challenge);
+    increment_and_set_nonce(nonce, challenge);
   }
 
  end:
@@ -243,7 +247,7 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
   }
 
   /* Fail if N = POW_NONCE is present in the replay cache. */
-  search.nonce = pow_solution->nonce;
+  memcpy(search.nonce, pow_solution->nonce, HS_POW_NONCE_LEN);
   search.seed_head = pow_solution->seed_head;
   entry = HT_FIND(nonce_cache_table_ht, &nonce_cache_table, &search);
   if (entry) {
@@ -279,7 +283,7 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 
   /* Add the (nonce, seed) tuple to the replay cache. */
   entry = tor_malloc_zero(sizeof(nonce_cache_entry_t));
-  entry->nonce = pow_solution->nonce;
+  memcpy(entry->nonce, pow_solution->nonce, HS_POW_NONCE_LEN);
   entry->seed_head = pow_solution->seed_head;
   HT_INSERT(nonce_cache_table_ht, &nonce_cache_table, entry);
 

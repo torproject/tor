@@ -10,8 +10,6 @@
 #ifndef TOR_HS_POW_H
 #define TOR_HS_POW_H
 
-typedef unsigned __int128 uint128_t;
-
 #include "ext/equix/include/equix.h"
 
 #include "lib/evloop/compat_libevent.h"
@@ -112,10 +110,8 @@ typedef struct hs_pow_service_state_t {
 
 /* Struct to store a solution to the PoW challenge. */
 typedef struct hs_pow_solution_t {
-  /** HRPR TODO are we best off storing this as a byte array, as trunnel doesnt
-   * support uint128 (?) */
   /* The 16 byte nonce used in the solution. */
-  uint128_t nonce;
+  uint8_t nonce[HS_POW_NONCE_LEN];
 
   /* The effort used in the solution. */
   uint32_t effort;
