@@ -67,6 +67,7 @@ core.*
 /stamp-h
 /stamp-h.in
 /stamp-h1
+/tags
 /TAGS
 /test-driver
 /tor.sh
