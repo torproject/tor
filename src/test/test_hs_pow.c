@@ -469,6 +469,7 @@ test_hs_pow_vectors(void *arg)
   trn_cell_introduce1_free(cell);
   trn_cell_introduce_encrypted_free(enc_cell);
   testing_hs_pow_service_free(tsvc);
+  hs_pow_remove_seed_from_cache(NULL);
 }
 
 struct testcase_t hs_pow_tests[] = {

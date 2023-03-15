@@ -228,6 +228,7 @@ test_hs_pow_vectors(void *arg)
 
  done:
   testing_disable_prefilled_rng();
+  hs_pow_remove_seed_from_cache(NULL);
 }
 
 struct testcase_t slow_hs_pow_tests[] = {

@@ -57,13 +57,18 @@ HT_GENERATE2(nonce_cache_table_ht, nonce_cache_entry_t, node,
              nonce_cache_entry_hash_, nonce_cache_entries_eq_, 0.6,
              tor_reallocarray_, tor_free_);
 
-/** We use this to check if an entry in the replay cache is for a particular
- * seed head, so we know to remove it once the seed is no longer in use. */
+/** This is a callback used to check replay cache entries against a provided
+ * seed head, or NULL to operate on the entire cache. Matching entries return
+ * 1 and their internal cache entry is freed, non-matching entries return 0. */
 static int
-nonce_cache_entry_has_seed(nonce_cache_entry_t *ent, void *data)
+nonce_cache_entry_match_seed_and_free(nonce_cache_entry_t *ent, void *data)
 {
-  /* Returning nonzero makes HT_FOREACH_FN remove the element from the HT */
-  return fast_memeq(ent->bytes.seed_head, data, HS_POW_SEED_HEAD_LEN);
+  if (data == NULL ||
+      fast_memeq(ent->bytes.seed_head, data, HS_POW_SEED_HEAD_LEN)) {
+    tor_free(ent);
+    return 1;
+  }
+  return 0;
 }
 
 /** Helper: Increment a given nonce and set it in the challenge at the right
@@ -298,13 +303,13 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 }
 
 /** Remove entries from the (nonce, seed) replay cache which are for the seed
- * beginning with seed_head. */
+ * beginning with seed_head. If seed_head is NULL, remove all cache entries. */
 void
 hs_pow_remove_seed_from_cache(const uint8_t *seed_head)
 {
   /* If nonce_cache_entry_has_seed returns 1, the entry is removed. */
   HT_FOREACH_FN(nonce_cache_table_ht, &nonce_cache_table,
-                nonce_cache_entry_has_seed, (void*)seed_head);
+                nonce_cache_entry_match_seed_and_free, (void*)seed_head);
 }
 
 /** Free a given PoW service state. */
