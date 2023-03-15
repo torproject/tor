@@ -41,12 +41,24 @@ static int initialize_program(hashx_ctx* ctx, hashx_program* program,
 
 int hashx_make(hashx_ctx* ctx, const void* seed, size_t size) {
 	assert(ctx != NULL && ctx != HASHX_NOTSUPP);
-	assert(seed != NULL || size == 0);	
-	siphash_state keys[2];
+	assert(seed != NULL || size == 0);
+
+	uint8_t keys_bytes[2 * sizeof(siphash_state)];
 	blake2b_state hash_state;
 	hashx_blake2b_init_param(&hash_state, &hashx_blake2_params);
 	hashx_blake2b_update(&hash_state, seed, size);
-	hashx_blake2b_final(&hash_state, &keys, sizeof(keys));
+	hashx_blake2b_final(&hash_state, keys_bytes, sizeof(keys_bytes));
+
+	siphash_state keys[2];
+	keys[0].v0 = load64(keys_bytes + 0 * sizeof(uint64_t));
+	keys[0].v1 = load64(keys_bytes + 1 * sizeof(uint64_t));
+	keys[0].v2 = load64(keys_bytes + 2 * sizeof(uint64_t));
+	keys[0].v3 = load64(keys_bytes + 3 * sizeof(uint64_t));
+	keys[1].v0 = load64(keys_bytes + 4 * sizeof(uint64_t));
+	keys[1].v1 = load64(keys_bytes + 5 * sizeof(uint64_t));
+	keys[1].v2 = load64(keys_bytes + 6 * sizeof(uint64_t));
+	keys[1].v3 = load64(keys_bytes + 7 * sizeof(uint64_t));
+
 	if (ctx->type & HASHX_COMPILED) {
 		hashx_program program;
 		if (!initialize_program(ctx, &program, keys)) {
