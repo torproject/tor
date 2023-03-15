@@ -99,7 +99,7 @@ extern "C" {
  *
  * @param type is the type of instance to be created.
  *
- * @return pointer to a new HashX instance. Returns NULL on memory allocation 
+ * @return pointer to a new HashX instance. Returns NULL on memory allocation
  *         failure and HASHX_NOTSUPP if the requested type is not supported.
 */
 HASHX_API hashx_ctx* hashx_alloc(hashx_type type);
@@ -111,7 +111,7 @@ HASHX_API hashx_ctx* hashx_alloc(hashx_type type);
  * @param seed is a pointer to the seed value.
  * @param size is the size of the seed.
  *
- * @return 1 on success, 0 on failure.                                         
+ * @return 1 on success, 0 on failure.
 */
 HASHX_API int hashx_make(hashx_ctx* ctx, const void* seed, size_t size);
 

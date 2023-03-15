@@ -11,7 +11,7 @@ set(HASHX_VERSION_STR "${HASHX_VERSION}.${HASHX_VERSION_MINOR}.${HASHX_VERSION_P
 project(hashx)
 
 set(hashx_sources
-src/blake2.c 
+src/blake2.c
 src/compiler.c
 src/compiler_a64.c
 src/compiler_x86.c

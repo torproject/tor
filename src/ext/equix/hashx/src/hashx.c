@@ -22,7 +22,7 @@
 #define HASHX_INPUT_ARGS input, size
 #endif
 
-static int initialize_program(hashx_ctx* ctx, hashx_program* program, 
+static int initialize_program(hashx_ctx* ctx, hashx_program* program,
 	siphash_state keys[2]) {
 
 	if (!hashx_program_generate(&keys[0], program)) {

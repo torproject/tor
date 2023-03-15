@@ -215,7 +215,7 @@ int main() {
 	RUN_TEST(test_hash_block1);
 	RUN_TEST(test_compiler_block1);
 	RUN_TEST(test_free);
-	
+
 	printf("\nAll tests were successful\n");
 	return 0;
 }

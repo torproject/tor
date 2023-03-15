@@ -430,7 +430,7 @@ int hashx_blake2b_final(blake2b_state* S, void* out, size_t outlen) {
 }
 
 /* 4-round version of Blake2b */
-void hashx_blake2b_4r(const blake2b_param* params, const void* in, 
+void hashx_blake2b_4r(const blake2b_param* params, const void* in,
 	size_t inlen, void* out) {
 
 	blake2b_state state;
