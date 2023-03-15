@@ -437,7 +437,14 @@ sb_mmap2(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2),
        SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE),
-       SCMP_CMP(3, SCMP_CMP_EQ,MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK));
+       SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK));
+  if (rc) {
+    return rc;
+  }
+
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap2),
+       SCMP_CMP(2, SCMP_CMP_EQ, PROT_NONE),
+       SCMP_CMP(3, SCMP_CMP_EQ, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK));
   if (rc) {
     return rc;
   }
