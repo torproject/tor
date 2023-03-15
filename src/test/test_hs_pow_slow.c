@@ -46,9 +46,9 @@ testing_one_hs_pow_solution(const hs_pow_solution_t *ref_solution,
           expected = 0;
         }
       } else if (variant & 1) {
-        sol_buffer.nonce[variant % HS_POW_NONCE_LEN]++;
+        sol_buffer.nonce[variant / 2 % HS_POW_NONCE_LEN]++;
       } else {
-        sol_buffer.equix_solution.idx[variant % EQUIX_NUM_IDX]++;
+        sol_buffer.equix_solution[variant / 2 % HS_POW_EQX_SOL_LEN]++;
       }
 
       tt_int_op(expected, OP_EQ, hs_pow_verify(s, &sol_buffer));

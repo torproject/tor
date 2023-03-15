@@ -13,11 +13,13 @@
 #include "ext/compat_blake2.h"
 #include "core/or/circuitlist.h"
 #include "core/or/origin_circuit_st.h"
+#include "ext/equix/include/equix.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_pow.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/arch/bytes.h"
 #include "lib/cc/ctassert.h"
 #include "core/mainloop/cpuworker.h"
 #include "lib/evloop/workqueue.h"
@@ -126,7 +128,8 @@ build_equix_challenge(const uint8_t *seed, const uint8_t *nonce,
 /** Helper: Return true iff the given challenge and solution for the given
  * effort do validate as in: R * E <= UINT32_MAX. */
 static bool
-validate_equix_challenge(const uint8_t *challenge, const equix_solution *sol,
+validate_equix_challenge(const uint8_t *challenge,
+                         const uint8_t *solution_bytes,
                          const uint32_t effort)
 {
   /* Fail if R * E > UINT32_MAX. */
@@ -139,13 +142,35 @@ validate_equix_challenge(const uint8_t *challenge, const equix_solution *sol,
 
   /* Construct: blake2b(C || N || E || S) */
   blake2b_update(&b2_state, challenge, HS_POW_CHALLENGE_LEN);
-  blake2b_update(&b2_state, (const uint8_t *) sol, HS_POW_EQX_SOL_LEN);
+  blake2b_update(&b2_state, solution_bytes, HS_POW_EQX_SOL_LEN);
   blake2b_final(&b2_state, hash_result, HS_POW_HASH_LEN);
 
   /* Scale to 64 bit so we can avoid 32 bit overflow. */
   uint64_t RE = tor_htonl(get_uint32(hash_result)) * (uint64_t) effort;
 
   return RE <= UINT32_MAX;
+}
+
+/** Helper: Convert equix_solution to a byte array in little-endian order */
+static void
+pack_equix_solution(const equix_solution *sol_in,
+                    uint8_t *bytes_out)
+{
+  for (unsigned i = 0; i < EQUIX_NUM_IDX; i++) {
+    bytes_out[i*2+0] = (uint8_t)sol_in->idx[i];
+    bytes_out[i*2+1] = (uint8_t)(sol_in->idx[i] >> 8);
+  }
+}
+
+/** Helper: Build an equix_solution from its corresponding byte array. */
+static void
+unpack_equix_solution(const uint8_t *bytes_in,
+                      equix_solution *sol_out)
+{
+  for (unsigned i = 0; i < EQUIX_NUM_IDX; i++) {
+    sol_out->idx[i] = (uint16_t)bytes_in[i*2+0] |
+                      (uint16_t)bytes_in[i*2+1] << 8;
+  }
 }
 
 /** Solve the EquiX/blake2b PoW scheme using the parameters in pow_params, and
@@ -177,16 +202,17 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
     goto end;
   }
   equix_solution solutions[EQUIX_MAX_SOLS];
+  uint8_t sol_bytes[HS_POW_EQX_SOL_LEN];
 
   log_notice(LD_REND, "Solving proof of work (effort %u)", effort);
   for (;;) {
     /* Calculate solutions to S = equix_solve(C || N || E),  */
     int count = equix_solve(ctx, challenge, HS_POW_CHALLENGE_LEN, solutions);
     for (int i = 0; i < count; i++) {
-      const equix_solution *sol = &solutions[i];
+      pack_equix_solution(&solutions[i], sol_bytes);
 
       /* Check an Equi-X solution against the effort threshold */
-      if (validate_equix_challenge(challenge, sol, effort)) {
+      if (validate_equix_challenge(challenge, sol_bytes, effort)) {
         /* Store the nonce N. */
         memcpy(pow_solution_out->nonce, nonce, HS_POW_NONCE_LEN);
         /* Store the effort E. */
@@ -195,8 +221,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
         memcpy(pow_solution_out->seed_head, pow_params->seed,
                sizeof(pow_solution_out->seed_head));
         /* Store the solution S */
-        memcpy(&pow_solution_out->equix_solution, sol,
-               sizeof(pow_solution_out->equix_solution));
+        memcpy(&pow_solution_out->equix_solution, sol_bytes, sizeof sol_bytes);
 
         /* Indicate success and we are done. */
         ret = 0;
@@ -267,7 +292,7 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
   challenge = build_equix_challenge(seed, pow_solution->nonce,
                                     pow_solution->effort);
 
-  if (!validate_equix_challenge(challenge, &pow_solution->equix_solution,
+  if (!validate_equix_challenge(challenge, pow_solution->equix_solution,
                                 pow_solution->effort)) {
     log_warn(LD_REND, "Equi-X solution and effort was too large.");
     goto done;
@@ -279,8 +304,10 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
   }
 
   /* Fail if equix_verify(C || N || E, S) != EQUIX_OK */
+  equix_solution equix_sol;
+  unpack_equix_solution(pow_solution->equix_solution, &equix_sol);
   equix_result result = equix_verify(ctx, challenge, HS_POW_CHALLENGE_LEN,
-                                     &pow_solution->equix_solution);
+                                     &equix_sol);
   if (result != EQUIX_OK) {
     log_warn(LD_REND, "Verification of EquiX solution in PoW failed.");
     goto done;

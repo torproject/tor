@@ -374,12 +374,11 @@ test_hs_pow_vectors(void *arg)
     tt_int_op(base16_decode((char*)pow_state->seed_previous, HS_POW_SEED_LEN,
                             seed_hex, 2 * HS_POW_SEED_LEN),
                             OP_EQ, HS_POW_SEED_LEN);
-    tt_int_op(base16_decode((char*)&solution.nonce, sizeof solution.nonce,
-                            nonce_hex, 2 * sizeof solution.nonce),
+    tt_int_op(base16_decode((char*)solution.nonce, HS_POW_NONCE_LEN,
+                            nonce_hex, 2 * HS_POW_NONCE_LEN),
                             OP_EQ, HS_POW_NONCE_LEN);
-    tt_int_op(base16_decode((char*)&solution.equix_solution,
-                            sizeof solution.equix_solution,
-                            sol_hex, 2 * sizeof solution.equix_solution),
+    tt_int_op(base16_decode((char*)solution.equix_solution, HS_POW_EQX_SOL_LEN,
+                            sol_hex, 2 * HS_POW_EQX_SOL_LEN),
                             OP_EQ, HS_POW_EQX_SOL_LEN);
 
     memcpy(solution.seed_head, pow_state->seed_previous, HS_POW_SEED_HEAD_LEN);

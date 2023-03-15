@@ -10,8 +10,6 @@
 #ifndef TOR_HS_POW_H
 #define TOR_HS_POW_H
 
-#include "ext/equix/include/equix.h"
-
 #include "lib/evloop/compat_libevent.h"
 #include "lib/evloop/token_bucket.h"
 #include "lib/smartlist_core/smartlist_core.h"
@@ -121,8 +119,8 @@ typedef struct hs_pow_solution_t {
   /* A prefix of the seed used in this solution, so it can be identified. */
   uint8_t seed_head[HS_POW_SEED_HEAD_LEN];
 
-  /* The Equi-X solution used in the solution. */
-  equix_solution equix_solution;
+  /* The Equi-X solution used in this PoW solution. */
+  uint8_t equix_solution[HS_POW_EQX_SOL_LEN];
 } hs_pow_solution_t;
 
 #ifdef HAVE_MODULE_POW
