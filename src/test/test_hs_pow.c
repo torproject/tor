@@ -382,7 +382,7 @@ test_hs_pow_vectors(void *arg)
                             sol_hex, 2 * sizeof solution.equix_solution),
                             OP_EQ, HS_POW_EQX_SOL_LEN);
 
-    solution.seed_head = tor_ntohl(get_uint32(pow_state->seed_previous));
+    memcpy(solution.seed_head, pow_state->seed_previous, HS_POW_SEED_HEAD_LEN);
 
     /* Try to encode 'solution' into a relay cell */
 

@@ -26,16 +26,14 @@ testing_one_hs_pow_solution(const hs_pow_solution_t *ref_solution,
   int retval = -1;
   hs_pow_solution_t sol_buffer;
   hs_pow_service_state_t *s = tor_malloc_zero(sizeof(hs_pow_service_state_t));
-  uint32_t seed_head;
 
   memcpy(s->seed_previous, seed, HS_POW_SEED_LEN);
-  memcpy(&seed_head, seed, sizeof seed_head);
 
   const unsigned num_variants = 10;
   const unsigned num_attempts = 3;
 
   for (unsigned variant = 0; variant < num_variants; variant++) {
-    hs_pow_remove_seed_from_cache(seed_head);
+    hs_pow_remove_seed_from_cache(seed);
 
     for (unsigned attempt = 0; attempt < num_attempts; attempt++) {
       int expected = -1;
@@ -211,15 +209,16 @@ test_hs_pow_vectors(void *arg)
                             sizeof solution.equix_solution,
                             sol_hex, 2 * sizeof solution.equix_solution),
                             OP_EQ, HS_POW_EQX_SOL_LEN);
-    solution.seed_head = tor_ntohl(get_uint32(params.seed));
+    memcpy(solution.seed_head, params.seed, HS_POW_SEED_HEAD_LEN);
 
     memset(&output, 0xaa, sizeof output);
     testing_enable_prefilled_rng(rng_bytes, HS_POW_NONCE_LEN);
     tt_int_op(0, OP_EQ, hs_pow_solve(&params, &output));
     testing_disable_prefilled_rng();
 
-    tt_int_op(solution.seed_head, OP_EQ, output.seed_head);
-    tt_mem_op(&solution.nonce, OP_EQ, &output.nonce,
+    tt_mem_op(solution.seed_head, OP_EQ, output.seed_head,
+              sizeof output.seed_head);
+    tt_mem_op(solution.nonce, OP_EQ, output.nonce,
               sizeof output.nonce);
     tt_mem_op(&solution.equix_solution, OP_EQ, &output.equix_solution,
               sizeof output.equix_solution);

@@ -27,6 +27,8 @@
 #define HS_POW_HASH_LEN 4
 /** Length of random seed used in the PoW scheme. */
 #define HS_POW_SEED_LEN 32
+/** Length of seed identification heading in the PoW scheme. */
+#define HS_POW_SEED_HEAD_LEN 4
 /** Length of an effort value */
 #define HS_POW_EFFORT_LEN sizeof(uint32_t)
 /** Length of a PoW challenge. Construction as per prop327 is:
@@ -45,7 +47,7 @@ typedef struct hs_pow_desc_params_t {
   /** Type of PoW system being used. */
   hs_pow_desc_type_t type;
 
-  /** Random 32-byte seed used as input the the PoW hash function. Decoded? */
+  /** Random 32-byte seed used as input the the PoW hash function */
   uint8_t seed[HS_POW_SEED_LEN];
 
   /** Specifies effort value that clients should aim for when contacting the
@@ -110,14 +112,14 @@ typedef struct hs_pow_service_state_t {
 
 /* Struct to store a solution to the PoW challenge. */
 typedef struct hs_pow_solution_t {
-  /* The 16 byte nonce used in the solution. */
+  /* The nonce chosen to satisfy the PoW challenge's conditions. */
   uint8_t nonce[HS_POW_NONCE_LEN];
 
-  /* The effort used in the solution. */
+  /* The effort used in this solution. */
   uint32_t effort;
 
-  /* The first four bytes of the seed used in the solution. */
-  uint32_t seed_head;
+  /* A prefix of the seed used in this solution, so it can be identified. */
+  uint8_t seed_head[HS_POW_SEED_HEAD_LEN];
 
   /* The Equi-X solution used in the solution. */
   equix_solution equix_solution;
@@ -133,7 +135,7 @@ int hs_pow_solve(const hs_pow_desc_params_t *pow_params,
 int hs_pow_verify(const hs_pow_service_state_t *pow_state,
                   const hs_pow_solution_t *pow_solution);
 
-void hs_pow_remove_seed_from_cache(uint32_t seed);
+void hs_pow_remove_seed_from_cache(const uint8_t *seed_head);
 void hs_pow_free_service_state(hs_pow_service_state_t *state);
 
 int hs_pow_queue_work(uint32_t intro_circ_identifier,
@@ -162,9 +164,9 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 }
 
 static inline void
-hs_pow_remove_seed_from_cache(uint32_t seed)
+hs_pow_remove_seed_from_cache(const uint8_t *seed_head)
 {
-  (void)seed;
+  (void)seed_head;
 }
 
 static inline void

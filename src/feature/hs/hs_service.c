@@ -2650,7 +2650,7 @@ rotate_pow_seeds(hs_service_t *service, time_t now)
 
   /* Before we overwrite the previous seed lets scrub entries corresponding
    * to it in the nonce replay cache. */
-  hs_pow_remove_seed_from_cache(get_uint32(pow_state->seed_previous));
+  hs_pow_remove_seed_from_cache(pow_state->seed_previous);
 
   /* Keep track of the current seed that we are now rotating. */
   memcpy(pow_state->seed_previous, pow_state->seed_current, HS_POW_SEED_LEN);
@@ -2658,8 +2658,8 @@ rotate_pow_seeds(hs_service_t *service, time_t now)
   /* Generate a new random seed to use from now on. Make sure the seed head
    * is different to that of the previous seed. The following while loop
    * will run at least once as the seeds will initially be equal. */
-  while (get_uint32(pow_state->seed_previous) ==
-         get_uint32(pow_state->seed_current)) {
+  while (fast_memeq(pow_state->seed_previous, pow_state->seed_current,
+                    HS_POW_SEED_HEAD_LEN)) {
     crypto_rand((char *)pow_state->seed_current, HS_POW_SEED_LEN);
   }
 

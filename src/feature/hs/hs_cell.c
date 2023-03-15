@@ -405,8 +405,9 @@ build_introduce_pow_extension(const hs_pow_solution_t *pow_solution,
          &pow_solution->nonce, TRUNNEL_POW_NONCE_LEN);
 
   trn_cell_extension_pow_set_pow_effort(pow_ext, pow_solution->effort);
-  trn_cell_extension_pow_set_pow_seed(pow_ext, pow_solution->seed_head);
 
+  memcpy(trn_cell_extension_pow_getarray_pow_seed(pow_ext),
+         pow_solution->seed_head, TRUNNEL_POW_SEED_HEAD_LEN);
   memcpy(trn_cell_extension_pow_getarray_pow_solution(pow_ext),
          &pow_solution->equix_solution, TRUNNEL_POW_SOLUTION_LEN);
 
@@ -829,7 +830,8 @@ handle_introduce2_encrypted_cell_pow_extension(const hs_service_t *service,
   /* Effort E */
   sol.effort = trn_cell_extension_pow_get_pow_effort(pow);
   /* Seed C */
-  sol.seed_head = trn_cell_extension_pow_get_pow_seed(pow);
+  memcpy(&sol.seed_head, trn_cell_extension_pow_getconstarray_pow_seed(pow),
+         HS_POW_SEED_HEAD_LEN);
   /* Nonce N */
   memcpy(&sol.nonce, trn_cell_extension_pow_getconstarray_pow_nonce(pow),
          HS_POW_NONCE_LEN);

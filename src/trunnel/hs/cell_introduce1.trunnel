@@ -89,6 +89,8 @@ const TRUNNEL_EXT_TYPE_POW = 0x02;
 
 const TRUNNEL_POW_NONCE_LEN = 16;
 const TRUNNEL_POW_SOLUTION_LEN = 16;
+const TRUNNEL_POW_SEED_HEAD_LEN = 4;
+
 /* Version 1 is based on Equi-X scheme. */
 const TRUNNEL_POW_VERSION_EQUIX = 0x01;
 
@@ -102,8 +104,8 @@ struct trn_cell_extension_pow {
   /* Effort */
   u32 pow_effort;
 
-  /* First 4 bytes of the seed. */
-  u32 pow_seed;
+  /* Identifiable prefix from the seed. */
+  u8 pow_seed[TRUNNEL_POW_SEED_HEAD_LEN];
 
   /* Solution. */
   u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN];

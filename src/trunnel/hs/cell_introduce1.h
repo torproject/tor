@@ -23,13 +23,14 @@ struct link_specifier_st;
 #define TRUNNEL_EXT_TYPE_POW 2
 #define TRUNNEL_POW_NONCE_LEN 16
 #define TRUNNEL_POW_SOLUTION_LEN 16
+#define TRUNNEL_POW_SEED_HEAD_LEN 4
 #define TRUNNEL_POW_VERSION_EQUIX 1
 #if !defined(TRUNNEL_OPAQUE) && !defined(TRUNNEL_OPAQUE_TRN_CELL_EXTENSION_POW)
 struct trn_cell_extension_pow_st {
   uint8_t pow_version;
   uint8_t pow_nonce[TRUNNEL_POW_NONCE_LEN];
   uint32_t pow_effort;
-  uint32_t pow_seed;
+  uint8_t pow_seed[TRUNNEL_POW_SEED_HEAD_LEN];
   uint8_t pow_solution[TRUNNEL_POW_SOLUTION_LEN];
   uint8_t trunnel_error_code_;
 };
@@ -148,15 +149,31 @@ uint32_t trn_cell_extension_pow_get_pow_effort(const trn_cell_extension_pow_t *i
  * return -1 and set the error code on 'inp' on failure.
  */
 int trn_cell_extension_pow_set_pow_effort(trn_cell_extension_pow_t *inp, uint32_t val);
-/** Return the value of the pow_seed field of the
- * trn_cell_extension_pow_t in 'inp'
+/** Return the (constant) length of the array holding the pow_seed
+ * field of the trn_cell_extension_pow_t in 'inp'.
  */
-uint32_t trn_cell_extension_pow_get_pow_seed(const trn_cell_extension_pow_t *inp);
-/** Set the value of the pow_seed field of the
- * trn_cell_extension_pow_t in 'inp' to 'val'. Return 0 on success;
- * return -1 and set the error code on 'inp' on failure.
+size_t trn_cell_extension_pow_getlen_pow_seed(const trn_cell_extension_pow_t *inp);
+/** Return the element at position 'idx' of the fixed array field
+ * pow_seed of the trn_cell_extension_pow_t in 'inp'.
  */
-int trn_cell_extension_pow_set_pow_seed(trn_cell_extension_pow_t *inp, uint32_t val);
+uint8_t trn_cell_extension_pow_get_pow_seed(trn_cell_extension_pow_t *inp, size_t idx);
+/** As trn_cell_extension_pow_get_pow_seed, but take and return a
+ * const pointer
+ */
+uint8_t trn_cell_extension_pow_getconst_pow_seed(const trn_cell_extension_pow_t *inp, size_t idx);
+/** Change the element at position 'idx' of the fixed array field
+ * pow_seed of the trn_cell_extension_pow_t in 'inp', so that it will
+ * hold the value 'elt'.
+ */
+int trn_cell_extension_pow_set_pow_seed(trn_cell_extension_pow_t *inp, size_t idx, uint8_t elt);
+/** Return a pointer to the TRUNNEL_POW_SEED_HEAD_LEN-element array
+ * field pow_seed of 'inp'.
+ */
+uint8_t * trn_cell_extension_pow_getarray_pow_seed(trn_cell_extension_pow_t *inp);
+/** As trn_cell_extension_pow_get_pow_seed, but take and return a
+ * const pointer
+ */
+const uint8_t  * trn_cell_extension_pow_getconstarray_pow_seed(const trn_cell_extension_pow_t *inp);
 /** Return the (constant) length of the array holding the pow_solution
  * field of the trn_cell_extension_pow_t in 'inp'.
  */

@@ -134,16 +134,41 @@ trn_cell_extension_pow_set_pow_effort(trn_cell_extension_pow_t *inp, uint32_t va
   inp->pow_effort = val;
   return 0;
 }
-uint32_t
-trn_cell_extension_pow_get_pow_seed(const trn_cell_extension_pow_t *inp)
+size_t
+trn_cell_extension_pow_getlen_pow_seed(const trn_cell_extension_pow_t *inp)
+{
+  (void)inp;  return TRUNNEL_POW_SEED_HEAD_LEN;
+}
+
+uint8_t
+trn_cell_extension_pow_get_pow_seed(trn_cell_extension_pow_t *inp, size_t idx)
+{
+  trunnel_assert(idx < TRUNNEL_POW_SEED_HEAD_LEN);
+  return inp->pow_seed[idx];
+}
+
+uint8_t
+trn_cell_extension_pow_getconst_pow_seed(const trn_cell_extension_pow_t *inp, size_t idx)
+{
+  return trn_cell_extension_pow_get_pow_seed((trn_cell_extension_pow_t*)inp, idx);
+}
+int
+trn_cell_extension_pow_set_pow_seed(trn_cell_extension_pow_t *inp, size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < TRUNNEL_POW_SEED_HEAD_LEN);
+  inp->pow_seed[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+trn_cell_extension_pow_getarray_pow_seed(trn_cell_extension_pow_t *inp)
 {
   return inp->pow_seed;
 }
-int
-trn_cell_extension_pow_set_pow_seed(trn_cell_extension_pow_t *inp, uint32_t val)
+const uint8_t  *
+trn_cell_extension_pow_getconstarray_pow_seed(const trn_cell_extension_pow_t *inp)
 {
-  inp->pow_seed = val;
-  return 0;
+  return (const uint8_t  *)trn_cell_extension_pow_getarray_pow_seed((trn_cell_extension_pow_t*)inp);
 }
 size_t
 trn_cell_extension_pow_getlen_pow_solution(const trn_cell_extension_pow_t *inp)
@@ -211,8 +236,8 @@ trn_cell_extension_pow_encoded_len(const trn_cell_extension_pow_t *obj)
   /* Length of u32 pow_effort */
   result += 4;
 
-  /* Length of u32 pow_seed */
-  result += 4;
+  /* Length of u8 pow_seed[TRUNNEL_POW_SEED_HEAD_LEN] */
+  result += TRUNNEL_POW_SEED_HEAD_LEN;
 
   /* Length of u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN] */
   result += TRUNNEL_POW_SOLUTION_LEN;
@@ -264,12 +289,12 @@ trn_cell_extension_pow_encode(uint8_t *output, const size_t avail, const trn_cel
   trunnel_set_uint32(ptr, trunnel_htonl(obj->pow_effort));
   written += 4; ptr += 4;
 
-  /* Encode u32 pow_seed */
+  /* Encode u8 pow_seed[TRUNNEL_POW_SEED_HEAD_LEN] */
   trunnel_assert(written <= avail);
-  if (avail - written < 4)
+  if (avail - written < TRUNNEL_POW_SEED_HEAD_LEN)
     goto truncated;
-  trunnel_set_uint32(ptr, trunnel_htonl(obj->pow_seed));
-  written += 4; ptr += 4;
+  memcpy(ptr, obj->pow_seed, TRUNNEL_POW_SEED_HEAD_LEN);
+  written += TRUNNEL_POW_SEED_HEAD_LEN; ptr += TRUNNEL_POW_SEED_HEAD_LEN;
 
   /* Encode u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN] */
   trunnel_assert(written <= avail);
@@ -330,10 +355,10 @@ trn_cell_extension_pow_parse_into(trn_cell_extension_pow_t *obj, const uint8_t *
   obj->pow_effort = trunnel_ntohl(trunnel_get_uint32(ptr));
   remaining -= 4; ptr += 4;
 
-  /* Parse u32 pow_seed */
-  CHECK_REMAINING(4, truncated);
-  obj->pow_seed = trunnel_ntohl(trunnel_get_uint32(ptr));
-  remaining -= 4; ptr += 4;
+  /* Parse u8 pow_seed[TRUNNEL_POW_SEED_HEAD_LEN] */
+  CHECK_REMAINING(TRUNNEL_POW_SEED_HEAD_LEN, truncated);
+  memcpy(obj->pow_seed, ptr, TRUNNEL_POW_SEED_HEAD_LEN);
+  remaining -= TRUNNEL_POW_SEED_HEAD_LEN; ptr += TRUNNEL_POW_SEED_HEAD_LEN;
 
   /* Parse u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN] */
   CHECK_REMAINING(TRUNNEL_POW_SOLUTION_LEN, truncated);

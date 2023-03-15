@@ -26,8 +26,10 @@
 /** Cache entry for (nonce, seed) replay protection. */
 typedef struct nonce_cache_entry_t {
   HT_ENTRY(nonce_cache_entry_t) node;
-  uint8_t nonce[HS_POW_NONCE_LEN];
-  uint32_t seed_head;
+  struct {
+    uint8_t nonce[HS_POW_NONCE_LEN];
+    uint8_t seed_head[HS_POW_SEED_HEAD_LEN];
+  } bytes;
 } nonce_cache_entry_t;
 
 /** Return true if the two (nonce, seed) replay cache entries are the same */
@@ -35,15 +37,14 @@ static inline int
 nonce_cache_entries_eq_(const struct nonce_cache_entry_t *entry1,
                         const struct nonce_cache_entry_t *entry2)
 {
-  return fast_memeq(entry1->nonce, entry2->nonce, HS_POW_NONCE_LEN) &&
-         entry1->seed_head == entry2->seed_head;
+  return fast_memeq(&entry1->bytes, &entry2->bytes, sizeof entry1->bytes);
 }
 
 /** Hash function to hash the (nonce, seed) tuple entry. */
 static inline unsigned
 nonce_cache_entry_hash_(const struct nonce_cache_entry_t *ent)
 {
-  return (unsigned)siphash24g(ent->nonce, HS_POW_NONCE_LEN) + ent->seed_head;
+  return (unsigned)siphash24g(&ent->bytes, sizeof ent->bytes);
 }
 
 static HT_HEAD(nonce_cache_table_ht, nonce_cache_entry_t)
@@ -62,7 +63,7 @@ static int
 nonce_cache_entry_has_seed(nonce_cache_entry_t *ent, void *data)
 {
   /* Returning nonzero makes HT_FOREACH_FN remove the element from the HT */
-  return ent->seed_head == *(uint32_t *)data;
+  return fast_memeq(ent->bytes.seed_head, data, HS_POW_SEED_HEAD_LEN);
 }
 
 /** Helper: Increment a given nonce and set it in the challenge at the right
@@ -186,7 +187,8 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
         /* Store the effort E. */
         pow_solution_out->effort = effort;
         /* We only store the first 4 bytes of the seed C. */
-        pow_solution_out->seed_head = tor_ntohl(get_uint32(pow_params->seed));
+        memcpy(pow_solution_out->seed_head, pow_params->seed,
+               sizeof(pow_solution_out->seed_head));
         /* Store the solution S */
         memcpy(&pow_solution_out->equix_solution, sol,
                sizeof(pow_solution_out->equix_solution));
@@ -235,11 +237,11 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 
   /* Find a valid seed C that starts with the seed head. Fail if no such seed
    * exists. */
-  if (tor_ntohl(get_uint32(pow_state->seed_current))
-      == pow_solution->seed_head) {
+  if (fast_memeq(pow_state->seed_current, pow_solution->seed_head,
+                 HS_POW_SEED_HEAD_LEN)) {
     seed = pow_state->seed_current;
-  } else if (tor_ntohl(get_uint32(pow_state->seed_previous))
-      == pow_solution->seed_head) {
+  } else if (fast_memeq(pow_state->seed_previous, pow_solution->seed_head,
+                        HS_POW_SEED_HEAD_LEN)) {
     seed = pow_state->seed_previous;
   } else {
     log_warn(LD_REND, "Seed head didn't match either seed.");
@@ -247,8 +249,9 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
   }
 
   /* Fail if N = POW_NONCE is present in the replay cache. */
-  memcpy(search.nonce, pow_solution->nonce, HS_POW_NONCE_LEN);
-  search.seed_head = pow_solution->seed_head;
+  memcpy(search.bytes.nonce, pow_solution->nonce, HS_POW_NONCE_LEN);
+  memcpy(search.bytes.seed_head, pow_solution->seed_head,
+         HS_POW_SEED_HEAD_LEN);
   entry = HT_FIND(nonce_cache_table_ht, &nonce_cache_table, &search);
   if (entry) {
     log_warn(LD_REND, "Found (nonce, seed) tuple in the replay cache.");
@@ -283,8 +286,9 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 
   /* Add the (nonce, seed) tuple to the replay cache. */
   entry = tor_malloc_zero(sizeof(nonce_cache_entry_t));
-  memcpy(entry->nonce, pow_solution->nonce, HS_POW_NONCE_LEN);
-  entry->seed_head = pow_solution->seed_head;
+  memcpy(entry->bytes.nonce, pow_solution->nonce, HS_POW_NONCE_LEN);
+  memcpy(entry->bytes.seed_head, pow_solution->seed_head,
+         HS_POW_SEED_HEAD_LEN);
   HT_INSERT(nonce_cache_table_ht, &nonce_cache_table, entry);
 
  done:
@@ -296,11 +300,11 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 /** Remove entries from the (nonce, seed) replay cache which are for the seed
  * beginning with seed_head. */
 void
-hs_pow_remove_seed_from_cache(uint32_t seed)
+hs_pow_remove_seed_from_cache(const uint8_t *seed_head)
 {
   /* If nonce_cache_entry_has_seed returns 1, the entry is removed. */
   HT_FOREACH_FN(nonce_cache_table_ht, &nonce_cache_table,
-                nonce_cache_entry_has_seed, &seed);
+                nonce_cache_entry_has_seed, (void*)seed_head);
 }
 
 /** Free a given PoW service state. */
