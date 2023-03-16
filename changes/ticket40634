@@ -1,0 +1,3 @@
+  o Major features (onion services):
+    - Proof-of-work client puzzles for DoS mitigation, from proposal 327.
+      Closes ticket 40634.
