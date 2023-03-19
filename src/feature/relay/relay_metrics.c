@@ -1009,18 +1009,15 @@ fill_signing_cert_expiry(void)
   const tor_cert_t *signing_key;
   const relay_metrics_entry_t *rentry =
     &base_metrics[RELAY_METRICS_SIGNING_CERT_EXPIRY];
-  uint64_t valid_until = 0;
-
-  sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                             rentry->help);
 
   if (get_options()->OfflineMasterKey) {
     signing_key = get_master_signing_key_cert();
     if (signing_key) {
-      valid_until = signing_key->valid_until;
+      sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                                 rentry->help);
+      metrics_store_entry_update(sentry, signing_key->valid_until);
     }
   }
-  metrics_store_entry_update(sentry, valid_until);
 }
 
 /** Reset the global store and fill it with all the metrics from base_metrics
