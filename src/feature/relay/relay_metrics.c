@@ -1080,8 +1080,8 @@ fill_est_intro_cells(void)
   static const size_t num_actions = ARRAY_LENGTH(actions);
 
   for (size_t i = 0; i < num_actions; ++i) {
-    sentry =
-        metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help, 0, NULL);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
     metrics_store_entry_update(sentry,
@@ -1118,8 +1118,8 @@ fill_est_rend_cells(void)
   static const size_t num_actions = ARRAY_LENGTH(actions);
 
   for (size_t i = 0; i < num_actions; ++i) {
-    sentry =
-        metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help, 0, NULL);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
     metrics_store_entry_update(sentry, (long)est_rend_actions[actions[i].key]);
@@ -1156,8 +1156,8 @@ fill_intro1_cells(void)
   static const size_t num_actions = ARRAY_LENGTH(actions);
 
   for (size_t i = 0; i < num_actions; ++i) {
-    sentry =
-        metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help, 0, NULL);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
     metrics_store_entry_update(sentry, (long)intro1_actions[actions[i].key]);
@@ -1192,8 +1192,8 @@ fill_rend1_cells(void)
   static const size_t num_actions = ARRAY_LENGTH(actions);
 
   for (size_t i = 0; i < num_actions; ++i) {
-    sentry =
-        metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
+    sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                               rentry->help, 0, NULL);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
     metrics_store_entry_update(sentry, (long)rend1_actions[actions[i].key]);
