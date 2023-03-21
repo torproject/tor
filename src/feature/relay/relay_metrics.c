@@ -1053,6 +1053,14 @@ fill_signing_cert_expiry(void)
   }
 }
 
+static uint64_t est_intro_actions[EST_INTRO_ACTION_COUNT] = {0};
+
+void
+increment_est_intro_action(est_intro_action_t action)
+{
+  est_intro_actions[action]++;
+}
+
 static void
 fill_est_intro_cells(void)
 {
@@ -1076,9 +1084,17 @@ fill_est_intro_cells(void)
         metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
-    metrics_store_entry_update(
-        sentry, (long)rep_hist_get_est_intro_action_count(actions[i].key));
+    metrics_store_entry_update(sentry,
+                               (long)est_intro_actions[actions[i].key]);
   }
+}
+
+static uint64_t est_rend_actions[EST_REND_ACTION_COUNT] = {0};
+
+void
+increment_est_rend_action(est_rend_action_t action)
+{
+  est_rend_actions[action]++;
 }
 
 static void
@@ -1106,9 +1122,16 @@ fill_est_rend_cells(void)
         metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
-    metrics_store_entry_update(
-        sentry, (long)rep_hist_get_est_rend_action_count(actions[i].key));
+    metrics_store_entry_update(sentry, (long)est_rend_actions[actions[i].key]);
   }
+}
+
+static uint64_t intro1_actions[INTRO1_ACTION_COUNT] = {0};
+
+void
+increment_intro1_action(intro1_action_t action)
+{
+  intro1_actions[action]++;
 }
 
 static void
@@ -1137,9 +1160,16 @@ fill_intro1_cells(void)
         metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
-    metrics_store_entry_update(
-        sentry, (long)rep_hist_get_intro1_action_count(actions[i].key));
+    metrics_store_entry_update(sentry, (long)intro1_actions[actions[i].key]);
   }
+}
+
+static uint64_t rend1_actions[REND1_ACTION_COUNT] = {0};
+
+void
+increment_rend1_action(rend1_action_t action)
+{
+  rend1_actions[action]++;
 }
 
 static void
@@ -1166,8 +1196,7 @@ fill_rend1_cells(void)
         metrics_store_add(the_store, rentry->type, rentry->name, rentry->help);
     metrics_store_entry_add_label(
         sentry, metrics_format_label("action", actions[i].name));
-    metrics_store_entry_update(
-        sentry, (long)rep_hist_get_rend1_action_count(actions[i].key));
+    metrics_store_entry_update(sentry, (long)rend1_actions[actions[i].key]);
   }
 }
 
