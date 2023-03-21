@@ -655,7 +655,7 @@ send_introduce1(origin_circuit_t *intro_circ,
 
 /** Set a client-side cap on the highest effort of PoW we will try to
  * tackle. If asked for higher, we solve it at this cap. */
-#define CLIENT_MAX_POW_EFFORT 500
+#define CLIENT_MAX_POW_EFFORT 10000
 
 /** Send an INTRODUCE1 cell along the intro circuit and populate the rend
  * circuit identifier with the needed key material for the e2e encryption.
