@@ -264,7 +264,6 @@ set_service_default_config(hs_service_config_t *c,
   c->intro_dos_burst_per_sec = HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT;
   /* PoW default options. */
   c->has_dos_defense_enabled = HS_CONFIG_V3_POW_DEFENSES_DEFAULT;
-  c->pow_min_effort = HS_CONFIG_V3_POW_DEFENSES_MIN_EFFORT_DEFAULT;
 }
 
 /** Initialize PoW defenses */
@@ -287,8 +286,6 @@ initialize_pow_defenses(hs_service_t *service)
                           service->config.pow_queue_burst,
                           (uint32_t) approx_time());
   }
-
-  pow_state->min_effort = service->config.pow_min_effort;
 
   /* We recalculate and update the suggested effort every HS_UPDATE_PERIOD
    * seconds. */
@@ -2696,12 +2693,14 @@ update_suggested_effort(hs_service_t *service, time_t now)
                                              pow_state->rend_handled);
   } else if (pow_state->had_queue) {
     /* If we had a queue during this period, and the current top of queue
-     * is at or above the suggested effort, we should re-estimate the effort.
-     * Otherwise, it can stay the same (no change to effort). */
+     * is at or above the suggested effort, we should re-estimate the effort
+     * and increase it at least a minimal amount. Otherwise, it can stay the
+     * same (no change to effort). */
     if (smartlist_len(pow_state->rend_request_pqueue) > 0 &&
         top_of_rend_pqueue_is_worthwhile(pow_state)) {
-      pow_state->suggested_effort = (uint32_t)(pow_state->total_effort /
-                                               pow_state->rend_handled);
+      pow_state->suggested_effort = MAX(pow_state->suggested_effort + 1,
+                                        (uint32_t)(pow_state->total_effort /
+                                                   pow_state->rend_handled));
     }
   } else {
     /* If we were able to keep the queue drained the entire update period,
@@ -2713,13 +2712,6 @@ update_suggested_effort(hs_service_t *service, time_t now)
 
   log_debug(LD_REND, "Recalculated suggested effort: %u",
             pow_state->suggested_effort);
-
-  /* If the suggested effort has been decreased below the minimum, set it
-   * to zero: no pow needed again until we queue or trim */
-  if (pow_state->suggested_effort < pow_state->min_effort) {
-    // XXX: Verify this disables pow being done at all.
-    pow_state->suggested_effort = 0;
-  }
 
   /* Reset the total effort sum and number of rends for this update period. */
   pow_state->total_effort = 0;

@@ -264,7 +264,6 @@ typedef struct hs_service_config_t {
 
   /** True iff PoW anti-DoS defenses are enabled. */
   unsigned int has_pow_defenses_enabled : 1;
-  uint32_t pow_min_effort;
   uint32_t pow_queue_rate;
   uint32_t pow_queue_burst;
 

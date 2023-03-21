@@ -81,9 +81,6 @@ typedef struct hs_pow_service_state_t {
   /* The time at which the current seed expires and rotates for a new one. */
   time_t expiration_time;
 
-  /* The minimum effort required for a valid solution. */
-  uint32_t min_effort;
-
   /* The suggested effort that clients should use in order for their request to
    * be serviced in a timely manner. */
   uint32_t suggested_effort;

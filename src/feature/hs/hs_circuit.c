@@ -1377,10 +1377,8 @@ hs_circ_handle_introduce2(const hs_service_t *service,
       goto done;
     }
 
-    /* Increase the total effort in valid requests received this period,
-     * but count 0-effort as min-effort, for estimation purposes. */
-    service->state.pow_state->total_effort += MAX(data.rdv_data.pow_effort,
-                                      service->state.pow_state->min_effort);
+    /* Track the total effort in valid requests received this period */
+    service->state.pow_state->total_effort += data.rdv_data.pow_effort;
 
     /* Successfully added rend circuit to priority queue. */
     ret = 0;

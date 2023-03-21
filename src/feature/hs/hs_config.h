@@ -27,7 +27,6 @@
 
 /* Default values for the HS anti-DoS PoW defenses. */
 #define HS_CONFIG_V3_POW_DEFENSES_DEFAULT 0
-#define HS_CONFIG_V3_POW_DEFENSES_MIN_EFFORT_DEFAULT 1
 
 /* API */
 

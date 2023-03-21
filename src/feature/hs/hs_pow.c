@@ -256,15 +256,6 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
   tor_assert(pow_state);
   tor_assert(pow_solution);
 
-  /* Notice, but don't fail, if E = POW_EFFORT is lower than the minimum
-   * effort. We will take whatever valid cells arrive, put them into the
-   * pqueue, and get to whichever ones we get to. */
-  if (pow_solution->effort < pow_state->min_effort) {
-    log_info(LD_REND, "Effort %d used in solution is less than the minimum "
-                      "effort %d required by the service. That's ok.",
-                       pow_solution->effort, pow_state->min_effort);
-  }
-
   /* Find a valid seed C that starts with the seed head. Fail if no such seed
    * exists. */
   if (fast_memeq(pow_state->seed_current, pow_solution->seed_head,
