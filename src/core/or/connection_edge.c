@@ -675,6 +675,25 @@ connection_half_edge_add(const edge_connection_t *conn,
   smartlist_insert(circ->half_streams, insert_at, half_conn);
 }
 
+/**
+ * Return true if the circuit has any half-closed connections
+ * that are still within the end_ack_expected_usec timestamp
+ * from now.
+ */
+bool
+connection_half_edges_waiting(const origin_circuit_t *circ)
+{
+  if (!circ->half_streams)
+    return false;
+
+  SMARTLIST_FOREACH_BEGIN(circ->half_streams, const half_edge_t *, half_conn) {
+    if (half_conn->end_ack_expected_usec > monotime_absolute_usec())
+      return true;
+  } SMARTLIST_FOREACH_END(half_conn);
+
+  return false;
+}
+
 /** Release space held by <b>he</b> */
 void
 half_edge_free_(half_edge_t *he)

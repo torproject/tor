@@ -1458,6 +1458,7 @@ circuit_expire_old_circuits_clientside(void)
     if (circ->timestamp_dirty &&
         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness <
           now.tv_sec &&
+        !connection_half_edges_waiting(TO_ORIGIN_CIRCUIT(circ)) &&
         !TO_ORIGIN_CIRCUIT(circ)->p_streams /* nothing attached */ ) {
       log_debug(LD_CIRC, "Closing n_circ_id %u (dirty %ld sec ago, "
                 "purpose %d)",
