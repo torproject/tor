@@ -12,6 +12,7 @@
 #include "orconfig.h"
 #include "feature/relay/relay_sys.h"
 #include "lib/subsys/subsys.h"
+#include "feature/relay/relay_metrics.h"
 
 const struct subsys_fns_t sys_relay = {
   .name = "relay",
