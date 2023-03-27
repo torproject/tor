@@ -257,27 +257,40 @@ static void
 test_parsecommon_get_next_token_carriage_return(void *arg)
 {
   memarea_t *area = memarea_new();
-  const char *str = "uptime 1024\r";
-  const char *end = str + strlen(str);
-  const char **s = &str;
-  token_rule_t table = T01("uptime", K_UPTIME, GE(1), NO_OBJ);
+  smartlist_t *tokens = smartlist_new();
+
   (void)arg;
 
-  directory_token_t *token = get_next_token(area, s, end, &table);
+  token_rule_t table[] = {
+          T01("uptime", K_UPTIME, GE(1), NO_OBJ),
+          T01("hibernating", K_HIBERNATING, GE(1), NO_OBJ),
+          END_OF_TABLE,
+  };
+
+  char *str = tor_strdup("hibernating 0\r\nuptime 1024\n");
+
+  int retval =
+  tokenize_string(area, str, NULL,
+                  tokens, table, 0);
+
+  tt_int_op(smartlist_len(tokens), OP_EQ, 2);
+  directory_token_t *token = smartlist_get(tokens, 0);
+
+  tt_int_op(token->tp, OP_EQ, K_HIBERNATING);
+
+  token = smartlist_get(tokens, 1);
 
   tt_int_op(token->tp, OP_EQ, K_UPTIME);
-  tt_int_op(token->n_args, OP_EQ, 1);
-  tt_str_op(*(token->args), OP_EQ, "1024");
-  tt_assert(!token->object_type);
-  tt_int_op(token->object_size, OP_EQ, 0);
-  tt_assert(!token->object_body);
 
-  tt_ptr_op(*s, OP_EQ, end);
+  tt_int_op(retval, OP_EQ, 0);
 
  done:
+  tor_free(str);
   memarea_drop_all(area);
+  smartlist_free(tokens);
   return;
 }
+
 
 static void
 test_parsecommon_get_next_token_concat_args(void *arg)
