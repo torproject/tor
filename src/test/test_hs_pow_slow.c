@@ -26,6 +26,7 @@ testing_one_hs_pow_solution(const hs_pow_solution_t *ref_solution,
   int retval = -1;
   hs_pow_solution_t sol_buffer;
   hs_pow_service_state_t *s = tor_malloc_zero(sizeof(hs_pow_service_state_t));
+  s->rend_request_pqueue = smartlist_new();
 
   memcpy(s->seed_previous, seed, HS_POW_SEED_LEN);
 

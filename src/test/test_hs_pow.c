@@ -194,7 +194,7 @@ testing_hs_pow_service_free(testing_hs_pow_service_t *tsvc)
   hs_metrics_service_free(&tsvc->service);
   service_intro_point_free(tsvc->service_ip);
   hs_desc_intro_point_free(tsvc->desc_ip);
-  tor_free(tsvc->service.state.pow_state);
+  hs_pow_free_service_state(tsvc->service.state.pow_state);
   tor_free(tsvc);
 
   if (fake_node) {
@@ -343,6 +343,7 @@ test_hs_pow_vectors(void *arg)
   testing_hs_pow_service_t *tsvc = testing_hs_pow_service_new();
   hs_pow_service_state_t *pow_state = tor_malloc_zero(sizeof *pow_state);
   tsvc->service.state.pow_state = pow_state;
+  pow_state->rend_request_pqueue = smartlist_new();
 
   char *mem_op_hex_tmp = NULL;
   uint8_t *decrypted = NULL;

@@ -33,6 +33,7 @@ typedef struct pending_rend_t {
 } pending_rend_t;
 
 int top_of_rend_pqueue_is_worthwhile(hs_pow_service_state_t *pow_state);
+void rend_pqueue_clear(hs_pow_service_state_t *pow_state);
 
 /* Cleanup function when the circuit is closed or freed. */
 void hs_circ_cleanup_on_close(circuit_t *circ);

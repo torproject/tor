@@ -337,6 +337,8 @@ hs_pow_free_service_state(hs_pow_service_state_t *state)
   if (state == NULL) {
     return;
   }
+  rend_pqueue_clear(state);
+  tor_assert(smartlist_len(state->rend_request_pqueue) == 0);
   smartlist_free(state->rend_request_pqueue);
   mainloop_event_free(state->pop_pqueue_ev);
   tor_free(state);

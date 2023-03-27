@@ -741,6 +741,17 @@ top_of_rend_pqueue_is_worthwhile(hs_pow_service_state_t *pow_state)
   return 0;
 }
 
+/** Abandon and free all pending rend requests, leaving the pqueue empty. */
+void
+rend_pqueue_clear(hs_pow_service_state_t *pow_state)
+{
+  tor_assert(pow_state->rend_request_pqueue);
+  while (smartlist_len(pow_state->rend_request_pqueue)) {
+    pending_rend_t *req = smartlist_pop_last(pow_state->rend_request_pqueue);
+    free_pending_rend(req);
+  }
+}
+
 /** How many rendezvous request we handle per mainloop event. Per prop327,
  * handling an INTRODUCE2 cell takes on average 5.56msec on an average CPU and
  * so it means that launching this max amount of circuits is well below 0.08
