@@ -103,7 +103,7 @@ circuit_matches_with_rend_stream(const edge_connection_t *edge_conn,
 /** Return 1 if <b>circ</b> could be returned by circuit_get_best().
  * Else return 0.
  */
-static int
+int
 circuit_is_acceptable(const origin_circuit_t *origin_circ,
                       const entry_connection_t *conn,
                       int must_be_open, uint8_t purpose,
@@ -338,6 +338,7 @@ circuit_get_best(const entry_connection_t *conn,
 {
   origin_circuit_t *best=NULL;
   struct timeval now;
+  time_t now_sec;
 
   tor_assert(conn);
 
@@ -349,6 +350,14 @@ circuit_get_best(const entry_connection_t *conn,
              purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   tor_gettimeofday(&now);
+  now_sec = now.tv_sec;
+
+  // Prefer pre-built conflux circuits here, if available but only for general
+  // purposes. We don't have onion service conflux support at the moment.
+  if (purpose == CIRCUIT_PURPOSE_C_GENERAL &&
+      (best = conflux_get_circ_for_conn(conn, now_sec))) {
+    return best;
+  }
 
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     origin_circuit_t *origin_circ;
@@ -357,7 +366,7 @@ circuit_get_best(const entry_connection_t *conn,
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
 
     if (!circuit_is_acceptable(origin_circ,conn,must_be_open,purpose,
-                               need_uptime,need_internal, (time_t)now.tv_sec))
+                               need_uptime,need_internal, now_sec))
       continue;
 
     /* now this is an acceptable circ to hand back. but that doesn't
@@ -1191,6 +1200,10 @@ circuit_predict_and_launch_new(void)
   int port_needs_uptime=0, port_needs_capacity=1;
   time_t now = time(NULL);
   int flags = 0;
+
+  /* Attempt to launch predicted conflux circuits. This is outside the HS or
+   * Exit preemptive circuit set. */
+  conflux_predict_new(now);
 
   /* Count how many of each type of circuit we currently have. */
   SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {

@@ -79,6 +79,12 @@ bool circuit_purpose_is_hs_service(const uint8_t purpose);
 bool circuit_purpose_is_hs_vanguards(const uint8_t purpose);
 
 bool circuit_is_hs_v3(const circuit_t *circ);
+int circuit_is_acceptable(const origin_circuit_t *origin_circ,
+                          const entry_connection_t *conn,
+                          int must_be_open, uint8_t purpose,
+                          int need_uptime, int need_internal,
+                          time_t now);
+
 int circuit_should_use_vanguards(uint8_t);
 void circuit_sent_valid_data(origin_circuit_t *circ, uint16_t relay_body_len);
 void circuit_read_valid_data(origin_circuit_t *circ, uint16_t relay_body_len);

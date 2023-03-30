@@ -916,6 +916,32 @@ link_circuit(circuit_t *circ)
   return err;
 }
 
+/** Launch a brand new set.
+ *
+ * Return true if all legs successfully launched or false if one failed. */
+STATIC bool
+launch_new_set(int num_legs)
+{
+  uint8_t nonce[DIGEST256_LEN];
+
+  /* Brand new nonce for this set. */
+  crypto_rand((char *) nonce, sizeof(nonce));
+
+  /* Launch all legs. */
+  for (int i = 0; i < num_legs; i++) {
+    if (!conflux_launch_leg(nonce)) {
+      /* This function cleans up entirely the unlinked set if a leg is unable
+       * to be launched. The recovery would be complex here. */
+      goto err;
+    }
+  }
+
+  return true;
+
+ err:
+  return false;
+}
+
 static unlinked_circuits_t *
 unlinked_get_or_create(const uint8_t *nonce, bool is_client)
 {
@@ -1213,6 +1239,111 @@ conflux_add_middles_to_exclude_list(const origin_circuit_t *orig_circ,
       }
     } SMARTLIST_FOREACH_END(leg);
   }
+}
+
+/** Return the number of unused client linked set. */
+static int
+count_client_usable_sets(void)
+{
+  int count = 0;
+
+  DIGEST256MAP_FOREACH(client_linked_pool, key, conflux_t *, cfx) {
+    conflux_leg_t *leg = smartlist_get(cfx->legs, 0);
+    if (BUG(!leg->circ)) {
+      log_warn(LD_BUG, "Client conflux linked set leg without a circuit");
+      continue;
+    }
+    if (!CONST_TO_ORIGIN_CIRCUIT(leg->circ)->unusable_for_new_conns) {
+      count++;
+    }
+  } DIGEST256MAP_FOREACH_END;
+
+  return count;
+}
+
+/** Determine if we need to launch new conflux circuits for our preemptive
+ * pool.
+ *
+ * This is called once a second from the mainloop from
+ * circuit_predict_and_launch_new(). */
+void
+conflux_predict_new(time_t now)
+{
+  (void) now;
+
+  if (!conflux_is_enabled(NULL)) {
+    return;
+  }
+
+  /* Don't attempt to build a new set if we are above our allowed maximum of
+   * linked sets. */
+  if (digest256map_size(client_linked_pool) >=
+      conflux_params_get_max_linked_set()) {
+    return;
+  }
+
+  /* Count the linked and unlinked to get the total number of sets we have
+   * (will have). */
+  int num_linked = count_client_usable_sets();
+  int num_unlinked = digest256map_size(client_unlinked_pool);
+  int num_set = num_unlinked + num_linked;
+  int max_prebuilt = conflux_params_get_max_prebuilt();
+
+  if (num_set >= max_prebuilt) {
+    return;
+  }
+
+  log_info(LD_CIRC, "Preemptively launching new conflux circuit set(s). "
+                    "We have %d linked and %d unlinked.",
+           num_linked, num_unlinked);
+
+  for (int i = 0; i < (max_prebuilt - num_set); i++) {
+    if (!launch_new_set(conflux_params_get_num_legs_set())) {
+      /* Failing once likely means we'll fail next attempt so stop for now and
+       * we'll try later. */
+      break;
+    }
+  }
+}
+
+/** Return the first circuit from the linked pool that will work with the conn.
+ * If no such circuit exists, return NULL. */
+origin_circuit_t *
+conflux_get_circ_for_conn(const entry_connection_t *conn, time_t now)
+{
+  /* Use conn to check the exit policy of the first circuit
+   * of each set in the linked pool. */
+  tor_assert(conn);
+
+  DIGEST256MAP_FOREACH(client_linked_pool, key, conflux_t *, cfx) {
+    /* Get the first circuit of the set. */
+    conflux_leg_t *leg = smartlist_get(cfx->legs, 0);
+    tor_assert(leg);
+    tor_assert(leg->circ);
+
+    /* Bug on these but we can recover. */
+    if (BUG(leg->circ->purpose != CIRCUIT_PURPOSE_CONFLUX_LINKED)) {
+      continue;
+    }
+    if (BUG(!CIRCUIT_IS_ORIGIN(leg->circ))) {
+      continue;
+    }
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(leg->circ);
+
+    /* Make sure the connection conforms with the exit policy and the isolation
+     * flags also allows it. */
+    if (!circuit_is_acceptable(ocirc, conn, 1 /* Must be open */,
+                               CIRCUIT_PURPOSE_CONFLUX_LINKED,
+                               1 /* Need uptime */,
+                               0 /* No need for internal */, now)) {
+      continue;
+    }
+
+    /* Found a circuit that works. */
+    return ocirc;
+  } DIGEST256MAP_FOREACH_END;
+
+  return NULL;
 }
 
 /** The given circuit is conflux pending and has closed. This deletes the leg
