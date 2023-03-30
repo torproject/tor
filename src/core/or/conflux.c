@@ -21,6 +21,7 @@
 #include "core/or/conflux.h"
 #include "core/or/conflux_params.h"
 #include "core/or/conflux_util.h"
+#include "core/or/conflux_pool.h"
 #include "core/or/conflux_st.h"
 #include "core/or/conflux_cell.h"
 #include "lib/time/compat_time.h"
@@ -548,11 +549,16 @@ conflux_pick_first_leg(conflux_t *cfx)
     }
   } CONFLUX_FOR_EACH_LEG_END(leg);
 
-  if (BUG(!min_leg)) {
+  if (!min_leg) {
     // Get the 0th leg; if it does not exist, assert
     tor_assert(smartlist_len(cfx->legs) > 0);
     min_leg = smartlist_get(cfx->legs, 0);
     tor_assert(min_leg);
+    if (BUG(min_leg->linked_sent_usec == 0)) {
+      log_warn(LD_BUG, "Conflux has no legs with non-zero RTT. "
+               "Using first leg.");
+      conflux_log_set(cfx, CIRCUIT_IS_ORIGIN(min_leg->circ));
+    }
   }
 
   // TODO-329-TUNING: We may want to initialize this to a cwnd, to

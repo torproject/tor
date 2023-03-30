@@ -822,10 +822,29 @@ record_rtt_client(const circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   leg_t *leg = unlinked_leg_find(circ, true);
-  if (leg && leg->link_sent_usec > 0) {
-    leg->rtt_usec = monotime_absolute_usec() - leg->link_sent_usec;
-    return leg->rtt_usec;
+
+  if (BUG(!leg || leg->link_sent_usec == 0)) {
+    log_warn(LD_BUG,
+             "Conflux: Trying to record client RTT without a timestamp");
+    goto err;
   }
+
+  uint64_t now = monotime_absolute_usec();
+  tor_assert_nonfatal(now >= leg->link_sent_usec);
+  leg->rtt_usec = now - leg->link_sent_usec;
+  if (leg->rtt_usec == 0) {
+    log_warn(LD_CIRC, "Clock appears stalled for conflux.");
+    // TODO-329-TUNING: For now, let's accept this case. We need to do
+    // tuning and clean up the tests such that they use RTT in order to
+    // fail here.
+    //goto err;
+  }
+  return leg->rtt_usec;
+
+ err:
+  // Avoid using this leg until a timestamp comes in
+  if (leg)
+    leg->rtt_usec = UINT64_MAX;
   return UINT64_MAX;
 }
 
@@ -842,10 +861,26 @@ record_rtt_exit(const circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORCIRC(circ));
 
   conflux_leg_t *leg = conflux_get_leg(circ->conflux, circ);
-  if (leg && leg->linked_sent_usec > 0) {
-    leg->circ_rtts_usec = monotime_absolute_usec() - leg->linked_sent_usec;
-    return leg->circ_rtts_usec;
+
+  if (BUG(!leg || leg->linked_sent_usec == 0)) {
+    log_warn(LD_BUG,
+             "Conflux: Trying to record exit RTT without a timestamp");
+    goto err;
   }
+
+  uint64_t now = monotime_absolute_usec();
+  tor_assert_nonfatal(now >= leg->linked_sent_usec);
+  leg->circ_rtts_usec = now - leg->linked_sent_usec;
+
+  if (leg->circ_rtts_usec == 0) {
+    log_warn(LD_CIRC, "Clock appears stalled for conflux.");
+    goto err;
+  }
+  return leg->circ_rtts_usec;
+
+ err:
+  if (leg)
+    leg->circ_rtts_usec = UINT64_MAX;
   return UINT64_MAX;
 }
 
@@ -862,6 +897,9 @@ record_rtt(const circuit_t *circ, bool is_client)
 
   if (is_client) {
     rtt_usec = record_rtt_client(circ);
+
+    if (rtt_usec == UINT64_MAX)
+      return false;
 
     if (rtt_usec >= get_circuit_build_timeout_ms()*1000) {
       log_info(LD_CIRC, "Conflux leg RTT is above circuit build time out "
