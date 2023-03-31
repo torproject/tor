@@ -119,6 +119,8 @@ int hs_client_any_intro_points_usable(const ed25519_public_key_t *service_pk,
 int hs_client_refetch_hsdesc(const ed25519_public_key_t *identity_pk);
 void hs_client_dir_info_changed(void);
 
+int hs_client_setup_intro_circ_auth_key(origin_circuit_t *circ);
+
 int hs_client_send_introduce1(origin_circuit_t *intro_circ,
                               origin_circuit_t *rend_circ);
 

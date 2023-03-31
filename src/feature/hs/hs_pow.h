@@ -56,6 +56,17 @@ typedef struct hs_pow_desc_params_t {
   time_t expiration_time;
 } hs_pow_desc_params_t;
 
+/** The inputs to the PoW solver, derived from the descriptor data and the
+  * client's per-connection effort choices. */
+typedef struct hs_pow_solver_inputs_t {
+  /** Seed value from a current descriptor */
+  uint8_t seed[HS_POW_SEED_LEN];
+
+  /** Effort chosen by the client. May be higher or ower than
+   * suggested_effort in the descriptor. */
+  uint32_t effort;
+} hs_pow_solver_inputs_t;
+
 /** State and parameters of PoW defenses, stored in the service state. */
 typedef struct hs_pow_service_state_t {
   /* If PoW defenses are enabled this is a priority queue containing acceptable
@@ -124,7 +135,7 @@ typedef struct hs_pow_solution_t {
 #define have_module_pow() (1)
 
 /* API */
-int hs_pow_solve(const hs_pow_desc_params_t *pow_params,
+int hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
                  hs_pow_solution_t *pow_solution_out);
 
 int hs_pow_verify(const hs_pow_service_state_t *pow_state,
@@ -135,16 +146,16 @@ void hs_pow_free_service_state(hs_pow_service_state_t *state);
 
 int hs_pow_queue_work(uint32_t intro_circ_identifier,
                       uint32_t rend_circ_identifier,
-                      const hs_pow_desc_params_t *pow_params);
+                      const hs_pow_solver_inputs_t *pow_inputs);
 
 #else /* !defined(HAVE_MODULE_POW) */
 #define have_module_pow() (0)
 
 static inline int
-hs_pow_solve(const hs_pow_desc_params_t *pow_params,
+hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
              hs_pow_solution_t *pow_solution_out)
 {
-  (void)pow_params;
+  (void)pow_inputs;
   (void)pow_solution_out;
   return -1;
 }
@@ -173,11 +184,11 @@ hs_pow_free_service_state(hs_pow_service_state_t *state)
 static inline int
 hs_pow_queue_work(uint32_t intro_circ_identifier,
                   uint32_t rend_circ_identifier,
-                  const hs_pow_desc_params_t *pow_params)
+                  const hs_pow_solver_inputs_t *pow_inputs)
 {
   (void)intro_circ_identifier;
   (void)rend_circ_identifier;
-  (void)pow_params;
+  (void)pow_inputs;
   return -1;
 }
 

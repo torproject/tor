@@ -177,6 +177,7 @@ helper_get_circ_and_stream_for_test(origin_circuit_t **circ_out,
 
   /* prop224: Setup hs ident on the circuit */
   or_circ->hs_ident = hs_ident_circuit_new(&service_pk);
+  or_circ->hs_ident->intro_auth_pk.pubkey[0] = 42;
 
   TO_CIRCUIT(or_circ)->state = CIRCUIT_STATE_OPEN;
 
@@ -1186,6 +1187,7 @@ test_socks_hs_errors(void *arg)
   circ->purpose = CIRCUIT_PURPOSE_C_REND_READY;
   ocirc = TO_ORIGIN_CIRCUIT(circ);
   ocirc->hs_ident = hs_ident_circuit_new(&service_kp.pubkey);
+  ocirc->hs_ident->intro_auth_pk.pubkey[0] = 42;
   ocirc->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
   /* Code path will log this exit so build it. */
   ocirc->build_state->chosen_exit = extend_info_new("TestNickname", digest,

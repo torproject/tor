@@ -187,17 +187,16 @@ test_hs_pow_vectors(void *arg)
     uint8_t rng_bytes[HS_POW_NONCE_LEN];
     hs_pow_solution_t output;
     hs_pow_solution_t solution = { 0 };
-    hs_pow_desc_params_t params = {
-      .type = HS_POW_DESC_V1,
-      .suggested_effort = vectors[vec_i].effort,
+    hs_pow_solver_inputs_t input = {
+      .effort = vectors[vec_i].effort,
     };
 
-    tt_int_op(strlen(seed_hex), OP_EQ, 2 * sizeof params.seed);
+    tt_int_op(strlen(seed_hex), OP_EQ, 2 * sizeof input.seed);
     tt_int_op(strlen(solve_rng_hex), OP_EQ, 2 * sizeof rng_bytes);
     tt_int_op(strlen(nonce_hex), OP_EQ, 2 * sizeof solution.nonce);
     tt_int_op(strlen(sol_hex), OP_EQ, 2 * sizeof solution.equix_solution);
 
-    tt_int_op(base16_decode((char*)params.seed, HS_POW_SEED_LEN,
+    tt_int_op(base16_decode((char*)input.seed, HS_POW_SEED_LEN,
                             seed_hex, 2 * HS_POW_SEED_LEN),
                             OP_EQ, HS_POW_SEED_LEN);
     tt_int_op(base16_decode((char*)rng_bytes, sizeof rng_bytes,
@@ -210,11 +209,11 @@ test_hs_pow_vectors(void *arg)
                             sizeof solution.equix_solution,
                             sol_hex, 2 * sizeof solution.equix_solution),
                             OP_EQ, HS_POW_EQX_SOL_LEN);
-    memcpy(solution.seed_head, params.seed, HS_POW_SEED_HEAD_LEN);
+    memcpy(solution.seed_head, input.seed, HS_POW_SEED_HEAD_LEN);
 
     memset(&output, 0xaa, sizeof output);
     testing_enable_prefilled_rng(rng_bytes, HS_POW_NONCE_LEN);
-    tt_int_op(0, OP_EQ, hs_pow_solve(&params, &output));
+    tt_int_op(0, OP_EQ, hs_pow_solve(&input, &output));
     testing_disable_prefilled_rng();
 
     tt_mem_op(solution.seed_head, OP_EQ, output.seed_head,
@@ -224,7 +223,7 @@ test_hs_pow_vectors(void *arg)
     tt_mem_op(&solution.equix_solution, OP_EQ, &output.equix_solution,
               sizeof output.equix_solution);
 
-    tt_int_op(testing_one_hs_pow_solution(&output, params.seed), OP_EQ, 0);
+    tt_int_op(testing_one_hs_pow_solution(&output, input.seed), OP_EQ, 0);
   }
 
  done:

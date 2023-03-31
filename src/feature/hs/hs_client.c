@@ -549,6 +549,7 @@ find_desc_intro_point_by_ident(const hs_ident_circuit_t *ident,
 
   tor_assert(ident);
   tor_assert(desc);
+  tor_assert_nonfatal(!ed25519_public_key_is_zero(&ident->intro_auth_pk));
 
   SMARTLIST_FOREACH_BEGIN(desc->encrypted_data.intro_points,
                           const hs_desc_intro_point_t *, ip) {
@@ -634,15 +635,8 @@ send_introduce1(origin_circuit_t *intro_circ,
     return -1; /* transient failure */
   }
 
-  /* Cell has been sent successfully. Copy the introduction point
-   * authentication and encryption key in the rendezvous circuit identifier so
-   * we can compute the ntor keys when we receive the RENDEZVOUS2 cell. */
-  memcpy(&rend_circ->hs_ident->intro_enc_pk, &ip->enc_key,
-         sizeof(rend_circ->hs_ident->intro_enc_pk));
-  ed25519_pubkey_copy(&rend_circ->hs_ident->intro_auth_pk,
-                      &intro_circ->hs_ident->intro_auth_pk);
-
-  /* Now, we wait for an ACK or NAK on this circuit. */
+  /* Cell has been sent successfully.
+   * Now, we wait for an ACK or NAK on this circuit. */
   circuit_change_purpose(TO_CIRCUIT(intro_circ),
                          CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT);
   /* Set timestamp_dirty, because circuit_expire_building expects it to
@@ -656,6 +650,17 @@ send_introduce1(origin_circuit_t *intro_circ,
 /** Set a client-side cap on the highest effort of PoW we will try to
  * tackle. If asked for higher, we solve it at this cap. */
 #define CLIENT_MAX_POW_EFFORT 10000
+
+/** Set a client-side minimum effort. If the client is choosing to increase
+ * effort on retry, it will always pick a value >= this lower limit. */
+#define CLIENT_MIN_RETRY_POW_EFFORT 8
+
+/** Client effort will double on every retry until this level is hit */
+#define CLIENT_POW_EFFORT_DOUBLE_UNTIL 1000
+
+/** After we reach DOUBLE_UNTIL, client effort is multiplied by this amount
+ * on every retry until we reach MAX_POW_EFFORT. */
+#define CLIENT_POW_RETRY_MULTIPLIER (1.5f)
 
 /** Send an INTRODUCE1 cell along the intro circuit and populate the rend
  * circuit identifier with the needed key material for the e2e encryption.
@@ -731,37 +736,76 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
     goto perm_err;
   }
 
-  /* If the descriptor contains PoW parameters then the service is
-   * expecting a PoW solution in the INTRODUCE cell, which we solve here. */
-  if (have_module_pow() &&
-      desc->encrypted_data.pow_params &&
-      desc->encrypted_data.pow_params->suggested_effort > 0) {
-    log_debug(LD_REND, "PoW params present in descriptor.");
+  /* Copy the introduction point authentication and encryption key
+   * in the rendezvous circuit identifier so we can compute the ntor keys
+   * when we receive the RENDEZVOUS2 cell. */
+  memcpy(&rend_circ->hs_ident->intro_enc_pk, &ip->enc_key,
+         sizeof(rend_circ->hs_ident->intro_enc_pk));
 
-    /* make sure we can't be tricked into hopeless quests */
-    if (desc->encrypted_data.pow_params->suggested_effort >
-          CLIENT_MAX_POW_EFFORT) {
+  /* Optionally choose to solve a client puzzle for this connection. This
+   * is only available if we have PoW support at compile time, and if the
+   * service has provided a PoW seed in its descriptor. The puzzle is enabled
+   * any time effort is nonzero, which can be recommended by the service or
+   * self-imposed as a result of previous timeouts.
+   */
+  if (have_module_pow() && desc->encrypted_data.pow_params) {
+    hs_pow_solver_inputs_t pow_inputs = {
+      .effort = desc->encrypted_data.pow_params->suggested_effort
+    };
+    memcpy(pow_inputs.seed, desc->encrypted_data.pow_params->seed,
+           sizeof pow_inputs.seed);
+    log_debug(LD_REND, "PoW params present in descriptor, suggested_effort=%u",
+              pow_inputs.effort);
+
+    if (pow_inputs.effort > CLIENT_MAX_POW_EFFORT) {
       log_notice(LD_REND, "Onion service suggested effort %d which is "
                  "higher than we want to solve. Solving at %d instead.",
-                 desc->encrypted_data.pow_params->suggested_effort,
-                 CLIENT_MAX_POW_EFFORT);
-
-      /* clobber it in-place. hopefully this won't have bad side effects. */
-      desc->encrypted_data.pow_params->suggested_effort =
-        CLIENT_MAX_POW_EFFORT;
+                 pow_inputs.effort, CLIENT_MAX_POW_EFFORT);
+      pow_inputs.effort = CLIENT_MAX_POW_EFFORT;
     }
 
-    /* send it to the client-side pow cpuworker for solving. */
-    intro_circ->hs_currently_solving_pow = 1;
-    if (0 != hs_pow_queue_work(intro_circ->global_identifier,
-                               rend_circ->global_identifier,
-                               desc->encrypted_data.pow_params)) {
-      log_debug(LD_REND, "Failed to enqueue PoW request");
+    const hs_cache_intro_state_t *state =
+      hs_cache_client_intro_state_find(&intro_circ->hs_ident->identity_pk,
+                                       &intro_circ->hs_ident->intro_auth_pk);
+    uint32_t unreachable_count = state ? state->unreachable_count : 0;
+    if (state) {
+      log_debug(LD_REND, "hs_cache state during PoW consideration, "
+                "error=%d timed_out=%d unreachable_count=%u",
+                state->error, state->timed_out, state->unreachable_count);
+    }
+    uint64_t new_effort = pow_inputs.effort;
+    for (unsigned n_retry = 0; n_retry < unreachable_count; n_retry++) {
+      if (new_effort >= CLIENT_MAX_POW_EFFORT) {
+        break;
+      }
+      if (new_effort < CLIENT_POW_EFFORT_DOUBLE_UNTIL) {
+        new_effort <<= 1;
+      } else {
+        new_effort = (uint64_t) (CLIENT_POW_RETRY_MULTIPLIER * new_effort);
+      }
+      new_effort = MAX((uint64_t)CLIENT_MIN_RETRY_POW_EFFORT, new_effort);
+      new_effort = MIN((uint64_t)CLIENT_MAX_POW_EFFORT, new_effort);
+    }
+    if (pow_inputs.effort != (uint32_t)new_effort) {
+      log_notice(LD_REND, "Increasing PoW effort from %d to %d after intro "
+                 "point unreachable_count=%d",
+                 pow_inputs.effort, (int)new_effort, unreachable_count);
+      pow_inputs.effort = (uint32_t)new_effort;
     }
 
-    /* can't proceed with the intro1 cell yet, so yield back to the
-     * main loop */
-    goto tran_err;
+    if (pow_inputs.effort > 0) {
+      /* send it to the client-side pow cpuworker for solving. */
+      intro_circ->hs_currently_solving_pow = 1;
+      if (hs_pow_queue_work(intro_circ->global_identifier,
+                            rend_circ->global_identifier,
+                            &pow_inputs) != 0) {
+        log_warn(LD_REND, "Failed to enqueue PoW request");
+      }
+
+      /* can't proceed with the intro1 cell yet, so yield back to the
+       * main loop */
+      goto tran_err;
+    }
   }
 
   /* move on to the next phase: actually try to send it */
@@ -796,8 +840,8 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
  *
  * Return 0 if everything went well, otherwise return -1 in the case of errors.
  */
-static int
-setup_intro_circ_auth_key(origin_circuit_t *circ)
+int
+hs_client_setup_intro_circ_auth_key(origin_circuit_t *circ)
 {
   const hs_descriptor_t *desc;
   const hs_desc_intro_point_t *ip;
@@ -842,13 +886,6 @@ client_intro_circ_has_opened(origin_circuit_t *circ)
   tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   log_info(LD_REND, "Introduction circuit %u has opened. Attaching streams.",
            (unsigned int) TO_CIRCUIT(circ)->n_circ_id);
-
-  /* This is an introduction circuit so we'll attach the correct
-   * authentication key to the circuit identifier so it can be identified
-   * properly later on. */
-  if (setup_intro_circ_auth_key(circ) < 0) {
-    return;
-  }
 
   connection_ap_attach_pending(1);
 }
@@ -2047,6 +2084,7 @@ hs_client_circuit_cleanup_on_free(const circuit_t *circ)
 
   orig_circ = CONST_TO_ORIGIN_CIRCUIT(circ);
   tor_assert(orig_circ->hs_ident);
+  const ed25519_public_key_t *intro_pk = &orig_circ->hs_ident->intro_auth_pk;
 
   has_timed_out =
     (circ->marked_for_close_orig_reason == END_CIRC_REASON_TIMEOUT);
@@ -2061,22 +2099,22 @@ hs_client_circuit_cleanup_on_free(const circuit_t *circ)
         safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
         safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)),
         failure);
+    tor_assert_nonfatal(!ed25519_public_key_is_zero(intro_pk));
     hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
-                                     &orig_circ->hs_ident->intro_auth_pk,
-                                     failure);
+                                     intro_pk, failure);
     break;
   case CIRCUIT_PURPOSE_C_INTRODUCING:
     if (has_timed_out || !orig_circ->build_state) {
       break;
     }
+    tor_assert_nonfatal(!ed25519_public_key_is_zero(intro_pk));
     failure = INTRO_POINT_FAILURE_UNREACHABLE;
     log_info(LD_REND, "Failed v3 intro circ for service %s to intro point %s "
                       "(while building circuit). Marking as unreachable.",
        safe_str_client(ed25519_fmt(&orig_circ->hs_ident->identity_pk)),
        safe_str_client(build_state_get_exit_nickname(orig_circ->build_state)));
     hs_cache_client_intro_state_note(&orig_circ->hs_ident->identity_pk,
-                                     &orig_circ->hs_ident->intro_auth_pk,
-                                     failure);
+                                     intro_pk, failure);
     break;
   default:
     break;

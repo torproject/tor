@@ -251,6 +251,7 @@ create_intro_circuit_identifier(const hs_service_t *service,
 
   ident = hs_ident_circuit_new(&service->keys.identity_pk);
   ed25519_pubkey_copy(&ident->intro_auth_pk, &ip->auth_key_kp.pubkey);
+  tor_assert_nonfatal(!ed25519_public_key_is_zero(&ident->intro_auth_pk));
 
   return ident;
 }

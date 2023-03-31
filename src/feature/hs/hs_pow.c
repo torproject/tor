@@ -177,7 +177,7 @@ unpack_equix_solution(const uint8_t *bytes_in,
  * store the solution in pow_solution_out. Returns 0 on success and -1
  * otherwise. Called by a client. */
 int
-hs_pow_solve(const hs_pow_desc_params_t *pow_params,
+hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
              hs_pow_solution_t *pow_solution_out)
 {
   int ret = -1;
@@ -185,17 +185,15 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
   uint8_t *challenge = NULL;
   equix_ctx *ctx = NULL;
 
-  tor_assert(pow_params);
+  tor_assert(pow_inputs);
   tor_assert(pow_solution_out);
-
-  /* Select E (just using suggested for now) */
-  uint32_t effort = pow_params->suggested_effort;
+  const uint32_t effort = pow_inputs->effort;
 
   /* Generate a random nonce N. */
   crypto_rand((char *)nonce, sizeof nonce);
 
   /* Build EquiX challenge (C || N || INT_32(E)). */
-  challenge = build_equix_challenge(pow_params->seed, nonce, effort);
+  challenge = build_equix_challenge(pow_inputs->seed, nonce, effort);
 
   ctx = build_equix_ctx(EQUIX_CTX_SOLVE);
   if (!ctx) {
@@ -218,7 +216,7 @@ hs_pow_solve(const hs_pow_desc_params_t *pow_params,
         /* Store the effort E. */
         pow_solution_out->effort = effort;
         /* We only store the first 4 bytes of the seed C. */
-        memcpy(pow_solution_out->seed_head, pow_params->seed,
+        memcpy(pow_solution_out->seed_head, pow_inputs->seed,
                sizeof(pow_solution_out->seed_head));
         /* Store the solution S */
         memcpy(&pow_solution_out->equix_solution, sol_bytes, sizeof sol_bytes);
@@ -353,8 +351,8 @@ hs_pow_free_service_state(hs_pow_service_state_t *state)
  */
 typedef struct pow_worker_job_t {
 
-  /** Input: The pow challenge we need to solve. */
-  hs_pow_desc_params_t *pow_params;
+  /** Inputs for the PoW solver (seed, chosen effort) */
+  hs_pow_solver_inputs_t pow_inputs;
 
   /** State: we'll look these up to figure out how to proceed after. */
   uint32_t intro_circ_identifier;
@@ -377,15 +375,15 @@ pow_worker_threadfn(void *state_, void *work_)
   pow_worker_job_t *job = work_;
   job->pow_solution_out = tor_malloc_zero(sizeof(hs_pow_solution_t));
 
-  if (hs_pow_solve(job->pow_params, job->pow_solution_out)) {
-    log_info(LD_REND, "Haven't solved the PoW yet. Returning.");
+  if (hs_pow_solve(&job->pow_inputs, job->pow_solution_out)) {
+    log_warn(LD_REND, "Failed to run the proof of work solver");
     tor_free(job->pow_solution_out);
     job->pow_solution_out = NULL; /* how we signal that we came up empty */
     return WQ_RPL_REPLY;
   }
 
   /* we have a winner! */
-  log_info(LD_REND, "cpuworker pow: we have a winner!");
+  log_info(LD_REND, "cpuworker has a proof of work solution");
   return WQ_RPL_REPLY;
 }
 
@@ -397,7 +395,6 @@ pow_worker_job_free(pow_worker_job_t *job)
 {
   if (!job)
     return;
-  tor_free(job->pow_params);
   tor_free(job->pow_solution_out);
   tor_free(job);
 }
@@ -470,14 +467,14 @@ pow_worker_replyfn(void *work_)
 int
 hs_pow_queue_work(uint32_t intro_circ_identifier,
                   uint32_t rend_circ_identifier,
-                  const hs_pow_desc_params_t *pow_params)
+                  const hs_pow_solver_inputs_t *pow_inputs)
 {
   tor_assert(in_main_thread());
 
   pow_worker_job_t *job = tor_malloc_zero(sizeof(*job));
   job->intro_circ_identifier = intro_circ_identifier;
   job->rend_circ_identifier = rend_circ_identifier;
-  job->pow_params = tor_memdup(pow_params, sizeof(hs_pow_desc_params_t));
+  memcpy(&job->pow_inputs, pow_inputs, sizeof job->pow_inputs);
 
   workqueue_entry_t *work;
   work = cpuworker_queue_work(WQ_PRI_LOW,

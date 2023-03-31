@@ -581,6 +581,8 @@ cache_client_intro_state_lookup(const ed25519_public_key_t *service_pk,
 
   tor_assert(service_pk);
   tor_assert(auth_key);
+  tor_assert_nonfatal(!ed25519_public_key_is_zero(service_pk));
+  tor_assert_nonfatal(!ed25519_public_key_is_zero(auth_key));
 
   /* Lookup the intro state cache for this service key. */
   cache = digest256map_get(hs_cache_client_intro_state, service_pk->pubkey);

@@ -564,14 +564,6 @@ circuit_expire_building(void)
       continue;
     }
 
-    /* Ignore circuits that are waiting for an introduction to a service with
-     * PoW enabled, it can take an arbitrary amount of time. They will get
-     * cleaned up if the SOCKS connection is closed. */
-    if (TO_ORIGIN_CIRCUIT(victim)->hs_with_pow_circ &&
-        victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
-      continue;
-    }
-
     build_state = TO_ORIGIN_CIRCUIT(victim)->build_state;
     if (build_state && build_state->onehop_tunnel)
       cutoff = begindir_cutoff;
@@ -2560,6 +2552,11 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
           circ->hs_ident =
             hs_ident_circuit_new(&edge_conn->hs_ident->identity_pk);
         }
+        if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
+          if (hs_client_setup_intro_circ_auth_key(circ) < 0) {
+            return 0;
+          }
+        }
         if (circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->base_.state == CIRCUIT_STATE_OPEN)
           circuit_has_opened(circ);
@@ -3011,6 +3008,16 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     retval = circuit_get_open_circ_or_launch(
       conn, CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT, &introcirc);
     if (retval < 0) return -1; /* failed */
+
+    if (rendcirc && introcirc) {
+      /* Let's fill out the hs_ident fully as soon as possible, so that
+       * unreachability counts can be updated properly even if circuits close
+       * early. */
+      tor_assert_nonfatal(!ed25519_public_key_is_zero(
+                             &introcirc->hs_ident->intro_auth_pk));
+      ed25519_pubkey_copy(&rendcirc->hs_ident->intro_auth_pk,
+                          &introcirc->hs_ident->intro_auth_pk);
+    }
 
     if (retval > 0) {
       /* one has already sent the intro. keep waiting. */
