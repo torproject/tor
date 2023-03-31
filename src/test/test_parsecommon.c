@@ -267,13 +267,15 @@ test_parsecommon_get_next_token_carriage_return(void *arg)
           END_OF_TABLE,
   };
 
-  char *str = tor_strdup("hibernating 0\r\nuptime 1024\n");
+  char *str = tor_strdup(
+          "hibernating 0\r\nuptime 1024\n"
+          "hibernating 0\ruptime 1024\n");
 
   int retval =
   tokenize_string(area, str, NULL,
                   tokens, table, 0);
 
-  tt_int_op(smartlist_len(tokens), OP_EQ, 2);
+  tt_int_op(smartlist_len(tokens), OP_EQ, 3);
   directory_token_t *token = smartlist_get(tokens, 0);
 
   tt_int_op(token->tp, OP_EQ, K_HIBERNATING);
@@ -282,7 +284,11 @@ test_parsecommon_get_next_token_carriage_return(void *arg)
 
   tt_int_op(token->tp, OP_EQ, K_UPTIME);
 
-  tt_int_op(retval, OP_EQ, 0);
+  token = smartlist_get(tokens, 2);
+
+  tt_int_op(token->tp, OP_EQ, K_HIBERNATING);
+
+  tt_int_op(retval, OP_EQ, -1);
 
  done:
   tor_free(str);
@@ -290,7 +296,6 @@ test_parsecommon_get_next_token_carriage_return(void *arg)
   smartlist_free(tokens);
   return;
 }
-
 
 static void
 test_parsecommon_get_next_token_concat_args(void *arg)
