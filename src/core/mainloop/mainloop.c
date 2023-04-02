@@ -645,6 +645,16 @@ connection_start_reading,(connection_t *conn))
                "to watched: %s",
                (int)conn->s,
                tor_socket_strerror(tor_socket_errno(conn->s)));
+
+    /* Process the inbuf if it is not empty because the only way to empty it is
+     * through a read event or a SENDME which might not come if the package
+     * window is proper or if the application has nothing more for us to read.
+     *
+     * If this is not done here, we risk having data lingering in the inbuf
+     * forever. */
+    if (conn->inbuf && buf_datalen(conn->inbuf) > 0) {
+      connection_process_inbuf(conn, 1);
+    }
   }
 }
 
