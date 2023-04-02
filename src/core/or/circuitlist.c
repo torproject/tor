@@ -2368,6 +2368,7 @@ circuit_about_to_free(circuit_t *circ)
   if (! CIRCUIT_IS_ORIGIN(circ)) {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     edge_connection_t *conn;
+
     for (conn=or_circ->n_streams; conn; conn=conn->next_stream)
       connection_edge_destroy(or_circ->p_circ_id, conn);
     or_circ->n_streams = NULL;

@@ -24,6 +24,7 @@
 #include "core/or/congestion_control_westwood.h"
 #include "core/or/congestion_control_st.h"
 #include "core/or/conflux.h"
+#include "core/or/conflux_util.h"
 #include "core/or/trace_probes_cc.h"
 #include "lib/time/compat_time.h"
 #include "feature/nodelist/networkstatus.h"
@@ -703,7 +704,7 @@ circuit_has_active_streams(const circuit_t *circ,
     if (conn->base_.marked_for_close)
       continue;
 
-    if (!layer_hint || conn->cpath_layer == layer_hint) {
+    if (edge_uses_cpath(conn, layer_hint)) {
       if (connection_get_inbuf_len(TO_CONN(conn)) > 0) {
         log_info(LD_CIRC, "CC: More in edge inbuf...");
         return 1;

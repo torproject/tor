@@ -64,6 +64,7 @@
 #include "lib/time/tvdiff.h"
 #include "lib/trace/events.h"
 #include "src/core/mainloop/mainloop.h"
+#include "core/or/conflux.h"
 
 #include "core/or/cpath_build_state_st.h"
 #include "feature/dircommon/dir_connection_st.h"
@@ -700,7 +701,6 @@ circuit_expire_building(void)
     } else { /* circuit not open, consider recording failure as timeout */
       int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath &&
             TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_OPEN;
-
       if (TO_ORIGIN_CIRCUIT(victim)->p_streams != NULL) {
         log_warn(LD_BUG, "Circuit %d (purpose %d, %s) has timed out, "
                  "yet has attached streams!",
@@ -1351,6 +1351,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
     int removed = 0;
     if (conn == origin_circ->p_streams) {
       origin_circ->p_streams = conn->next_stream;
+      conflux_update_p_streams(origin_circ, conn->next_stream);
       removed = 1;
     } else {
       for (prevconn = origin_circ->p_streams;
@@ -1383,10 +1384,12 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     if (conn == or_circ->n_streams) {
       or_circ->n_streams = conn->next_stream;
+      conflux_update_n_streams(or_circ, conn->next_stream);
       return;
     }
     if (conn == or_circ->resolving_streams) {
       or_circ->resolving_streams = conn->next_stream;
+      conflux_update_resolving_streams(or_circ, conn->next_stream);
       return;
     }
 
@@ -2556,7 +2559,13 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
 }
 
 /** Return true iff <b>crypt_path</b> is one of the crypt_paths for
- * <b>circ</b>. */
+ * <b>circ</b>.
+ *
+ * WARNING: This function only validates that the cpath is on the *current*
+ * circuit, for internal consistency checking. For codepaths involving streams,
+ * or cpaths or layer_hints that could be from a different circuit due to
+ * conflux, use edge_uses_cpath() or conflux_validate_source_hop() instead.
+ */
 static int
 cpath_is_on_circuit(origin_circuit_t *circ, crypt_path_t *crypt_path)
 {
@@ -2594,6 +2603,7 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   ENTRY_TO_EDGE_CONN(apconn)->on_circuit = TO_CIRCUIT(circ);
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = ENTRY_TO_EDGE_CONN(apconn);
+  conflux_update_p_streams(circ, ENTRY_TO_EDGE_CONN(apconn));
 
   if (connection_edge_is_rendezvous_stream(ENTRY_TO_EDGE_CONN(apconn))) {
     /* We are attaching a stream to a rendezvous circuit.  That means
@@ -2733,6 +2743,9 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
     /* When stream isolation is in use and controlled by an application
      * we are willing to keep using the stream. */
     circ->base_.timestamp_dirty = approx_time();
+    if (TO_CIRCUIT(circ)->conflux) {
+      conflux_sync_circ_fields(TO_CIRCUIT(circ)->conflux, circ);
+    }
   }
 
   pathbias_count_use_attempt(circ);
@@ -3103,6 +3116,10 @@ mark_circuit_unusable_for_new_conns(origin_circuit_t *circ)
     circ->base_.timestamp_dirty -= options->MaxCircuitDirtiness;
 
   circ->unusable_for_new_conns = 1;
+
+  if (TO_CIRCUIT(circ)->conflux) {
+    conflux_sync_circ_fields(TO_CIRCUIT(circ)->conflux, circ);
+  }
 }
 
 /**

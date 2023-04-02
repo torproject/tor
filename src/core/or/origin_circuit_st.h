@@ -80,11 +80,18 @@ struct origin_circuit_t {
   circuit_t base_;
 
   /** Linked list of AP streams (or EXIT streams if hidden service)
-   * associated with this circuit. */
+   * associated with this circuit.
+   *
+   * Any updates to this pointer must be followed with
+   * conflux_update_p_streams(). */
   edge_connection_t *p_streams;
 
   /** Smartlist of half-closed streams (half_edge_t*) that still
-   * have pending activity */
+   * have pending activity.
+   *
+   * Any updates to this pointer must be followed with
+   * conflux_update_half_streams().
+   */
   smartlist_t *half_streams;
 
   /** Bytes read on this circuit since last call to

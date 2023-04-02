@@ -70,6 +70,7 @@
 #include "core/or/circuitpadding.h"
 #include "core/or/connection_edge.h"
 #include "core/or/congestion_control_flow.h"
+#include "core/or/conflux_util.h"
 #include "core/or/circuitstats.h"
 #include "core/or/connection_or.h"
 #include "core/or/extendinfo.h"
@@ -628,6 +629,7 @@ connection_half_edge_add(const edge_connection_t *conn,
 
   if (!circ->half_streams) {
     circ->half_streams = smartlist_new();
+    conflux_update_half_streams(circ, circ->half_streams);
   }
 
   half_conn->stream_id = conn->stream_id;
@@ -3101,6 +3103,10 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
   if (connection_half_edge_find_stream_id(circ->half_streams,
                                            test_stream_id))
     goto again;
+
+  if (TO_CIRCUIT(circ)->conflux) {
+    conflux_sync_circ_fields(TO_CIRCUIT(circ)->conflux, circ);
+  }
 
   return test_stream_id;
 }
