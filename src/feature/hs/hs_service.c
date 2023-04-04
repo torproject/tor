@@ -2686,26 +2686,39 @@ update_suggested_effort(hs_service_t *service, time_t now)
 
   /* Calculate the new suggested effort, using an additive-increase
    * multiplicative-decrease estimation scheme. */
+  enum {
+    NONE,
+    INCREASE,
+    DECREASE
+  } aimd_event = NONE;
+
   if (pow_state->max_trimmed_effort > pow_state->suggested_effort) {
-    /* If we trimmed a request above our suggested effort, re-estimate the
-     * effort */
-    pow_state->suggested_effort = (uint32_t)(pow_state->total_effort /
-                                             pow_state->rend_handled);
+    /* Increase when we notice that high-effort requests are trimmed */
+    aimd_event = INCREASE;
   } else if (pow_state->had_queue) {
-    /* If we had a queue during this period, and the current top of queue
-     * is at or above the suggested effort, we should re-estimate the effort
-     * and increase it at least a minimal amount. Otherwise, it can stay the
-     * same (no change to effort). */
     if (smartlist_len(pow_state->rend_request_pqueue) > 0 &&
         top_of_rend_pqueue_is_worthwhile(pow_state)) {
-      pow_state->suggested_effort = MAX(pow_state->suggested_effort + 1,
-                                        (uint32_t)(pow_state->total_effort /
-                                                   pow_state->rend_handled));
+      /* Increase when the top of queue is high-effort */
+      aimd_event = INCREASE;
     }
-  } else {
-    /* If we were able to keep the queue drained the entire update period,
-     * multiplicative decrease the pow by 2/3. */
-    pow_state->suggested_effort = 2*pow_state->suggested_effort/3;
+  } else if (smartlist_len(pow_state->rend_request_pqueue) == 0) {
+    /* Dec when the queue is empty now and had_queue wasn't set this period */
+    aimd_event = DECREASE;
+  }
+
+  switch (aimd_event) {
+    case INCREASE:
+      if (pow_state->suggested_effort < UINT32_MAX) {
+        pow_state->suggested_effort = MAX(pow_state->suggested_effort + 1,
+                                          (uint32_t)(pow_state->total_effort /
+                                                     pow_state->rend_handled));
+      }
+      break;
+    case DECREASE:
+      pow_state->suggested_effort = 2*pow_state->suggested_effort/3;
+      break;
+    case NONE:
+      break;
   }
 
   hs_metrics_pow_suggested_effort(service, pow_state->suggested_effort);
