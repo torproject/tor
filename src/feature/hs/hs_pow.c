@@ -202,7 +202,7 @@ hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
   equix_solution solutions[EQUIX_MAX_SOLS];
   uint8_t sol_bytes[HS_POW_EQX_SOL_LEN];
 
-  log_notice(LD_REND, "Solving proof of work (effort %u)", effort);
+  log_info(LD_REND, "Solving proof of work (effort %u)", effort);
   for (;;) {
     /* Calculate solutions to S = equix_solve(C || N || E),  */
     int count = equix_solve(ctx, challenge, HS_POW_CHALLENGE_LEN, solutions);
@@ -431,7 +431,7 @@ pow_worker_replyfn(void *work_)
   if (intro_circ && rend_circ && service_identity_pk && desc && ip &&
       job->pow_solution_out) { /* successful pow solve, and circs still here */
 
-    log_notice(LD_REND, "Got a PoW solution we like! Shipping it!");
+    log_info(LD_REND, "Got a PoW solution we like! Shipping it!");
     /* Set flag to reflect that the HS we are attempting to rendezvous has PoW
      * defenses enabled, and as such we will need to be more lenient with
      * timing out while waiting for the service-side circuit to be built. */

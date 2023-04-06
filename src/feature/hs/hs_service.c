@@ -298,7 +298,7 @@ initialize_pow_defenses(hs_service_t *service)
    * seed to be predictable even if it doesn't really exist yet, and it needs
    * to be different to the current nonce for the replay cache scrubbing to
    * function correctly. */
-  log_notice(LD_REND, "Generating both PoW seeds...");
+  log_info(LD_REND, "Generating both PoW seeds...");
   crypto_rand((char *)&pow_state->seed_current, HS_POW_SEED_LEN);
   crypto_rand((char *)&pow_state->seed_previous, HS_POW_SEED_LEN);
 
@@ -2450,7 +2450,7 @@ update_all_descriptors_pow_params(time_t now)
        * initialise pow_params in the descriptors. If this runs the next if
        * statement will run and set the correct values. */
       if (!encrypted->pow_params) {
-        log_notice(LD_REND, "Initializing pow_params in descriptor...");
+        log_info(LD_REND, "Initializing pow_params in descriptor...");
         encrypted->pow_params = tor_malloc_zero(sizeof(hs_pow_desc_params_t));
       }
 

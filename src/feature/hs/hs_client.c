@@ -787,9 +787,9 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
       new_effort = MIN((uint64_t)CLIENT_MAX_POW_EFFORT, new_effort);
     }
     if (pow_inputs.effort != (uint32_t)new_effort) {
-      log_notice(LD_REND, "Increasing PoW effort from %d to %d after intro "
-                 "point unreachable_count=%d",
-                 pow_inputs.effort, (int)new_effort, unreachable_count);
+      log_info(LD_REND, "Increasing PoW effort from %d to %d after intro "
+               "point unreachable_count=%d",
+               pow_inputs.effort, (int)new_effort, unreachable_count);
       pow_inputs.effort = (uint32_t)new_effort;
     }
 

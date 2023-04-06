@@ -665,7 +665,7 @@ trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
   smartlist_t *old_pqueue = pow_state->rend_request_pqueue;
   smartlist_t *new_pqueue = pow_state->rend_request_pqueue = smartlist_new();
 
-  log_notice(LD_REND, "Rendezvous request priority queue has "
+  log_info(LD_REND, "Rendezvous request priority queue has "
                     "reached capacity (%d). Discarding the bottom half.",
                     smartlist_len(old_pqueue));
 
@@ -776,10 +776,10 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 
   (void) ev; /* Not using the returned event, make compiler happy. */
 
-  log_notice(LD_REND, "Considering launching more rendezvous responses. "
-             "%d in-flight, %d pending.",
-             in_flight,
-             smartlist_len(pow_state->rend_request_pqueue));
+  log_info(LD_REND, "Considering launching more rendezvous responses. "
+           "%d in-flight, %d pending.",
+           in_flight,
+           smartlist_len(pow_state->rend_request_pqueue));
 
   /* Process rendezvous request until the maximum per mainloop run. */
   while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
@@ -790,8 +790,8 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
       /* We have queued requests, but they are all low priority, and also
        * we have too many in-progress rendezvous responses. Don't launch
        * any more. Schedule ourselves to reassess in a bit. */
-      log_notice(LD_REND, "Next request to launch is low priority, and "
-                 "%d in-flight already. Waiting to launch more.", in_flight);
+      log_info(LD_REND, "Next request to launch is low priority, and "
+               "%d in-flight already. Waiting to launch more.", in_flight);
       const struct timeval delay_tv = { 0, 100000 };
       mainloop_event_schedule(pow_state->pop_pqueue_ev, &delay_tv);
       return; /* done here! no cleanup needed. */
@@ -820,7 +820,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
     hs_metrics_pow_pqueue_rdv(service,
                               smartlist_len(pow_state->rend_request_pqueue));
 
-    log_notice(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
+    log_info(LD_REND, "Dequeued pending rendezvous request with effort: %u. "
                       "Waited %d. "
                       "Remaining requests: %u",
              req->rdv_data.pow_effort,
@@ -828,7 +828,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
              smartlist_len(pow_state->rend_request_pqueue));
 
     if (queued_rend_request_is_too_old(req, now)) {
-      log_notice(LD_REND, "Top rend request has been pending for too long; "
+      log_info(LD_REND, "Top rend request has been pending for too long; "
                         "discarding and moving to the next one.");
       free_pending_rend(req);
       continue; /* do not increment count, this one's free */
@@ -907,7 +907,7 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
   hs_metrics_pow_pqueue_rdv(service,
                             smartlist_len(pow_state->rend_request_pqueue));
 
-  log_notice(LD_REND, "Enqueued rendezvous request with effort: %u. "
+  log_info(LD_REND, "Enqueued rendezvous request with effort: %u. "
                     "Queued requests: %u",
            req->rdv_data.pow_effort,
            smartlist_len(pow_state->rend_request_pqueue));
@@ -1382,9 +1382,9 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   /* Add the rendezvous request to the priority queue if PoW defenses are
    * enabled, otherwise rendezvous as usual. */
   if (have_module_pow() && service->config.has_pow_defenses_enabled) {
-    log_notice(LD_REND,
-               "Adding introduction request to pqueue with effort: %u",
-               data.rdv_data.pow_effort);
+    log_info(LD_REND,
+             "Adding introduction request to pqueue with effort: %u",
+             data.rdv_data.pow_effort);
     if (enqueue_rend_request(service, ip, &data, now) < 0) {
       goto done;
     }
