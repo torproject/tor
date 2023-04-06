@@ -797,7 +797,7 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
       /* send it to the client-side pow cpuworker for solving. */
       intro_circ->hs_currently_solving_pow = 1;
       if (hs_pow_queue_work(intro_circ->global_identifier,
-                            rend_circ->global_identifier,
+                            rend_circ->hs_ident->rendezvous_cookie,
                             &pow_inputs) != 0) {
         log_warn(LD_REND, "Failed to enqueue PoW request");
       }

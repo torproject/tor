@@ -16,6 +16,7 @@
 #include "ext/equix/include/equix.h"
 #include "feature/hs/hs_cache.h"
 #include "feature/hs/hs_descriptor.h"
+#include "feature/hs/hs_circuitmap.h"
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_pow.h"
 #include "lib/crypt_ops/crypto_rand.h"
@@ -356,7 +357,7 @@ typedef struct pow_worker_job_t {
 
   /** State: we'll look these up to figure out how to proceed after. */
   uint32_t intro_circ_identifier;
-  uint32_t rend_circ_identifier;
+  uint8_t rend_circ_cookie[HS_REND_COOKIE_LEN];
 
   /** Output: The worker thread will malloc and write its answer here,
    * or set it to NULL if it produced no useful answer. */
@@ -411,11 +412,17 @@ pow_worker_replyfn(void *work_)
 
   pow_worker_job_t *job = work_;
 
-  // look up the circuits that we're going to use this pow in
+  /* Look up the circuits that we're going to use this pow in.
+   * There's room for improvement here. We already had a fast mapping to
+   * rend circuits from some kind of identifier that we can keep in a
+   * pow_worker_job_t, but we don't have that index for intro circs at this
+   * time. If the linear search in circuit_get_by_global_id() is ever a
+   * noticeable bottleneck we should add another map.
+   */
   origin_circuit_t *intro_circ =
     circuit_get_by_global_id(job->intro_circ_identifier);
   origin_circuit_t *rend_circ =
-    circuit_get_by_global_id(job->rend_circ_identifier);
+    hs_circuitmap_get_established_rend_circ_client_side(job->rend_circ_cookie);
 
   /* try to re-create desc and ip */
   const ed25519_public_key_t *service_identity_pk = NULL;
@@ -466,14 +473,17 @@ pow_worker_replyfn(void *work_)
  */
 int
 hs_pow_queue_work(uint32_t intro_circ_identifier,
-                  uint32_t rend_circ_identifier,
+                  const uint8_t *rend_circ_cookie,
                   const hs_pow_solver_inputs_t *pow_inputs)
 {
   tor_assert(in_main_thread());
+  tor_assert(rend_circ_cookie);
+  tor_assert(pow_inputs);
 
   pow_worker_job_t *job = tor_malloc_zero(sizeof(*job));
   job->intro_circ_identifier = intro_circ_identifier;
-  job->rend_circ_identifier = rend_circ_identifier;
+  memcpy(&job->rend_circ_cookie, rend_circ_cookie,
+         sizeof job->rend_circ_cookie);
   memcpy(&job->pow_inputs, pow_inputs, sizeof job->pow_inputs);
 
   workqueue_entry_t *work;

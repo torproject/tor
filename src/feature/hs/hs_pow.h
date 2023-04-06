@@ -145,7 +145,7 @@ void hs_pow_remove_seed_from_cache(const uint8_t *seed_head);
 void hs_pow_free_service_state(hs_pow_service_state_t *state);
 
 int hs_pow_queue_work(uint32_t intro_circ_identifier,
-                      uint32_t rend_circ_identifier,
+                      const uint8_t *rend_circ_cookie,
                       const hs_pow_solver_inputs_t *pow_inputs);
 
 #else /* !defined(HAVE_MODULE_POW) */
@@ -183,11 +183,11 @@ hs_pow_free_service_state(hs_pow_service_state_t *state)
 
 static inline int
 hs_pow_queue_work(uint32_t intro_circ_identifier,
-                  uint32_t rend_circ_identifier,
+                  const uint8_t *rend_circ_cookie,
                   const hs_pow_solver_inputs_t *pow_inputs)
 {
   (void)intro_circ_identifier;
-  (void)rend_circ_identifier;
+  (void)rend_circ_cookie;
   (void)pow_inputs;
   return -1;
 }
