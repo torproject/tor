@@ -680,8 +680,8 @@ trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
       log_info(LD_REND, "While trimming, rend request has been pending "
                         "for too long; discarding.");
 
-      if (req->rdv_data.pow_effort > pow_state->max_trimmed_effort)
-        pow_state->max_trimmed_effort = req->rdv_data.pow_effort;
+      pow_state->max_trimmed_effort = MAX(pow_state->max_trimmed_effort,
+                                          req->rdv_data.pow_effort);
 
       free_pending_rend(req);
     } else {
@@ -694,9 +694,8 @@ trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
   /* Ok, we have rescued all the entries we want to keep. The rest are
    * all excess. */
   SMARTLIST_FOREACH_BEGIN(old_pqueue, pending_rend_t *, req) {
-    if (req->rdv_data.pow_effort > pow_state->max_trimmed_effort)
-      pow_state->max_trimmed_effort = req->rdv_data.pow_effort;
-
+    pow_state->max_trimmed_effort = MAX(pow_state->max_trimmed_effort,
+                                        req->rdv_data.pow_effort);
     free_pending_rend(req);
   } SMARTLIST_FOREACH_END(req);
   smartlist_free(old_pqueue);
