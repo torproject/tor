@@ -278,6 +278,12 @@ initialize_pow_defenses(hs_service_t *service)
   pow_state->rend_request_pqueue = smartlist_new();
   pow_state->pop_pqueue_ev = NULL;
 
+  /* If we are using the pqueue rate limiter, calculate min and max queue
+   * levels based on those programmed rates. If not, we have generic
+   * defaults */
+  pow_state->pqueue_low_level = 16;
+  pow_state->pqueue_high_level = 16384;
+
   if (service->config.pow_queue_rate > 0 &&
       service->config.pow_queue_burst >= service->config.pow_queue_rate) {
     pow_state->using_pqueue_bucket = 1;
@@ -285,6 +291,11 @@ initialize_pow_defenses(hs_service_t *service)
                           service->config.pow_queue_rate,
                           service->config.pow_queue_burst,
                           (uint32_t) approx_time());
+
+    pow_state->pqueue_low_level = MAX(8, service->config.pow_queue_rate / 4);
+    pow_state->pqueue_high_level =
+      service->config.pow_queue_burst +
+      service->config.pow_queue_rate * MAX_REND_TIMEOUT * 2;
   }
 
   /* We recalculate and update the suggested effort every HS_UPDATE_PERIOD
@@ -2701,7 +2712,8 @@ update_suggested_effort(hs_service_t *service, time_t now)
       /* Increase when the top of queue is high-effort */
       aimd_event = INCREASE;
     }
-  } else if (smartlist_len(pow_state->rend_request_pqueue) == 0) {
+  } else if (smartlist_len(pow_state->rend_request_pqueue) <
+             pow_state->pqueue_low_level) {
     /* Dec when the queue is empty now and had_queue wasn't set this period */
     aimd_event = DECREASE;
   }

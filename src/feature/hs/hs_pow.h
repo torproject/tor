@@ -74,9 +74,16 @@ typedef struct hs_pow_service_state_t {
    * based on the amount of effort that was exerted in the PoW. */
   smartlist_t *rend_request_pqueue;
 
-  /* HRPR TODO Is this cursed? Including compat_libevent for this. feb 24 */
-  /* When PoW defenses are enabled, this event pops rendezvous requests from
-   * the service's priority queue; higher effort is higher priority. */
+  /* Low level mark for pqueue size. Below this length it's considered to be
+   * effectively empty when calculating effort adjustments. */
+  int pqueue_low_level;
+
+  /* High level mark for pqueue size. When the queue is this length we will
+   * trim it down to pqueue_high_level/2. */
+  int pqueue_high_level;
+
+  /* Event callback for dequeueing rend requests, paused when the queue is
+   * empty or rate limited. */
   mainloop_event_t *pop_pqueue_ev;
 
   /* Token bucket for rate limiting the priority queue */

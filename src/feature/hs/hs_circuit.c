@@ -650,14 +650,8 @@ queued_rend_request_is_too_old(pending_rend_t *req, time_t now)
   return 0;
 }
 
-/** Maximum number of rendezvous requests we enqueue per service. We allow the
- * average amount of INTRODUCE2 that a service can process in a second times
- * the rendezvous timeout. Then we let it grow to twice that before
- * discarding the bottom half in trim_rend_pqueue(). */
-#define QUEUED_REND_REQUEST_HIGH_WATER (2 * 180 * MAX_REND_TIMEOUT)
-
 /** Our rendezvous request priority queue is too full; keep the first
- * QUEUED_REND_REQUEST_HIGH_WATER/2 entries and discard the rest.
+ * pqueue_high_level/2 entries and discard the rest.
  */
 static void
 trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
@@ -670,7 +664,7 @@ trim_rend_pqueue(hs_pow_service_state_t *pow_state, time_t now)
                     smartlist_len(old_pqueue));
 
   while (smartlist_len(old_pqueue) &&
-         smartlist_len(new_pqueue) < QUEUED_REND_REQUEST_HIGH_WATER/2) {
+         smartlist_len(new_pqueue) < pow_state->pqueue_high_level/2) {
     /* while there are still old ones, and the new one isn't full yet */
     pending_rend_t *req =
       smartlist_pqueue_pop(old_pqueue,
@@ -752,12 +746,6 @@ rend_pqueue_clear(hs_pow_service_state_t *pow_state)
   }
 }
 
-/** How many rendezvous request we handle per mainloop event. Per prop327,
- * handling an INTRODUCE2 cell takes on average 5.56msec on an average CPU and
- * so it means that launching this max amount of circuits is well below 0.08
- * seconds which we believe is negligable on the whole mainloop. */
-#define MAX_REND_REQUEST_PER_MAINLOOP 16
-
 /** What is the threshold of in-progress (CIRCUIT_PURPOSE_S_CONNECT_REND)
  * rendezvous responses above which we won't launch new low-effort rendezvous
  * responses? (Intro2 cells with suitable PoW effort are not affected
@@ -767,7 +755,6 @@ rend_pqueue_clear(hs_pow_service_state_t *pow_state)
 static void
 handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 {
-  int count = 0;
   hs_service_t *service = arg;
   hs_pow_service_state_t *pow_state = service->state.pow_state;
   time_t now = time(NULL);
@@ -845,10 +832,6 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
         token_bucket_ctr_get(&pow_state->pqueue_bucket) < 1) {
       break;
     }
-
-    if (++count == MAX_REND_REQUEST_PER_MAINLOOP) {
-      break;
-    }
   }
 
   /* If there are still some pending rendezvous circuits in the pqueue then
@@ -856,12 +839,8 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   if (smartlist_len(pow_state->rend_request_pqueue) > 0) {
     mainloop_event_activate(pow_state->pop_pqueue_ev);
 
-    // XXX: Is this a good threshhold to decide that we have a significant
-    // queue? I just made it up.
-    if (smartlist_len(pow_state->rend_request_pqueue) >
-        2*MAX_REND_REQUEST_PER_MAINLOOP) {
-      /* Note the fact that we had multiple eventloops worth of queue
-       * to service, for effort estimation */
+    if (smartlist_len(pow_state->rend_request_pqueue) >=
+        pow_state->pqueue_low_level) {
       pow_state->had_queue = 1;
     }
   }
@@ -922,7 +901,7 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
 
   /* See if there are so many cells queued that we need to cull. */
   if (smartlist_len(pow_state->rend_request_pqueue) >=
-        QUEUED_REND_REQUEST_HIGH_WATER) {
+        pow_state->pqueue_high_level) {
     trim_rend_pqueue(pow_state, now);
     hs_metrics_pow_pqueue_rdv(service,
                               smartlist_len(pow_state->rend_request_pqueue));
