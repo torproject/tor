@@ -2421,7 +2421,6 @@ update_all_descriptors_intro_points(time_t now)
   } FOR_EACH_SERVICE_END;
 }
 
-/* XXX: Need to check with mikeperry. */
 /** Update or initialise PoW parameters in the descriptors if they do not
  * reflect the current state of the PoW defenses. If the defenses have been
  * disabled then remove the PoW parameters from the descriptors. */
@@ -2465,9 +2464,9 @@ update_all_descriptors_pow_params(time_t now)
         encrypted->pow_params = tor_malloc_zero(sizeof(hs_pow_desc_params_t));
       }
 
-      /* Update the descriptor if it doesn't reflect the current pow_state, for
-       * example if the defenses have just been enabled or refreshed due to a
-       * SIGHUP. HRPR TODO: Don't check using expiration time? */
+      /* Update the descriptor any time the seed rotates, using expiration
+       * time as a proxy for parameters not including the suggested_effort,
+       * which gets special treatment below. */
       if (encrypted->pow_params->expiration_time !=
           pow_state->expiration_time) {
         encrypted->pow_params->type = 0; /* use first version in the list */

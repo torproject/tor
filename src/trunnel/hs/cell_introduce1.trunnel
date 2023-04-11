@@ -84,7 +84,7 @@ const TRUNNEL_EXT_TYPE_CC_REQUEST = 0x01;
 const TRUNNEL_EXT_TYPE_POW = 0x02;
 
 /*
- * HRPR: PoW Solution Extension. Proposal 327.
+ * PoW Solution Extension. Proposal 327.
  */
 
 const TRUNNEL_POW_NONCE_LEN = 16;

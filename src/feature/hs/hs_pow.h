@@ -14,8 +14,15 @@
 #include "lib/evloop/token_bucket.h"
 #include "lib/smartlist_core/smartlist_core.h"
 
-/* Service updates the suggested effort every HS_UPDATE_PERIOD seconds. */
-#define HS_UPDATE_PERIOD 300 // HRPR TODO Should be consensus
+/* Service updates the suggested effort every HS_UPDATE_PERIOD seconds.
+ * This parameter controls how often we can change hs descriptor data to
+ * update suggested_effort, but it also controls the frequency of our
+ * opportunities to increase or decrease effort. Lower values react to
+ * attacks faster, higher values may be more stable.
+ * Can this move to torrc? (Or the consensus?) The hs_cache timings are
+ * related, and they're also hardcoded.
+*/
+#define HS_UPDATE_PERIOD 300
 
 /** Length of random nonce (N) used in the PoW scheme. */
 #define HS_POW_NONCE_LEN 16
