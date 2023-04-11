@@ -767,7 +767,9 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
            in_flight,
            smartlist_len(pow_state->rend_request_pqueue));
 
-  /* Process rendezvous request until the maximum per mainloop run. */
+  /* Process only one rend request per callback, so that this work will not
+   * be prioritized over other event loop callbacks. We may need to retry
+   * in order to find one request that's still viable. */
   while (smartlist_len(pow_state->rend_request_pqueue) > 0) {
 
     /* first, peek at the top result to see if we want to pop it */
@@ -827,11 +829,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 
     ++pow_state->rend_handled;
     ++in_flight;
-
-    if (pow_state->using_pqueue_bucket &&
-        token_bucket_ctr_get(&pow_state->pqueue_bucket) < 1) {
-      break;
-    }
+    break;
   }
 
   /* If there are still some pending rendezvous circuits in the pqueue then
