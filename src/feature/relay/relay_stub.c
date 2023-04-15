@@ -22,25 +22,25 @@ const struct subsys_fns_t sys_relay = {
 };
 
 void
-increment_est_intro_action(est_intro_action_t action)
+relay_increment_est_intro_action(est_intro_action_t action)
 {
   (void)action;
 }
 
 void
-increment_est_rend_action(est_rend_action_t action)
+relay_increment_est_rend_action(est_rend_action_t action)
 {
   (void)action;
 }
 
 void
-increment_intro1_action(intro1_action_t action)
+relay_increment_intro1_action(intro1_action_t action)
 {
   (void)action;
 }
 
 void
-increment_rend1_action(rend1_action_t action)
+relay_increment_rend1_action(rend1_action_t action)
 {
   (void)action;
 }
