@@ -1056,7 +1056,7 @@ fill_signing_cert_expiry(void)
 static uint64_t est_intro_actions[EST_INTRO_ACTION_COUNT] = {0};
 
 void
-increment_est_intro_action(est_intro_action_t action)
+relay_increment_est_intro_action(est_intro_action_t action)
 {
   est_intro_actions[action]++;
 }
@@ -1092,7 +1092,7 @@ fill_est_intro_cells(void)
 static uint64_t est_rend_actions[EST_REND_ACTION_COUNT] = {0};
 
 void
-increment_est_rend_action(est_rend_action_t action)
+relay_increment_est_rend_action(est_rend_action_t action)
 {
   est_rend_actions[action]++;
 }
@@ -1129,7 +1129,7 @@ fill_est_rend_cells(void)
 static uint64_t intro1_actions[INTRO1_ACTION_COUNT] = {0};
 
 void
-increment_intro1_action(intro1_action_t action)
+relay_increment_intro1_action(intro1_action_t action)
 {
   intro1_actions[action]++;
 }
@@ -1167,7 +1167,7 @@ fill_intro1_cells(void)
 static uint64_t rend1_actions[REND1_ACTION_COUNT] = {0};
 
 void
-increment_rend1_action(rend1_action_t action)
+relay_increment_rend1_action(rend1_action_t action)
 {
   rend1_actions[action]++;
 }

@@ -89,7 +89,7 @@ typedef enum {
   EST_INTRO_ACTION_COUNT
 } est_intro_action_t;
 
-void increment_est_intro_action(est_intro_action_t);
+void relay_increment_est_intro_action(est_intro_action_t);
 
 typedef enum {
   EST_REND_SUCCESS,
@@ -102,7 +102,7 @@ typedef enum {
   EST_REND_ACTION_COUNT
 } est_rend_action_t;
 
-void increment_est_rend_action(est_rend_action_t);
+void relay_increment_est_rend_action(est_rend_action_t);
 
 typedef enum {
   INTRO1_SUCCESS,
@@ -116,7 +116,7 @@ typedef enum {
   INTRO1_ACTION_COUNT
 } intro1_action_t;
 
-void increment_intro1_action(intro1_action_t);
+void relay_increment_intro1_action(intro1_action_t);
 
 typedef enum {
   REND1_SUCCESS,
@@ -128,6 +128,6 @@ typedef enum {
   REND1_ACTION_COUNT
 } rend1_action_t;
 
-void increment_rend1_action(rend1_action_t);
+void relay_increment_rend1_action(rend1_action_t);
 
 #endif /* !defined(TOR_FEATURE_RELAY_RELAY_METRICS_H) */

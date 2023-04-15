@@ -37,7 +37,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
            (unsigned)circ->p_circ_id);
 
   if (circ->base_.purpose != CIRCUIT_PURPOSE_OR) {
-    increment_est_rend_action(EST_REND_UNSUITABLE_CIRCUIT);
+    relay_increment_est_rend_action(EST_REND_UNSUITABLE_CIRCUIT);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Tried to establish rendezvous on non-OR circuit with purpose %s",
            circuit_purpose_to_string(circ->base_.purpose));
@@ -48,7 +48,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
    * attempt to establish rendezvous points directly to us. */
   if (channel_is_client(circ->p_chan) &&
       dos_should_refuse_single_hop_client()) {
-    increment_est_rend_action(EST_REND_SINGLE_HOP);
+    relay_increment_est_rend_action(EST_REND_SINGLE_HOP);
     /* Note it down for the heartbeat log purposes. */
     dos_note_refuse_single_hop_client();
     /* Silent drop so the client has to time out before moving on. */
@@ -56,21 +56,21 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
   }
 
   if (circ->base_.n_chan) {
-    increment_est_rend_action(EST_REND_UNSUITABLE_CIRCUIT);
+    relay_increment_est_rend_action(EST_REND_UNSUITABLE_CIRCUIT);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Tried to establish rendezvous on non-edge circuit");
     goto err;
   }
 
   if (request_len != REND_COOKIE_LEN) {
-    increment_est_rend_action(EST_REND_MALFORMED);
+    relay_increment_est_rend_action(EST_REND_MALFORMED);
     log_fn(LOG_PROTOCOL_WARN,
            LD_PROTOCOL, "Invalid length on ESTABLISH_RENDEZVOUS.");
     goto err;
   }
 
   if (hs_circuitmap_get_rend_circ_relay_side(request)) {
-    increment_est_rend_action(EST_REND_DUPLICATE_COOKIE);
+    relay_increment_est_rend_action(EST_REND_DUPLICATE_COOKIE);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Duplicate rendezvous cookie in ESTABLISH_RENDEZVOUS.");
     goto err;
@@ -80,13 +80,13 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
   if (relay_send_command_from_edge(0,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
                                    "", 0, NULL)<0) {
-    increment_est_rend_action(EST_REND_CIRCUIT_DEAD);
+    relay_increment_est_rend_action(EST_REND_CIRCUIT_DEAD);
     log_warn(LD_PROTOCOL, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
     /* Stop right now, the circuit has been closed. */
     return -1;
   }
 
-  increment_est_rend_action(EST_REND_SUCCESS);
+  relay_increment_est_rend_action(EST_REND_SUCCESS);
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_REND_POINT_WAITING);
   hs_circuitmap_register_rend_circ_relay_side(circ, request);
 
@@ -116,7 +116,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
   int reason = END_CIRC_REASON_INTERNAL;
 
   if (circ->base_.purpose != CIRCUIT_PURPOSE_OR || circ->base_.n_chan) {
-    increment_rend1_action(REND1_UNSUITABLE_CIRCUIT);
+    relay_increment_rend1_action(REND1_UNSUITABLE_CIRCUIT);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Tried to complete rendezvous on non-OR or non-edge circuit %u.",
            (unsigned)circ->p_circ_id);
@@ -125,7 +125,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
   }
 
   if (request_len < REND_COOKIE_LEN) {
-    increment_rend1_action(REND1_MALFORMED);
+    relay_increment_rend1_action(REND1_MALFORMED);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with bad length (%d) on circuit %u.",
          (int)request_len, (unsigned)circ->p_circ_id);
@@ -145,7 +145,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
      * client gives up on a rendezvous circuit after sending INTRODUCE1, but
      * before the onion service sends the RENDEZVOUS1 cell.
      */
-    increment_rend1_action(REND1_UNKNOWN_COOKIE);
+    relay_increment_rend1_action(REND1_UNKNOWN_COOKIE);
     log_fn(LOG_DEBUG, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
          hexid);
@@ -166,7 +166,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
                                    RELAY_COMMAND_RENDEZVOUS2,
                                    (char*)(request+REND_COOKIE_LEN),
                                    request_len-REND_COOKIE_LEN, NULL)) {
-    increment_rend1_action(REND1_CIRCUIT_DEAD);
+    relay_increment_rend1_action(REND1_CIRCUIT_DEAD);
     log_warn(LD_GENERAL,
              "Unable to send RENDEZVOUS2 cell to client on circuit %u.",
              (unsigned)rend_circ->p_circ_id);
@@ -174,7 +174,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
     return -1;
   }
 
-  increment_rend1_action(REND1_SUCCESS);
+  relay_increment_rend1_action(REND1_SUCCESS);
   /* Join the circuits. */
   log_info(LD_REND,
            "Completing rendezvous: circuit %u joins circuit %u (cookie %s)",

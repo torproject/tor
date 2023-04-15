@@ -420,7 +420,7 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
 
   /* Check that the circuit is in shape to become an intro point */
   if (!hs_intro_circuit_is_suitable_for_establish_intro(circ)) {
-    increment_est_intro_action(EST_INTRO_UNSUITABLE_CIRCUIT);
+    relay_increment_est_intro_action(EST_INTRO_UNSUITABLE_CIRCUIT);
     goto err;
   }
 
@@ -428,7 +428,7 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   ssize_t parsing_result = trn_cell_establish_intro_parse(&parsed_cell,
                                                          request, request_len);
   if (parsing_result < 0) {
-    increment_est_intro_action(EST_INTRO_MALFORMED);
+    relay_increment_est_intro_action(EST_INTRO_MALFORMED);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Rejecting %s ESTABLISH_INTRO cell.",
            parsing_result == -1 ? "invalid" : "truncated");
@@ -439,7 +439,7 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
                                         (uint8_t *) circ->rend_circ_nonce,
                                         sizeof(circ->rend_circ_nonce));
   if (cell_ok < 0) {
-    increment_est_intro_action(EST_INTRO_MALFORMED);
+    relay_increment_est_intro_action(EST_INTRO_MALFORMED);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Failed to verify ESTABLISH_INTRO cell.");
     goto err;
@@ -448,11 +448,11 @@ handle_establish_intro(or_circuit_t *circ, const uint8_t *request,
   /* This cell is legit. Take the appropriate actions. */
   cell_ok = handle_verified_establish_intro_cell(circ, parsed_cell);
   if (cell_ok < 0) {
-    increment_est_intro_action(EST_INTRO_CIRCUIT_DEAD);
+    relay_increment_est_intro_action(EST_INTRO_CIRCUIT_DEAD);
     goto err;
   }
 
-  increment_est_intro_action(EST_INTRO_SUCCESS);
+  relay_increment_est_intro_action(EST_INTRO_SUCCESS);
   /* We are done! */
   retval = 0;
   goto done;
@@ -511,7 +511,7 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
   tor_assert(request);
 
   if (request_len == 0) {
-    increment_est_intro_action(EST_INTRO_MALFORMED);
+    relay_increment_est_intro_action(EST_INTRO_MALFORMED);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Empty ESTABLISH_INTRO cell.");
     goto err;
   }
@@ -524,12 +524,12 @@ hs_intro_received_establish_intro(or_circuit_t *circ, const uint8_t *request,
     case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1:
       /* Likely version 2 onion service which is now obsolete. Avoid a
        * protocol warning considering they still exists on the network. */
-    increment_est_intro_action(EST_INTRO_MALFORMED);
+    relay_increment_est_intro_action(EST_INTRO_MALFORMED);
       goto err;
     case TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519:
       return handle_establish_intro(circ, request, request_len);
     default:
-      increment_est_intro_action(EST_INTRO_MALFORMED);
+      relay_increment_est_intro_action(EST_INTRO_MALFORMED);
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Unrecognized AUTH_KEY_TYPE %u.", first_byte);
       goto err;
@@ -653,7 +653,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   ssize_t cell_size = trn_cell_introduce1_parse(&parsed_cell, request,
                                                request_len);
   if (cell_size < 0) {
-    increment_intro1_action(INTRO1_MALFORMED);
+    relay_increment_intro1_action(INTRO1_MALFORMED);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Rejecting %s INTRODUCE1 cell. Responding with NACK.",
            cell_size == -1 ? "invalid" : "truncated");
@@ -664,7 +664,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
 
   /* Once parsed validate the cell format. */
   if (validate_introduce1_parsed_cell(parsed_cell) < 0) {
-    increment_intro1_action(INTRO1_MALFORMED);
+    relay_increment_intro1_action(INTRO1_MALFORMED);
     /* Inform client that the INTRODUCE1 has bad format. */
     status = TRUNNEL_HS_INTRO_ACK_STATUS_BAD_FORMAT;
     goto send_ack;
@@ -676,7 +676,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
     get_auth_key_from_cell(&auth_key, RELAY_COMMAND_INTRODUCE1, parsed_cell);
     service_circ = hs_circuitmap_get_intro_circ_v3_relay_side(&auth_key);
     if (service_circ == NULL) {
-      increment_intro1_action(INTRO1_UNKNOWN_SERVICE);
+      relay_increment_intro1_action(INTRO1_UNKNOWN_SERVICE);
       char b64_key[ED25519_BASE64_LEN + 1];
       ed25519_public_to_base64(b64_key, &auth_key);
       log_info(LD_REND, "No intro circuit found for INTRODUCE1 cell "
@@ -692,7 +692,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   /* Before sending, lets make sure this cell can be sent on the service
    * circuit asking the DoS defenses. */
   if (!hs_dos_can_send_intro2(service_circ)) {
-    increment_intro1_action(INTRO1_RATE_LIMITED);
+    relay_increment_intro1_action(INTRO1_RATE_LIMITED);
     char *msg;
     static ratelim_t rlimit = RATELIM_INIT(5 * 60);
     if ((msg = rate_limit_log(&rlimit, approx_time()))) {
@@ -709,7 +709,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
   if (relay_send_command_from_edge(CONTROL_CELL_ID, TO_CIRCUIT(service_circ),
                                    RELAY_COMMAND_INTRODUCE2,
                                    (char *) request, request_len, NULL)) {
-    increment_intro1_action(INTRO1_CIRCUIT_DEAD);
+    relay_increment_intro1_action(INTRO1_CIRCUIT_DEAD);
     log_warn(LD_PROTOCOL, "Unable to send INTRODUCE2 cell to the service.");
     /* Inform the client that we can't relay the cell. Use the unknown ID
      * status code since it means that we do not know the service. */
@@ -717,7 +717,7 @@ handle_introduce1(or_circuit_t *client_circ, const uint8_t *request,
     goto send_ack;
   }
 
-  increment_intro1_action(INTRO1_SUCCESS);
+  relay_increment_intro1_action(INTRO1_SUCCESS);
   /* Success! Send an INTRODUCE_ACK success status onto the client circuit. */
   status = TRUNNEL_HS_INTRO_ACK_STATUS_SUCCESS;
   ret = 0;
@@ -748,7 +748,7 @@ circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
   }
 
   if (circ->already_received_introduce1) {
-    increment_intro1_action(INTRO1_CIRCUIT_REUSED);
+    relay_increment_intro1_action(INTRO1_CIRCUIT_REUSED);
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Blocking multiple introductions on the same circuit. "
            "Someone might be trying to attack a hidden service through "
@@ -758,7 +758,7 @@ circuit_is_suitable_for_introduce1(const or_circuit_t *circ)
 
   /* Disallow single hop client circuit. */
   if (circ->p_chan && channel_is_client(circ->p_chan)) {
-    increment_intro1_action(INTRO1_SINGLE_HOP);
+    relay_increment_intro1_action(INTRO1_SINGLE_HOP);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Single hop client was rejected while trying to introduce. "
            "Closing circuit.");
@@ -780,7 +780,7 @@ hs_intro_received_introduce1(or_circuit_t *circ, const uint8_t *request,
 
   /* A cell that can't hold a DIGEST_LEN is invalid. */
   if (request_len < DIGEST_LEN) {
-    increment_intro1_action(INTRO1_MALFORMED);
+    relay_increment_intro1_action(INTRO1_MALFORMED);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL, "Invalid INTRODUCE1 cell length.");
     goto err;
   }
