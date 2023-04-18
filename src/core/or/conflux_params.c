@@ -100,19 +100,28 @@ static void
 count_exit_with_conflux_support(const networkstatus_t *ns)
 {
   double supported = 0.0;
+  int total_exits = 0;
 
   if (!ns || smartlist_len(ns->routerstatus_list) == 0) {
     return;
   }
 
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, const routerstatus_t *, rs) {
+    if (!rs->is_exit || rs->is_bad_exit) {
+      continue;
+    }
     if (rs->pv.supports_conflux) {
       supported++;
     }
+    total_exits++;
   } SMARTLIST_FOREACH_END(rs);
 
-  exit_conflux_ratio =
-    supported / smartlist_len(ns->routerstatus_list);
+  if (total_exits > 0) {
+    exit_conflux_ratio =
+      supported / total_exits;
+  } else {
+    exit_conflux_ratio = 0.0;
+  }
 
   log_info(LD_GENERAL, "Consensus has %.2f %% Exit relays supporting Conflux",
            exit_conflux_ratio * 100.0);
