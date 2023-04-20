@@ -53,8 +53,11 @@ build_link_cell(const conflux_cell_link_t *link, uint8_t *cell_out)
   trn_cell_conflux_link_payload_v1_set_desired_ux(payload, link->desired_ux);
 
   /* Encode payload. */
-  trn_cell_conflux_link_setlen_payload(cell,
-                   trn_cell_conflux_link_payload_v1_encoded_len(payload));
+  ssize_t pay_len = trn_cell_conflux_link_payload_v1_encoded_len(payload);
+  tor_assert(pay_len >= 0);
+
+  trn_cell_conflux_link_setlen_payload(cell, pay_len);
+
   trn_cell_conflux_link_payload_v1_encode(
       trn_cell_conflux_link_getarray_payload(cell),
       trn_cell_conflux_link_getlen_payload(cell), payload);
