@@ -35,6 +35,7 @@
 #include "core/or/conflux_st.h"
 
 #include "feature/nodelist/nodelist.h"
+#include "feature/client/bridges.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -1147,6 +1148,14 @@ conflux_add_guards_to_exclude_list(const origin_circuit_t *orig_circ,
 
   /* Getting here without a nonce is a code flow issue. */
   if (BUG(!circ->conflux_pending_nonce)) {
+    return;
+  }
+
+  /* If there is only one bridge, then only issue a warn once that
+   * at least two bridges are best for conflux. Exempt Snowflake
+   * from this warn */
+  if (get_options()->UseBridges && !conflux_can_exclude_used_bridges()) {
+    /* Do not build any exclude lists; not enough bridges */
     return;
   }
 
