@@ -2635,7 +2635,6 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
    */
   if (packaged_this_round && packaged_this_round < max_to_package &&
       n_streams_left) {
-    max_to_package -= packaged_this_round;
     n_packaging_streams = n_streams_left;
     goto again;
   }
