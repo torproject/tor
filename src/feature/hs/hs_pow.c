@@ -436,9 +436,11 @@ pow_worker_replyfn(void *work_)
     ip = find_desc_intro_point_by_ident(intro_circ->hs_ident, desc);
 
   if (intro_circ && rend_circ && service_identity_pk && desc && ip &&
-      job->pow_solution_out) { /* successful pow solve, and circs still here */
+      job->pow_solution_out) {
 
+    /* successful pow solve, and circs still here */
     log_info(LD_REND, "Got a PoW solution we like! Shipping it!");
+
     /* Set flag to reflect that the HS we are attempting to rendezvous has PoW
      * defenses enabled, and as such we will need to be more lenient with
      * timing out while waiting for the service-side circuit to be built. */
@@ -451,18 +453,16 @@ pow_worker_replyfn(void *work_)
       intro_circ->hs_currently_solving_pow = 0;
     }
 
-  } else { /* unsuccessful pow solve. put it back on the queue. */
-    log_notice(LD_REND,
-               "PoW cpuworker returned with no solution. Will retry soon.");
+  } else {
+    if (!job->pow_solution_out) {
+      log_warn(LD_REND, "PoW cpuworker returned with no solution");
+    } else {
+      log_info(LD_REND, "PoW solution completed but we can "
+                        "no longer locate its circuit");
+    }
     if (intro_circ) {
       intro_circ->hs_currently_solving_pow = 0;
     }
-    /* We could imagine immediately re-launching a follow-up worker
-     * here too, but for now just let the main intro loop find the
-     * not-being-serviced request and it can start everything again. For
-     * the sake of complexity, maybe that's the best long-term solution
-     * too, and we can tune the cpuworker job to try for longer if we want
-     * to improve efficiency. */
   }
 
   pow_worker_job_free(job);
