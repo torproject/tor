@@ -446,6 +446,9 @@ pow_worker_replyfn(void *work_)
      * timing out while waiting for the service-side circuit to be built. */
     rend_circ->hs_with_pow_circ = 1;
 
+    /* Remember the PoW effort we chose, for client-side rend circuits. */
+    rend_circ->hs_pow_effort = job->pow_inputs.effort;
+
     // and then send that intro cell
     if (send_introduce1(intro_circ, rend_circ,
                         desc, job->pow_solution_out, ip) < 0) {

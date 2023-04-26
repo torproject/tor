@@ -429,6 +429,13 @@ launch_rendezvous_point_circuit,(const hs_service_t *service,
     tor_assert(circ->hs_ident);
   }
 
+  /* Remember PoW state if this introduction included a valid proof of work
+   * client puzzle extension. */
+  if (rdv_data->pow_effort > 0) {
+    circ->hs_pow_effort = rdv_data->pow_effort;
+    circ->hs_with_pow_circ = 1;
+  }
+
   /* Setup congestion control if asked by the client from the INTRO cell. */
   if (rdv_data->cc_enabled) {
     hs_circ_setup_congestion_control(circ, congestion_control_sendme_inc(),

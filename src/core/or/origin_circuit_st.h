@@ -212,6 +212,10 @@ struct origin_circuit_t {
    * (in host byte order) for response comparison. */
   uint32_t pathbias_probe_nonce;
 
+  /** This is nonzero iff hs_with_pow_circ is set and there was a valid proof
+   * of work solution associated with this circuit. */
+  uint32_t hs_pow_effort;
+
   /** Set iff this is a hidden-service circuit for a HS with PoW defenses
    * enabled, so that we know to be more lenient with timing out the
    * circuit-build to allow the service time to work through the queue of
