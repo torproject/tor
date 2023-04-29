@@ -1180,7 +1180,7 @@ The following options are useful only for clients (that is, if
     entry nodes over IPv6. For IPv6 only hosts, you need to also set
     **ClientUseIPv4** to 0 to disable IPv4. Note that clients configured with
     an IPv6 address in a **Bridge**, proxy, or pluggable transportline will
-    try connecting over IPv6 even if **ClientUseIPv6** is set to 0. (Default: 0)
+    try connecting over IPv6 even if **ClientUseIPv6** is set to 0. (Default: 1)
 
 [[ConnectionPadding]] **ConnectionPadding** **0**|**1**|**auto**::
     This option governs Tor's use of padding to defend against some forms of
