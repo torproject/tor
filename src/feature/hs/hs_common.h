@@ -145,6 +145,15 @@ typedef enum {
   RSAE_OKAY        = 0   /**< Service added as expected */
 } hs_service_add_ephemeral_status_t;
 
+/** Which protocol to use for exporting HS client circuit ID. */
+typedef enum {
+  /** Don't expose the circuit id. */
+  HS_CIRCUIT_ID_PROTOCOL_NONE,
+
+  /** Use the HAProxy proxy protocol. */
+  HS_CIRCUIT_ID_PROTOCOL_HAPROXY
+} hs_circuit_id_protocol_t;
+
 /** Represents the mapping from a virtual port of a rendezvous service to a
  * real port on some IP. */
 typedef struct hs_port_config_t {
@@ -156,6 +165,8 @@ typedef struct hs_port_config_t {
   uint16_t real_port;
   /** The outgoing IPv4 or IPv6 address to use, if !is_unix_addr */
   tor_addr_t real_addr;
+  /** Does this port export the circuit ID of its clients? */
+  hs_circuit_id_protocol_t circuit_id_protocol;
   /** The socket path to connect to, if is_unix_addr */
   char unix_addr[FLEXIBLE_ARRAY_MEMBER];
 } hs_port_config_t;
@@ -241,6 +252,8 @@ void hs_purge_last_hid_serv_requests(void);
 int hs_set_conn_addr_port(const smartlist_t *ports, edge_connection_t *conn);
 hs_port_config_t *hs_parse_port_config(const char *string, const char *sep,
                                        char **err_msg_out);
+hs_circuit_id_protocol_t hs_parse_circuit_id_protocol(const char *protocol_str,
+                                                      int *ok);
 void hs_port_config_free_(hs_port_config_t *p);
 #define hs_port_config_free(p) \
   FREE_AND_NULL(hs_port_config_t, hs_port_config_free_, (p))

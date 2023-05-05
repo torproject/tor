@@ -973,7 +973,7 @@ connected_cell_format_payload(uint8_t *payload_out,
 
 /* This is an onion service client connection: Export the client circuit ID
  * according to the HAProxy proxy protocol. */
-STATIC void
+static void
 export_hs_client_circuit_id(edge_connection_t *edge_conn,
                             hs_circuit_id_protocol_t protocol)
 {
@@ -3857,7 +3857,7 @@ begin_cell_parse(const cell_t *cell, begin_cell_t *bcell,
  * connection, attach it to the circ and connect it. Return 0 on success
  * or END_CIRC_AT_ORIGIN if we can't find the requested hidden service port
  * where the caller should close the circuit. */
-static int
+STATIC int
 handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
 {
   int ret;
@@ -3928,9 +3928,7 @@ handle_hs_exit_conn(circuit_t *circ, edge_connection_t *conn)
   /* If it's an onion service connection, we might want to include the proxy
    * protocol header: */
   if (conn->hs_ident) {
-    hs_circuit_id_protocol_t circuit_id_protocol =
-      hs_service_exports_circuit_id(&conn->hs_ident->identity_pk);
-    export_hs_client_circuit_id(conn, circuit_id_protocol);
+    export_hs_client_circuit_id(conn, conn->hs_ident->circuit_id_protocol);
   }
 
   /* Connect tor to the hidden service destination. */
@@ -4237,8 +4235,8 @@ network_reentry_is_allowed(void)
  * address, but <em>only</em> if it's a general exit stream. (Rendezvous
  * streams must not reveal what IP they connected to.)
  */
-void
-connection_exit_connect(edge_connection_t *edge_conn)
+MOCK_IMPL(void,
+connection_exit_connect,(edge_connection_t *edge_conn))
 {
   const tor_addr_t *addr;
   uint16_t port;
