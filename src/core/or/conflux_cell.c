@@ -266,22 +266,13 @@ conflux_cell_parse_linked(const cell_t *cell, const uint16_t cell_len)
 
 conflux_cell_link_t *
 conflux_cell_new_link(const uint8_t *nonce, uint64_t last_seqno_sent,
-                      uint64_t last_seqno_recv, bool is_client)
+                      uint64_t last_seqno_recv, uint8_t ux)
 {
   conflux_cell_link_t *link = tor_malloc_zero(sizeof(*link));
 
   link->version = 0x01;
-  if (is_client) {
-    // TODO-329-TUNING: The default should probably be high-throughput,
-    // but mobile clients may want to use low-memory.. We may also want
-    // to move this choice upstairs, so that torrc can control it.
-    link->desired_ux = CONFLUX_UX_HIGH_THROUGHPUT;
-  } else {
-    // TODO-329-TUNING: For exits, the default should be min-latency
-    // but we need to fix the tests and evaluate this first.
-    //link->desired_ux = CONFLUX_UX_MIN_LATENCY;
-    link->desired_ux = CONFLUX_UX_HIGH_THROUGHPUT;
-  }
+  link->desired_ux = ux;
+
   link->last_seqno_sent = last_seqno_sent;
   link->last_seqno_recv = last_seqno_recv;
   memcpy(link->nonce, nonce, sizeof(link->nonce));

@@ -23,7 +23,7 @@ typedef struct conflux_cell_link_t {
 conflux_cell_link_t *conflux_cell_new_link(const uint8_t *nonce,
                                            uint64_t last_sent,
                                            uint64_t last_recv,
-                                           bool is_client);
+                                           uint8_t ux);
 
 conflux_cell_link_t *conflux_cell_parse_link(const cell_t *cell,
                                              const uint16_t cell_len);

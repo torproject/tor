@@ -143,18 +143,19 @@ fmt_nonce(const uint8_t *nonce)
 static uint8_t
 conflux_choose_algorithm(uint8_t desired_ux)
 {
-  /* TODO-329-TUNING: Pick better algs here*/
   switch (desired_ux) {
     case CONFLUX_UX_NO_OPINION:
       return CONFLUX_ALG_LOWRTT;
     case CONFLUX_UX_MIN_LATENCY:
       return CONFLUX_ALG_MINRTT;
-    case CONFLUX_UX_LOW_MEM_LATENCY:
-      return CONFLUX_ALG_MINRTT;
-    case CONFLUX_UX_LOW_MEM_THROUGHPUT:
-      return CONFLUX_ALG_CWNDRTT;
     case CONFLUX_UX_HIGH_THROUGHPUT:
       return CONFLUX_ALG_LOWRTT;
+    /* For now, we have no low mem algs, so use minRTT since it should
+     * switch less and thus use less mem */
+    /* TODO-329-TUNING: Pick better algs here*/
+    case CONFLUX_UX_LOW_MEM_THROUGHPUT:
+    case CONFLUX_UX_LOW_MEM_LATENCY:
+      return CONFLUX_ALG_MINRTT;
     default:
       /* Trunnel should protect us from this */
       tor_assert_nonfatal_unreached();
@@ -1105,11 +1106,12 @@ conflux_launch_leg(const uint8_t *nonce)
   // arti-relay could (if resumption seems worthwhile; it may not be worth the
   // memory storage there, either).
 
-  /* We have a circuit, create the new leg and attach it to the set. */
+  /* We have a circuit, create the new leg and attach it to the set.
+   * TODO-329-TUNING: Should we make a torrc option to request min latency? */
   leg_t *leg = leg_new(TO_CIRCUIT(circ),
                        conflux_cell_new_link(nonce,
                                              last_seq_sent, last_seq_recv,
-                                             true));
+                                             CONFLUX_UX_HIGH_THROUGHPUT));
 
   /* Increase the retry count for this conflux object as in this nonce. */
   unlinked->cfx->num_leg_launch++;
@@ -1760,8 +1762,10 @@ conflux_process_link(circuit_t *circ, const cell_t *cell,
     goto end;
   }
 
+  /* Exits should always request min latency from clients */
   conflux_cell_link_t *linked = conflux_cell_new_link(nonce, last_seq_sent,
-                                                      last_seq_recv, false);
+                                                      last_seq_recv,
+                                                      CONFLUX_UX_MIN_LATENCY);
 
   conflux_cell_send_linked(linked, TO_OR_CIRCUIT(circ));
   tor_free(linked);
