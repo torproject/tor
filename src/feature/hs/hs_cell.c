@@ -799,14 +799,16 @@ hs_cell_parse_intro_established(const uint8_t *payload, size_t payload_len)
  * including if PoW couldn't be verified. */
 static int
 handle_introduce2_encrypted_cell_pow_extension(const hs_service_t *service,
-                                 const trn_extension_field_t *field,
-                                 hs_cell_introduce2_data_t *data)
+                                const hs_service_intro_point_t *ip,
+                                const trn_extension_field_t *field,
+                                hs_cell_introduce2_data_t *data)
 {
   int ret = -1;
   trn_cell_extension_pow_t *pow = NULL;
   hs_pow_solution_t sol;
 
   tor_assert(field);
+  tor_assert(ip);
 
   if (!service->state.pow_state) {
     log_info(LD_REND, "Unsolicited PoW solution in INTRODUCE2 request.");
@@ -840,7 +842,7 @@ handle_introduce2_encrypted_cell_pow_extension(const hs_service_t *service,
          trn_cell_extension_pow_getconstarray_pow_solution(pow),
          HS_POW_EQX_SOL_LEN);
 
-  if (hs_pow_verify(service->state.pow_state, &sol)) {
+  if (hs_pow_verify(&ip->blinded_id, service->state.pow_state, &sol)) {
     log_info(LD_REND, "PoW INTRODUCE2 request failed to verify.");
     goto end;
   }
@@ -930,6 +932,7 @@ get_introduce2_keys_and_verify_mac(hs_cell_introduce2_data_t *data,
  * includes a PoW that doesn't verify). */
 static int
 parse_introduce_cell_extension(const hs_service_t *service,
+                               const hs_service_intro_point_t *ip,
                                hs_cell_introduce2_data_t *data,
                                const trn_extension_field_t *field)
 {
@@ -948,7 +951,7 @@ parse_introduce_cell_extension(const hs_service_t *service,
     break;
   case TRUNNEL_EXT_TYPE_POW:
     /* PoW request. If successful, the effort is put in the data. */
-    if (handle_introduce2_encrypted_cell_pow_extension(service,
+    if (handle_introduce2_encrypted_cell_pow_extension(service, ip,
                                                        field, data) < 0) {
       log_fn(LOG_PROTOCOL_WARN, LD_REND, "Invalid PoW cell extension.");
       ret = -1;
@@ -969,7 +972,8 @@ parse_introduce_cell_extension(const hs_service_t *service,
 ssize_t
 hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
                          const origin_circuit_t *circ,
-                         const hs_service_t *service)
+                         const hs_service_t *service,
+                         const hs_service_intro_point_t *ip)
 {
   int ret = -1;
   time_t elapsed;
@@ -1102,7 +1106,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
         /* The number of extensions should match the number of fields. */
         break;
       }
-      if (parse_introduce_cell_extension(service, data, field) < 0) {
+      if (parse_introduce_cell_extension(service, ip, data, field) < 0) {
         goto done;
       }
     }

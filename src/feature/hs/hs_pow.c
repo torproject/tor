@@ -9,6 +9,8 @@
 
 #include <stdio.h>
 
+#include "core/or/or.h"
+#include "app/config/config.h"
 #include "ext/ht.h"
 #include "ext/compat_blake2.h"
 #include "core/or/circuitlist.h"
@@ -20,6 +22,7 @@
 #include "feature/hs/hs_client.h"
 #include "feature/hs/hs_pow.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/crypt_ops/crypto_format.h"
 #include "lib/arch/bytes.h"
 #include "lib/cc/ctassert.h"
 #include "core/mainloop/cpuworker.h"
@@ -85,7 +88,7 @@ increment_and_set_nonce(uint8_t *nonce, uint8_t *challenge)
       break;
     }
   }
-  memcpy(challenge + HS_POW_SEED_LEN, nonce, HS_POW_NONCE_LEN);
+  memcpy(challenge + HS_POW_NONCE_OFFSET, nonce, HS_POW_NONCE_LEN);
 }
 
 /* Helper: Allocate an EquiX context, using the much faster compiled
@@ -105,18 +108,32 @@ build_equix_ctx(equix_ctx_flags flags)
   return ctx;
 }
 
-/* Helper: Build EquiX challenge (C || N || INT_32(E)) and return a newly
- * allocated buffer containing it. */
+/* Helper: Build EquiX challenge (P || ID || C || N || INT_32(E)) and return
+ * a newly allocated buffer containing it. */
 static uint8_t *
-build_equix_challenge(const uint8_t *seed, const uint8_t *nonce,
+build_equix_challenge(const ed25519_public_key_t *blinded_id,
+                      const uint8_t *seed, const uint8_t *nonce,
                       const uint32_t effort)
 {
-  /* Build EquiX challenge (C || N || INT_32(E)). */
   size_t offset = 0;
   uint8_t *challenge = tor_malloc_zero(HS_POW_CHALLENGE_LEN);
 
-  memcpy(challenge, seed, HS_POW_SEED_LEN);
+  CTASSERT(HS_POW_ID_LEN == sizeof *blinded_id);
+  tor_assert_nonfatal(!ed25519_public_key_is_zero(blinded_id));
+
+  log_debug(LD_REND,
+            "Constructing EquiX challenge with "
+            "blinded service id %s, effort: %d",
+            safe_str_client(ed25519_fmt(blinded_id)),
+            effort);
+
+  memcpy(challenge + offset, HS_POW_PSTRING, HS_POW_PSTRING_LEN);
+  offset += HS_POW_PSTRING_LEN;
+  memcpy(challenge + offset, blinded_id, HS_POW_ID_LEN);
+  offset += HS_POW_ID_LEN;
+  memcpy(challenge + offset, seed, HS_POW_SEED_LEN);
   offset += HS_POW_SEED_LEN;
+  tor_assert(HS_POW_NONCE_OFFSET == offset);
   memcpy(challenge + offset, nonce, HS_POW_NONCE_LEN);
   offset += HS_POW_NONCE_LEN;
   set_uint32(challenge + offset, tor_htonl(effort));
@@ -193,8 +210,9 @@ hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
   /* Generate a random nonce N. */
   crypto_rand((char *)nonce, sizeof nonce);
 
-  /* Build EquiX challenge (C || N || INT_32(E)). */
-  challenge = build_equix_challenge(pow_inputs->seed, nonce, effort);
+  /* Build EquiX challenge string */
+  challenge = build_equix_challenge(&pow_inputs->service_blinded_id,
+                                    pow_inputs->seed, nonce, effort);
 
   ctx = build_equix_ctx(EQUIX_CTX_SOLVE);
   if (!ctx) {
@@ -243,7 +261,8 @@ hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
  * parameters found in pow_state. Returns 0 on success and -1 otherwise. Called
  * by the service. */
 int
-hs_pow_verify(const hs_pow_service_state_t *pow_state,
+hs_pow_verify(const ed25519_public_key_t *service_blinded_id,
+              const hs_pow_service_state_t *pow_state,
               const hs_pow_solution_t *pow_solution)
 {
   int ret = -1;
@@ -254,6 +273,8 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
 
   tor_assert(pow_state);
   tor_assert(pow_solution);
+  tor_assert(service_blinded_id);
+  tor_assert_nonfatal(!ed25519_public_key_is_zero(service_blinded_id));
 
   /* Find a valid seed C that starts with the seed head. Fail if no such seed
    * exists. */
@@ -278,13 +299,13 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
     goto done;
   }
 
-  /* Build the challenge with the param we have. */
-  challenge = build_equix_challenge(seed, pow_solution->nonce,
-                                    pow_solution->effort);
+  /* Build the challenge with the params we have. */
+  challenge = build_equix_challenge(service_blinded_id, seed,
+                                    pow_solution->nonce, pow_solution->effort);
 
   if (!validate_equix_challenge(challenge, pow_solution->equix_solution,
                                 pow_solution->effort)) {
-    log_warn(LD_REND, "Equi-X solution and effort was too large.");
+    log_warn(LD_REND, "Verification of challenge effort in PoW failed.");
     goto done;
   }
 
@@ -293,7 +314,7 @@ hs_pow_verify(const hs_pow_service_state_t *pow_state,
     goto done;
   }
 
-  /* Fail if equix_verify(C || N || E, S) != EQUIX_OK */
+  /* Fail if equix_verify() != EQUIX_OK */
   equix_solution equix_sol;
   unpack_equix_solution(pow_solution->equix_solution, &equix_sol);
   equix_result result = equix_verify(ctx, challenge, HS_POW_CHALLENGE_LEN,
@@ -482,6 +503,8 @@ hs_pow_queue_work(uint32_t intro_circ_identifier,
   tor_assert(in_main_thread());
   tor_assert(rend_circ_cookie);
   tor_assert(pow_inputs);
+  tor_assert_nonfatal(
+    !ed25519_public_key_is_zero(&pow_inputs->service_blinded_id));
 
   pow_worker_job_t *job = tor_malloc_zero(sizeof(*job));
   job->intro_circ_identifier = intro_circ_identifier;

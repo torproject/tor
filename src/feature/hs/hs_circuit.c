@@ -1333,7 +1333,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
     goto done;
   }
 
-  if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
+  if (hs_cell_parse_introduce2(&data, circ, service, ip) < 0) {
     hs_metrics_reject_intro_req(service, HS_METRICS_ERR_INTRO_REQ_INTRODUCE2);
     goto done;
   }

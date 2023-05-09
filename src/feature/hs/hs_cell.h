@@ -122,7 +122,8 @@ ssize_t hs_cell_parse_intro_established(const uint8_t *payload,
                                         size_t payload_len);
 ssize_t hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
                                  const origin_circuit_t *circ,
-                                 const hs_service_t *service);
+                                 const hs_service_t *service,
+                                 const hs_service_intro_point_t *ip);
 int hs_cell_parse_introduce_ack(const uint8_t *payload, size_t payload_len);
 int hs_cell_parse_rendezvous2(const uint8_t *payload, size_t payload_len,
                               uint8_t *handshake_info,

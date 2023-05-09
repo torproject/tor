@@ -62,6 +62,10 @@ typedef struct hs_service_intro_point_t {
   /** Encryption keypair for the "ntor" type. */
   curve25519_keypair_t enc_key_kp;
 
+  /** Blinded public ID for this service, from this intro point's
+   * active time period. */
+  ed25519_public_key_t blinded_id;
+
   /** Legacy key if that intro point doesn't support v3. This should be used if
    * the base object legacy flag is set. */
   crypto_pk_t *legacy_key;

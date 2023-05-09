@@ -13,6 +13,7 @@
 #include "lib/evloop/compat_libevent.h"
 #include "lib/evloop/token_bucket.h"
 #include "lib/smartlist_core/smartlist_core.h"
+#include "lib/crypt_ops/crypto_ed25519.h"
 
 /* Service updates the suggested effort every HS_UPDATE_PERIOD seconds.
  * This parameter controls how often we can change hs descriptor data to
@@ -30,17 +31,27 @@
 #define HS_POW_EQX_SOL_LEN 16
 /** Length of blake2b hash result (R) used in the PoW scheme. */
 #define HS_POW_HASH_LEN 4
+/** Length of algorithm personalization string (P) used in the PoW scheme */
+#define HS_POW_PSTRING_LEN 16
+/** Algorithm personalization string (P) */
+#define HS_POW_PSTRING "Tor hs intro v1\0"
+/** Length of the blinded public ID for the onion service (ID) */
+#define HS_POW_ID_LEN 32
 /** Length of random seed used in the PoW scheme. */
 #define HS_POW_SEED_LEN 32
 /** Length of seed identification heading in the PoW scheme. */
 #define HS_POW_SEED_HEAD_LEN 4
 /** Length of an effort value */
 #define HS_POW_EFFORT_LEN sizeof(uint32_t)
+/** Offset of the nonce value within the challenge string */
+#define HS_POW_NONCE_OFFSET \
+  (HS_POW_PSTRING_LEN + HS_POW_ID_LEN + HS_POW_SEED_LEN)
 /** Length of a PoW challenge. Construction as per prop327 is:
- *    (C || N || INT_32(E))
+ *    (P || ID || C || N || INT_32(E))
  */
 #define HS_POW_CHALLENGE_LEN \
-  (HS_POW_SEED_LEN + HS_POW_NONCE_LEN + HS_POW_EFFORT_LEN)
+  (HS_POW_PSTRING_LEN + HS_POW_ID_LEN + \
+  HS_POW_SEED_LEN + HS_POW_NONCE_LEN + HS_POW_EFFORT_LEN)
 
 /** Type of PoW in the descriptor. */
 typedef enum {
@@ -68,7 +79,8 @@ typedef struct hs_pow_desc_params_t {
 typedef struct hs_pow_solver_inputs_t {
   /** Seed value from a current descriptor */
   uint8_t seed[HS_POW_SEED_LEN];
-
+  /** Blinded public ID for the onion service this puzzle is bound to */
+  ed25519_public_key_t service_blinded_id;
   /** Effort chosen by the client. May be higher or ower than
    * suggested_effort in the descriptor. */
   uint32_t effort;
@@ -152,7 +164,8 @@ typedef struct hs_pow_solution_t {
 int hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
                  hs_pow_solution_t *pow_solution_out);
 
-int hs_pow_verify(const hs_pow_service_state_t *pow_state,
+int hs_pow_verify(const ed25519_public_key_t *service_blinded_id,
+                  const hs_pow_service_state_t *pow_state,
                   const hs_pow_solution_t *pow_solution);
 
 void hs_pow_remove_seed_from_cache(const uint8_t *seed_head);
@@ -175,9 +188,11 @@ hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
 }
 
 static inline int
-hs_pow_verify(const hs_pow_service_state_t *pow_state,
+hs_pow_verify(const ed25519_public_key_t *service_blinded_id,
+              const hs_pow_service_state_t *pow_state,
               const hs_pow_solution_t *pow_solution)
 {
+  (void)service_blinded_id;
   (void)pow_state;
   (void)pow_solution;
   return -1;

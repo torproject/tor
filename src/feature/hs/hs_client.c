@@ -752,6 +752,8 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
     hs_pow_solver_inputs_t pow_inputs = {
       .effort = desc->encrypted_data.pow_params->suggested_effort
     };
+    ed25519_pubkey_copy(&pow_inputs.service_blinded_id,
+                        &desc->plaintext_data.blinded_pubkey);
     memcpy(pow_inputs.seed, desc->encrypted_data.pow_params->seed,
            sizeof pow_inputs.seed);
     log_debug(LD_REND, "PoW params present in descriptor, suggested_effort=%u",

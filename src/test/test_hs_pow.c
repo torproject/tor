@@ -264,6 +264,7 @@ test_hs_pow_vectors(void *arg)
     uint32_t validated_effort;
     int expected_retval;
     const char *seed_hex;
+    const char *service_blinded_id_hex;
     const char *nonce_hex;
     const char *sol_hex;
     const char *encoded_hex;
@@ -272,6 +273,7 @@ test_hs_pow_vectors(void *arg)
       /* All zero, expect invalid */
       1, 0, -1,
       "0000000000000000000000000000000000000000000000000000000000000000",
+      "1111111111111111111111111111111111111111111111111111111111111111",
       "00000000000000000000000000000000", "00000000000000000000000000000000",
       "01"
       "00000000000000000000000000000000"
@@ -282,67 +284,74 @@ test_hs_pow_vectors(void *arg)
       /* Valid zero-effort solution */
       0, 0, 0,
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "55555555555555555555555555555555", "fd57d7676238c0ad1d5473aa2d0cbff5",
+      "1111111111111111111111111111111111111111111111111111111111111111",
+      "55555555555555555555555555555555", "4312f87ceab844c78e1c793a913812d7",
       "01"
       "55555555555555555555555555555555"
       "00000000" "aaaaaaaa"
-      "fd57d7676238c0ad1d5473aa2d0cbff5"
+      "4312f87ceab844c78e1c793a913812d7"
     },
     {
       /* Valid high-effort solution */
       1000000, 1000000, 0,
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "16505855555555555555555555555555", "bf2c2d345e5773b5c32ec5596244bdbc",
+      "1111111111111111111111111111111111111111111111111111111111111111",
+      "59217255555555555555555555555555", "0f3db97b9cac20c1771680a1a34848d3",
       "01"
-      "16505855555555555555555555555555"
+      "59217255555555555555555555555555"
       "000f4240" "aaaaaaaa"
-      "bf2c2d345e5773b5c32ec5596244bdbc"
+      "0f3db97b9cac20c1771680a1a34848d3"
     },
     {
       /* Reject replays */
       1000000, 0, -1,
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "16505855555555555555555555555555", "bf2c2d345e5773b5c32ec5596244bdbc",
+      "1111111111111111111111111111111111111111111111111111111111111111",
+      "59217255555555555555555555555555", "0f3db97b9cac20c1771680a1a34848d3",
       "01"
-      "16505855555555555555555555555555"
+      "59217255555555555555555555555555"
       "000f4240" "aaaaaaaa"
-      "bf2c2d345e5773b5c32ec5596244bdbc"
+      "0f3db97b9cac20c1771680a1a34848d3"
     },
     {
       /* The claimed effort must exactly match what's in the challenge */
       99999, 0, -1,
       "86fb0acf4932cda44dbb451282f415479462dd10cb97ff5e7e8e2a53c3767a7f",
-      "cdd49fdbc34326d9d2f18ed277469c63", "7f153437c58620d3ea4717746093dde6",
+      "bfd298428562e530c52bdb36d81a0e293ef4a0e94d787f0f8c0c611f4f9e78ed",
+      "2eff9fdbc34326d9d2f18ed277469c63", "400cb091139f86b352119f6e131802d6",
       "01"
-      "cdd49fdbc34326d9d2f18ed277469c63"
+      "2eff9fdbc34326d9d2f18ed277469c63"
       "0001869f" "86fb0acf"
-      "7f153437c58620d3ea4717746093dde6"
+      "400cb091139f86b352119f6e131802d6"
     },
     {
       /* Otherwise good solution but with a corrupted nonce */
       100000, 0, -1,
       "86fb0acf4932cda44dbb451282f415479462dd10cb97ff5e7e8e2a53c3767a7f",
-      "cdd49fdbc34326d9d2f18ed270469c63", "7f153437c58620d3ea4717746093dde6",
+      "bfd298428562e530c52bdb36d81a0e293ef4a0e94d787f0f8c0c611f4f9e78ed",
+      "2eff9fdbc34326d9a2f18ed277469c63", "400cb091139f86b352119f6e131802d6",
       "01"
-      "cdd49fdbc34326d9d2f18ed270469c63"
+      "2eff9fdbc34326d9a2f18ed277469c63"
       "000186a0" "86fb0acf"
-      "7f153437c58620d3ea4717746093dde6"
+      "400cb091139f86b352119f6e131802d6"
     },
     {
       /* Corrected version of above */
       100000, 100000, 0,
       "86fb0acf4932cda44dbb451282f415479462dd10cb97ff5e7e8e2a53c3767a7f",
-      "cdd49fdbc34326d9d2f18ed277469c63", "7f153437c58620d3ea4717746093dde6",
+      "bfd298428562e530c52bdb36d81a0e293ef4a0e94d787f0f8c0c611f4f9e78ed",
+      "2eff9fdbc34326d9d2f18ed277469c63", "400cb091139f86b352119f6e131802d6",
       "01"
-      "cdd49fdbc34326d9d2f18ed277469c63"
+      "2eff9fdbc34326d9d2f18ed277469c63"
       "000186a0" "86fb0acf"
-      "7f153437c58620d3ea4717746093dde6"
+      "400cb091139f86b352119f6e131802d6"
     }
   };
 
   testing_hs_pow_service_t *tsvc = testing_hs_pow_service_new();
   hs_pow_service_state_t *pow_state = tor_malloc_zero(sizeof *pow_state);
   tsvc->service.state.pow_state = pow_state;
+  tsvc->service.desc_current = service_descriptor_new();
   pow_state->rend_request_pqueue = smartlist_new();
 
   char *mem_op_hex_tmp = NULL;
@@ -353,6 +362,7 @@ test_hs_pow_vectors(void *arg)
   const unsigned num_vectors = sizeof vectors / sizeof vectors[0];
   for (unsigned vec_i = 0; vec_i < num_vectors; vec_i++) {
     const int expected_retval = vectors[vec_i].expected_retval;
+    const char *service_blinded_id_hex = vectors[vec_i].service_blinded_id_hex;
     const char *seed_hex = vectors[vec_i].seed_hex;
     const char *nonce_hex = vectors[vec_i].nonce_hex;
     const char *sol_hex = vectors[vec_i].sol_hex;
@@ -368,10 +378,19 @@ test_hs_pow_vectors(void *arg)
     };
     int retval;
 
+    tt_int_op(strlen(service_blinded_id_hex), OP_EQ, 2 * HS_POW_ID_LEN);
     tt_int_op(strlen(seed_hex), OP_EQ, 2 * HS_POW_SEED_LEN);
     tt_int_op(strlen(nonce_hex), OP_EQ, 2 * sizeof solution.nonce);
     tt_int_op(strlen(sol_hex), OP_EQ, 2 * sizeof solution.equix_solution);
 
+    tt_assert(tsvc->service.desc_current);
+    ed25519_public_key_t *desc_blinded_pubkey =
+        &tsvc->service.desc_current->desc->plaintext_data.blinded_pubkey;
+
+    tt_int_op(base16_decode((char*)desc_blinded_pubkey->pubkey,
+                            HS_POW_ID_LEN, service_blinded_id_hex,
+                            2 * HS_POW_ID_LEN),
+                            OP_EQ, HS_POW_ID_LEN);
     tt_int_op(base16_decode((char*)pow_state->seed_previous, HS_POW_SEED_LEN,
                             seed_hex, 2 * HS_POW_SEED_LEN),
                             OP_EQ, HS_POW_SEED_LEN);
@@ -382,6 +401,7 @@ test_hs_pow_vectors(void *arg)
                             sol_hex, 2 * HS_POW_EQX_SOL_LEN),
                             OP_EQ, HS_POW_EQX_SOL_LEN);
 
+    ed25519_pubkey_copy(&tsvc->service_ip->blinded_id, desc_blinded_pubkey);
     memcpy(solution.seed_head, pow_state->seed_previous, HS_POW_SEED_HEAD_LEN);
 
     /* Try to encode 'solution' into a relay cell */
@@ -468,6 +488,7 @@ test_hs_pow_vectors(void *arg)
   tor_free(decrypted);
   trn_cell_introduce1_free(cell);
   trn_cell_introduce_encrypted_free(enc_cell);
+  service_descriptor_free(tsvc->service.desc_current);
   testing_hs_pow_service_free(tsvc);
   hs_pow_remove_seed_from_cache(NULL);
 }

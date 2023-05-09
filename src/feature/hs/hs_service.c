@@ -2304,6 +2304,14 @@ pick_needed_intro_points(hs_service_t *service,
                safe_str_client(service->onion_address));
       goto done;
     }
+
+    /* Save a copy of the specific version of the blinded ID that we
+     * use to reach this intro point. Needed to validate proof-of-work
+     * solutions that are bound to this specific service. */
+    tor_assert(desc->desc);
+    ed25519_pubkey_copy(&ip->blinded_id,
+                        &desc->desc->plaintext_data.blinded_pubkey);
+
     /* Valid intro point object, add it to the descriptor current map. */
     service_intro_point_add(desc->intro_points.map, ip);
   }
