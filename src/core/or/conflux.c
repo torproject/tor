@@ -209,7 +209,7 @@ circuit_ready_to_send(const circuit_t *circ)
    * cwnd, because inflight is decremented before this check */
   // TODO-329-TUNING: This subtraction not be right.. It depends
   // on call order wrt decisions and sendme arrival
-  if (cc->inflight + cc->sendme_inc >= cc->cwnd) {
+  if (cc->inflight >= cc->cwnd) {
     cc_sendable = false;
   }
 
@@ -290,38 +290,6 @@ conflux_decide_circ_lowrtt(const conflux_t *cfx)
 }
 
 /**
- * Return the amount of congestion window we can send on
- * on_circ during in_usec. However, if we're still in
- * slow-start, send the whole window to establish the true
- * cwnd.
- */
-static inline uint64_t
-cwnd_sendable(const circuit_t *on_circ, uint64_t in_usec,
-              uint64_t our_usec)
-{
-  const congestion_control_t *cc = circuit_ccontrol(on_circ);
-
-  tor_assert(cc);
-
-  // TODO-329-TUNING: This function may want to consider inflight?
-
-  if (our_usec == 0 || in_usec == 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
-       "cwnd_sendable: Missing RTT data. in_usec: %" PRIu64
-       " our_usec: %" PRIu64, in_usec, our_usec);
-    return cc->cwnd;
-  }
-
-  if (cc->in_slow_start) {
-    return cc->cwnd;
-  } else {
-    uint64_t sendable =
-      conflux_params_get_send_pct()*cc->cwnd*in_usec/(100*our_usec);
-    return MIN(cc->cwnd, sendable);
-  }
-}
-
-/**
  * Returns the amount of room in a cwnd on a circuit.
  */
 static inline uint64_t
@@ -334,6 +302,41 @@ cwnd_available(const circuit_t *on_circ)
     return 0;
 
   return cc->cwnd - cc->inflight;
+}
+
+/**
+ * Return the amount of congestion window we can send on
+ * on_circ during in_usec. However, if we're still in
+ * slow-start, send the whole window to establish the true
+ * cwnd.
+ */
+static inline uint64_t
+cwnd_sendable(const circuit_t *on_circ, uint64_t in_usec,
+              uint64_t our_usec)
+{
+  const congestion_control_t *cc = circuit_ccontrol(on_circ);
+  tor_assert(cc);
+  uint64_t cwnd_adjusted = cwnd_available(on_circ);
+
+  if (our_usec == 0 || in_usec == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
+       "cwnd_sendable: Missing RTT data. in_usec: %" PRIu64
+       " our_usec: %" PRIu64, in_usec, our_usec);
+    return cwnd_adjusted;
+  }
+
+  if (cc->in_slow_start) {
+    return cwnd_adjusted;
+  } else {
+    /* For any given leg, it has min_rtt/2 time before the 'primary'
+     * leg's acks start arriving. So, the amount of data this
+     * 'secondary' leg can send while the min_rtt leg transmits these
+     * acks is:
+     *   (cwnd_leg/(leg_rtt/2))*min_rtt/2 = cwnd_leg*min_rtt/leg_rtt.
+     */
+    uint64_t sendable = cwnd_adjusted*in_usec/our_usec;
+    return MIN(cc->cwnd, sendable);
+  }
 }
 
 /**
@@ -360,14 +363,13 @@ conflux_can_switch(const conflux_t *cfx)
      * of the congestion window, then we can switch.
      * We check the sendme_inc because there may be un-ackable
      * data in inflight as well, and we can still switch then. */
+    // TODO-329-TUNING: Should we try to switch if the prev_leg is
+    // ready to send, instead of this?
     if (ccontrol->inflight < ccontrol->sendme_inc ||
         100*ccontrol->inflight <=
         conflux_params_get_drain_pct()*ccontrol->cwnd) {
       return true;
     }
-
-    // TODO-329-TUNING: Should we try to switch if the prev_leg is
-    // ready to send?
 
     return false;
   }
@@ -407,14 +409,6 @@ conflux_decide_circ_cwndrtt(const conflux_t *cfx)
     return leg->circ;
   }
 
-  /* For any given leg, it has min_rtt/2 time before the 'primary'
-   * leg's acks start arriving. So, the amount of data this
-   * 'secondary' leg can send while the min_rtt leg transmits these
-   * acks is:
-   *   (cwnd_leg/(leg_rtt/2))*min_rtt/2 = cwnd_leg*min_rtt/leg_rtt.
-   * So any leg with available room below that is no good.
-   */
-
   leg = NULL;
 
   CONFLUX_FOR_EACH_LEG_BEGIN(cfx, l) {
@@ -425,8 +419,7 @@ conflux_decide_circ_cwndrtt(const conflux_t *cfx)
     /* Pick a 'min_leg' with the lowest RTT that still has
      * room in the congestion window. Note that this works for
      * min_leg itself, up to inflight. */
-    if (cwnd_sendable(l->circ, min_rtt, l->circ_rtts_usec) <=
-        cwnd_available(l->circ)) {
+    if (cwnd_sendable(l->circ, min_rtt, l->circ_rtts_usec) > 0) {
       leg = l;
     }
   } CONFLUX_FOR_EACH_LEG_END(l);
@@ -484,9 +477,12 @@ conflux_decide_circ_for_send(conflux_t *cfx,
     tor_assert(cfx->curr_leg);
 
     if (new_circ != cfx->curr_leg->circ) {
-      cfx->cells_until_switch =
-        cwnd_sendable(new_circ,cfx->curr_leg->circ_rtts_usec,
-                                 new_leg->circ_rtts_usec);
+      // TODO-329-TUNING: This is one mechanism to rate limit switching,
+      // which should reduce the OOQ mem. However, we're not going to do that
+      // until we get some data on if the memory usage is high
+      cfx->cells_until_switch = 0;
+        //cwnd_sendable(new_circ,cfx->curr_leg->circ_rtts_usec,
+        //                         new_leg->circ_rtts_usec);
 
       conflux_validate_stream_lists(cfx);
 
@@ -559,13 +555,10 @@ conflux_pick_first_leg(conflux_t *cfx)
     tor_assert(min_leg);
   }
 
-  // TODO-329-TUNING: Does this create an edge condition by getting blocked,
-  // is it possible that we get full before this point and block?
-  // Esp if we switch to a new circuit that is not ready to
-  // send because it has unacked inflight data.... This might cause
-  // stalls?
-  // That is the thinking with this -1 here, but maybe it is not needed.
-  cfx->cells_until_switch = circuit_ccontrol(min_leg->circ)->cwnd - 1;
+  // TODO-329-TUNING: We may want to initialize this to a cwnd, to
+  // minimize early switching?
+  //cfx->cells_until_switch = circuit_ccontrol(min_leg->circ)->cwnd;
+  cfx->cells_until_switch = 0;
 
   cfx->curr_leg = min_leg;
 }
