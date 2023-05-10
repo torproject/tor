@@ -130,6 +130,11 @@ get_linked_pool(bool is_client)
 }
 #endif
 
+/* For unit tests only: please treat these exactly as the defines in the
+ * code. */
+STATIC uint8_t DEFAULT_CLIENT_UX = CONFLUX_UX_HIGH_THROUGHPUT;
+STATIC uint8_t DEFAULT_EXIT_UX = CONFLUX_UX_MIN_LATENCY;
+
 /** Helper: Format at 8 bytes the nonce for logging. */
 static inline const char *
 fmt_nonce(const uint8_t *nonce)
@@ -1111,7 +1116,7 @@ conflux_launch_leg(const uint8_t *nonce)
   leg_t *leg = leg_new(TO_CIRCUIT(circ),
                        conflux_cell_new_link(nonce,
                                              last_seq_sent, last_seq_recv,
-                                             CONFLUX_UX_HIGH_THROUGHPUT));
+                                             DEFAULT_CLIENT_UX));
 
   /* Increase the retry count for this conflux object as in this nonce. */
   unlinked->cfx->num_leg_launch++;
@@ -1765,7 +1770,7 @@ conflux_process_link(circuit_t *circ, const cell_t *cell,
   /* Exits should always request min latency from clients */
   conflux_cell_link_t *linked = conflux_cell_new_link(nonce, last_seq_sent,
                                                       last_seq_recv,
-                                                      CONFLUX_UX_MIN_LATENCY);
+                                                      DEFAULT_EXIT_UX);
 
   conflux_cell_send_linked(linked, TO_OR_CIRCUIT(circ));
   tor_free(linked);

@@ -53,6 +53,7 @@
 #include "core/or/conflux_params.h"
 #include "core/or/conflux.h"
 #include "core/or/conflux_st.h"
+#include "trunnel/conflux.h"
 #include "lib/crypt_ops/crypto_rand.h"
 
 /* Start our monotime mocking at 1 second past whatever monotime_init()
@@ -1112,6 +1113,7 @@ test_conflux_switch(void *arg)
 {
    (void) arg;
   test_setup();
+  DEFAULT_EXIT_UX = CONFLUX_UX_HIGH_THROUGHPUT;
 
   launch_new_set(2);
 
