@@ -41,6 +41,7 @@ hashx_ctx* hashx_alloc(hashx_type type) {
 		goto failure;
 	}
 	ctx->code = NULL;
+	ctx->type = 0;
 	if (type & HASHX_COMPILED) {
 		if (!hashx_compiler_init(ctx)) {
 			goto failure;
