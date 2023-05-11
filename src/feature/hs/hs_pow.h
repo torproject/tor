@@ -81,7 +81,7 @@ typedef struct hs_pow_solver_inputs_t {
   uint8_t seed[HS_POW_SEED_LEN];
   /** Blinded public ID for the onion service this puzzle is bound to */
   ed25519_public_key_t service_blinded_id;
-  /** Effort chosen by the client. May be higher or ower than
+  /** Effort chosen by the client. May be higher or lower than
    * suggested_effort in the descriptor. */
   uint32_t effort;
 } hs_pow_solver_inputs_t;

@@ -45,17 +45,17 @@ struct conflux_params_t {
 struct conflux_leg_t {
   /**
    * For computing ooo_q insertion sequence numbers: Highest absolute
-   * sequence number recieved on each leg, before delivery.
+   * sequence number received on each leg, before delivery.
    *
-   * As a reciever, this allows us to compute the absolute sequence number
+   * As a receiver, this allows us to compute the absolute sequence number
    * of a cell for delivery or insertion into the ooo_q. When a SWITCH cell
-   * is recieved on a leg, the absolute sequence number of that cell is
+   * is received on a leg, the absolute sequence number of that cell is
    * the relative sequence number in that cell, plus the absolute sequence
    * number of that leg from this array. The leg's sequence number
    * is then updated to this value immediately.
    *
    * In this way, we are able to assign absolute sequence numbers to cells
-   * immediately, regardless of how many legs or leg switches have ocurred,
+   * immediately, regardless of how many legs or leg switches have occurred,
    * and regardless of the delivery status of each cell versus if it must be
    * queued.
    */
