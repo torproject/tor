@@ -36,6 +36,7 @@
 
 #include "feature/nodelist/nodelist.h"
 #include "feature/client/bridges.h"
+#include "app/config/config.h"
 
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
@@ -1022,6 +1023,24 @@ get_exit_for_nonce(const uint8_t *nonce)
   return exit;
 }
 
+/**
+ * Return the currently configured client UX.
+ */
+static uint8_t
+get_client_ux(void)
+{
+#ifdef TOR_UNIT_TESTS
+  return DEFAULT_CLIENT_UX;
+#else
+  const or_options_t *opt = get_options();
+  tor_assert(opt);
+  (void)DEFAULT_CLIENT_UX;
+
+  /* Return the UX */
+  return opt->ConfluxClientUX;
+#endif
+}
+
 /** Return true iff the given conflux object is allowed to launch a new leg. If
  * the cfx object is NULL, then it is always allowed to launch a new leg. */
 static bool
@@ -1111,12 +1130,11 @@ conflux_launch_leg(const uint8_t *nonce)
   // arti-relay could (if resumption seems worthwhile; it may not be worth the
   // memory storage there, either).
 
-  /* We have a circuit, create the new leg and attach it to the set.
-   * TODO-329-TUNING: Should we make a torrc option to request min latency? */
+  /* We have a circuit, create the new leg and attach it to the set. */
   leg_t *leg = leg_new(TO_CIRCUIT(circ),
                        conflux_cell_new_link(nonce,
                                              last_seq_sent, last_seq_recv,
-                                             DEFAULT_CLIENT_UX));
+                                             get_client_ux()));
 
   /* Increase the retry count for this conflux object as in this nonce. */
   unlinked->cfx->num_leg_launch++;
