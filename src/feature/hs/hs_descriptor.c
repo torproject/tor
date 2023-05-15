@@ -155,7 +155,7 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   T01(str_intro_auth_required, R3_INTRO_AUTH_REQUIRED, GE(1), NO_OBJ),
   T01(str_single_onion, R3_SINGLE_ONION_SERVICE, ARGS, NO_OBJ),
   T01(str_flow_control, R3_FLOW_CONTROL, GE(2), NO_OBJ),
-  T01(str_pow_params, R3_POW_PARAMS, GE(3), NO_OBJ),
+  T01(str_pow_params, R3_POW_PARAMS, GE(4), NO_OBJ),
   END_OF_TABLE
 };
 
