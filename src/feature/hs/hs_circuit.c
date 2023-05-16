@@ -35,6 +35,7 @@
 #include "lib/crypt_ops/crypto_dh.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
+#include "lib/time/compat_time.h"
 
 /* Trunnel. */
 #include "trunnel/ed25519_cert.h"
@@ -794,7 +795,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 
     if (pow_state->using_pqueue_bucket) {
       token_bucket_ctr_refill(&pow_state->pqueue_bucket,
-                              (uint32_t) approx_time());
+                              (uint32_t) monotime_coarse_absolute_sec());
 
       if (token_bucket_ctr_get(&pow_state->pqueue_bucket) > 0) {
         token_bucket_ctr_dec(&pow_state->pqueue_bucket, 1);

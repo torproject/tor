@@ -9,6 +9,7 @@
 #include "core/or/dos.h"
 #include "core/or/circuitlist.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/time/compat_time.h"
 #include "feature/stats/geoip_stats.h"
 #include "core/or/channel.h"
 #include "feature/nodelist/microdesc.h"
@@ -22,6 +23,8 @@
 
 #include "test/test.h"
 #include "test/log_test_helpers.h"
+
+static const uint64_t BILLION = 1000000000;
 
 static networkstatus_t *dummy_ns = NULL;
 static networkstatus_t *
@@ -58,14 +61,18 @@ mock_enable_dos_protection(const networkstatus_t *ns)
 static void
 test_dos_conn_creation(void *arg)
 {
+  uint64_t monotime_now = 0xfffffffe;
+
   (void) arg;
 
+  monotime_enable_test_mocking();
+  monotime_coarse_set_mock_time_nsec(monotime_now);
   MOCK(get_param_cc_enabled, mock_enable_dos_protection);
   MOCK(get_param_conn_enabled, mock_enable_dos_protection);
 
   /* Initialize test data */
   or_connection_t or_conn;
-  time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
+  time_t wallclock_now = 1281533250; /* 2010-08-11 13:27:30 UTC */
   tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&TO_CONN(&or_conn)->addr,
                                           "18.0.0.1"));
   tor_addr_t *addr = &TO_CONN(&or_conn)->addr;
@@ -75,13 +82,14 @@ test_dos_conn_creation(void *arg)
   uint32_t max_concurrent_conns = get_param_conn_max_concurrent_count(NULL);
 
   /* Introduce new client */
-  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, addr, NULL, now);
+  geoip_note_client_seen(GEOIP_CLIENT_CONNECT, addr, NULL, wallclock_now);
   { /* Register many conns from this client but not enough to get it blocked */
     unsigned int i;
     for (i = 0; i < max_concurrent_conns; i++) {
       /* Don't trigger the connect() rate limitation so advance the clock 1
        * second for each connection. */
-      update_approx_time(++now);
+      monotime_coarse_set_mock_time_nsec(monotime_now += BILLION);
+      update_approx_time(++wallclock_now);
       dos_new_client_conn(&or_conn, NULL);
     }
   }
@@ -107,6 +115,7 @@ test_dos_conn_creation(void *arg)
 
  done:
   dos_free_all();
+  monotime_disable_test_mocking();
 }
 
 /** Helper mock: Place a fake IP addr for this channel in <b>addr_out</b> */

@@ -21,6 +21,7 @@
 #include "feature/relay/routermode.h"
 #include "feature/stats/geoip_stats.h"
 #include "lib/crypt_ops/crypto_rand.h"
+#include "lib/time/compat_time.h"
 
 #include "core/or/dos.h"
 #include "core/or/dos_sys.h"
@@ -528,7 +529,8 @@ conn_update_on_connect(conn_client_stats_t *stats, const tor_addr_t *addr)
   stats->concurrent_count++;
 
   /* Refill connect connection count. */
-  token_bucket_ctr_refill(&stats->connect_count, (uint32_t) approx_time());
+  token_bucket_ctr_refill(&stats->connect_count,
+                          (uint32_t) monotime_coarse_absolute_sec());
 
   /* Decrement counter for this new connection. */
   if (token_bucket_ctr_get(&stats->connect_count) > 0) {
@@ -808,7 +810,7 @@ dos_geoip_entry_init(clientmap_entry_t *geoip_ent)
    * can be enabled at runtime and these counters need to be valid. */
   token_bucket_ctr_init(&geoip_ent->dos_stats.conn_stats.connect_count,
                         dos_conn_connect_rate, dos_conn_connect_burst,
-                        (uint32_t) approx_time());
+                        (uint32_t) monotime_coarse_absolute_sec());
 }
 
 /** Note that the given channel has sent outbound the maximum amount of cell
