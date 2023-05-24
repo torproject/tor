@@ -32,8 +32,10 @@
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/node_st.h"
 #include "feature/nodelist/routerstatus_st.h"
+#include "feature/nodelist/torcert.h"
 #include "feature/relay/relay_metrics.h"
 #include "feature/relay/router.h"
+#include "feature/relay/routerkeys.h"
 #include "feature/stats/rephist.h"
 
 #include <event2/dns.h>
@@ -55,6 +57,7 @@ static void fill_streams_values(void);
 static void fill_relay_flags(void);
 static void fill_tcp_exhaustion_values(void);
 static void fill_traffic_values(void);
+static void fill_signing_cert_expiry(void);
 
 /** The base metrics that is a static array of metrics added to the metrics
  * store.
@@ -173,6 +176,13 @@ static const relay_metrics_entry_t base_metrics[] =
     .name = METRICS_NAME(relay_circuits_total),
     .help = "Total number of circuits",
     .fill_fn = fill_circuits_values,
+  },
+  {
+    .key = RELAY_METRICS_SIGNING_CERT_EXPIRY,
+    .type = METRICS_TYPE_GAUGE,
+    .name = METRICS_NAME(relay_signing_cert_expiry_timestamp),
+    .help = "Timestamp at which the current online keys will expire",
+    .fill_fn = fill_signing_cert_expiry,
   },
 };
 static const size_t num_base_metrics = ARRAY_LENGTH(base_metrics);
@@ -989,6 +999,25 @@ fill_oom_values(void)
   metrics_store_entry_add_label(sentry,
                                 metrics_format_label("subsys", "hsdir"));
   metrics_store_entry_update(sentry, oom_stats_n_bytes_removed_hsdir);
+}
+
+/** Fill function for the RELAY_METRICS_SIGNING_CERT_EXPIRY metrics. */
+static void
+fill_signing_cert_expiry(void)
+{
+  metrics_store_entry_t *sentry;
+  const tor_cert_t *signing_key;
+  const relay_metrics_entry_t *rentry =
+    &base_metrics[RELAY_METRICS_SIGNING_CERT_EXPIRY];
+
+  if (get_options()->OfflineMasterKey) {
+    signing_key = get_master_signing_key_cert();
+    if (signing_key) {
+      sentry = metrics_store_add(the_store, rentry->type, rentry->name,
+                                 rentry->help);
+      metrics_store_entry_update(sentry, signing_key->valid_until);
+    }
+  }
 }
 
 /** Reset the global store and fill it with all the metrics from base_metrics
