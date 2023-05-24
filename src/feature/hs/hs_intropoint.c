@@ -17,6 +17,7 @@
 #include "feature/rend/rendmid.h"
 #include "feature/stats/rephist.h"
 #include "lib/crypt_ops/crypto_format.h"
+#include "lib/time/compat_time.h"
 
 /* Trunnel */
 #include "trunnel/ed25519_cert.h"
@@ -316,7 +317,7 @@ handle_establish_intro_cell_dos_extension(
   token_bucket_ctr_init(&circ->introduce2_bucket,
                         (uint32_t) intro2_rate_per_sec,
                         (uint32_t) intro2_burst_per_sec,
-                        (uint32_t) approx_time());
+                        (uint32_t) monotime_coarse_absolute_sec());
   log_info(LD_REND, "Intro point DoS defenses enabled. Rate is %" PRIu64
                     " and Burst is %" PRIu64,
            intro2_rate_per_sec, intro2_burst_per_sec);

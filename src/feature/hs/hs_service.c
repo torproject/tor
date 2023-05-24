@@ -34,6 +34,7 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 #include "lib/time/tvdiff.h"
+#include "lib/time/compat_time.h"
 
 #include "feature/hs/hs_circuit.h"
 #include "feature/hs/hs_common.h"
@@ -290,7 +291,7 @@ initialize_pow_defenses(hs_service_t *service)
     token_bucket_ctr_init(&pow_state->pqueue_bucket,
                           service->config.pow_queue_rate,
                           service->config.pow_queue_burst,
-                          (uint32_t) approx_time());
+                          (uint32_t) monotime_coarse_absolute_sec());
 
     pow_state->pqueue_low_level = MAX(8, service->config.pow_queue_rate / 4);
     pow_state->pqueue_high_level =

@@ -2990,6 +2990,7 @@ test_crypto_hashx(void *arg)
 
   const unsigned num_vectors = sizeof vectors / sizeof vectors[0];
   const unsigned num_variations = sizeof variations / sizeof variations[0];
+  hashx_ctx *ctx = NULL;
 
   for (unsigned vec_i = 0; vec_i < num_vectors; vec_i++) {
     const char *seed_literal = vectors[vec_i].seed_literal;
@@ -3008,7 +3009,9 @@ test_crypto_hashx(void *arg)
     for (unsigned vari_i = 0; vari_i < num_variations; vari_i++) {
       uint8_t out_actual[HASHX_SIZE] = { 0 };
 
-      hashx_ctx *ctx = hashx_alloc(variations[vari_i].type);
+      hashx_free(ctx);
+      ctx = hashx_alloc(variations[vari_i].type);
+
       tt_ptr_op(ctx, OP_NE, NULL);
       tt_ptr_op(ctx, OP_NE, HASHX_NOTSUPP);
       retval = hashx_make(ctx, seed_literal, seed_len);
@@ -3017,13 +3020,11 @@ test_crypto_hashx(void *arg)
       memset(out_actual, 0xa5, sizeof out_actual);
       hashx_exec(ctx, hash_input, out_actual);
       tt_mem_op(out_actual, OP_EQ, out_expected, sizeof out_actual);
-
-      hashx_free(ctx);
     }
   }
 
  done:
-  ;
+  hashx_free(ctx);
 }
 
 /* We want the likelihood that the random buffer exhibits any regular pattern
