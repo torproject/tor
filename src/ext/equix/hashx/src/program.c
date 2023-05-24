@@ -712,8 +712,8 @@ bool hashx_program_generate(const siphash_state* key, hashx_program* program) {
 	/* reject programs that don't meet the uniform complexity requirements */
 	/* this happens in less than 1 seed out of 10000 */
 	return
-		(program->code_size == REQUIREMENT_SIZE) &
-		(ctx.mul_count == REQUIREMENT_MUL_COUNT) &
+		(program->code_size == REQUIREMENT_SIZE) &&
+		(ctx.mul_count == REQUIREMENT_MUL_COUNT) &&
 		(ctx.latency == REQUIREMENT_LATENCY - 1); /* cycles are numbered from 0 */
 }
 
