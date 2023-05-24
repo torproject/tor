@@ -377,7 +377,7 @@ static const config_var_t option_vars_[] = {
   OBSOLETE("ClientAutoIPv6ORPort"),
   V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientTransportPlugin,       LINELIST, NULL),
-  V(ClientUseIPv6,               BOOL,     "0"),
+  V(ClientUseIPv6,               BOOL,     "1"),
   V(ClientUseIPv4,               BOOL,     "1"),
   V(ConfluxEnabled,              AUTOBOOL, "auto"),
   V(ConnLimit,                   POSINT,     "1000"),
