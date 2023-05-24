@@ -77,6 +77,7 @@
 #include "core/or/circuitmux_ewma.h"
 #include "core/or/circuitstats.h"
 #include "core/or/connection_edge.h"
+#include "trunnel/conflux.h"
 #include "core/or/dos.h"
 #include "core/or/policies.h"
 #include "core/or/relay.h"
@@ -380,6 +381,8 @@ static const config_var_t option_vars_[] = {
   V(ClientUseIPv6,               BOOL,     "1"),
   V(ClientUseIPv4,               BOOL,     "1"),
   V(ConfluxEnabled,              AUTOBOOL, "auto"),
+  VAR("ConfluxClientUX",         STRING,   ConfluxClientUX_option,
+          "throughput"),
   V(ConnLimit,                   POSINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
   V(ConstrainedSockets,          BOOL,     "0"),
@@ -3543,6 +3546,21 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
                      "Unrecognized value '%s' in SafeLogging",
                      escaped(options->SafeLogging));
     return -1;
+  }
+
+ options->ConfluxClientUX = CONFLUX_UX_HIGH_THROUGHPUT;
+ if (options->ConfluxClientUX_option) {
+    if (!strcmp(options->ConfluxClientUX_option, "latency"))
+      options->ConfluxClientUX = CONFLUX_UX_MIN_LATENCY;
+    else if (!strcmp(options->ConfluxClientUX_option, "throughput"))
+      options->ConfluxClientUX = CONFLUX_UX_HIGH_THROUGHPUT;
+    else if (!strcmp(options->ConfluxClientUX_option, "latency_lowmem"))
+      options->ConfluxClientUX = CONFLUX_UX_LOW_MEM_LATENCY;
+    else if (!strcmp(options->ConfluxClientUX_option, "throughput_lowmem"))
+      options->ConfluxClientUX = CONFLUX_UX_LOW_MEM_THROUGHPUT;
+    else
+      REJECT("ConfluxClientUX must be 'latency', 'throughput, "
+             "'latency_lowmem', or 'throughput_lowmem'");
   }
 
   if (options_validate_publish_server(old_options, options, msg) < 0)

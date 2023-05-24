@@ -727,6 +727,10 @@ struct or_options_t {
    * circuits which excludes onion service traffic. */
   int ConfluxEnabled;
 
+  /** Has the UX integer value that the client will request from the exit. */
+  char *ConfluxClientUX_option;
+  int ConfluxClientUX;
+
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
   /** The length of time we think it will take to distribute votes. */

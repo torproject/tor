@@ -40,6 +40,8 @@ void conflux_process_linked_ack(circuit_t *circ);
 bool launch_new_set(int num_legs);
 digest256map_t *get_linked_pool(bool is_client);
 digest256map_t *get_unlinked_pool(bool is_client);
+extern uint8_t DEFAULT_CLIENT_UX;
+extern uint8_t DEFAULT_EXIT_UX;
 #endif /* defined(UNIT_TESTS) */
 
 #endif /* TOR_CONFLUX_POOL_H */

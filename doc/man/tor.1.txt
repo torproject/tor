@@ -354,6 +354,13 @@ forward slash (/) in the configuration file and on the command line.
     supported at the moment. Default value is set to "auto" meaning the
     consensus is used to decide unless set. (Default: auto)
 
+[[ConfluxClientUX]] **ConfluxClientUX** **throughput**|**latency**|**throughput_lowmem**|**latency_lowmem**::
+    This option configures the user experience that the client requests from
+    the exit, for data that the exit sends to the client. The default is
+    "throughput", which maximizes throughput. "Latency" will tell the exit to
+    only use the circuit with lower latency for all data. The lowmem versions
+    minimize queue usage memory at the client. (Default: "throughput")
+
 [[ConnLimit]] **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file

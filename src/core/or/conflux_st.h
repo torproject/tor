@@ -20,8 +20,6 @@ typedef enum {
  CONFLUX_ALG_MINRTT = 0,
  CONFLUX_ALG_LOWRTT = 1,
  CONFLUX_ALG_CWNDRTT = 2,
- CONFLUX_ALG_MAXRATE = 3,
- CONFLUX_ALG_HIGHRATE = 4
 } conflux_alg_t;
 
 /**
