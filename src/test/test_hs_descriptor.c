@@ -364,6 +364,75 @@ test_decode_descriptor(void *arg)
     hs_helper_desc_equal(desc, decoded);
   }
 
+  /* Decode a descriptor without auth clients, and with PoW data added via
+   * test_extra_plaintext to test both the normal case of PoW decoding and the
+   * extra plaintext mechanism itself. */
+  {
+    tor_assert(!desc->encrypted_data.pow_params);
+
+    char pow_seed_base64[HS_POW_SEED_LEN*2];
+    uint8_t pow_seed[HS_POW_SEED_LEN];
+    crypto_strongest_rand(pow_seed, sizeof pow_seed);
+    tt_int_op(base64_encode_nopad(pow_seed_base64, sizeof pow_seed_base64,
+                                  pow_seed, sizeof pow_seed), OP_GT, 0);
+
+    time_t expiration_time = time(NULL);
+    char time_buf[ISO_TIME_LEN + 1];
+    format_iso_time_nospace(time_buf, expiration_time);
+
+    const unsigned suggested_effort = 123456;
+    char *extra_plaintext = NULL;
+    tor_asprintf(&extra_plaintext,
+                "pow-params v1 %s %u %s\n",
+                pow_seed_base64, suggested_effort, time_buf);
+
+    tor_free(encoded);
+    desc->encrypted_data.test_extra_plaintext = extra_plaintext;
+    ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
+    tor_free(extra_plaintext);
+    desc->encrypted_data.test_extra_plaintext = extra_plaintext;
+
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    desc->encrypted_data.pow_params =
+      tor_malloc_zero(sizeof(hs_pow_desc_params_t));
+    desc->encrypted_data.pow_params->type = HS_POW_DESC_V1;
+    memcpy(desc->encrypted_data.pow_params->seed, pow_seed, HS_POW_SEED_LEN);
+    desc->encrypted_data.pow_params->suggested_effort = suggested_effort;
+    desc->encrypted_data.pow_params->expiration_time = expiration_time;
+
+    hs_descriptor_free(decoded);
+    ret = hs_desc_decode_descriptor(encoded, &subcredential, NULL, &decoded);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_OK);
+    tt_assert(decoded);
+
+    hs_helper_desc_equal(desc, decoded);
+
+    tor_free(desc->encrypted_data.pow_params);
+  }
+
+  /* Now a version of the above that's expected to fail. This reproduces the
+   * issue from ticket tor#40793, in which pow_params gets too few parameters
+   * but this would cause an assert instead of an early validation fail.
+   * Make sure it fails to parse. Prior to the fix for #40793 this fails
+   * an assertion instead. */
+  {
+    tor_free(encoded);
+    tor_assert(!desc->encrypted_data.pow_params);
+    desc->encrypted_data.test_extra_plaintext = "pow-params v1 a a\n";
+    ret = hs_desc_encode_descriptor(desc, &signing_kp, NULL, &encoded);
+    desc->encrypted_data.test_extra_plaintext = NULL;
+
+    tt_int_op(ret, OP_EQ, 0);
+    tt_assert(encoded);
+
+    hs_descriptor_free(decoded);
+    ret = hs_desc_decode_descriptor(encoded, &subcredential, NULL, &decoded);
+    tt_int_op(ret, OP_EQ, HS_DESC_DECODE_ENCRYPTED_ERROR);
+    tt_assert(!decoded);
+  }
+
  done:
   hs_descriptor_free(desc);
   hs_descriptor_free(desc_no_ip);

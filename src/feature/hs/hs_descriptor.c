@@ -155,7 +155,7 @@ static token_rule_t hs_desc_encrypted_v3_token_table[] = {
   T01(str_intro_auth_required, R3_INTRO_AUTH_REQUIRED, GE(1), NO_OBJ),
   T01(str_single_onion, R3_SINGLE_ONION_SERVICE, ARGS, NO_OBJ),
   T01(str_flow_control, R3_FLOW_CONTROL, GE(2), NO_OBJ),
-  T01(str_pow_params, R3_POW_PARAMS, GE(3), NO_OBJ),
+  T01(str_pow_params, R3_POW_PARAMS, GE(4), NO_OBJ),
   END_OF_TABLE
 };
 
@@ -770,6 +770,13 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
     }
     smartlist_add_asprintf(lines, "%s %d\n", str_create2_formats,
                            ONION_HANDSHAKE_TYPE_NTOR);
+
+#ifdef TOR_UNIT_TESTS
+    if (desc->encrypted_data.test_extra_plaintext) {
+      smartlist_add(lines,
+                    tor_strdup(desc->encrypted_data.test_extra_plaintext));
+    }
+#endif
 
     if (desc->encrypted_data.intro_auth_types &&
         smartlist_len(desc->encrypted_data.intro_auth_types)) {
@@ -2817,9 +2824,15 @@ hs_desc_encode_descriptor,(const hs_descriptor_t *desc,
   }
 
   /* Try to decode what we just encoded. Symmetry is nice!, but it is
-   * symmetric only if the client auth is disabled. That is, the descriptor
-   * cookie will be NULL. */
-  if (!descriptor_cookie) {
+   * symmetric only if the client auth is disabled (That is, the descriptor
+   * cookie will be NULL) and the test-only mock plaintext isn't in use. */
+  bool do_round_trip_test = !descriptor_cookie;
+#ifdef TOR_UNIT_TESTS
+  if (desc->encrypted_data.test_extra_plaintext) {
+    do_round_trip_test = false;
+  }
+#endif
+  if (do_round_trip_test) {
     ret = hs_desc_decode_descriptor(*encoded_out, &desc->subcredential,
                                     NULL, NULL);
     if (BUG(ret != HS_DESC_DECODE_OK)) {
