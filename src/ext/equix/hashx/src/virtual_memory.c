@@ -22,7 +22,7 @@
 
 #ifdef HASHX_WIN
 
-static int set_privilege(const char* pszPrivilege, BOOL bEnable) {
+static bool set_privilege(const char* pszPrivilege, BOOL bEnable) {
 	HANDLE           hToken;
 	TOKEN_PRIVILEGES tp;
 	BOOL             status;
@@ -30,10 +30,10 @@ static int set_privilege(const char* pszPrivilege, BOOL bEnable) {
 
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES
 		| TOKEN_QUERY, &hToken))
-		return 0;
+		return false;
 
 	if (!LookupPrivilegeValue(NULL, pszPrivilege, &tp.Privileges[0].Luid))
-		return 0;
+		return false;
 
 	tp.PrivilegeCount = 1;
 
@@ -64,31 +64,33 @@ void* hashx_vm_alloc(size_t bytes) {
 	return mem;
 }
 
-static inline int page_protect(void* ptr, size_t bytes, int rules) {
+static inline bool page_protect(void* ptr, size_t bytes, int rules) {
 #ifdef HASHX_WIN
 	DWORD oldp;
 	if (!VirtualProtect(ptr, bytes, (DWORD)rules, &oldp)) {
-		return 0;
+		return false;
 	}
 #else
-	if (-1 == mprotect(ptr, bytes, rules))
-		return 0;
+	if (mprotect(ptr, bytes, rules) != 0)
+		return false;
 #endif
-	return 1;
+	return true;
 }
 
-void hashx_vm_rw(void* ptr, size_t bytes) {
-	page_protect(ptr, bytes, PAGE_READWRITE);
+bool hashx_vm_rw(void* ptr, size_t bytes) {
+	return page_protect(ptr, bytes, PAGE_READWRITE);
 }
 
-void hashx_vm_rx(void* ptr, size_t bytes) {
-	page_protect(ptr, bytes, PAGE_EXECUTE_READ);
+bool hashx_vm_rx(void* ptr, size_t bytes) {
+	return page_protect(ptr, bytes, PAGE_EXECUTE_READ);
 }
 
 void* hashx_vm_alloc_huge(size_t bytes) {
 	void* mem;
 #ifdef HASHX_WIN
-	set_privilege("SeLockMemoryPrivilege", 1);
+	if (!set_privilege("SeLockMemoryPrivilege", 1)) {
+		/* Failed, but try the VirtualAlloc anyway */
+	}
 	SIZE_T page_min = GetLargePageMinimum();
 	if (page_min > 0) {
 		mem = VirtualAlloc(NULL, ALIGN_SIZE(bytes, page_min), MEM_COMMIT

@@ -64,7 +64,9 @@ int hashx_make(hashx_ctx* ctx, const void* seed, size_t size) {
 		if (!initialize_program(ctx, &program, keys)) {
 			return 0;
 		}
-		hashx_compile(&program, ctx->code);
+		if (!hashx_compile(&program, ctx->code)) {
+			return 0;
+		}
 		return 1;
 	}
 	return initialize_program(ctx, ctx->program, keys);

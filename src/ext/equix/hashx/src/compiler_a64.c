@@ -48,8 +48,9 @@ static const uint8_t a64_epilogue[] = {
 	0xc0, 0x03, 0x5f, 0xd6, /* ret               */
 };
 
-void hashx_compile_a64(const hashx_program* program, uint8_t* code) {
-	hashx_vm_rw(code, COMP_CODE_SIZE);
+bool hashx_compile_a64(const hashx_program* program, uint8_t* code) {
+	if (!hashx_vm_rw(code, COMP_CODE_SIZE))
+		return false;
 	uint8_t* pos = code;
 	uint8_t* target = NULL;
 	int creg = -1;
@@ -145,10 +146,12 @@ void hashx_compile_a64(const hashx_program* program, uint8_t* code) {
 		}
 	}
 	EMIT(pos, a64_epilogue);
-	hashx_vm_rx(code, COMP_CODE_SIZE);
+	if (!hashx_vm_rx(code, COMP_CODE_SIZE))
+		return false;
 #ifdef __GNUC__
 	__builtin___clear_cache(code, pos);
 #endif
+	return true;
 }
 
 #endif

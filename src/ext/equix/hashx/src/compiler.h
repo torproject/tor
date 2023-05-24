@@ -10,9 +10,9 @@
 #include "virtual_memory.h"
 #include "program.h"
 
-HASHX_PRIVATE void hashx_compile_x86(const hashx_program* program, uint8_t* code);
+HASHX_PRIVATE bool hashx_compile_x86(const hashx_program* program, uint8_t* code);
 
-HASHX_PRIVATE void hashx_compile_a64(const hashx_program* program, uint8_t* code);
+HASHX_PRIVATE bool hashx_compile_a64(const hashx_program* program, uint8_t* code);
 
 #if defined(_M_X64) || defined(__x86_64__)
 #define HASHX_COMPILER 1
@@ -24,7 +24,7 @@ HASHX_PRIVATE void hashx_compile_a64(const hashx_program* program, uint8_t* code
 #define hashx_compile(p,c) hashx_compile_a64(p,c)
 #else
 #define HASHX_COMPILER 0
-#define hashx_compile(p,c)
+#define hashx_compile(p,c) (false)
 #endif
 
 HASHX_PRIVATE bool hashx_compiler_init(hashx_ctx* compiler);

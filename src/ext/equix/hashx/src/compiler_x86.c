@@ -81,8 +81,9 @@ static const uint8_t x86_epilogue[] = {
 	0xC3                          /* ret */
 };
 
-void hashx_compile_x86(const hashx_program* program, uint8_t* code) {
-	hashx_vm_rw(code, COMP_CODE_SIZE);
+bool hashx_compile_x86(const hashx_program* program, uint8_t* code) {
+	if (!hashx_vm_rw(code, COMP_CODE_SIZE))
+		return false;
 	uint8_t* pos = code;
 	uint8_t* target = NULL;
 	EMIT(pos, x86_prologue);
@@ -145,7 +146,7 @@ void hashx_compile_x86(const hashx_program* program, uint8_t* code) {
 		}
 	}
 	EMIT(pos, x86_epilogue);
-	hashx_vm_rx(code, COMP_CODE_SIZE);
+	return hashx_vm_rx(code, COMP_CODE_SIZE);
 }
 
 #endif
