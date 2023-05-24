@@ -1014,7 +1014,7 @@ fill_signing_cert_expiry(void)
     signing_key = get_master_signing_key_cert();
     if (signing_key) {
       sentry = metrics_store_add(the_store, rentry->type, rentry->name,
-                                 rentry->help);
+                                 rentry->help, 0, NULL);
       metrics_store_entry_update(sentry, signing_key->valid_until);
     }
   }
