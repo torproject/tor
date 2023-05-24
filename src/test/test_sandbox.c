@@ -12,6 +12,8 @@
 #include "orconfig.h"
 
 #include "lib/sandbox/sandbox.h"
+#include "lib/crypt_ops/crypto_rand.h"
+#include "ext/equix/include/equix.h"
 
 #ifdef USE_LIBSECCOMP
 
@@ -292,6 +294,63 @@ test_sandbox_stat_filename(void *arg)
   (void)0;
 }
 
+/** This is a simplified subset of test_crypto_equix(), running one solve
+ * and one verify from inside the sandbox. The sandbox restricts mprotect, and
+ * hashx will experience a failure at runtime which this test case exercises.
+ * The result of the solve and verify should both still be correct, since we
+ * expect it to cleanly fall back on an interpreted implementation which has
+ * no operating system dependencies. */
+static void
+test_sandbox_crypto_equix(void *arg)
+{
+  (void)arg;
+
+  const char *challenge_literal = "abce";
+  const size_t challenge_len = strlen(challenge_literal);
+  const size_t num_sols = 4;
+  static const equix_solution sols_expected[EQUIX_MAX_SOLS] = {
+    {{ 0x4fca, 0x72eb, 0x101f, 0xafab, 0x1add, 0x2d71, 0x75a3, 0xc978 }},
+    {{ 0x17f1, 0x7aa6, 0x23e3, 0xab00, 0x7e2f, 0x917e, 0x16da, 0xda9e }},
+    {{ 0x70ee, 0x7757, 0x8a54, 0xbd2b, 0x90e4, 0xe31e, 0x2085, 0xe47e }},
+    {{ 0x62c5, 0x86d1, 0x5752, 0xe1f0, 0x12da, 0x8f33, 0x7336, 0xf161 }},
+  };
+
+  equix_solution sols_actual[EQUIX_MAX_SOLS] = { 0 };
+  equix_ctx *solve_ctx = NULL, *verify_ctx = NULL;
+
+  /* TODO: A subsequent change will modify these flags to use an auto fallback
+   *       that will be built into our fork of equix. (This implements a
+   *       performant and low-complexity way to share the generated program
+   *       state during fallback instead of re-generating it.)
+   */
+  solve_ctx = equix_alloc(EQUIX_CTX_SOLVE | EQUIX_CTX_COMPILE);
+  tt_ptr_op(solve_ctx, OP_NE, NULL);
+  tt_ptr_op(solve_ctx, OP_NE, EQUIX_NOTSUPP);
+
+  int retval = equix_solve(solve_ctx, challenge_literal,
+                           challenge_len, sols_actual);
+  tt_int_op(retval, OP_EQ, num_sols);
+  tt_mem_op(sols_actual, OP_EQ, sols_expected,
+            num_sols * sizeof(equix_solution));
+
+  verify_ctx = equix_alloc(EQUIX_CTX_VERIFY | EQUIX_CTX_COMPILE);
+  tt_ptr_op(verify_ctx, OP_NE, NULL);
+  tt_ptr_op(verify_ctx, OP_NE, EQUIX_NOTSUPP);
+
+  /* Test one of the solutions randomly */
+  equix_result result;
+  const unsigned sol_i = crypto_rand_int(num_sols);
+  equix_solution *sol = &sols_actual[sol_i];
+
+  result = equix_verify(verify_ctx, challenge_literal,
+                        challenge_len, sol);
+  tt_int_op(EQUIX_OK, OP_EQ, result);
+
+ done:
+  equix_free(solve_ctx);
+  equix_free(verify_ctx);
+}
+
 #define SANDBOX_TEST_SKIPPED(name) \
   { #name, test_sandbox_ ## name, TT_SKIP, NULL, NULL }
 
@@ -343,6 +402,8 @@ struct testcase_t sandbox_tests[] = {
 #else
   SANDBOX_TEST_SKIPPED(stat_filename),
 #endif
+
+  SANDBOX_TEST_IN_SANDBOX(crypto_equix),
   END_OF_TESTCASES
 };
 
