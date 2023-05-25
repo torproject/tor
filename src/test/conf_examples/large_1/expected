@@ -19,7 +19,6 @@ ClientPreferIPv6DirPort 1
 ClientPreferIPv6ORPort 1
 ClientRejectInternalAddresses 0
 ClientUseIPv4 0
-ClientUseIPv6 1
 ConnDirectionStatistics 1
 ConnectionPadding 1
 ConnLimit 64
