@@ -9,8 +9,7 @@
 #include "hashx.h"
 #include "blake2.h"
 #include "siphash.h"
-
-typedef void program_func(uint64_t r[8]);
+#include "program.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,19 +25,14 @@ typedef struct hashx_program hashx_program;
 
 /* HashX context. */
 typedef struct hashx_ctx {
-	union {
-		uint8_t* code;
-		program_func* func;
-		hashx_program* program;
-	};
-	hashx_type type;
+	uint8_t* compiler_mem;
+	hashx_type ctx_type;
+	hashx_type func_type;
+	hashx_program program;
 #ifndef HASHX_BLOCK_MODE
 	siphash_state keys;
 #else
 	blake2b_param params;
-#endif
-#ifndef NDEBUG
-	bool has_program;
 #endif
 } hashx_ctx;
 

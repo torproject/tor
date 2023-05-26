@@ -22,25 +22,20 @@
 #define HASHX_INPUT_ARGS input, size
 #endif
 
-static int initialize_program(hashx_ctx* ctx, hashx_program* program,
-	siphash_state keys[2]) {
-
-	if (!hashx_program_generate(&keys[0], program)) {
-		return 0;
+static bool initialize_program(hashx_ctx* ctx, siphash_state keys[2]) {
+	if (!hashx_program_generate(&keys[0], &ctx->program)) {
+		return false;
 	}
 #ifndef HASHX_BLOCK_MODE
 	memcpy(&ctx->keys, &keys[1], 32);
 #else
 	memcpy(&ctx->params.salt, &keys[1], 32);
 #endif
-#ifndef NDEBUG
-	ctx->has_program = true;
-#endif
-	return 1;
+	return true;
 }
 
-int hashx_make(hashx_ctx* ctx, const void* seed, size_t size) {
-	assert(ctx != NULL && ctx != HASHX_NOTSUPP);
+hashx_result hashx_make(hashx_ctx* ctx, const void* seed, size_t size) {
+	assert(ctx != NULL);
 	assert(seed != NULL || size == 0);
 
 	uint8_t keys_bytes[2 * sizeof(siphash_state)];
@@ -59,23 +54,48 @@ int hashx_make(hashx_ctx* ctx, const void* seed, size_t size) {
 	keys[1].v2 = load64(keys_bytes + 6 * sizeof(uint64_t));
 	keys[1].v3 = load64(keys_bytes + 7 * sizeof(uint64_t));
 
-	if (ctx->type & HASHX_COMPILED) {
-		hashx_program program;
-		if (!initialize_program(ctx, &program, keys)) {
-			return 0;
-		}
-		if (!hashx_compile(&program, ctx->code)) {
-			return 0;
-		}
-		return 1;
+	ctx->func_type = (hashx_type)0;
+	if (!initialize_program(ctx, keys)) {
+		return HASHX_FAIL_SEED;
 	}
-	return initialize_program(ctx, ctx->program, keys);
+
+	switch (ctx->ctx_type) {
+	case HASHX_TYPE_INTERPRETED:
+		ctx->func_type = HASHX_TYPE_INTERPRETED;
+		return HASHX_OK;
+	case HASHX_TYPE_COMPILED:
+	case HASHX_TRY_COMPILE:
+		if (ctx->compiler_mem != NULL &&
+			hashx_compile(&ctx->program, ctx->compiler_mem)) {
+			ctx->func_type = HASHX_TYPE_COMPILED;
+			return HASHX_OK;
+		}
+		if (ctx->ctx_type == HASHX_TRY_COMPILE) {
+			ctx->func_type = HASHX_TYPE_INTERPRETED;
+			return HASHX_OK;
+		} else {
+			return HASHX_FAIL_COMPILE;
+		}
+	default:
+		return HASHX_FAIL_UNDEFINED;
+	}
 }
 
-void hashx_exec(const hashx_ctx* ctx, HASHX_INPUT, void* output) {
-	assert(ctx != NULL && ctx != HASHX_NOTSUPP);
+hashx_result hashx_query_type(hashx_ctx* ctx, hashx_type *type_out) {
+	assert(ctx != NULL);
+	assert(type_out != NULL);
+
+	if (ctx->func_type == (hashx_type)0) {
+		return HASHX_FAIL_UNPREPARED;
+	}
+	*type_out = ctx->func_type;
+	return HASHX_OK;
+}
+
+hashx_result hashx_exec(const hashx_ctx* ctx, HASHX_INPUT, void* output) {
+	assert(ctx != NULL);
 	assert(output != NULL);
-	assert(ctx->has_program);
+
 	uint64_t r[8];
 #ifndef HASHX_BLOCK_MODE
 	hashx_siphash24_ctr_state512(&ctx->keys, input, r);
@@ -83,11 +103,14 @@ void hashx_exec(const hashx_ctx* ctx, HASHX_INPUT, void* output) {
 	hashx_blake2b_4r(&ctx->params, input, size, r);
 #endif
 
-	if (ctx->type & HASHX_COMPILED) {
-		ctx->func(r);
-	}
-	else {
-		hashx_program_execute(ctx->program, r);
+	if (ctx->func_type == HASHX_TYPE_COMPILED) {
+		typedef void program_func(uint64_t r[8]);
+		assert(ctx->compiler_mem != NULL);
+		((program_func*)ctx->compiler_mem)(r);
+	} else if (ctx->func_type == HASHX_TYPE_INTERPRETED) {
+		hashx_program_execute(&ctx->program, r);
+	} else {
+		return HASHX_FAIL_UNPREPARED;
 	}
 
 	/* Hash finalization to remove bias toward 0 caused by multiplications */
@@ -145,4 +168,5 @@ void hashx_exec(const hashx_ctx* ctx, HASHX_INPUT, void* output) {
 	memcpy(output, temp_out, HASHX_SIZE);
 #endif
 #endif
+	return HASHX_OK;
 }

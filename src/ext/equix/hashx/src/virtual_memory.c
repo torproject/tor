@@ -120,6 +120,9 @@ void* hashx_vm_alloc_huge(size_t bytes) {
 }
 
 void hashx_vm_free(void* ptr, size_t bytes) {
+	if (!ptr) {
+		return;
+	}
 #ifdef HASHX_WIN
 	(void)bytes;
 	VirtualFree(ptr, 0, MEM_RELEASE);

@@ -33,50 +33,25 @@ const blake2b_param hashx_blake2_params = {
 };
 
 hashx_ctx* hashx_alloc(hashx_type type) {
-	if (!HASHX_COMPILER && (type & HASHX_COMPILED)) {
-		return HASHX_NOTSUPP;
-	}
 	hashx_ctx* ctx = malloc(sizeof(hashx_ctx));
-	if (ctx == NULL) {
-		goto failure;
+	if (ctx == NULL)
+		return NULL;
+
+	memset(ctx, 0, sizeof *ctx);
+	ctx->ctx_type = type;
+	if (type == HASHX_TYPE_COMPILED || type == HASHX_TRY_COMPILE) {
+		hashx_compiler_init(ctx);
 	}
-	ctx->code = NULL;
-	ctx->type = 0;
-	if (type & HASHX_COMPILED) {
-		if (!hashx_compiler_init(ctx)) {
-			goto failure;
-		}
-		ctx->type = HASHX_COMPILED;
-	}
-	else {
-		ctx->program = malloc(sizeof(hashx_program));
-		if (ctx->program == NULL) {
-			goto failure;
-		}
-		ctx->type = HASHX_INTERPRETED;
-	}
+
 #ifdef HASHX_BLOCK_MODE
 	memcpy(&ctx->params, &hashx_blake2_params, 32);
 #endif
-#ifndef NDEBUG
-	ctx->has_program = false;
-#endif
 	return ctx;
-failure:
-	hashx_free(ctx);
-	return NULL;
 }
 
 void hashx_free(hashx_ctx* ctx) {
-	if (ctx != NULL && ctx != HASHX_NOTSUPP) {
-		if (ctx->code != NULL) {
-			if (ctx->type & HASHX_COMPILED) {
-				hashx_compiler_destroy(ctx);
-			}
-			else {
-				free(ctx->program);
-			}
-		}
+	if (ctx != NULL) {
+		hashx_compiler_destroy(ctx);
 		free(ctx);
 	}
 }

@@ -5,6 +5,7 @@
 #include "hashx_thread.h"
 #include "hashx_endian.h"
 #include "hashx_time.h"
+#include <assert.h>
 #include <limits.h>
 #include <inttypes.h>
 
@@ -26,16 +27,31 @@ static hashx_thread_retval worker(void* args) {
 	job->total_hashes = 0;
 	job->best_hash = UINT64_MAX;
 	for (int seed = job->start; seed < job->end; seed += job->step) {
-		if (!hashx_make(job->ctx, &seed, sizeof(seed))) {
-			continue;
+		{
+			hashx_result result = hashx_make(job->ctx, &seed, sizeof(seed));
+			if (result == HASHX_FAIL_SEED) {
+				continue;
+			}
+			if (result == HASHX_FAIL_COMPILE) {
+				printf("Error: not supported. Try with --interpret\n");
+			}
+			assert(result == HASHX_OK);
+			if (result != HASHX_OK)
+				break;
 		}
 		for (int nonce = 0; nonce < job->nonces; ++nonce) {
 			uint8_t hash[HASHX_SIZE] = { 0 };
+			{
 #ifndef HASHX_BLOCK_MODE
-			hashx_exec(job->ctx, nonce, hash);
+				hashx_result result = hashx_exec(job->ctx, nonce, hash);
 #else
-			hashx_exec(job->ctx, &nonce, sizeof(nonce), hash);
+				hashx_result result = hashx_exec(job->ctx,
+					&nonce, sizeof(nonce), hash);
 #endif
+				assert(result == HASHX_OK);
+				if (result != HASHX_OK)
+					break;
+			}
 			uint64_t hashval = load64(hash);
 			if (hashval < job->best_hash) {
 				job->best_hash = hashval;
@@ -70,9 +86,9 @@ int main(int argc, char** argv) {
 	read_int_option("--nonces", argc, argv, &nonces, 65536);
 	read_int_option("--threads", argc, argv, &threads, 1);
 	read_option("--interpret", argc, argv, &interpret);
-	hashx_type flags = HASHX_INTERPRETED;
+	hashx_type ctx_type = HASHX_TYPE_INTERPRETED;
 	if (!interpret) {
-		flags = HASHX_COMPILED;
+		ctx_type = HASHX_TYPE_COMPILED;
 	}
 	uint64_t best_hash = UINT64_MAX;
 	uint64_t diff_ex = (uint64_t)diff * 1000ULL;
@@ -88,13 +104,9 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	for (int thd = 0; thd < threads; ++thd) {
-		jobs[thd].ctx = hashx_alloc(flags);
+		jobs[thd].ctx = hashx_alloc(ctx_type);
 		if (jobs[thd].ctx == NULL) {
 			printf("Error: memory allocation failure\n");
-			return 1;
-		}
-		if (jobs[thd].ctx == HASHX_NOTSUPP) {
-			printf("Error: not supported. Try with --interpret\n");
 			return 1;
 		}
 		jobs[thd].id = thd;

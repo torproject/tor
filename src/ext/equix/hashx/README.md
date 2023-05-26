@@ -13,7 +13,7 @@ and to ensure that each function takes exactly the same number of CPU cycles
 
 ## API
 
-The API consists of 4 functions and is documented in the public header file
+The API consists of 5 functions and is documented in the public header file
 [hashx.h](include/hashx.h).
 
 Example of usage:
@@ -25,13 +25,15 @@ Example of usage:
 int main() {
     char seed[] = "this is a seed that will generate a hash function";
     char hash[HASHX_SIZE];
-    hashx_ctx* ctx = hashx_alloc(HASHX_COMPILED);
-    if (ctx == HASHX_NOTSUPP)
-        ctx = hashx_alloc(HASHX_INTERPRETED);
+    hashx_type func_type;
+    hashx_ctx* ctx = hashx_alloc(HASHX_TRY_COMPILE);
     if (ctx == NULL)
         return 1;
-    if (!hashx_make(ctx, seed, sizeof(seed))) /* generate a hash function */
+    /* generate a hash function */
+    if (hashx_make(ctx, seed, sizeof(seed)) != HASHX_OK)
         return 1;
+    if (hashx_query_type(ctx, &func_type) == HASHX_OK && func_type == HASHX_TYPE_COMPILED)
+        printf("Using the compiled implementation of HashX\n");
     hashx_exec(ctx, 123456789, hash); /* calculate the hash of a nonce value */
     hashx_free(ctx);
     for (unsigned i = 0; i < HASHX_SIZE; ++i)
@@ -83,6 +85,31 @@ A benchmark executable is included:
 ```
 ./hashx-bench --seeds 500
 ```
+
+## Error fallback
+
+The compiled implementation of HashX is much faster (very roughly 20x) so it
+should be used whenever possible. It may be necessary to use the interpreter
+for multiple reasons: either the platform is not supported at compile time,
+or various runtime policies disallow the memory protection changes that are
+necessary to do just-in-time compilation. Failures may be detected late, so
+the library provides a built-in mechanism to fall back from the compiled
+implementation to interpreted quickly without duplicating the whole context.
+
+The `hashx_query_type()` function is optional, provided for users of the
+`HASHX_TRY_COMPILE` context who need to know which implementation was
+ultimately used.
+
+The actual hash function, `hashx_exec()`, returns an error code for
+completeness in reporting programming errors, but if a caller has invoked
+`hashx_make()` successfully it can be considered infallible.
+
+It is always possible for `hashx_make()` to fail. In addition to the
+OS-specific failures you may see when forcing HashX to use the compiled
+implementation with `hashx_alloc(HASHX_TYPE_COMPILED)`, it's always possible
+for `hashx_make` to fail unpredictably for a particular seed value. These
+seeds should be discarded and a new one attempted by the caller when
+`hashx_make` returns `HASHX_FAIL_SEED`.
 
 ## Security
 

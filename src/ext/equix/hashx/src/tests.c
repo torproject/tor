@@ -14,6 +14,7 @@ static int test_no = 0;
 
 static hashx_ctx* ctx_int = NULL;
 static hashx_ctx* ctx_cmp = NULL;
+static hashx_ctx* ctx_auto = NULL;
 
 static const char seed1[] = "This is a test";
 static const char seed2[] = "Lorem ipsum dolor sit amet";
@@ -42,20 +43,21 @@ static void run_test(const char* name, test_func* func) {
 }
 
 static bool test_alloc() {
-	ctx_int = hashx_alloc(HASHX_INTERPRETED);
-	assert(ctx_int != NULL && ctx_int != HASHX_NOTSUPP);
+	ctx_int = hashx_alloc(HASHX_TYPE_INTERPRETED);
+	assert(ctx_int != NULL);
 	return true;
 }
 
 static bool test_free() {
 	hashx_free(ctx_int);
 	hashx_free(ctx_cmp);
+	hashx_free(ctx_auto);
 	return true;
 }
 
 static bool test_make1() {
-	int result = hashx_make(ctx_int, seed1, sizeof(seed1));
-	assert(result == 1);
+	hashx_result result = hashx_make(ctx_int, seed1, sizeof(seed1));
+	assert(result == HASHX_OK);
 	return true;
 }
 
@@ -65,7 +67,8 @@ static bool test_hash_ctr1() {
 #endif
 #ifndef HASHX_BLOCK_MODE
 	char hash[HASHX_SIZE];
-	hashx_exec(ctx_int, counter2, hash);
+	hashx_result result = hashx_exec(ctx_int, counter2, hash);
+	assert(result == HASHX_OK);
 	/* printf("\n");
 	output_hex(hash, HASHX_SIZE);
 	printf("\n"); */
@@ -82,7 +85,8 @@ static bool test_hash_ctr2() {
 #endif
 #ifndef HASHX_BLOCK_MODE
 	char hash[HASHX_SIZE];
-	hashx_exec(ctx_int, counter1, hash);
+	hashx_result result = hashx_exec(ctx_int, counter1, hash);
+	assert(result == HASHX_OK);
 	assert(equals_hex(hash, "2b2f54567dcbea98fdb5d5e5ce9a65983c4a4e35ab1464b1efb61e83b7074bb2"));
 	return true;
 #else
@@ -91,8 +95,8 @@ static bool test_hash_ctr2() {
 }
 
 static bool test_make2() {
-	int result = hashx_make(ctx_int, seed2, sizeof(seed2));
-	assert(result == 1);
+	hashx_result result = hashx_make(ctx_int, seed2, sizeof(seed2));
+	assert(result == HASHX_OK);
 	return true;
 }
 
@@ -102,7 +106,8 @@ static bool test_hash_ctr3() {
 #endif
 #ifndef HASHX_BLOCK_MODE
 	char hash[HASHX_SIZE];
-	hashx_exec(ctx_int, counter2, hash);
+	hashx_result result = hashx_exec(ctx_int, counter2, hash);
+	assert(result == HASHX_OK);
 	assert(equals_hex(hash, "ab3d155bf4bbb0aa3a71b7801089826186e44300e6932e6ffd287cf302bbb0ba"));
 	return true;
 #else
@@ -116,7 +121,8 @@ static bool test_hash_ctr4() {
 #endif
 #ifndef HASHX_BLOCK_MODE
 	char hash[HASHX_SIZE];
-	hashx_exec(ctx_int, counter3, hash);
+	hashx_result result = hashx_exec(ctx_int, counter3, hash);
+	assert(result == HASHX_OK);
 	assert(equals_hex(hash, "8dfef0497c323274a60d1d93292b68d9a0496379ba407b4341cf868a14d30113"));
 	return true;
 #else
@@ -132,36 +138,40 @@ static bool test_hash_block1() {
 	return false;
 #else
 	char hash[HASHX_SIZE];
-	hashx_exec(ctx_int, long_input, sizeof(long_input), hash);
+	hashx_result result = hashx_exec(ctx_int, long_input, sizeof(long_input), hash);
+	assert(result == HASHX_OK);
 	assert(equals_hex(hash, "d0b232b832459501ca1ac9dc0429fd931414ead7624a457e375a43ea3e5e737a"));
 	return true;
 #endif
 }
 
 static bool test_alloc_compiler() {
-	ctx_cmp = hashx_alloc(HASHX_COMPILED);
+	ctx_cmp = hashx_alloc(HASHX_TYPE_COMPILED);
 	assert(ctx_cmp != NULL);
-	return ctx_cmp != HASHX_NOTSUPP;
+	return true;
 }
 
 static bool test_make3() {
-	if (ctx_cmp == HASHX_NOTSUPP)
+	hashx_result result = hashx_make(ctx_cmp, seed2, sizeof(seed2));
+	if (result == HASHX_FAIL_COMPILE) {
 		return false;
-
-	int result = hashx_make(ctx_cmp, seed2, sizeof(seed2));
-	assert(result == 1);
+	}
+	assert(result == HASHX_OK);
 	return true;
 }
 
 static bool test_compiler_ctr1() {
-	if (ctx_cmp == HASHX_NOTSUPP)
-		return false;
-
 #ifndef HASHX_BLOCK_MODE
+	hashx_result result;
 	char hash1[HASHX_SIZE];
 	char hash2[HASHX_SIZE];
-	hashx_exec(ctx_int, counter2, hash1);
-	hashx_exec(ctx_cmp, counter2, hash2);
+	result = hashx_exec(ctx_int, counter2, hash1);
+	assert(result == HASHX_OK);
+	result = hashx_exec(ctx_cmp, counter2, hash2);
+	if (result == HASHX_FAIL_UNPREPARED) {
+		return false;
+	}
+	assert(result == HASHX_OK);
 	assert(hashes_equal(hash1, hash2));
 	return true;
 #else
@@ -170,14 +180,17 @@ static bool test_compiler_ctr1() {
 }
 
 static bool test_compiler_ctr2() {
-	if (ctx_cmp == HASHX_NOTSUPP)
-		return false;
-
 #ifndef HASHX_BLOCK_MODE
+	hashx_result result;
 	char hash1[HASHX_SIZE];
 	char hash2[HASHX_SIZE];
-	hashx_exec(ctx_int, counter1, hash1);
-	hashx_exec(ctx_cmp, counter1, hash2);
+	result = hashx_exec(ctx_int, counter1, hash1);
+	assert(result == HASHX_OK);
+	result = hashx_exec(ctx_cmp, counter1, hash2);
+	if (result == HASHX_FAIL_UNPREPARED) {
+		return false;
+	}
+	assert(result == HASHX_OK);
 	assert(hashes_equal(hash1, hash2));
 	return true;
 #else
@@ -186,16 +199,54 @@ static bool test_compiler_ctr2() {
 }
 
 static bool test_compiler_block1() {
-	if (ctx_cmp == HASHX_NOTSUPP)
-		return false;
 #ifndef HASHX_BLOCK_MODE
 	return false;
 #else
+	hashx_result result;
 	char hash1[HASHX_SIZE];
 	char hash2[HASHX_SIZE];
-	hashx_exec(ctx_int, long_input, sizeof(long_input), hash1);
-	hashx_exec(ctx_cmp, long_input, sizeof(long_input), hash2);
+	result = hashx_exec(ctx_int, long_input, sizeof(long_input), hash1);
+	assert(result == HASHX_OK);
+	result = hashx_exec(ctx_cmp, long_input, sizeof(long_input), hash2);
+	if (result == HASHX_FAIL_UNPREPARED) {
+		return false;
+	}
+	assert(result == HASHX_OK);
 	assert(hashes_equal(hash1, hash2));
+	return true;
+#endif
+}
+
+static bool test_alloc_automatic() {
+	ctx_auto = hashx_alloc(HASHX_TRY_COMPILE);
+	assert(ctx_auto != NULL);
+	return true;
+}
+
+static bool test_auto_fallback() {
+	hashx_result result = hashx_make(ctx_auto, seed2, sizeof(seed2));
+	assert(result == HASHX_OK);
+	hashx_type actual_type = (hashx_type)-1;
+	result = hashx_query_type(ctx_auto, &actual_type);
+	assert(result == HASHX_OK);
+	assert(actual_type == HASHX_TYPE_INTERPRETED ||
+	       actual_type == HASHX_TYPE_COMPILED);
+	return actual_type == HASHX_TYPE_INTERPRETED;
+}
+
+static bool test_bad_seeds() {
+#ifdef HASHX_SALT
+	return false;
+#else
+	hashx_result result;
+	result = hashx_make(ctx_auto, "\xf8\x05\x00\x00", 4);
+	assert(result == HASHX_OK);
+	result = hashx_make(ctx_auto, "\xf9\x05\x00\x00", 4);
+	assert(result == HASHX_FAIL_SEED);
+	result = hashx_make(ctx_auto, "\x5d\x93\x02\x00", 4);
+	assert(result == HASHX_FAIL_SEED);
+	result = hashx_make(ctx_auto, "\x5e\x93\x02\x00", 4);
+	assert(result == HASHX_OK);
 	return true;
 #endif
 }
@@ -214,6 +265,9 @@ int main() {
 	RUN_TEST(test_compiler_ctr2);
 	RUN_TEST(test_hash_block1);
 	RUN_TEST(test_compiler_block1);
+	RUN_TEST(test_alloc_automatic);
+	RUN_TEST(test_auto_fallback);
+	RUN_TEST(test_bad_seeds);
 	RUN_TEST(test_free);
 
 	printf("\nAll tests were successful\n");
