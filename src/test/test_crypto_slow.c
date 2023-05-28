@@ -636,14 +636,21 @@ test_crypto_equix(void *arg)
   static const struct {
     equix_ctx_flags flags;
     equix_result expected;
+    equix_solution_flags sol_flags;
   } variations[] = {
-    {0, EQUIX_OK},
-    {0, EQUIX_ORDER},
-    {0, EQUIX_PARTIAL_SUM},
+    {0, EQUIX_OK, 0},
+    {0, EQUIX_FAIL_ORDER, 0},
+    {0, EQUIX_FAIL_PARTIAL_SUM, 0},
 #if defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__)
-    {EQUIX_CTX_COMPILE, EQUIX_OK},
-    {EQUIX_CTX_COMPILE, EQUIX_ORDER},
-    {EQUIX_CTX_COMPILE, EQUIX_PARTIAL_SUM},
+    { EQUIX_CTX_MUST_COMPILE, EQUIX_OK,
+      EQUIX_SOLVER_DID_USE_COMPILER
+    },
+    { EQUIX_CTX_MUST_COMPILE, EQUIX_FAIL_ORDER,
+      EQUIX_SOLVER_DID_USE_COMPILER
+    },
+    { EQUIX_CTX_MUST_COMPILE, EQUIX_FAIL_PARTIAL_SUM,
+      EQUIX_SOLVER_DID_USE_COMPILER
+    },
 #endif
   };
 
@@ -659,48 +666,42 @@ test_crypto_equix(void *arg)
 
     for (unsigned vari_i = 0; vari_i < num_variations; vari_i++) {
       const equix_ctx_flags flags = variations[vari_i].flags;
+      const equix_solution_flags sol_flags = variations[vari_i].sol_flags;
       const equix_result expected = variations[vari_i].expected;
 
-      equix_solution sols_actual[EQUIX_MAX_SOLS];
+      equix_solutions_buffer output;
       equix_ctx *solve_ctx = NULL, *verify_ctx = NULL;
 
       solve_ctx = equix_alloc(EQUIX_CTX_SOLVE | flags);
       tt_ptr_op(solve_ctx, OP_NE, NULL);
-      tt_ptr_op(solve_ctx, OP_NE, EQUIX_NOTSUPP);
 
       /* Solve phase: Make sure the test vector matches */
-      memset(sols_actual, 0xa5, sizeof sols_actual);
-      int retval = equix_solve(solve_ctx, challenge_literal,
-                               challenge_len, sols_actual);
-      tt_int_op(retval, OP_EQ, num_sols);
-      tt_mem_op(sols_actual, OP_EQ, sols_expected,
+      memset(&output, 0xa5, sizeof output);
+      equix_result result;
+      result = equix_solve(solve_ctx, challenge_literal,
+                           challenge_len, &output);
+      tt_int_op(result, OP_EQ, EQUIX_OK);
+      tt_int_op(output.count, OP_EQ, num_sols);
+      tt_int_op(output.flags, OP_EQ, sol_flags);
+      tt_mem_op(output.sols, OP_EQ, sols_expected,
                 num_sols * sizeof(equix_solution));
 
       verify_ctx = equix_alloc(EQUIX_CTX_VERIFY | flags);
       tt_ptr_op(verify_ctx, OP_NE, NULL);
-      tt_ptr_op(verify_ctx, OP_NE, EQUIX_NOTSUPP);
 
       /* Use each solution for positive and negative tests of verify */
       for (size_t sol_i = 0; sol_i < num_sols; sol_i++) {
-        equix_result result;
         equix_idx tmp_idx;
-        equix_solution *sol = &sols_actual[sol_i];
+        equix_solution *sol = &output.sols[sol_i];
 
-        switch (expected) {
-          case EQUIX_ORDER:
-            /* Swap two otherwise valid indices, to trigger an order error */
-            tmp_idx = sol->idx[0];
-            sol->idx[0] = sol->idx[1];
-            sol->idx[1] = tmp_idx;
-            break;
-          case EQUIX_FINAL_SUM:
-          case EQUIX_PARTIAL_SUM:
-            /* Most changes to the solution will cause a partial sum error */
-            sol->idx[0]++;
-            break;
-          case EQUIX_OK:
-          case EQUIX_CHALLENGE:
-            break;
+        if (expected == EQUIX_FAIL_ORDER) {
+          /* Swap two otherwise valid indices, to trigger an order error */
+          tmp_idx = sol->idx[0];
+          sol->idx[0] = sol->idx[1];
+          sol->idx[1] = tmp_idx;
+        } else if (expected == EQUIX_FAIL_PARTIAL_SUM) {
+          /* Most changes to the solution will cause a partial sum error */
+          sol->idx[0]++;
         }
 
         result = equix_verify(verify_ctx, challenge_literal,

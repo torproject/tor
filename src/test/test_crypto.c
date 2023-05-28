@@ -2982,9 +2982,9 @@ test_crypto_hashx(void *arg)
   static const struct {
     hashx_type type;
   } variations[] = {
-    { HASHX_INTERPRETED },
+    { HASHX_TYPE_INTERPRETED },
 #if defined(_M_X64) || defined(__x86_64__) || defined(__aarch64__)
-    { HASHX_COMPILED },
+    { HASHX_TYPE_COMPILED },
 #endif
   };
 
@@ -3013,12 +3013,12 @@ test_crypto_hashx(void *arg)
       ctx = hashx_alloc(variations[vari_i].type);
 
       tt_ptr_op(ctx, OP_NE, NULL);
-      tt_ptr_op(ctx, OP_NE, HASHX_NOTSUPP);
       retval = hashx_make(ctx, seed_literal, seed_len);
-      tt_int_op(retval, OP_EQ, 1);
+      tt_int_op(retval, OP_EQ, HASHX_OK);
 
       memset(out_actual, 0xa5, sizeof out_actual);
-      hashx_exec(ctx, hash_input, out_actual);
+      retval = hashx_exec(ctx, hash_input, out_actual);
+      tt_int_op(retval, OP_EQ, HASHX_OK);
       tt_mem_op(out_actual, OP_EQ, out_expected, sizeof out_actual);
     }
   }

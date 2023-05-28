@@ -315,32 +315,27 @@ test_sandbox_crypto_equix(void *arg)
     {{ 0x62c5, 0x86d1, 0x5752, 0xe1f0, 0x12da, 0x8f33, 0x7336, 0xf161 }},
   };
 
-  equix_solution sols_actual[EQUIX_MAX_SOLS] = { 0 };
+  equix_solutions_buffer output;
   equix_ctx *solve_ctx = NULL, *verify_ctx = NULL;
 
-  /* TODO: A subsequent change will modify these flags to use an auto fallback
-   *       that will be built into our fork of equix. (This implements a
-   *       performant and low-complexity way to share the generated program
-   *       state during fallback instead of re-generating it.)
-   */
-  solve_ctx = equix_alloc(EQUIX_CTX_SOLVE | EQUIX_CTX_COMPILE);
+  solve_ctx = equix_alloc(EQUIX_CTX_SOLVE | EQUIX_CTX_TRY_COMPILE);
   tt_ptr_op(solve_ctx, OP_NE, NULL);
-  tt_ptr_op(solve_ctx, OP_NE, EQUIX_NOTSUPP);
 
-  int retval = equix_solve(solve_ctx, challenge_literal,
-                           challenge_len, sols_actual);
-  tt_int_op(retval, OP_EQ, num_sols);
-  tt_mem_op(sols_actual, OP_EQ, sols_expected,
+  equix_result result;
+  memset(&output, 0xEE, sizeof output);
+  result = equix_solve(solve_ctx, challenge_literal, challenge_len, &output);
+  tt_int_op(result, OP_EQ, EQUIX_OK);
+  tt_int_op(output.count, OP_EQ, num_sols);
+  tt_int_op(output.flags, OP_EQ, 0); /* EQUIX_SOLVER_DID_USE_COMPILER unset */
+  tt_mem_op(output.sols, OP_EQ, sols_expected,
             num_sols * sizeof(equix_solution));
 
-  verify_ctx = equix_alloc(EQUIX_CTX_VERIFY | EQUIX_CTX_COMPILE);
+  verify_ctx = equix_alloc(EQUIX_CTX_VERIFY | EQUIX_CTX_TRY_COMPILE);
   tt_ptr_op(verify_ctx, OP_NE, NULL);
-  tt_ptr_op(verify_ctx, OP_NE, EQUIX_NOTSUPP);
 
   /* Test one of the solutions randomly */
-  equix_result result;
   const unsigned sol_i = crypto_rand_int(num_sols);
-  equix_solution *sol = &sols_actual[sol_i];
+  equix_solution *sol = &output.sols[sol_i];
 
   result = equix_verify(verify_ctx, challenge_literal,
                         challenge_len, sol);
