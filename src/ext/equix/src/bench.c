@@ -10,11 +10,6 @@
 #include <hashx_thread.h>
 #include <hashx_time.h>
 
-typedef struct solver_output {
-	equix_solution sols[EQUIX_MAX_SOLS];
-	int count;
-} solver_output;
-
 typedef struct worker_job {
 	int id;
 	hashx_thread thread;
@@ -23,17 +18,29 @@ typedef struct worker_job {
 	int start;
 	int step;
 	int end;
-	solver_output* output;
+	equix_solutions_buffer* output;
 } worker_job;
 
 static hashx_thread_retval worker(void* args) {
 	worker_job* job = (worker_job*)args;
 	job->total_sols = 0;
-	solver_output* outptr = job->output;
+	equix_solutions_buffer* outptr = job->output;
 	for (int seed = job->start; seed < job->end; seed += job->step) {
-		int count = equix_solve(job->ctx, &seed, sizeof(seed), outptr->sols);
-		outptr->count = count;
-		job->total_sols += count;
+		equix_result result = equix_solve(job->ctx, &seed,
+		                                  sizeof(seed), outptr);
+		if (result == EQUIX_OK) {
+			job->total_sols += outptr->count;
+		} else if (result == EQUIX_FAIL_CHALLENGE) {
+			outptr->count = 0;
+		} else if (result == EQUIX_FAIL_COMPILE) {
+			printf("Error: not supported. Try with --interpret\n");
+			exit(1);
+			break;
+		} else {
+			printf("Error: unexpected solve failure (%d)\n", (int)result);
+			exit(1);
+			break;
+		}
 		outptr++;
 	}
 	return HASHX_THREAD_SUCCESS;
@@ -54,7 +61,10 @@ static const char* result_names[] = {
 	"Invalid nonce",
 	"Indices out of order",
 	"Nonzero partial sum",
-	"Nonzero final sum"
+	"Nonzero final sum",
+	"HashX compiler failed",
+	"(Internal) Solver not allocated",
+	"(Internal error)"
 };
 
 static void print_help(char* executable) {
@@ -85,7 +95,7 @@ int main(int argc, char** argv) {
 	read_int_option("--threads", argc, argv, &threads, 1);
 	equix_ctx_flags flags = EQUIX_CTX_SOLVE;
 	if (!interpret) {
-		flags |= EQUIX_CTX_COMPILE;
+		flags |= EQUIX_CTX_MUST_COMPILE;
 	}
 	if (huge_pages) {
 		flags |= EQUIX_CTX_HUGEPAGES;
@@ -102,15 +112,11 @@ int main(int argc, char** argv) {
 			printf("Error: memory allocation failure\n");
 			return 1;
 		}
-		if (jobs[thd].ctx == EQUIX_NOTSUPP) {
-			printf("Error: not supported. Try with --interpret\n");
-			return 1;
-		}
 		jobs[thd].id = thd;
 		jobs[thd].start = start + thd;
 		jobs[thd].step = threads;
 		jobs[thd].end = start + nonces;
-		jobs[thd].output = malloc(sizeof(solver_output) * per_thread);
+		jobs[thd].output = malloc(sizeof(equix_solutions_buffer) * per_thread);
 		if (jobs[thd].output == NULL) {
 			printf("Error: memory allocation failure\n");
 			return 1;
@@ -141,7 +147,7 @@ int main(int argc, char** argv) {
 	if (print_sols) {
 		for (int thd = 0; thd < threads; ++thd) {
 			worker_job* job = &jobs[thd];
-			solver_output* outptr = job->output;
+			equix_solutions_buffer* outptr = job->output;
 			for (int seed = job->start; seed < job->end; seed += job->step) {
 				for (int sol = 0; sol < outptr->count; ++sol) {
 					print_solution(seed, &outptr->sols[sol]);
@@ -153,7 +159,7 @@ int main(int argc, char** argv) {
 	time_start = hashx_time();
 	for (int thd = 0; thd < threads; ++thd) {
 		worker_job* job = &jobs[thd];
-		solver_output* outptr = job->output;
+		equix_solutions_buffer* outptr = job->output;
 		for (int seed = job->start; seed < job->end; seed += job->step) {
 			for (int sol = 0; sol < outptr->count; ++sol) {
 				equix_result result = equix_verify(job->ctx, &seed, sizeof(seed), &outptr->sols[sol]);

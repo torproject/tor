@@ -13,7 +13,7 @@
 typedef bool test_func();
 
 static equix_ctx* ctx = NULL;
-static equix_solution solution[EQUIX_MAX_SOLS];
+static equix_solutions_buffer output;
 static int nonce;
 static int valid_count = 0;
 static int test_no = 0;
@@ -26,8 +26,8 @@ static int test_no = 0;
     } while(0)
 
 static bool test_alloc() {
-	ctx = equix_alloc(EQUIX_CTX_SOLVE);
-	assert(ctx != NULL && ctx != EQUIX_NOTSUPP);
+	ctx = equix_alloc(EQUIX_CTX_SOLVE | EQUIX_CTX_TRY_COMPILE);
+	assert(ctx != NULL);
 	return true;
 }
 
@@ -37,60 +37,65 @@ static bool test_free() {
 }
 
 static bool test_solve() {
-	int num_solutions = 0;
-	for (nonce = 0; num_solutions == 0 && nonce < 20; ++nonce) {
-		num_solutions = equix_solve(ctx, &nonce, sizeof(nonce), solution);
+	output.count = 0;
+	for (nonce = 0; output.count == 0 && nonce < 20; ++nonce) {
+		equix_result result = equix_solve(ctx, &nonce, sizeof(nonce), &output);
+		assert(result == EQUIX_OK);
 	}
 	--nonce;
-	assert(num_solutions > 0);
+	assert(output.count > 0);
+	assert(output.flags == EQUIX_SOLVER_DID_USE_COMPILER || output.flags == 0);
+	printf("(using %s HashX) ",
+		(EQUIX_SOLVER_DID_USE_COMPILER & output.flags)
+		? "compiled" : "interpreted");
 	return true;
 }
 
 static bool test_verify1() {
-	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &solution[0]);
+	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &output.sols[0]);
 	assert(result == EQUIX_OK);
 	return true;
 }
 
 static bool test_verify2() {
-	SWAP_IDX(solution[0].idx[0], solution[0].idx[1]);
-	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &solution[0]);
-	assert(result == EQUIX_ORDER);
+	SWAP_IDX(output.sols[0].idx[0], output.sols[0].idx[1]);
+	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &output.sols[0]);
+	assert(result == EQUIX_FAIL_ORDER);
 	return true;
 }
 
 static bool test_verify3() {
-	SWAP_IDX(solution[0].idx[0], solution[0].idx[4]);
-	SWAP_IDX(solution[0].idx[1], solution[0].idx[5]);
-	SWAP_IDX(solution[0].idx[2], solution[0].idx[6]);
-	SWAP_IDX(solution[0].idx[3], solution[0].idx[7]);
-	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &solution[0]);
-	assert(result == EQUIX_ORDER);
-	SWAP_IDX(solution[0].idx[0], solution[0].idx[4]);
-	SWAP_IDX(solution[0].idx[1], solution[0].idx[5]);
-	SWAP_IDX(solution[0].idx[2], solution[0].idx[6]);
-	SWAP_IDX(solution[0].idx[3], solution[0].idx[7]);
+	SWAP_IDX(output.sols[0].idx[0], output.sols[0].idx[4]);
+	SWAP_IDX(output.sols[0].idx[1], output.sols[0].idx[5]);
+	SWAP_IDX(output.sols[0].idx[2], output.sols[0].idx[6]);
+	SWAP_IDX(output.sols[0].idx[3], output.sols[0].idx[7]);
+	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &output.sols[0]);
+	assert(result == EQUIX_FAIL_ORDER);
+	SWAP_IDX(output.sols[0].idx[0], output.sols[0].idx[4]);
+	SWAP_IDX(output.sols[0].idx[1], output.sols[0].idx[5]);
+	SWAP_IDX(output.sols[0].idx[2], output.sols[0].idx[6]);
+	SWAP_IDX(output.sols[0].idx[3], output.sols[0].idx[7]);
 	return true;
 }
 
 static bool test_verify4() {
-	SWAP_IDX(solution[0].idx[1], solution[0].idx[2]);
-	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &solution[0]);
-	assert(result == EQUIX_PARTIAL_SUM);
-	SWAP_IDX(solution[0].idx[1], solution[0].idx[2]);
+	SWAP_IDX(output.sols[0].idx[1], output.sols[0].idx[2]);
+	equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &output.sols[0]);
+	assert(result == EQUIX_FAIL_PARTIAL_SUM);
+	SWAP_IDX(output.sols[0].idx[1], output.sols[0].idx[2]);
 	return true;
 }
 
 static void permute_idx(int start) {
 	if (start == EQUIX_NUM_IDX - 1) {
-		equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &solution[0]);
+		equix_result result = equix_verify(ctx, &nonce, sizeof(nonce), &output.sols[0]);
 		valid_count += result == EQUIX_OK;
 	}
 	else {
 		for (int i = start; i < EQUIX_NUM_IDX; ++i)	{
-			SWAP_IDX(solution[0].idx[start], solution[0].idx[i]);
+			SWAP_IDX(output.sols[0].idx[start], output.sols[0].idx[i]);
 			permute_idx(start + 1);
-			SWAP_IDX(solution[0].idx[start], solution[0].idx[i]);
+			SWAP_IDX(output.sols[0].idx[start], output.sols[0].idx[i]);
 		}
 	}
 }

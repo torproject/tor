@@ -30,16 +30,35 @@ typedef struct equix_solution {
 } equix_solution;
 
 /*
- * Solution verification results
+ * Extra informational flags returned by the solver
+ */
+typedef enum equix_solution_flags {
+    EQUIX_SOLVER_DID_USE_COMPILER = (1 << 0),
+} equix_solution_flags;
+
+/*
+ * Fixed size buffer containing up to EQUIX_MAX_SOLS solutions.
+ */
+typedef struct equix_solutions_buffer {
+    unsigned count;
+    equix_solution_flags flags;
+    equix_solution sols[EQUIX_MAX_SOLS];
+} equix_solutions_buffer;
+
+/*
+ * Result type for solve and verify operations
  */
 typedef enum equix_result {
     EQUIX_OK,               /* Solution is valid */
-    EQUIX_CHALLENGE,        /* The challenge is invalid (the internal hash
+    EQUIX_FAIL_CHALLENGE,   /* The challenge is invalid (the internal hash
                                function doesn't pass validation). */
-    EQUIX_ORDER,            /* Indices are not in the correct order. */
-    EQUIX_PARTIAL_SUM,      /* The partial sums of the hash values don't
+    EQUIX_FAIL_ORDER,       /* Indices are not in the correct order. */
+    EQUIX_FAIL_PARTIAL_SUM, /* The partial sums of the hash values don't
                                have the required number of trailing zeroes. */
-    EQUIX_FINAL_SUM         /* The hash values don't sum to zero. */
+    EQUIX_FAIL_FINAL_SUM,   /* The hash values don't sum to zero. */
+    EQUIX_FAIL_COMPILE,     /* Can't compile, and no fallback is enabled */
+    EQUIX_FAIL_NO_SOLVER,   /* Solve requested on a context with no solver */
+    EQUIX_FAIL_INTERNAL,    /* Internal error (bug) */
 } equix_result;
 
 /*
@@ -49,16 +68,14 @@ typedef struct equix_ctx equix_ctx;
 
 /*
  * Flags for context creation
-*/
+ */
 typedef enum equix_ctx_flags {
     EQUIX_CTX_VERIFY = 0,       /* Context for verification */
     EQUIX_CTX_SOLVE = 1,        /* Context for solving */
-    EQUIX_CTX_COMPILE = 2,      /* Compile internal hash function */
-    EQUIX_CTX_HUGEPAGES = 4,    /* Allocate solver memory using HugePages */
+    EQUIX_CTX_MUST_COMPILE = 2, /* Must compile internal hash function */
+    EQUIX_CTX_TRY_COMPILE = 4,  /* Compile if possible */
+    EQUIX_CTX_HUGEPAGES = 8,    /* Allocate solver memory using HugePages */
 } equix_ctx_flags;
-
-/* Sentinel value used to indicate unsupported type */
-#define EQUIX_NOTSUPP ((equix_ctx*)-1)
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define EQUIX_WIN
@@ -93,8 +110,7 @@ extern "C" {
  * @param flags is the type of context to be created
  *
  * @return pointer to a newly created context. Returns NULL on memory
- *         allocation failure and EQUIX_NOTSUPP if the requested type
- *         is not supported.
+ *         allocation failure.
  */
 EQUIX_API equix_ctx* equix_alloc(equix_ctx_flags flags);
 
@@ -114,13 +130,17 @@ EQUIX_API void equix_free(equix_ctx* ctx);
  * @param output          pointer to the output array where solutions will be
  *                        stored
  *
- * @return the number of solutions found
+ * @return On success, returns EQUIX_OK and sets output->count to the number
+ *         of solutions found, with the solutions themselves written to the
+ *         output buffer. If the challenge is unusable, returns
+ *         EQUIX_FAIL_CHALLENGE. If the EQUIX_CTX_MUST_COMPILE flag is in use
+ *         and the compiler fails, this can return EQUIX_FAIL_COMPILE.
  */
-EQUIX_API int equix_solve(
+EQUIX_API equix_result equix_solve(
     equix_ctx* ctx,
     const void* challenge,
     size_t challenge_size,
-    equix_solution output[EQUIX_MAX_SOLS]);
+    equix_solutions_buffer *output);
 
 /*
  * Verify an Equi-X solution.
@@ -130,8 +150,9 @@ EQUIX_API int equix_solve(
  * @param challenge_size  size of the challenge
  * @param solution        pointer to the solution to be verified
  *
- * @return verification result
-*/
+ * @return Verification result. This can return EQUIX_OK or any of the
+ *         EQUIX_FAIL_* error codes.
+ */
 EQUIX_API equix_result equix_verify(
     equix_ctx* ctx,
     const void* challenge,

@@ -49,7 +49,8 @@ typedef stage3_idx_item s3_idx;
 
 static FORCE_INLINE uint64_t hash_value(hashx_ctx* hash_func, equix_idx index) {
 	char hash[HASHX_SIZE];
-	hashx_exec(hash_func, index, hash);
+	hashx_result result = hashx_exec(hash_func, index, hash);
+	assert(result == HASHX_OK);
 	return load64(hash);
 }
 
