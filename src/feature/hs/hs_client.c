@@ -750,7 +750,8 @@ consider_sending_introduce1(origin_circuit_t *intro_circ,
    */
   if (have_module_pow() && desc->encrypted_data.pow_params) {
     hs_pow_solver_inputs_t pow_inputs = {
-      .effort = desc->encrypted_data.pow_params->suggested_effort
+      .effort = desc->encrypted_data.pow_params->suggested_effort,
+      .CompiledProofOfWorkHash = get_options()->CompiledProofOfWorkHash
     };
     ed25519_pubkey_copy(&pow_inputs.service_blinded_id,
                         &desc->plaintext_data.blinded_pubkey);

@@ -380,6 +380,7 @@ static const config_var_t option_vars_[] = {
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "1"),
   V(ClientUseIPv4,               BOOL,     "1"),
+  V(CompiledProofOfWorkHash,     AUTOBOOL, "auto"),
   V(ConfluxEnabled,              AUTOBOOL, "auto"),
   VAR("ConfluxClientUX",         STRING,   ConfluxClientUX_option,
           "throughput"),

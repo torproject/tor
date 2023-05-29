@@ -3119,6 +3119,21 @@ The following options are per onion service:
     The maximum burst size for rendezvous requests handled from the
     priority queue at once. (Default: 2500)
 
+These options are applicable to both onion services and their clients:
+
+[[CompiledProofOfWorkHash]] **CompiledProofOfWorkHash** **0**|**1**|**auto**::
+    When proof-of-work DoS mitigation is active, both the services themselves
+    and the clients which connect will use a dynamically generated hash
+    function as part of the puzzle computation.
+     +
+    If this option is set to 1, puzzles will only be solved and verified using
+    the compiled implementation (about 20x faster) and we choose to fail rather
+    than using a slower fallback. If it's 0, the compiler will never be used.
+    By default, the compiler is always tried if possible but the interpreter is
+    available as a fallback. (Default: auto)
+
+See also <<opt-list-modules,`--list-modules`>>, these proof of work options
+have no effect unless the "`pow`" module is enabled at compile time.
 
 == DIRECTORY AUTHORITY SERVER OPTIONS
 

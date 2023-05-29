@@ -723,6 +723,11 @@ struct or_options_t {
    * accessing this value directly.  */
   int ClientPreferIPv6DirPort;
 
+  /** If true, always use the compiled hash implementation. If false, always
+   * the interpreter. Default of "auto" allows a dynamic fallback from
+   * copmiler to interpreter. */
+  int CompiledProofOfWorkHash;
+
   /** If true, the tor client will use conflux for its general purpose
    * circuits which excludes onion service traffic. */
   int ConfluxEnabled;

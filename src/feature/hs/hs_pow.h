@@ -84,6 +84,8 @@ typedef struct hs_pow_solver_inputs_t {
   /** Effort chosen by the client. May be higher or lower than
    * suggested_effort in the descriptor. */
   uint32_t effort;
+  /** Configuration option, choice of hash implementation. AUTOBOOL. */
+  int CompiledProofOfWorkHash;
 } hs_pow_solver_inputs_t;
 
 /** State and parameters of PoW defenses, stored in the service state. */

@@ -218,6 +218,7 @@ test_hs_pow_vectors(void *arg)
     hs_pow_solution_t solution = { 0 };
     hs_pow_solver_inputs_t input = {
       .effort = vectors[vec_i].effort,
+      .CompiledProofOfWorkHash = -1
     };
 
     tt_int_op(strlen(service_blinded_id_hex), OP_EQ, 2 * HS_POW_ID_LEN);

@@ -175,9 +175,24 @@ unpack_equix_solution(const uint8_t *bytes_in,
   }
 }
 
+/** Helper: Map the CompiledProofOfWorkHash configuration option to its
+ * corresponding equix_ctx_flags bit. */
+static equix_ctx_flags
+hs_pow_equix_option_flags(int CompiledProofOfWorkHash)
+{
+  if (CompiledProofOfWorkHash == 0) {
+    return 0;
+  } else if (CompiledProofOfWorkHash == 1) {
+    return EQUIX_CTX_MUST_COMPILE;
+  } else {
+    tor_assert_nonfatal(CompiledProofOfWorkHash == -1);
+    return EQUIX_CTX_TRY_COMPILE;
+  }
+}
+
 /** Solve the EquiX/blake2b PoW scheme using the parameters in pow_params, and
  * store the solution in pow_solution_out. Returns 0 on success and -1
- * otherwise. Called by a client. */
+ * otherwise. Called by a client, from a cpuworker thread. */
 int
 hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
              hs_pow_solution_t *pow_solution_out)
@@ -198,7 +213,10 @@ hs_pow_solve(const hs_pow_solver_inputs_t *pow_inputs,
   challenge = build_equix_challenge(&pow_inputs->service_blinded_id,
                                     pow_inputs->seed, nonce, effort);
 
-  ctx = equix_alloc(EQUIX_CTX_SOLVE | EQUIX_CTX_TRY_COMPILE);
+  /* This runs on a cpuworker, let's not access global get_options().
+   * Instead, the particular options we need are captured in pow_inputs. */
+  ctx = equix_alloc(EQUIX_CTX_SOLVE |
+    hs_pow_equix_option_flags(pow_inputs->CompiledProofOfWorkHash));
   if (!ctx) {
     goto end;
   }
@@ -339,7 +357,8 @@ hs_pow_verify(const ed25519_public_key_t *service_blinded_id,
     goto done;
   }
 
-  ctx = equix_alloc(EQUIX_CTX_VERIFY | EQUIX_CTX_TRY_COMPILE);
+  ctx = equix_alloc(EQUIX_CTX_VERIFY |
+    hs_pow_equix_option_flags(get_options()->CompiledProofOfWorkHash));
   if (!ctx) {
     goto done;
   }
@@ -428,7 +447,6 @@ pow_worker_threadfn(void *state_, void *work_)
   job->pow_solution_out = tor_malloc_zero(sizeof(hs_pow_solution_t));
 
   if (hs_pow_solve(&job->pow_inputs, job->pow_solution_out)) {
-    log_warn(LD_REND, "Failed to run the proof of work solver");
     tor_free(job->pow_solution_out);
     job->pow_solution_out = NULL; /* how we signal that we came up empty */
   }
