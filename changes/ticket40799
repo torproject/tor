@@ -1,0 +1,6 @@
+  o Minor bugfixes (sandbox):
+    - Allow membarrier for the sandbox. And allow rt_sigprocmask when compiled
+      with LTTng. Fixes bug 40799; bugfix on 0.3.5.1-alpha.
+
+  o Minor feature (CI):
+    - Update CI to use Debian Bullseye for runners.
