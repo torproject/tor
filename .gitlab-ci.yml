@@ -49,6 +49,7 @@ variables:
       echo Etc/UTC > /etc/timezone
       mkdir -p apt-cache
       export APT_CACHE_DIR="$(pwd)/apt-cache"
+      rm -f /etc/apt/apt.conf.d/docker-clean
       echo 'quiet "1";' \
            'APT::Install-Recommends "0";' \
            'APT::Install-Suggests "0";' \
@@ -79,9 +80,11 @@ variables:
     - *apt-template
     # Install patches unconditionally.
     - apt-get install
+        apt-utils
         automake
         build-essential
         ca-certificates
+        file
         git
         libevent-dev
         liblzma-dev
@@ -106,7 +109,7 @@ variables:
 # Minimal check on debian: just make, make check.
 #
 debian-minimal:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   script:
     - ./scripts/ci/ci-driver.sh
@@ -114,7 +117,7 @@ debian-minimal:
 # Minmal check on debian/i386: just make, make check.
 #
 debian-i386-minimal:
-  image: i386/debian:buster
+  image: i386/debian:bullseye
   <<: *debian-template
   script:
     - ./scripts/ci/ci-driver.sh
@@ -137,7 +140,7 @@ debian-hardened:
 #####
 # Distcheck on debian stable
 debian-distcheck:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   variables:
     DISTCHECK: "yes"
@@ -148,7 +151,7 @@ debian-distcheck:
 #####
 # Documentation tests on debian stable: doxygen and asciidoc.
 debian-docs:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   variables:
     DOXYGEN: "yes"
@@ -166,7 +169,7 @@ debian-docs:
 #       with the 'artifacts' mechanism, in theory, but it would be good to
 #       avoid having to have a system with hundreds of artifacts.
 debian-integration:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   variables:
     CHECK: "no"
@@ -180,7 +183,7 @@ debian-integration:
 #####
 # Tracing build on Debian stable.
 debian-tracing:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   variables:
     TRACING: "yes"
@@ -192,7 +195,7 @@ debian-tracing:
 #####
 # No-authority mode
 debian-disable-dirauth:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   variables:
     DISABLE_DIRAUTH: "yes"
@@ -202,7 +205,7 @@ debian-disable-dirauth:
 #####
 # No-relay mode
 debian-disable-relay:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   variables:
     DISABLE_RELAY: "yes"
@@ -212,7 +215,7 @@ debian-disable-relay:
 #####
 # NSS check on debian
 debian-nss:
-  image: debian:buster
+  image: debian:bullseye
   <<: *debian-template
   variables:
     NSS: "yes"
