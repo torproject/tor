@@ -340,8 +340,10 @@ tor_tls_init(void)
     SSL_load_error_strings();
 #endif /* defined(OPENSSL_1_1_API) */
 
-#if (SIZEOF_VOID_P >= 8 &&                              \
-     OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1))
+#if (SIZEOF_VOID_P >= 8 &&                                \
+     OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1) && \
+     (!defined(LIBRESSL_VERSION_NUMBER) ||                \
+      LIBRESSL_VERSION_NUMBER < 0x3080000fL))
     long version = tor_OpenSSL_version_num();
 
     /* LCOV_EXCL_START : we can't test these lines on the same machine */
