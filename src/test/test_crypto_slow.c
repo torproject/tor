@@ -710,7 +710,6 @@ test_crypto_equix(void *arg)
         tt_int_op(expected, OP_EQ, result);
       }
 
-      equix_free(solve_ctx);
       equix_free(verify_ctx);
     }
   }
