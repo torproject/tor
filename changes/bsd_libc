@@ -1,3 +1,0 @@
-  o Minor feature (compilation):
-    - Fix returning something other than "Unknown N/A" as libc version if we
-      build tor on an O.S. like DragonFlyBSD, FreeBSD, OpenBSD or NetBSD.

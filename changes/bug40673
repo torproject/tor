@@ -1,7 +1,0 @@
-  o Minor bugfixes (relay overload statistics):
-    - Count total create cells vs dropped create cells properly, when
-      assessing if our fraction of dropped cells is too high. We only
-      count non-client circuits in the denominator, but we would include
-      client circuits in the numerator, leading to surprising log lines
-      claiming that we had dropped more than 100% of incoming create
-      cells. Fixes bug 40673; bugfix on 0.4.7.1-alpha.

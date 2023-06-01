@@ -1,3 +1,0 @@
-  o Minor bugfix (relay, logging):
-    - The wrong max queue cell size was used in a protocol warning logging
-      statement. Fixes bug 40745; bugfix on 0.4.7.1-alpha.

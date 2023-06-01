@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging):
-    - Correct a log message when cleaning microdescriptors.
-      Fixes bug 40619; bugfix on 0.2.5.4-alpha.

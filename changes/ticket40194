@@ -1,9 +1,0 @@
-  o Minor feature (relay, metrics):
-    - Add counters to the MetricsPort how many connections, per type, are
-      currently opened and how many were created. Part of ticket 40194.
-    - Add total number of streams seen by an Exit to the MetricsPort.
-    - Add congestion control RTT reset counter to MetricsPort.
-    - Add DoS defenses counter to MetricsPort.
-    - Add relay flags from the consensus to the MetricsPort.
-    - Add total number of opened circuits to MetricsPort.
-    - Add traffic stats as in number of read/written bytes in total.

@@ -1,4 +1,0 @@
-  o Minor feature (MetricsPort, relay, onion service):
-    - Add metrics for the relay side onion service interactions counting
-      seen cells. Closes ticket 40797. Patch by "friendly73".
-

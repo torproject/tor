@@ -1,3 +1,0 @@
-  o Minor features (relay):
-    - Do not warn about configuration options that may expose a non-anonymous
-      onion service. Closes ticket 40691.

@@ -1,3 +1,0 @@
-  o Minor features (portability, compilation):
-    - Use OpenSSL 1.1 APIs for LibreSSL, fixing LibreSSL 3.5 compatibility.
-      Fixes issue 40630; patch by Alex Xu (Hello71).

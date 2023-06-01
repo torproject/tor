@@ -1,4 +1,0 @@
-  o Removed features:
-    - Remove the RendPostPeriod option. This was primarily used in Version 2
-      Onion Services and after its deprecation isn't needed anymore. Closes
-      ticket 40431. Patch by Neel Chauhan.

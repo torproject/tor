@@ -1,4 +1,0 @@
-  o Minor bugfixes (pluggable transports, windows):
-    - Remove a warning `BUG()` that could occur when attempting to execute a
-      non-existing pluggable transport on Windows. Fixes bug 40596; bugfix on
-      0.4.0.1-alpha.

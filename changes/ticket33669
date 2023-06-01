@@ -1,3 +1,0 @@
-  o Minor features (pluggable transports):
-    - Automatically restart managed Pluggable Transport processes when their
-      process terminate. Resolves ticket 33669.

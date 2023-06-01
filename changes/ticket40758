@@ -1,3 +1,0 @@
-  o Minor features (metrics):
-    - Add a `reason` label to the HS error metrics.
-      Closes ticket 40758.

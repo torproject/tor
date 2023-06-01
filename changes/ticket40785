@@ -1,4 +1,0 @@
-  o Minor feature (client, IPv6):
-    - Make client able to pick IPv6 relays by default now meaning ClientUseIPv6
-      option now defaults to 1. Closes ticket 40785.
-

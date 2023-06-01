@@ -1,3 +1,0 @@
-  o Minor feature (Congestion control metrics):
-    - Add additional metricsport relay metrics for congestion control.
-      Closes ticket 40724.

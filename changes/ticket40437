@@ -1,4 +1,0 @@
-  o Minor bugfixes (state file):
-    - Avoid a segfault if the state file doesn't contains TotalBuildTimes along
-      CircuitBuildAbandonedCount being above 0. Fixes bug 40437; bugfix on
-      0.3.5.1-alpha.

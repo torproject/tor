@@ -1,3 +1,0 @@
-  o Minor feature (MetricsPort, relay):
-    - Expose time until online keys expires on the MetricsPort. Closes ticket
-      40546.

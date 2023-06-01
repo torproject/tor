@@ -1,7 +1,0 @@
-  o Major features (dirauth):
-    - Directory authorities and relays now interact properly with
-      directory authorities if they change addresses. In the past, they
-      would continue to upload votes, signatures, descriptors, etc to
-      the hard-coded address in the configuration. Now, if the directory
-      authority is listed in the consensus at a different address, they
-      will direct queries to this new address. Implements ticket 40705.
