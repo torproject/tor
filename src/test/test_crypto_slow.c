@@ -680,6 +680,7 @@ test_crypto_equix(void *arg)
       equix_result result;
       result = equix_solve(solve_ctx, challenge_literal,
                            challenge_len, &output);
+      equix_free(solve_ctx);
       tt_int_op(result, OP_EQ, EQUIX_OK);
       tt_int_op(output.count, OP_EQ, num_sols);
       tt_int_op(output.flags, OP_EQ, sol_flags);
