@@ -28,8 +28,11 @@ static uint64_t sum_pair(hashx_ctx* hash_func, equix_idx left, equix_idx right) 
 	uint8_t hash_right[HASHX_SIZE];
 	hashx_result r_left = hashx_exec(hash_func, left, hash_left);
 	hashx_result r_right = hashx_exec(hash_func, right, hash_right);
-	assert(r_left == HASHX_OK && r_right == HASHX_OK);
-	return load64(hash_left) + load64(hash_right);
+	if (r_left == HASHX_OK && r_right == HASHX_OK) {
+		return load64(hash_left) + load64(hash_right);
+	}
+	assert(false);
+	return ~(uint64_t)0;
 }
 
 static equix_result verify_internal(hashx_ctx* hash_func, const equix_solution* solution) {

@@ -55,11 +55,11 @@ if(HASHX_SALT)
   endif()
 endif()
 
+include_directories(include/)
+
 add_library(hashx SHARED ${hashx_sources})
 set_property(TARGET hashx PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET hashx PROPERTY PUBLIC_HEADER include/hashx.h)
-include_directories(hashx
-  include/)
 target_compile_definitions(hashx PRIVATE HASHX_SHARED)
 set_target_properties(hashx PROPERTIES VERSION ${HASHX_VERSION_STR}
                                        SOVERSION ${HASHX_VERSION})
@@ -76,8 +76,6 @@ install(TARGETS hashx hashx_static
 
 add_executable(hashx-tests
   src/tests.c)
-include_directories(hashx-tests
-  include/)
 target_compile_definitions(hashx-tests PRIVATE HASHX_STATIC)
 target_link_libraries(hashx-tests
   PRIVATE hashx_static)
@@ -91,8 +89,6 @@ add_executable(hashx-bench
   src/bench.c
   src/hashx_thread.c
   src/hashx_time.c)
-include_directories(hashx-bench
-  include/)
 target_compile_definitions(hashx-bench PRIVATE HASHX_STATIC)
 target_link_libraries(hashx-bench
   PRIVATE hashx_static

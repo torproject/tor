@@ -149,7 +149,7 @@ bool hashx_compile_a64(const hashx_program* program, uint8_t* code) {
 	if (!hashx_vm_rx(code, COMP_CODE_SIZE))
 		return false;
 #ifdef __GNUC__
-	__builtin___clear_cache(code, pos);
+	__builtin___clear_cache((void*)code, (void*)pos);
 #endif
 	return true;
 }
