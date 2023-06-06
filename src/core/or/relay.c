@@ -2333,7 +2333,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
 
   tor_assert(conn);
 
-  if (conn->base_.marked_for_close) {
+  if (BUG(conn->base_.marked_for_close)) {
     log_warn(LD_BUG,
              "called on conn that's already marked for close at %s:%d.",
              conn->base_.marked_for_close_file, conn->base_.marked_for_close);
