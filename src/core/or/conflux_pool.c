@@ -2020,6 +2020,51 @@ conflux_pool_init(void)
   }
 }
 
+/**
+ * Return a description of all linked and unlinked circuits associated
+ * with a conflux set.
+ *
+ * For use in rare bug cases that are hard to diagnose.
+ */
+void
+conflux_log_set(const conflux_t *cfx, bool is_client)
+{
+  tor_assert(cfx);
+
+  log_warn(LD_BUG, "Conflux %s: %d linked, %d launched",
+               fmt_nonce(cfx->nonce), smartlist_len(cfx->legs),
+               cfx->num_leg_launch);
+
+  // Log all linked legs
+  int legs = 0;
+  CONFLUX_FOR_EACH_LEG_BEGIN(cfx, leg) {
+   log_warn(LD_BUG,
+            " - Linked Leg %d purpose=%d; RTT %"PRIu64", sent: %"PRIu64
+            " marked: %d",
+            legs, leg->circ->purpose, leg->circ_rtts_usec,
+            leg->linked_sent_usec, leg->circ->marked_for_close);
+   legs++;
+  } CONFLUX_FOR_EACH_LEG_END(leg);
+
+  // Look up the nonce to see if we have any unlinked circuits.
+  unlinked_circuits_t *unlinked = unlinked_pool_get(cfx->nonce, is_client);
+  if (unlinked) {
+    // Log the number of legs and the is_for_linked_set status
+    log_warn(LD_BUG, " - Unlinked set:  %d legs, for link: %d",
+             smartlist_len(unlinked->legs), unlinked->is_for_linked_set);
+    legs = 0;
+    SMARTLIST_FOREACH_BEGIN(unlinked->legs, leg_t *, leg) {
+      log_warn(LD_BUG,
+        "     Unlinked Leg: %d purpose=%d; linked: %d, RTT %"PRIu64", "
+        "sent: %"PRIu64" link ptr %p, marked: %d",
+               legs, leg->circ->purpose, leg->linked,
+               leg->rtt_usec, leg->link_sent_usec,
+               leg->link, leg->circ->marked_for_close);
+      legs++;
+    } SMARTLIST_FOREACH_END(leg);
+  }
+}
+
 /** Free and clean up the conflux pool subsystem. This is called by the subsys
  * manager AFTER all circuits have been freed which implies that all objects in
  * the pools aren't referenced anymore. */
