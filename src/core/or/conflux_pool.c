@@ -797,11 +797,6 @@ try_finalize_set(unlinked_circuits_t *unlinked)
   unlinked->cfx = NULL;
   unlinked_free(unlinked);
 
-  /* Now that this set is ready to use, try any pending streams again. */
-  if (is_client) {
-    connection_ap_attach_pending(1);
-  }
-
   log_info(LD_CIRC,
            "Successfully linked a conflux %s set which is now usable.",
            is_client ? "client" : "relay");
@@ -1962,6 +1957,12 @@ conflux_process_linked(circuit_t *circ, crypt_path_t *layer_hint,
   if (!conflux_cell_send_linked_ack(TO_ORIGIN_CIRCUIT(circ))) {
     /* On failure, the circuit is closed by the underlying function(s). */
     goto end;
+  }
+
+  /* If this set is ready to use with a valid conflux set, try any pending
+   * streams again. */
+  if (circ->conflux) {
+    connection_ap_attach_pending(1);
   }
 
   goto end;
