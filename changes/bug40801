@@ -1,0 +1,10 @@
+  o Minor bugfixes (conflux):
+    - Fix stream attachment order when creating conflux circuits, so that
+      stream attachment happens after finishing the full link handshake,
+      rather than upon set finalization. Fixes bug 40801; bugfix on
+      0.4.8.1-alpha.
+    - Remove a "BUG" warning from conflux_pick_first_leg that can be
+      triggered by broken or malicious clients. Fixes bug 40801; bugfix
+      on 0.4.8.1-alpha.
+    - Fix a case where we were resuming reading on edge connections that
+      were already marked for close. Fixes bug 40801; bugfix on 0.4.8.1-alpha.
