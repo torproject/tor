@@ -3081,9 +3081,9 @@ set_block_state_for_streams(circuit_t *circ, edge_connection_t *stream_list,
     if (stream_id && edge->stream_id != stream_id)
       continue;
 
-    if (!conn->read_event || edge->xoff_received) {
-      /* This connection is a placeholder for something; probably a DNS
-       * request.  It can't actually stop or start reading.*/
+    if (!conn->read_event || edge->xoff_received ||
+        conn->marked_for_close) {
+      /* This connection should not start or stop reading. */
       continue;
     }
 
