@@ -20,6 +20,7 @@
 #include "core/or/conflux.h"
 #include "core/or/conflux_params.h"
 #include "core/or/conflux_util.h"
+#include "core/or/conflux_pool.h"
 #include "core/or/conflux_st.h"
 #include "lib/time/compat_time.h"
 #include "app/config/config.h"
@@ -372,22 +373,39 @@ void
 conflux_validate_legs(const conflux_t *cfx)
 {
   tor_assert(cfx);
-  // TODO-329-UDP: Eventually we want to allow three legs for the
-  // exit case, to allow reconnection of legs to hit an RTT target.
-  // For now, this validation helps find bugs.
-  if (BUG(smartlist_len(cfx->legs) > conflux_params_get_num_legs_set())) {
-    log_warn(LD_BUG, "Number of legs is above maximum of %d allowed: %d\n",
-             conflux_params_get_num_legs_set(), smartlist_len(cfx->legs));
-  }
-
+  bool is_client = false;
+  int num_legs = 0;
   CONFLUX_FOR_EACH_LEG_BEGIN(cfx, leg) {
-    /* Ensure we have no pending nonce on the circ */
-    tor_assert_nonfatal(leg->circ->conflux_pending_nonce == NULL);
-    tor_assert_nonfatal(leg->circ->conflux != NULL);
-
     if (CIRCUIT_IS_ORIGIN(leg->circ)) {
       tor_assert_nonfatal(leg->circ->purpose ==
                           CIRCUIT_PURPOSE_CONFLUX_LINKED);
+      is_client = true;
+    }
+
+    /* Ensure we have no pending nonce on the circ */
+    if (BUG(leg->circ->conflux_pending_nonce != NULL)) {
+      conflux_log_set(cfx, is_client);
+      continue;
+    }
+
+    /* Ensure we have a conflux object */
+    if (BUG(leg->circ->conflux == NULL)) {
+      conflux_log_set(cfx, is_client);
+      continue;
+    }
+
+    /* Only count legs that have a valid RTT */
+    if (leg->circ_rtts_usec > 0) {
+      num_legs++;
     }
   } CONFLUX_FOR_EACH_LEG_END(leg);
+
+  // TODO-329-UDP: Eventually we want to allow three legs for the
+  // exit case, to allow reconnection of legs to hit an RTT target.
+  // For now, this validation helps find bugs.
+  if (BUG(num_legs > conflux_params_get_num_legs_set())) {
+    log_warn(LD_BUG, "Number of legs is above maximum of %d allowed: %d\n",
+             conflux_params_get_num_legs_set(), smartlist_len(cfx->legs));
+    conflux_log_set(cfx, is_client);
+  }
 }
