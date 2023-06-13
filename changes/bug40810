@@ -1,0 +1,4 @@
+  o Minor bugfixes (conflux):
+    - Handle legs being closed or destroyed before computing an RTT
+      (resulting in warns about too many legs). Fixes bug 40810; bugfix on
+      0.4.8.1-alpha.
