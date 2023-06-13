@@ -244,7 +244,9 @@ conflux_decide_circ_minrtt(const conflux_t *cfx)
   tor_assert(CONFLUX_NUM_LEGS(cfx));
 
   CONFLUX_FOR_EACH_LEG_BEGIN(cfx, leg) {
-    if (leg->circ_rtts_usec < min_rtt) {
+
+    /* Ignore circuits with no RTT measurement */
+    if (leg->circ_rtts_usec && leg->circ_rtts_usec < min_rtt) {
       circ = leg->circ;
       min_rtt = leg->circ_rtts_usec;
     }
@@ -279,7 +281,8 @@ conflux_decide_circ_lowrtt(const conflux_t *cfx)
       continue;
     }
 
-    if (leg->circ_rtts_usec < low_rtt) {
+    /* Ignore circuits with no RTT */
+    if (leg->circ_rtts_usec && leg->circ_rtts_usec < low_rtt) {
       low_rtt = leg->circ_rtts_usec;
       circ = leg->circ;
     }
@@ -399,7 +402,8 @@ conflux_decide_circ_cwndrtt(const conflux_t *cfx)
 
   /* Find the leg with the minimum RTT.*/
   CONFLUX_FOR_EACH_LEG_BEGIN(cfx, l) {
-    if (l->circ_rtts_usec < min_rtt) {
+    /* Ignore circuits with invalid RTT */
+    if (l->circ_rtts_usec && l->circ_rtts_usec < min_rtt) {
       min_rtt = l->circ_rtts_usec;
       leg = l;
     }
@@ -420,7 +424,8 @@ conflux_decide_circ_cwndrtt(const conflux_t *cfx)
     /* Pick a 'min_leg' with the lowest RTT that still has
      * room in the congestion window. Note that this works for
      * min_leg itself, up to inflight. */
-    if (cwnd_sendable(l->circ, min_rtt, l->circ_rtts_usec) > 0) {
+    if (l->circ_rtts_usec &&
+        cwnd_sendable(l->circ, min_rtt, l->circ_rtts_usec) > 0) {
       leg = l;
     }
   } CONFLUX_FOR_EACH_LEG_END(l);
