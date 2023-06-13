@@ -24,13 +24,14 @@ if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "Setting default build type: ${CMAKE_BUILD_TYPE}")
 endif()
 
-add_library(equix SHARED ${equix_sources})
-set_property(TARGET equix PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET equix PROPERTY PUBLIC_HEADER include/equix.h)
-include_directories(equix
+include_directories(
   include/
   hashx/include/
   hashx/src/)
+
+add_library(equix SHARED ${equix_sources})
+set_property(TARGET equix PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET equix PROPERTY PUBLIC_HEADER include/equix.h)
 target_compile_definitions(equix PRIVATE HASHX_STATIC)
 target_compile_definitions(equix PRIVATE EQUIX_SHARED)
 target_link_libraries(equix
@@ -43,10 +44,6 @@ set_property(TARGET equix_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(equix_static PROPERTIES OUTPUT_NAME equix)
 target_compile_definitions(equix_static PRIVATE HASHX_STATIC)
 target_compile_definitions(equix_static PRIVATE EQUIX_STATIC)
-include_directories(equix_static
-  include/
-  hashx/include/
-  hashx/src/)
 target_link_libraries(equix_static
   PRIVATE hashx_static)
 
@@ -58,8 +55,6 @@ install(TARGETS equix equix_static
 
 add_executable(equix-tests
   src/tests.c)
-include_directories(equix-tests
-  include/)
 target_compile_definitions(equix-tests PRIVATE EQUIX_STATIC)
 target_link_libraries(equix-tests
   PRIVATE equix_static)
@@ -73,9 +68,6 @@ add_executable(equix-bench
   src/bench.c
   hashx/src/hashx_thread.c
   hashx/src/hashx_time.c)
-include_directories(equix-bench
-  include/
-  hashx/src/)
 target_compile_definitions(equix-bench PRIVATE EQUIX_STATIC)
 target_link_libraries(equix-bench
   PRIVATE equix_static

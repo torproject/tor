@@ -47,11 +47,16 @@ typedef stage1_idx_item s1_idx;
 typedef stage2_idx_item s2_idx;
 typedef stage3_idx_item s3_idx;
 
-static FORCE_INLINE uint64_t hash_value(hashx_ctx* hash_func, equix_idx index) {
+static FORCE_INLINE bool hash_value(hashx_ctx* hash_func, equix_idx index, uint64_t *value_out) {
 	char hash[HASHX_SIZE];
 	hashx_result result = hashx_exec(hash_func, index, hash);
-	assert(result == HASHX_OK);
-	return load64(hash);
+	if (result == HASHX_OK) {
+		*value_out = load64(hash);
+		return true;
+	} else {
+		assert(false);
+		return false;
+	}
 }
 
 static void build_solution_stage1(equix_idx* output, solver_heap* heap, s2_idx root) {
@@ -97,7 +102,9 @@ static void build_solution(equix_solution* solution, solver_heap* heap, s3_idx l
 static void solve_stage0(hashx_ctx* hash_func, solver_heap* heap) {
 	CLEAR(heap->stage1_indices.counts);
 	for (u32 i = 0; i < INDEX_SPACE; ++i) {
-		uint64_t value = hash_value(hash_func, i);
+		uint64_t value;
+		if (!hash_value(hash_func, i, &value))
+			break;
 		u32 bucket_idx = value % NUM_COARSE_BUCKETS;
 		u32 item_idx = STAGE1_SIZE(bucket_idx);
 		if (item_idx >= COARSE_BUCKET_ITEMS)
