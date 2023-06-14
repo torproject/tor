@@ -2333,7 +2333,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
 
   tor_assert(conn);
 
-  if (conn->base_.marked_for_close) {
+  if (BUG(conn->base_.marked_for_close)) {
     log_warn(LD_BUG,
              "called on conn that's already marked for close at %s:%d.",
              conn->base_.marked_for_close_file, conn->base_.marked_for_close);
@@ -3081,9 +3081,9 @@ set_block_state_for_streams(circuit_t *circ, edge_connection_t *stream_list,
     if (stream_id && edge->stream_id != stream_id)
       continue;
 
-    if (!conn->read_event || edge->xoff_received) {
-      /* This connection is a placeholder for something; probably a DNS
-       * request.  It can't actually stop or start reading.*/
+    if (!conn->read_event || edge->xoff_received ||
+        conn->marked_for_close) {
+      /* This connection should not start or stop reading. */
       continue;
     }
 

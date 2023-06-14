@@ -797,11 +797,6 @@ try_finalize_set(unlinked_circuits_t *unlinked)
   unlinked->cfx = NULL;
   unlinked_free(unlinked);
 
-  /* Now that this set is ready to use, try any pending streams again. */
-  if (is_client) {
-    connection_ap_attach_pending(1);
-  }
-
   log_info(LD_CIRC,
            "Successfully linked a conflux %s set which is now usable.",
            is_client ? "client" : "relay");
@@ -822,10 +817,29 @@ record_rtt_client(const circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   leg_t *leg = unlinked_leg_find(circ, true);
-  if (leg && leg->link_sent_usec > 0) {
-    leg->rtt_usec = monotime_absolute_usec() - leg->link_sent_usec;
-    return leg->rtt_usec;
+
+  if (BUG(!leg || leg->link_sent_usec == 0)) {
+    log_warn(LD_BUG,
+             "Conflux: Trying to record client RTT without a timestamp");
+    goto err;
   }
+
+  uint64_t now = monotime_absolute_usec();
+  tor_assert_nonfatal(now >= leg->link_sent_usec);
+  leg->rtt_usec = now - leg->link_sent_usec;
+  if (leg->rtt_usec == 0) {
+    log_warn(LD_CIRC, "Clock appears stalled for conflux.");
+    // TODO-329-TUNING: For now, let's accept this case. We need to do
+    // tuning and clean up the tests such that they use RTT in order to
+    // fail here.
+    //goto err;
+  }
+  return leg->rtt_usec;
+
+ err:
+  // Avoid using this leg until a timestamp comes in
+  if (leg)
+    leg->rtt_usec = UINT64_MAX;
   return UINT64_MAX;
 }
 
@@ -842,10 +856,26 @@ record_rtt_exit(const circuit_t *circ)
   tor_assert(CIRCUIT_IS_ORCIRC(circ));
 
   conflux_leg_t *leg = conflux_get_leg(circ->conflux, circ);
-  if (leg && leg->linked_sent_usec > 0) {
-    leg->circ_rtts_usec = monotime_absolute_usec() - leg->linked_sent_usec;
-    return leg->circ_rtts_usec;
+
+  if (BUG(!leg || leg->linked_sent_usec == 0)) {
+    log_warn(LD_BUG,
+             "Conflux: Trying to record exit RTT without a timestamp");
+    goto err;
   }
+
+  uint64_t now = monotime_absolute_usec();
+  tor_assert_nonfatal(now >= leg->linked_sent_usec);
+  leg->circ_rtts_usec = now - leg->linked_sent_usec;
+
+  if (leg->circ_rtts_usec == 0) {
+    log_warn(LD_CIRC, "Clock appears stalled for conflux.");
+    goto err;
+  }
+  return leg->circ_rtts_usec;
+
+ err:
+  if (leg)
+    leg->circ_rtts_usec = UINT64_MAX;
   return UINT64_MAX;
 }
 
@@ -862,6 +892,9 @@ record_rtt(const circuit_t *circ, bool is_client)
 
   if (is_client) {
     rtt_usec = record_rtt_client(circ);
+
+    if (rtt_usec == UINT64_MAX)
+      return false;
 
     if (rtt_usec >= get_circuit_build_timeout_ms()*1000) {
       log_info(LD_CIRC, "Conflux leg RTT is above circuit build time out "
@@ -1926,6 +1959,12 @@ conflux_process_linked(circuit_t *circ, crypt_path_t *layer_hint,
     goto end;
   }
 
+  /* If this set is ready to use with a valid conflux set, try any pending
+   * streams again. */
+  if (circ->conflux) {
+    connection_ap_attach_pending(1);
+  }
+
   goto end;
 
  close:
@@ -2017,6 +2056,51 @@ conflux_pool_init(void)
   }
   if (!server_unlinked_pool) {
     server_unlinked_pool = digest256map_new();
+  }
+}
+
+/**
+ * Return a description of all linked and unlinked circuits associated
+ * with a conflux set.
+ *
+ * For use in rare bug cases that are hard to diagnose.
+ */
+void
+conflux_log_set(const conflux_t *cfx, bool is_client)
+{
+  tor_assert(cfx);
+
+  log_warn(LD_BUG, "Conflux %s: %d linked, %d launched",
+               fmt_nonce(cfx->nonce), smartlist_len(cfx->legs),
+               cfx->num_leg_launch);
+
+  // Log all linked legs
+  int legs = 0;
+  CONFLUX_FOR_EACH_LEG_BEGIN(cfx, leg) {
+   log_warn(LD_BUG,
+            " - Linked Leg %d purpose=%d; RTT %"PRIu64", sent: %"PRIu64
+            " marked: %d",
+            legs, leg->circ->purpose, leg->circ_rtts_usec,
+            leg->linked_sent_usec, leg->circ->marked_for_close);
+   legs++;
+  } CONFLUX_FOR_EACH_LEG_END(leg);
+
+  // Look up the nonce to see if we have any unlinked circuits.
+  unlinked_circuits_t *unlinked = unlinked_pool_get(cfx->nonce, is_client);
+  if (unlinked) {
+    // Log the number of legs and the is_for_linked_set status
+    log_warn(LD_BUG, " - Unlinked set:  %d legs, for link: %d",
+             smartlist_len(unlinked->legs), unlinked->is_for_linked_set);
+    legs = 0;
+    SMARTLIST_FOREACH_BEGIN(unlinked->legs, leg_t *, leg) {
+      log_warn(LD_BUG,
+        "     Unlinked Leg: %d purpose=%d; linked: %d, RTT %"PRIu64", "
+        "sent: %"PRIu64" link ptr %p, marked: %d",
+               legs, leg->circ->purpose, leg->linked,
+               leg->rtt_usec, leg->link_sent_usec,
+               leg->link, leg->circ->marked_for_close);
+      legs++;
+    } SMARTLIST_FOREACH_END(leg);
   }
 }
 
