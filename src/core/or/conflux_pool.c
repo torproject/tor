@@ -1140,6 +1140,11 @@ conflux_launch_leg(const uint8_t *nonce)
              fmt_nonce(nonce));
   }
 
+  /* Increase the retry count for this conflux object as in this nonce.
+   * We must do this now, because some of the maze's early failure paths
+   * call right back into this function for relaunch. */
+  unlinked->cfx->num_leg_launch++;
+
   origin_circuit_t *circ =
     circuit_establish_circuit_conflux(nonce, CIRCUIT_PURPOSE_CONFLUX_UNLINKED,
                                       exit, flags);
@@ -1168,9 +1173,6 @@ conflux_launch_leg(const uint8_t *nonce)
                        conflux_cell_new_link(nonce,
                                              last_seq_sent, last_seq_recv,
                                              get_client_ux()));
-
-  /* Increase the retry count for this conflux object as in this nonce. */
-  unlinked->cfx->num_leg_launch++;
 
   unlinked_leg_add(unlinked, leg);
   return true;
@@ -1338,7 +1340,10 @@ conflux_predict_new(time_t now)
 {
   (void) now;
 
-  if (!conflux_is_enabled(NULL)) {
+  /* If conflux is disabled, or we have insufficient consensus exits,
+   * don't prebuild. */
+  if (!conflux_is_enabled(NULL) ||
+      router_have_consensus_path() != CONSENSUS_PATH_EXIT) {
     return;
   }
 
