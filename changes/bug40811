@@ -1,0 +1,6 @@
+  o Minor bugfixes (conflux):
+    - Count leg launch attempts prior to attempting to launch them. This
+      avoids inifinite launch attempts due to internal circuit building
+      failures. Additionally, double-check that we have enough exits in
+      our consensus overall, before attempting to launch conflux sets.
+      Fixes bug 40811; bugfix on 0.4.8.1-alpha.
