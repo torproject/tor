@@ -296,7 +296,7 @@ check-local:					\
 	shellcheck
 
 # test-network requires a copy of Chutney in $CHUTNEY_PATH.
-# Chutney can be cloned from https://git.torproject.org/chutney.git .
+# Chutney can be cloned from https://gitlab.torproject.org/tpo/core/chutney.git .
 .PHONY: need-chutney-path
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
@@ -309,7 +309,7 @@ need-chutney-path:
 			echo; \
 			echo "To run these tests," \
 			  "git clone" \
-			  "https://git.torproject.org/chutney.git ;" \
+			  "https://gitlab.torproject.org/tpo/core/chutney.git ;" \
 			  "export CHUTNEY_PATH=\`pwd\`/chutney"; \
 			exit 1; \
 		fi \
