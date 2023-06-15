@@ -40,10 +40,6 @@ function usage()
   echo "       (current: $GITHUB_PULL)"
   echo "   TOR_GITHUB_PUSH: the tor-github remote push URL"
   echo "       (current: $GITHUB_PUSH)"
-  echo "   TOR_GITLAB_PULL: the tor-gitlab remote pull URL"
-  echo "       (current: $GITLAB_PULL)"
-  echo "   TOR_GITLAB_PUSH: the tor-gitlab remote push URL"
-  echo "       (current: $GITLAB_PUSH)"
   echo "   TOR_EXTRA_CLONE_ARGS: extra arguments to git clone"
   echo "       (current: $TOR_EXTRA_CLONE_ARGS)"
   echo "   TOR_EXTRA_REMOTE_NAME: the name of an extra remote"
@@ -72,9 +68,9 @@ TOR_MASTER_NAME=${TOR_MASTER_NAME:-"tor"}
 TOR_WKT_NAME=${TOR_WKT_NAME:-"tor-wkt"}
 
 # Origin repositories
-GIT_ORIGIN_PULL=${TOR_GIT_ORIGIN_PULL:-"https://git.torproject.org/tor.git"}
+GIT_ORIGIN_PULL=${TOR_GIT_ORIGIN_PULL:-"https://gitlab.torproject.org/tpo/core/tor.git"}
 GIT_ORIGIN_PUSH=${TOR_GIT_ORIGIN_PUSH:-"git@git-rw.torproject.org:tor.git"}
-# The upstream remote which git.torproject.org/tor.git points to.
+# The upstream remote which gitlab.torproject.org/tpo/core/tor.git points to.
 DEFAULT_UPSTREAM_REMOTE=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 # Copy the URLs from origin
 GIT_UPSTREAM_PULL="$GIT_ORIGIN_PULL"
@@ -86,10 +82,6 @@ fi
 # GitHub repositories
 GITHUB_PULL=${TOR_GITHUB_PULL:-"https://github.com/torproject/tor.git"}
 GITHUB_PUSH=${TOR_GITHUB_PUSH:-"No_Pushing_To_GitHub"}
-
-# GitLab repositories
-GITLAB_PULL=${TOR_GITLAB_PULL:-"https://gitlab.torproject.org/tpo/core/tor.git"}
-GITLAB_PUSH=${TOR_GITLAB_PUSH:-"No_Pushing_To_GitLab"}
 
 ##########################
 # Git branches to manage #
@@ -492,15 +484,6 @@ set_remote_push "tor-github" "$GITHUB_PUSH"
 set_tor_github_pr_fetch_config
 # Now fetch them all
 fetch_remote "tor-github"
-
-# GitLab remote
-printf "%s Setting up remote %s\\n" "$MARKER" "${BYEL}tor-gitlab${CNRM}"
-add_remote "tor-gitlab" "$GITLAB_PULL"
-set_remote_push "tor-gitlab" "$GITLAB_PUSH"
-# Add custom fetch for MRs
-set_tor_gitlab_mr_fetch_config
-# Now fetch them all
-fetch_remote "tor-gitlab"
 
 # Extra remote
 if [ "$TOR_EXTRA_REMOTE_NAME" ]; then

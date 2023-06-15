@@ -19,7 +19,7 @@ The quick and dirty plan is to:
 ## Clone and compile tor
 
 ```console
-$ git clone https://git.torproject.org/tor.git
+$ git clone https://gitlab.torproject.org/tpo/core/tor.git
 $ cd tor
 $ git checkout tor-0.4.1.5
 ```
