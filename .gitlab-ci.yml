@@ -103,7 +103,7 @@ variables:
     # llvm-symbolizer for sanitizer backtrace
     - if [ "$HARDENING" = yes ]; then apt-get install llvm; fi
     # TODO: This next line should not be debian-only.
-    - if [ "$STEM" = yes ]; then git clone --depth 1 https://git.torproject.org/stem.git ; export STEM_PATH="$(pwd)/stem"; fi
+    - if [ "$STEM" = yes ]; then git clone --depth 1 https://gitlab.torproject.org/tpo/network-health/stem.git ; export STEM_PATH="$(pwd)/stem"; fi
     # TODO: This next line should not be debian-only.
     - if [ "$CHUTNEY" = yes ]; then git clone --depth 1 https://gitlab.torproject.org/tpo/core/chutney.git ;  export CHUTNEY_PATH="$(pwd)/chutney"; fi
     - if [ "$TRACING" = yes ]; then apt install liblttng-ust-dev; fi

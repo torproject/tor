@@ -479,7 +479,7 @@ test-network-results:
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \
 		echo '$$STEM_SOURCE_DIR was not set.'; echo; \
-		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
+		echo "To run these tests, git clone https://gitlab.torproject.org/tpo/network-health/stem ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
 		exit 1; \
 	fi
 
