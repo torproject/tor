@@ -80,7 +80,7 @@ if [ "$TOR_FULL_GIT_PATH" ]; then
 fi
 # git push command and default arguments
 GIT_PUSH=${TOR_GIT_PUSH:-"git push --atomic"}
-# The upstream remote which git.torproject.org/tor.git points to.
+# The upstream remote which gitlab.torproject.org/tpo/core/tor.git points to.
 DEFAULT_UPSTREAM_REMOTE=${TOR_UPSTREAM_REMOTE_NAME:-"upstream"}
 # Push to a different upstream remote using -r <remote-name>
 UPSTREAM_REMOTE=${DEFAULT_UPSTREAM_REMOTE}
