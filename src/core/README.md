@@ -1,3 +1,5 @@
+# src/core files
+
 @dir /core
 @brief core: main loop and onion routing functionality
 
@@ -6,13 +8,11 @@ client and relay must implement in order to perform onion routing.
 
 It is divided into three lower-level pieces:
 
-   - \refdir{core/crypto} -- Tor-specific cryptography.
-
-   - \refdir{core/proto} -- Protocol encoding/decoding.
-
-   - \refdir{core/mainloop} -- A connection-oriented asynchronous mainloop.
+ - **\refdir{core/crypto}** -- Tor-specific cryptography.
+ - **\refdir{core/proto}** -- Protocol encoding/decoding.
+ - **\refdir{core/mainloop}** -- A connection-oriented asynchronous mainloop.
 
 and one high-level piece:
 
-   - \refdir{core/or} -- Implements onion routing itself.
+ - **\refdir{core/or}** -- Implements onion routing itself.
 

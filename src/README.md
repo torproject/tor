@@ -1,3 +1,5 @@
+# src/ files
+
 @mainpage Tor source reference
 
 @tableofcontents
@@ -83,34 +85,34 @@ will be scheduled.
 The codebase is divided into a few top-level subdirectories, each of
 which contains several sub-modules.
 
-   - \refdir{ext} -- Code maintained elsewhere that we include in the Tor
-     source distribution.  You should not edit this code if you can
-     avoid it: we try to keep it identical to the upstream versions.
+ - **\refdir{ext}** -- Code maintained elsewhere that we include in the Tor
+source distribution.  You should not edit this code if you can
+avoid it: we try to keep it identical to the upstream versions.
 
-   - \refdir{lib} -- Lower-level utility code, not necessarily
-     tor-specific.
+ - **\refdir{lib}** -- Lower-level utility code, not necessarily
+tor-specific.
 
-   - `trunnel` -- Automatically generated code (from the Trunnel
-     tool): used to parse and encode binary formats.
+ - `trunnel` -- Automatically generated code (from the Trunnel
+tool): used to parse and encode binary formats.
 
-   - \refdir{core} -- Networking code that is implements the central
-     parts of the Tor protocol and main loop.
+ - **\refdir{core}** -- Networking code that is implements the central
+parts of the Tor protocol and main loop.
 
-   - \refdir{feature} -- Aspects of Tor (like directory management,
-     running a relay, running a directory authorities, managing a list of
-     nodes, running and using onion services) that are built on top of the
-     mainloop code.
+ - **\refdir{feature}** -- Aspects of Tor (like directory management,
+running a relay, running a directory authorities, managing a list of
+nodes, running and using onion services) that are built on top of the
+mainloop code.
 
-   - \refdir{app} -- Highest-level functionality; responsible for setting
-     up and configuring the Tor daemon, making sure all the lower-level
-     modules start up when required, and so on.
+ - **\refdir{app}** -- Highest-level functionality; responsible for setting
+up and configuring the Tor daemon, making sure all the lower-level
+modules start up when required, and so on.
 
-   - \refdir{tools} -- Binaries other than Tor that we produce.
-      Currently this is tor-resolve, tor-gencert, and the tor_runner.o helper
-      module.
+ - **\refdir{tools}** -- Binaries other than Tor that we produce.
+Currently this is tor-resolve, tor-gencert, and the tor_runner.o helper
+module.
 
-   - `test` -- unit tests, regression tests, and a few integration
-     tests.
+ - `test` -- unit tests, regression tests, and a few integration
+tests.
 
 In theory, the above parts of the codebase are sorted from highest-level to
 lowest-level, where high-level code is only allowed to invoke lower-level
@@ -149,3 +151,17 @@ more connection types.
 
 A 'Node' (node_t) is a view of a Tor instance's current knowledge and opinions
 about a Tor relay or bridge.
+
+
+## Other Document
+
+ - [src/app](app/README.md)
+ - [src/config](config/README.md)
+ - [src/core](core/README.md)
+ - [src/ext](ext/README.md)
+ - [src/feature](feature/README.md)
+ - [src/lib](lib/README.md)
+ - [src/test](test/README.md)
+ - [src/tools](tools/README.md)
+ - [src/trunnel](trunnel/README.md)
+
