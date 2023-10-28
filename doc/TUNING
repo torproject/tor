@@ -43,7 +43,7 @@ resource limits stricter than those of more popular Unix-like operating systems.
 
 OpenBSD stores a kernel-level file descriptor limit in the sysctl variable
 kern.maxfiles. It defaults to 7,030. To change it to, for example, 16,000 while
-the system is running, use the command 'sudo sysctl kern.maxfiles=16000'.
+the system is running, use the command 'doas sysctl kern.maxfiles=16000'.
 kern.maxfiles will reset to the default value upon system reboot unless you also
 add 'kern.maxfiles=16000' to the file /etc/sysctl.conf.
 
