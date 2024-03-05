@@ -1,6 +1,0 @@
-# Relay PT tests
-# Options from relay/transport_config.c
-# Try a valid config with a risky ExtORPort address
-ORPort 2
-ExtORPort 2.2.2.2:1
-ServerTransportPlugin bad3 exec /

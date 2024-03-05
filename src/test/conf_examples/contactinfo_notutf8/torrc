@@ -1,5 +1,0 @@
-# We only accept ContactInfo in UTF-8 (or 7-bit ASCII)
-# (Unless the relay module is disabled, because ContactInfo is a
-# relay-only option. We'll ignore all relay-only options in #32395.
-# But at the moment, tor canonicalises and quotes the string.)
-ContactInfo ÄëÄëÄë@example.com

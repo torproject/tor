@@ -1,4 +1,0 @@
-# Relay PT tests
-# Options from relay/transport_config.c
-# Plugin, but no ExtORPort
-ServerTransportPlugin bad3 exec /

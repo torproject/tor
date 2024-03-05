@@ -1,5 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Relays can't set ReducedConnectionPadding 1
-ORPort 1
-ReducedConnectionPadding 1

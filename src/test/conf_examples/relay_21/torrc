@@ -1,5 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Ignored PublishServerDescriptor values
-ORPort 1
-PublishServerDescriptor v1,v2,hidserv

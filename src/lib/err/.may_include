@@ -1,6 +1,0 @@
-orconfig.h
-lib/cc/*.h
-lib/defs/*.h
-lib/err/*.h
-lib/subsys/*.h
-lib/version/*.h

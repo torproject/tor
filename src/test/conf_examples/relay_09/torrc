@@ -1,6 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Try a valid config with all the non-bridge options
-ORPort 1
-DirPort 2
-DirCache 1

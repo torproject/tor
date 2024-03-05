@@ -1,5 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Minimal PublishServerDescriptor
-ORPort 1
-PublishServerDescriptor

@@ -1,4 +1,0 @@
-# Relay tests
-# default (IPv4) ORPort and DirPort auto
-ORPort auto
-DirPort auto

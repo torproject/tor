@@ -1,3 +1,0 @@
-# ADD_C_FILE: INSERT HEADERS HERE.
-TRACEHEADERS += \
-	src/lib/trace/usdt/usdt.h

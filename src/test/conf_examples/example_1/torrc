@@ -1,5 +1,0 @@
-
-# Here is a simple example torrc.
-  SocksPort  80
-
-ContactInfo "tor_tellini@example.com"

@@ -1,2 +1,0 @@
-ExtORPort unix:/
-ServerTransportPlugin bad3 exec /

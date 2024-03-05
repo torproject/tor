@@ -1,3 +1,0 @@
-  o Documentation:
-    - Update doc/state-contents.txt to more accurately explain the
-      current contents of a Tor state file. Closes ticket 40136.

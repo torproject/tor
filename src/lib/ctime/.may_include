@@ -1,5 +1,0 @@
-orconfig.h
-lib/cc/*.h
-lib/ctime/*.h
-lib/err/*.h
-lib/malloc/*.h

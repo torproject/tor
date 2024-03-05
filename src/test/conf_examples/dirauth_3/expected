@@ -1,9 +1,0 @@
-Address 192.0.2.1
-AuthoritativeDirectory 1
-ContactInfo tor_parse_test@example.net
-DirPort 192.0.2.1:2
-DownloadExtraInfo 1
-Nickname Unnamed
-ORPort 192.0.2.1:1
-ORPort [2001:DB8::1]:3
-V3AuthoritativeDirectory 1

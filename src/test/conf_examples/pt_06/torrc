@@ -1,9 +1,0 @@
-# Relay PT tests
-# Options from relay/transport_config.c
-# Try a config with all the options
-ExtORPort 1
-ExtORPortCookieAuthFile /
-ExtORPortCookieAuthFileGroupReadable 1
-ServerTransportPlugin bad3 exec /
-ServerTransportListenAddr bad3 127.0.0.1:2
-ServerTransportOptions bad3 a=b

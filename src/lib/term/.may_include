@@ -1,8 +1,0 @@
-orconfig.h
-
-lib/cc/*.h
-lib/log/*.h
-lib/term/*.h
-lib/malloc/*.h
-
-ext/tor_readpassphrase.h

@@ -1,5 +1,0 @@
-This directory contains typical test_parseconf.sh failure cases.
-
-If these directories are copied into conf_examples, test_parseconf.sh will
-fail. Use these failure cases to make sure test_parseconf.sh handles failures
-correctly, and produces useful output.

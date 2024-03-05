@@ -1,6 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Bad BridgeDistribution characters
-ORPort 1
-BridgeRelay 1
-BridgeDistribution *$%()@!

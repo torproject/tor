@@ -1,3 +1,0 @@
-ExtORPortCookieAuthFile /
-ExtORPort 1
-ServerTransportPlugin bad3 exec /

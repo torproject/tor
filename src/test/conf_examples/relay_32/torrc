@@ -1,4 +1,0 @@
-# Relay tests
-# default (IPv4) ORPort auto and IPv6 ORPort auto
-ORPort auto
-ORPort [::1]:auto

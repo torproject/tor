@@ -1,7 +1,0 @@
-orconfig.h
-lib/arch/*.h
-lib/cc/*.h
-lib/log/*.h
-lib/malloc/*.h
-lib/memarea/*.h
-lib/smartlist_core/*.h

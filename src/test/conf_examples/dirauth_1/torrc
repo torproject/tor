@@ -1,8 +1,0 @@
-AuthoritativeDirectory 1
-V3AuthoritativeDirectory 1
-
-ContactInfo tor_parse_test@example.net
-
-Address 192.0.2.1
-ORPort 9001
-DirPort 9030

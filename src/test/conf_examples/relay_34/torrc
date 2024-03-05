@@ -1,5 +1,0 @@
-# Relay tests
-# explicit IPv4 ORPort and DirPort auto and IPv6 ORPort auto
-ORPort 127.0.0.1:auto
-ORPort [::1]:auto
-DirPort 127.0.0.1:auto

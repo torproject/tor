@@ -1,7 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Try a valid config, that has a warning: Bridge, warn and disable DirPort
-ORPort 1
-DirPort 2
-DirCache 1
-BridgeRelay 1

@@ -1,5 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Short key lifetimes
-ORPort 1
-SigningKeyLifetime 1

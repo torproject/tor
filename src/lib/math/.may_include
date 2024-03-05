@@ -1,7 +1,0 @@
-orconfig.h
-
-lib/cc/*.h
-lib/log/*.h
-lib/math/*.h
-lib/testsupport/*.h
-lib/crypt_ops/*.h

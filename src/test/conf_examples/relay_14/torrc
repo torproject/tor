@@ -1,4 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Listening but not advertising: DirPort
-DirPort 1 NoAdvertise

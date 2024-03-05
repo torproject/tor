@@ -1,5 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Empty linelist values are ignored with a warning
-ORPort
-DirPort

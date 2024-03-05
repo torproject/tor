@@ -1,6 +1,0 @@
-# Relay PT tests
-# Options from relay/transport_config.c
-# Try a valid minimal config
-ORPort 2
-ExtORPort 1
-ServerTransportPlugin bad3 exec /

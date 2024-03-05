@@ -1,3 +1,0 @@
-  o Minor feature (hs):
-    - Fix compiler warnings in equix and hashx when building with clang.
-      Closes ticket 40800.

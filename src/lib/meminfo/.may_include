@@ -1,9 +1,0 @@
-orconfig.h
-
-lib/cc/*.h
-lib/fs/*.h
-lib/log/*.h
-lib/malloc/*.h
-lib/meminfo/*.h
-lib/string/*.h
-lib/testsupport/*.h

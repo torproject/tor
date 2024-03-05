@@ -1,5 +1,0 @@
-# Relay tests
-# Options from relay/relay_config.c
-# Try a valid minimal directory mirror config
-ORPort 1
-DirPort 2
