@@ -1,0 +1,663 @@
+
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Anonymity Online | Defend yourself against tracking and surveillance. Circumvent censorship.">
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@torproject" />
+  <meta name="twitter:creator" content="@torproject" />
+  <meta name="twitter:image" content="https://www.torproject.org/static/images/tor-project-logo-onions.png"/>
+  <meta property="og:url" content="https://torproject.org" />
+  <meta property="og:title" content="The Tor Project | Privacy &amp; Freedom Online" />
+  <meta property="og:description" content="Defend yourself against tracking and surveillance. Circumvent censorship." />
+  <meta property="og:image" content="https://www.torproject.org/static/images/tor-project-logo-onions.png" />
+  <meta name="monetization" content="$ilp.uphold.com/pYfXb92JBQN4">
+  <link rel="stylesheet" href="static/css/bootstrap.css?h=2122cf07">
+  <link rel="stylesheet" href="static/fonts/fontawesome/css/all.min.css?h=9d272f6a" rel="stylesheet">
+  
+  <!-- Standard favicon -->
+  <link rel="icon" type="image/x-icon" href="https://www.torproject.org/static/images/favicon/favicon.ico">
+  <!-- Recommended favicon format -->
+  <link rel="icon" type="image/png" href="https://www.torproject.org/static/images/favicon/favicon.png">
+  <title>Tor Project | Anonymity Online</title>
+  
+</head>
+<body class="no-gutters">
+  <div class="banner">
+  <input id="trigger" type="checkbox" title="Close banner" />
+  <label for="trigger" class="banner-close text-white">
+      <div class="d-flex h-100">
+        <img src="static/images/yec-2023/x.png?h=bcdaa456" class="m-auto h-100 w-100 p-1 img-svg">
+      </div>
+  </label>
+  <span class="eoy-sr-only text-white">Close banner</span>
+  
+  <div id="banner-header">
+    <div class="banner-content">
+      <div class="banner-content-spacer py-5 h-100">
+        <div class="banner-content-container d-flex">
+          <div class="banner-main-graphics h-100">
+            <img class="yec-illo img-svg" src="static/images/yec-2023/main-illo.png?h=15484879">
+          </div>
+          <div id="banner-text-container" class="d-flex flex-column text-left">
+            <div id="banner-text" class="d-flex flex-column">
+              <p id="match-text">The Friends of Tor match has been reached.</p>
+              <h1>Right now, Tor is protecting the privacy of millions of people like you!</h1>
+              <p>
+              <strong>This is possible because of donations from our community.</strong> If you value the privacy that Tor offers yourself and others, please make a donation today. You’ll ensure Tor continues to provide online privacy to everyone who needs it.
+              </p>
+            </div>
+            <div id="yec-donate-button-container">
+              <a class="btn" id="yec-donate-button" href="https://donate.torproject.org/">
+                <span>Donate now</span>
+                <img src="static/images/yec-2023/heart.png?h=ad369acb" class="donate-heart img-svg">
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  <header>
+      
+<div class="container-fluid bg-dark">
+  <nav class="navbar no-background navbar-expand-lg navbar-dark bg-dark p-4">
+
+    <a class="navbar-brand" href="https://torproject.org/en/">
+      <img alt="The Tor Project" src="static/images/tor-logo@2x.png?h=16ad42bc" >
+      <span class="sr-only">Tor Logo</span>
+    </a>
+
+    
+    
+      <a href="https://donate.torproject.org" title="Donate" class="px-2 h4"><span class="badge badge-warning p-2">Donate Now</span></a>
+    
+
+    <label for="nav-toggle">
+      <a class="btn btn-lg btn-primary navbar-toggler text-white p-3" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        Menu <span class="navbar-toggler-icon ml-1"></span>
+      </a>
+    </label>
+    <input type="checkbox" id="nav-toggle"/>
+    <div class="collapse navbar-collapse hamburger-menu" id="navbarSupportedContent">
+      <div class="mx-auto">
+        <ul class="navbar-nav">
+        	
+        	
+        	<li class="nav-item">
+            
+            
+              
+              
+                <a class="nav-link" href="https://www.torproject.org/about/history/">
+              
+            
+            About
+              
+            </a>
+        	</li>
+  	
+        	<li class="nav-item">
+            
+            
+              
+              
+                <a class="nav-link" href="https://support.torproject.org/">
+              
+            
+            Support
+              
+            </a>
+        	</li>
+  	
+        	<li class="nav-item">
+            
+            
+              
+              
+                <a class="nav-link" href="https://community.torproject.org/">
+              
+            
+            Community
+              
+            </a>
+        	</li>
+  	
+        	<li class="nav-item">
+            
+            
+              
+              
+                <a class="nav-link" href="https://blog.torproject.org">
+              
+            
+            Blog
+              
+            </a>
+        	</li>
+  	
+        	<li class="nav-item">
+            
+            
+              
+              
+                <a class="nav-link" href="https://donate.torproject.org">
+              
+            
+            Donate
+              
+            </a>
+        	</li>
+  	
+    <!--
+            I add some strings here because the i18n plugin does not pick them up from the Databags
+            About
+            Documentation
+            Support
+            Community
+            Blog
+            PrivChat
+            Jobs
+            Contact
+            Press
+            Donate
+    -->
+        </ul>
+      </div>
+      
+      
+        <div class="btn-group dropdown pull-right">
+          
+            <button type="button" class="btn btn-dark bg-dark dropdown-toggle btn-block my-3 my-sm-0" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          
+          English (en)
+          </button>
+          <div class="dropdown-menu">
+            
+              
+            
+              
+                <a class="dropdown-item" href="ar/">عربي (ar)</a>
+              
+            
+              
+                <a class="dropdown-item" href="ca/">Català (ca)</a>
+              
+            
+              
+                <a class="dropdown-item" href="de/">Deutsch (de)</a>
+              
+            
+              
+                <a class="dropdown-item" href="es/">Español (es)</a>
+              
+            
+              
+                <a class="dropdown-item" href="fa/">فارسی (fa)</a>
+              
+            
+              
+                <a class="dropdown-item" href="fr/">Français (fr)</a>
+              
+            
+              
+                <a class="dropdown-item" href="hu/">Magyar nyelv (hu)</a>
+              
+            
+              
+                <a class="dropdown-item" href="is/">Íslenska (is)</a>
+              
+            
+              
+                <a class="dropdown-item" href="it/">Italiano (it)</a>
+              
+            
+              
+                <a class="dropdown-item" href="ja/">日本語 (ja)</a>
+              
+            
+              
+                <a class="dropdown-item" href="ka/">ქართული (ka)</a>
+              
+            
+              
+                <a class="dropdown-item" href="km/">ភាសាខ្មែរ (km)</a>
+              
+            
+              
+                <a class="dropdown-item" href="ko/">한국어(ko)</a>
+              
+            
+              
+                <a class="dropdown-item" href="pt-BR/">Português Brasil (pt-BR)</a>
+              
+            
+              
+                <a class="dropdown-item" href="ru/">Русский (ru)</a>
+              
+            
+              
+                <a class="dropdown-item" href="sq/">Shqip (sq)</a>
+              
+            
+              
+                <a class="dropdown-item" href="sw/">Kiswahili (sw)</a>
+              
+            
+              
+                <a class="dropdown-item" href="tr/">Türkçe (tr)</a>
+              
+            
+              
+                <a class="dropdown-item" href="vi/">Tiếng Việt (vi)</a>
+              
+            
+              
+                <a class="dropdown-item" href="zh-CN/">简体中文 (zh-CN)</a>
+              
+            
+              
+                <a class="dropdown-item" href="zh-TW/">正體中文 (zh-TW)</a>
+              
+            
+          </div>
+        </div>
+      
+      
+      <div class="pull-right">
+        
+          <a class="btn btn-outline-light pull-right" href="download/">
+        
+          Download Tor Browser<i class="ml-2 pt-1 fas fa-arrow-down-png"></i>
+        </a>
+      </div>
+    </nav>
+</div>
+  </header>
+  <div class="page">
+    <div class="container-fluid bg-dark">
+      <div class="row flex-xl-nowrap order-last">
+        <div class="container bg-dark pt-5">
+  <div class="row">
+    <div class="col-12 content-center pt-5">
+      <div class="row">
+  <h1 class="mx-auto display-2 text-center text-white">Browse Privately.</h1>
+</div>
+<div class="row">
+  <h1 class="mx-auto display-2 text-center text-white">Explore Freely.</h1>
+</div>
+<div class="row">
+  <h3 class="mx-auto p-3 text-center text-white">Defend yourself against tracking and surveillance. Circumvent censorship.</h3>
+</div>
+<div class="row col-12 p-5 mx-auto justify-content-center">
+  
+  <a class="btn btn-lg btn-outline-light" href="download/">
+    Download Tor Browser<i class="ml-2 pt-1 fas fa-arrow-down-png"></i>
+  </a>
+</div>
+    </div>
+  </div>
+</div>
+      </div>
+    </div>
+    
+    <div class="container-fluid order-last text-left">
+      <div class="row flex-xl-nowrap order-last text-left">
+        <main role="main" class="mx-auto col-12 order-last text-left">
+          <div class="container pt-5 justify-content-center">
+  <section>
+    <div class="container py-3">
+      <div class="card border-0">
+        <div class="row">
+          <div class="col-md-5 order-1 illo-container">
+            <img src="static/images/home/png/block-trackers@3x.png?h=70991bcb" class="" alt="Block Trackers" />
+          </div>
+          <div class="col-md-7 px-3 order-2">
+            <div class="card-block px-3 py-5">
+              <h4 class="pt-3 card-title text-primary">BLOCK TRACKERS</h4>
+              <p class="card-text">Tor Browser isolates each website you visit so third-party trackers and ads can&#39;t follow you. Any cookies automatically clear when you&#39;re done browsing. So will your browsing history.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="container py-3">
+      <div class="card border-0">
+        <div class="row">
+          <div class="col-md-5 order-md-2 order-first illo-container">
+            <img src="static/images/home/png/surveillance@3x.png?h=688a829c" class="" alt="Defend Against Surveillance" />
+          </div>
+          <div class="col-md-7 px-3 order-md-1">
+            <div class="card-block px-3 py-5">
+              <h4 class="pt-3 card-title text-primary">DEFEND AGAINST SURVEILLANCE</h4>
+              <p class="card-text">Tor Browser prevents someone watching your connection from knowing what websites you visit. All anyone monitoring your browsing habits can see is that you&#39;re using Tor.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="container py-3">
+      <div class="card border-0">
+        <div class="row">
+          <div class="col-md-5 order-1 illo-container">
+            <img src="static/images/home/png/fingerprinting@3x.png?h=11fc8c97" class="" alt="Resist Fingerprinting" />
+          </div>
+          <div class="col-md-7 px-3 order-2">
+            <div class="card-block px-3 py-5">
+              <h4 class="pt-3 card-title text-primary">RESIST FINGERPRINTING</h4>
+              <p class="card-text">Tor Browser aims to make all users look the same, making it difficult for you to be fingerprinted based on your browser and device information.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="container py-3">
+      <div class="card border-0">
+        <div class="row">
+          <div class="col-md-5 order-md-2 order-first illo-container">
+            <img src="static/images/home/png/encryption@3x.png?h=4b28f3dd" class="" alt="Multi-layered Encryption" />
+          </div>
+          <div class="col-md-7 px-3 order-md-1">
+            <div class="card-block px-3 py-5">
+              <h4 class="pt-3 card-title text-primary">MULTI-LAYERED ENCRYPTION</h4>
+              <p class="card-text">Your traffic is relayed and encrypted three times as it passes over the Tor network. The network is comprised of thousands of volunteer-run servers known as Tor relays.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="container py-3">
+      <div class="card border-0">
+        <div class="row">
+          <div class="col-md-5 order-md-2 order-first illo-container">
+            <img src="static/images/home/png/browse-freely@3x.png?h=23b7d7d3" class="" alt="Browse Freely" />
+          </div>
+          <div class="col-md-7 px-3 order-2">
+            <div class="card-block px-3 py-5">
+              <h4 class="pt-3 card-title text-primary">BROWSE FREELY</h4>
+              <p class="card-text">With Tor Browser, you are free to access sites your home network may have blocked.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+            <div class="container pt-5 hero order-last text-left">
+              
+  <h6>ABOUT US</h6>
+<p>We believe everyone should be able to explore the internet with privacy.
+We are the Tor Project, a 501(c)(3) US nonprofit.
+We advance human rights and defend your privacy online through free software and open networks. <a href="about/people">Meet our team</a>.</p>
+
+
+            </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  
+
+<div class="container-fluid bg-dark footer order-last text-left">
+
+  
+
+  <div class="row">
+      <div class="col-4 d-flex onion-pattern">
+          <img src="static/images/circle-pattern.png?h=9a4040e4" class="img-svg">
+    </div>
+    <div class="col-sm-8 d-flex download-section mt-auto">
+      <div class="container pb-2 justify-content-right">
+         <h2 class="text-white text-bold">Download Tor Browser</h2>
+         <p class="text-white">Download Tor Browser to experience real private browsing without tracking, surveillance, or censorship.</p>
+            <a class="btn text-primary bg-white btn-light pull-right mt-2" href="download/">
+          Download Tor Browser<i class="ml-2 pt-1 fas fa-arrow-down-png-purple"></i>
+         </a>
+      </div>
+    </div>
+  </div>
+
+  
+
+
+  <div class="row">
+    <div class="col-12 d-flex justify-content-center">
+      <div class="col-sm-6 offset-lx-1 offset-sm-0 mt-5">
+	        <h5 class="font-weight-bold mt-5 text-white">Our mission:</h5>
+          <p class="text-white mb-5" >To advance human rights and freedoms by creating and deploying free and open source anonymity and privacy technologies, supporting their unrestricted availability and use, and furthering their scientific and popular understanding.</p>
+      </div>
+      <div class="col-sm-2 mt-5 d-none d-sm-block">
+        <ul class="nav flex-column mt-sm-5">
+          
+          
+          <li class="nav-item">
+          
+          
+            
+            
+              <a class="nav-link text-light" href="https://www.torproject.org/about/jobs/">
+            
+          
+              Jobs
+              
+            </a>
+          </li>
+          
+          <li class="nav-item">
+          
+          
+            
+            
+              <a class="nav-link text-light" href="https://blog.torproject.org">
+            
+          
+              Blog
+              
+            </a>
+          </li>
+          
+          <li class="nav-item">
+          
+          
+            
+            
+              <a class="nav-link text-light" href="https://www.torproject.org/contact/">
+            
+          
+              Contact
+              
+            </a>
+          </li>
+          
+          <li class="nav-item">
+          
+          
+            
+            
+              <a class="nav-link text-light" href="https://www.torproject.org/press/">
+            
+          
+              Press
+              
+            </a>
+          </li>
+          
+          <li class="nav-item">
+          
+          
+            
+            
+              <a class="nav-link text-light" href="https://www.torproject.org/privchat">
+            
+          
+              PrivChat
+              
+            </a>
+          </li>
+          
+        </ul>
+        
+        
+        
+          <a href="https://donate.torproject.org" title="Donate" class="h5"><span class="badge badge-warning p-2 mt-2">Donate Now</span></a>
+        
+        
+      </div>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-12 d-flex justify-content-center">
+      <div class="col-sm-6 offset-lx-1 offset-sm-0 mt-5">
+        <p class="text-primary-light">SUBSCRIBE TO OUR NEWSLETTER</p>
+        <p class="text-light">Get monthly updates and opportunities from the Tor Project:</p>
+        <p class="w"><a class="btn btn-small btn-dark mt-2 text-white active" role="button" aria-pressed="true" href="https://newsletter.torproject.org/">SIGN UP</a></p>
+      </div>
+      <div class="col-sm-2 mt-5 d-none d-sm-block">
+        <div class="row">
+          <h4><a class="text-white px-3" target="_blank" href="https://forum.torproject.org"><i class="fab fa-discourse"></i></a></h4>
+          <h4><a class="text-white px-3" target="_blank" href="https://www.facebook.com/TorProject/"><i class="fab fa-facebook-png"></i></a></h4>
+          <h4><a class="mastodon text-white px-3" target="_blank" href="https://mastodon.social/@torproject" rel="me"><i class="fab fa-mastodon-png"></i></a></h4>
+        </div>
+        <div class="row">
+          <h4><a class="instagram text-white px-3" target="_blank" href="https://www.instagram.com/torproject"><i class="fab fa-instagram-png"></i></a></h4>
+          <h4><a class="twitter text-white px-3" target="_blank" href="https://twitter.com/torproject"><i class="fab fa-twitter-png"></i></a></h4>
+          <h4><a class="linkedin text-white px-3" target="_blank" href="https://www.linkedin.com/company/tor-project"><i class="fab fa-linkedin-png"></i></a></h4>
+        </div>
+        <div class="row">
+          <h4><a class="github text-white px-3" target="_blank" href="https://github.com/torproject"><i class="fab fa-github-png"></i></a></h4>
+          <h4><a class="telegram text-white px-3" target="_blank" href="https://t.me/torproject"><i class="fab fa-telegram-png"></i></a></h4>
+          <h4><a class="gitlab text-white px-3" target="_blank" href="https://gitlab.torproject.org/"><i class="fab fa-gitlab-png"></i></a></h4>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-12 d-flex justify-content-center">
+      <div class="col-8 mt-5">
+        
+        <p class="text-primary text-light">Trademark, copyright notices, and rules for use by third parties can be found in our 
+  <a href="https://www.torproject.org/about/trademark/" target="_blank" class="text-primary text-light"><u>FAQ</u></a>
+.</p>
+      </div>
+      <div class="col-sm-2 mt-5 d-none d-sm-block">
+        <div class="btn-group dropup float-right">
+      	  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            English (en)
+      	  </button>
+      	  <div class="dropdown-menu">
+            
+              
+            
+              
+    	          <a class="dropdown-item" href="ar/">عربي (ar)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="ca/">Català (ca)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="de/">Deutsch (de)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="es/">Español (es)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="fa/">فارسی (fa)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="fr/">Français (fr)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="hu/">Magyar nyelv (hu)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="is/">Íslenska (is)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="it/">Italiano (it)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="ja/">日本語 (ja)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="ka/">ქართული (ka)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="km/">ភាសាខ្មែរ (km)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="ko/">한국어(ko)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="pt-BR/">Português Brasil (pt-BR)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="ru/">Русский (ru)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="sq/">Shqip (sq)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="sw/">Kiswahili (sw)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="tr/">Türkçe (tr)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="vi/">Tiếng Việt (vi)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="zh-CN/">简体中文 (zh-CN)</a>
+              
+            
+              
+    	          <a class="dropdown-item" href="zh-TW/">正體中文 (zh-TW)</a>
+              
+            
+        	</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="static/js/jquery-3.2.1.min.js?h=1055018c" ></script>
+  <script src="static/js/popper.min.js?h=a4336719" ></script>
+  <script src="static/js/bootstrap.bundle.min.js?h=46d1f82f" ></script>
+  <script src="static/js/scrollspy.min.js?h=02674132" ></script>
+  <script src="static/js/modernizr.js?h=9a7f0609" ></script>
+  <script src="static/js/download.js?h=caaadf8f" ></script>
+  <script src="static/js/fallback.js?h=8a716acd" ></script>
+  </div>
+</div>
+</body>
+</html>
