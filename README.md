@@ -1,5 +1,4 @@
-This project is no longer hosted here. Come find us at [our gitlab
-repository](https://gitlab.torproject.org/tpo/core/tor) instead.
+This project is no longer hosted here. Come find us at [our GitLab repository](https://gitlab.torproject.org/tpo/core/tor) instead.
 
 ## About
 
@@ -24,4 +23,3 @@ Documentation, including links to installation and setup instructions:
 Frequently Asked Questions:
 
 - https://www.torproject.org/docs/faq.html
-
